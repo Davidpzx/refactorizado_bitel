@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Agente extends Model
+{
+    protected $table = 'agentes';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'dni', 'nombres', 'tienda_base', 'hora_ingreso', 'hora_salida',
+        'sueldo_base', 'dia_pago', 'estado', 'dia_descanso',
+        'pin_seguridad', 'fecha_ingreso', 'correo', 'telefono', 'direccion',
+        'es_gerencia', 'permiso_largo', 'fecha_retorno',
+    ];
+
+    protected $hidden = ['pin_seguridad', 'hash_dispositivo', 'hash_facial'];
+
+    protected $casts = [
+        'sueldo_base'           => 'decimal:2',
+        'fecha_ingreso'         => 'date',
+        'fecha_retorno'         => 'date',
+        'fecha_baja'            => 'date',
+        'permiso_largo'         => 'boolean',
+        'antecedentes_penales'  => 'boolean',
+        'creado_en'             => 'datetime',
+        'formacion_academica'   => 'array',
+        'carga_familiar'        => 'array',
+        'experiencia_laboral'   => 'array',
+    ];
+
+    public function asistencias(): HasMany
+    {
+        return $this->hasMany(Asistencia::class);
+    }
+
+    public function adelantos(): HasMany
+    {
+        return $this->hasMany(Adelanto::class);
+    }
+
+    public function reportes(): HasMany
+    {
+        return $this->hasMany(Reporte::class);
+    }
+
+    public function scopeActivos($query)
+    {
+        return $query->where('estado', 'ACTIVO');
+    }
+
+    public function scopePorTienda($query, string $tienda)
+    {
+        return $query->where('tienda_base', $tienda);
+    }
+}

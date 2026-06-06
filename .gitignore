@@ -1,0 +1,27 @@
+# Backend
+/backend/vendor/
+/backend/.env
+/backend/.env.*
+/backend/node_modules/
+/backend/storage/logs/*.log
+/backend/storage/framework/cache/
+/backend/storage/framework/sessions/
+/backend/storage/framework/views/
+/backend/public/build/
+/backend/public/hot
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env.local
+/frontend/.env.production
+
+# General
+.DS_Store
+*.log
+*.pfx
+*.p12
+backup_*.sql
+.idea/
+.vscode/
+*.swp
