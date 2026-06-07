@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\EnviarComprobanteSunat;
 use App\Models\Comprobante;
-use App\Models\Venta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,19 +13,17 @@ class ComprobanteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $comprobantes = Comprobante::query()
-            ->with(['venta.cliente'])
-            ->when($request->estado_sunat, fn($q, $e) => $q->where('estado_sunat', $e))
-            ->when($request->tipo, fn($q, $t) => $q->where('tipo_comprobante', $t))
-            ->pendientes()
-            ->latest('creado_en')
-            ->paginate($request->integer('per_page', 20));
-
-        // Sin filtro de pendientes si se especifica estado
         if ($request->estado_sunat) {
             $comprobantes = Comprobante::query()
                 ->with(['venta.cliente'])
                 ->where('estado_sunat', $request->estado_sunat)
+                ->latest('creado_en')
+                ->paginate($request->integer('per_page', 20));
+        } else {
+            $comprobantes = Comprobante::query()
+                ->with(['venta.cliente'])
+                ->when($request->tipo, fn($q, $t) => $q->where('tipo_comprobante', $t))
+                ->pendientes()
                 ->latest('creado_en')
                 ->paginate($request->integer('per_page', 20));
         }
@@ -35,19 +33,19 @@ class ComprobanteController extends Controller
 
     public function show(Comprobante $comprobante): JsonResponse
     {
-        $comprobante->load(['venta.cliente', 'venta.items']);
+        $comprobante->load(['venta.cliente', 'venta.equipo', 'venta.linea']);
         return response()->json($comprobante);
     }
 
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'venta_id'        => ['required', 'integer', 'exists:ventas,id'],
-            'tipo_comprobante'=> ['required', Rule::in(['03', '01'])],
-            'serie'           => ['required', 'string', 'size:4'],
+            'venta_id'         => ['required', 'integer', 'exists:ventas,id'],
+            'tipo_comprobante' => ['required', Rule::in(['03', '01'])],
+            'serie'            => ['required', 'string', 'size:4'],
         ]);
 
-        // Generar número correlativo
+        // Número correlativo auto-incremental por serie+tipo
         $ultimo = Comprobante::where('tipo_comprobante', $data['tipo_comprobante'])
             ->where('serie', $data['serie'])
             ->max('numero') ?? 0;
@@ -58,10 +56,11 @@ class ComprobanteController extends Controller
             'serie'            => $data['serie'],
             'numero'           => $ultimo + 1,
             'estado_sunat'     => 'PENDIENTE',
+            'intentos'         => 0,
         ]);
 
-        // Despachar job de envío a SUNAT
-        // dispatch(new \App\Jobs\EnviarComprobanteSunat($comprobante->id));
+        EnviarComprobanteSunat::dispatch($comprobante->id)
+            ->onQueue(config('sunat.queue', 'sunat'));
 
         return response()->json($comprobante, 201);
     }
@@ -78,7 +77,8 @@ class ComprobanteController extends Controller
             'proximo_intento' => null,
         ]);
 
-        // dispatch(new \App\Jobs\EnviarComprobanteSunat($comprobante->id));
+        EnviarComprobanteSunat::dispatch($comprobante->id)
+            ->onQueue(config('sunat.queue', 'sunat'));
 
         return response()->json(['message' => 'Comprobante encolado para reenvío.']);
     }

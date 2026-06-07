@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,327 +12,379 @@ import { Select } from '../../components/ui/select'
 import { Card } from '../../components/ui/card'
 import { PageHeader } from '../../components/PageHeader'
 
+// ── Constantes ────────────────────────────────────────────────────────────────
+
 const TIENDAS = [
-  'PUNDA50', 'PUNDA11', 'PUNSC01', 'PUNDA23',
-  'TACDA13', 'TACDA17', 'TACDA21', 'TACDA25', 'TACDA27', 'TACDA30',
+  'PUNDA50','PUNDA11','PUNSC01','PUNDA23',
+  'TACDA13','TACDA17','TACDA21','TACDA25','TACDA27','TACDA30',
 ]
 
-const FINANCIERAS = ['Krece', 'Tasa Cero', 'Contado directo']
+const FINANCIERAS = ['PayJoy', 'Krece', 'Tasa Cero', 'Otro']
 
-// ── Zod schema ───────────────────────────────────────────────────────────────
+const TIPOS_ALTA = [
+  { value: 'MNP',     label: 'Portabilidad (MNP)' },
+  { value: 'LN',      label: 'Alta nueva (LN)'    },
+  { value: 'RECUPERO',label: 'Recupero'            },
+  { value: 'BIFRI',   label: 'Bifri / Familia'     },
+  { value: 'TURISTA', label: 'Turista'             },
+  { value: 'PAQUETE', label: 'Paquete'             },
+]
+
+const TIPOS_SALIDA = ['Pasaje','Gasto','Adelanto','Otro']
+
+// ── Zod ───────────────────────────────────────────────────────────────────────
 
 const ventaSchema = z.object({
-  tipo_venta:         z.enum(['EQUIPO', 'ACCESORIO', 'POSTPAGO', 'PREPAGO', 'OTROS_FLUJO']),
-  subtipo:            z.string().optional().or(z.literal('')),
-  monto_total:        z.number().min(0),
-  efectivo_inicial:   z.number().min(0),
-  cross_selling:      z.boolean(),
-  tienda_destino:     z.string().optional().or(z.literal('')),
-  es_remate:          z.boolean(),
-  es_extranjero:      z.boolean(),
-  cliente_dni:        z.string().max(11).optional().or(z.literal('')),
-  // Equipo / Accesorio
-  producto_nombre:    z.string().optional().or(z.literal('')),
-  imei_serial:        z.string().optional().or(z.literal('')),
-  tipo_pago:          z.enum(['CONTADO', 'CUOTAS']),
-  financiera:         z.string().optional().or(z.literal('')),
-  precio_venta:       z.number().min(0),
-  costo_snap:         z.number().min(0),
-  por_cobrar_financiera: z.number().min(0),
+  tipo_venta:           z.enum(['EQUIPO','ACCESORIO','POSTPAGO','PREPAGO','OTROS_FLUJO']),
+  subtipo:              z.string().optional().or(z.literal('')),
+  monto_total:          z.number().min(0),
+  efectivo_inicial:     z.number().min(0),
+  cross_selling:        z.boolean(),
+  tienda_destino:       z.string().optional().or(z.literal('')),
+  es_remate:            z.boolean(),
+  es_extranjero:        z.boolean(),
+  cliente_dni:          z.string().max(15).optional().or(z.literal('')),
+  producto_nombre:      z.string().optional().or(z.literal('')),
+  imei_serial:          z.string().optional().or(z.literal('')),
+  tipo_pago:            z.enum(['CONTADO','CUOTAS']),
+  financiera:           z.string().optional().or(z.literal('')),
+  precio_venta:         z.number().min(0),
+  costo_snap:           z.number().min(0),
+  por_cobrar_financiera:z.number().min(0),
   inventario_tienda_id: z.number().int().min(0),
-  // Postpago / Prepago
-  plan_nombre:        z.string().optional().or(z.literal('')),
-  tipo_alta:          z.string().optional().or(z.literal('')),
-  cantidad:           z.number().int().min(1),
-  cobrado_unitario:   z.number().min(0),
-  comision_unitaria:  z.number().min(0),
+  plan_nombre:          z.string().optional().or(z.literal('')),
+  tipo_alta:            z.string().optional().or(z.literal('')),
+  cantidad:             z.number().int().min(1),
+  cobrado_unitario:     z.number().min(0),
+  comision_unitaria:    z.number().min(0),
 })
 
 const schema = z.object({
   agente_id:          z.number().int().min(1),
-  tienda_id:          z.string().min(1, 'Selecciona una tienda'),
-  fecha:              z.string().min(1, 'La fecha es obligatoria'),
+  tienda_id:          z.string().min(1,'Selecciona una tienda'),
+  fecha:              z.string().min(1,'La fecha es obligatoria'),
+  nombre_cubre:       z.string().optional().or(z.literal('')),
   caja_inicial:       z.number().min(0),
   yape:               z.number().min(0),
   bipay:              z.number().min(0),
   transferencia:      z.number().min(0),
+  retiro_bipay:       z.number().min(0),
   recarga_bipay:      z.number().min(0),
   pago_servicio:      z.number().min(0),
   pago_krece:         z.number().min(0),
   tickets_tusamy:     z.number().min(0),
-  retiro_bipay:       z.number().min(0),
   efectivo_entregado: z.number().min(0),
   total_salidas:      z.number().min(0),
-  nombre_cubre:       z.string().optional().or(z.literal('')),
+  destino_efectivo:   z.enum(['TIENDA','ENTREGADO','EN_CAJA']),
   observaciones:      z.string().optional().or(z.literal('')),
-  destino_efectivo:   z.enum(['TIENDA', 'ENTREGADO', 'EN_CAJA']),
+  obs_dia:            z.string().optional().or(z.literal('')),
   ventas:             z.array(ventaSchema),
 })
 
-type FormData = z.infer<typeof schema>
+type FormData     = z.infer<typeof schema>
 type VentaFormData = z.infer<typeof ventaSchema>
 
 const VENTA_DEFAULT: VentaFormData = {
-  tipo_venta: 'POSTPAGO',
-  subtipo: '',
-  monto_total: 0,
-  efectivo_inicial: 0,
-  cross_selling: false,
-  tienda_destino: '',
-  es_remate: false,
-  es_extranjero: false,
-  cliente_dni: '',
-  producto_nombre: '',
-  imei_serial: '',
-  tipo_pago: 'CONTADO',
-  financiera: '',
-  precio_venta: 0,
-  costo_snap: 0,
-  por_cobrar_financiera: 0,
-  inventario_tienda_id: 0,
-  plan_nombre: '',
-  tipo_alta: 'MNP',
-  cantidad: 1,
-  cobrado_unitario: 0,
-  comision_unitaria: 0,
+  tipo_venta:'POSTPAGO', subtipo:'', monto_total:0, efectivo_inicial:0,
+  cross_selling:false, tienda_destino:'', es_remate:false, es_extranjero:false,
+  cliente_dni:'', producto_nombre:'', imei_serial:'', tipo_pago:'CONTADO',
+  financiera:'', precio_venta:0, costo_snap:0, por_cobrar_financiera:0,
+  inventario_tienda_id:0, plan_nombre:'', tipo_alta:'MNP', cantidad:1,
+  cobrado_unitario:0, comision_unitaria:0,
 }
 
-// ── Componente VentaCard ─────────────────────────────────────────────────────
+// ── Salidas locales (no van al schema, se suman en total_salidas) ─────────────
 
-function VentaCard({
-  index,
-  register,
-  control,
-  errors,
-  onRemove,
-  planes,
+type SalidaItem = { id: string; tipo: string; monto: number; motivo: string }
+
+// ── Componente: fila compacta para POSTPAGO / PREPAGO ────────────────────────
+
+function LineaRow({
+  index, register, control, errors, tipo, onRemove, planes,
+}: {
+  index: number
+  register: ReturnType<typeof useForm<FormData>>['register']
+  control: ReturnType<typeof useForm<FormData>>['control']
+  errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
+  tipo: 'POSTPAGO' | 'PREPAGO'
+  onRemove: () => void
+  planes: Array<{ nombre_plan: string; tipo_alta: string }>
+}) {
+  const cross = useWatch({ control, name: `ventas.${index}.cross_selling` })
+  const e     = errors.ventas?.[index]
+
+  return (
+    <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+      {/* DNI */}
+      <div>
+        <Input
+          {...register(`ventas.${index}.cliente_dni`)}
+          placeholder="DNI / Celular"
+          maxLength={15}
+          className="h-8 text-xs"
+        />
+      </div>
+
+      {/* Plan */}
+      <div>
+        <Select {...register(`ventas.${index}.plan_nombre`)} className="h-8 text-xs">
+          <option value="">— Plan —</option>
+          {planes.map((p, i) => (
+            <option key={i} value={p.nombre_plan}>
+              {p.nombre_plan} ({p.tipo_alta})
+            </option>
+          ))}
+        </Select>
+        {e?.plan_nombre && <p className="text-red-500 text-[10px]">{e.plan_nombre.message}</p>}
+      </div>
+
+      {/* Tipo Alta */}
+      <div>
+        <Select {...register(`ventas.${index}.tipo_alta`)} className="h-8 text-xs">
+          {TIPOS_ALTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </Select>
+      </div>
+
+      {/* Cobrado */}
+      <div>
+        <Input
+          type="number" step="0.01" min="0"
+          {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })}
+          placeholder="S/"
+          className="h-8 text-xs"
+        />
+      </div>
+
+      {/* Toggles */}
+      <div className="flex flex-col gap-0.5 text-[10px]">
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} className="w-3 h-3" />
+          Ext
+        </label>
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input type="checkbox" {...register(`ventas.${index}.es_remate`)} className="w-3 h-3" />
+          Rem
+        </label>
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input type="checkbox" {...register(`ventas.${index}.cross_selling`)} className="w-3 h-3" />
+          Cruz
+        </label>
+        {tipo === 'PREPAGO' && (
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input type="checkbox" {...register(`ventas.${index}.comision_unitaria`, { valueAsNumber: true })} className="w-3 h-3" />
+            eSIM
+          </label>
+        )}
+      </div>
+
+      {/* Eliminar */}
+      <button
+        type="button" onClick={onRemove}
+        className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center"
+      >×</button>
+
+      {/* Cross-selling expand */}
+      {cross && (
+        <div className="col-span-full pl-0 pt-1">
+          <Label className="text-[10px] text-gray-500">Tienda destino (apoyo)</Label>
+          <Select {...register(`ventas.${index}.tienda_destino`)} className="h-7 text-xs w-40 mt-0.5">
+            <option value="">— Selecciona —</option>
+            {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
+          </Select>
+        </div>
+      )}
+
+      {/* Monto total oculto — para POSTPAGO/PREPAGO = cobrado_unitario × cantidad */}
+      <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
+      <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
+    </div>
+  )
+}
+
+// ── Componente: fila compacta para EQUIPO / ACCESORIO ────────────────────────
+
+function EquipoRow({
+  index, register, control, errors, onRemove,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
   control: ReturnType<typeof useForm<FormData>>['control']
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   onRemove: () => void
-  planes: Array<{ nombre_plan: string; tipo_alta: string }>
 }) {
-  const tipo = useWatch({ control, name: `ventas.${index}.tipo_venta` })
-  const cross = useWatch({ control, name: `ventas.${index}.cross_selling` })
-  const e = errors.ventas?.[index]
-
-  const isEquipo  = tipo === 'EQUIPO' || tipo === 'ACCESORIO'
-  const isLinea   = tipo === 'POSTPAGO' || tipo === 'PREPAGO'
-  const isOtros   = tipo === 'OTROS_FLUJO'
+  const tipoPago = useWatch({ control, name: `ventas.${index}.tipo_pago` })
+  const e        = errors.ventas?.[index]
 
   return (
-    <Card className="p-4 relative">
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-lg leading-none"
-        aria-label="Eliminar venta"
-      >
-        ×
-      </button>
-
-      <div className="grid grid-cols-2 gap-3 mb-3">
+    <div className="space-y-1 py-1.5 border-b border-gray-100 last:border-0">
+      <div className="grid grid-cols-[1fr_140px_110px_90px_auto] gap-1.5 items-end">
+        {/* Producto */}
         <div>
-          <Label>Tipo de venta *</Label>
-          <Select {...register(`ventas.${index}.tipo_venta`)} className="mt-1">
-            <option value="POSTPAGO">Postpago (plan)</option>
-            <option value="PREPAGO">Prepago / Chip</option>
-            <option value="EQUIPO">Equipo</option>
-            <option value="ACCESORIO">Accesorio</option>
-            <option value="OTROS_FLUJO">Otros / Flujo</option>
+          <Input
+            {...register(`ventas.${index}.producto_nombre`)}
+            placeholder="Producto (nombre o búsqueda)"
+            className="h-8 text-xs"
+          />
+          {e?.producto_nombre && <p className="text-red-500 text-[10px]">{e.producto_nombre.message}</p>}
+        </div>
+
+        {/* IMEI */}
+        <div>
+          <Input
+            {...register(`ventas.${index}.imei_serial`)}
+            placeholder="IMEI / Serie"
+            maxLength={50}
+            className="h-8 text-xs"
+          />
+        </div>
+
+        {/* Tipo pago */}
+        <div>
+          <Select {...register(`ventas.${index}.tipo_pago`)} className="h-8 text-xs">
+            <option value="CONTADO">Contado</option>
+            <option value="CUOTAS">A cuotas</option>
           </Select>
         </div>
 
+        {/* Precio venta */}
         <div>
-          <Label>Cliente DNI</Label>
           <Input
-            {...register(`ventas.${index}.cliente_dni`)}
-            placeholder="12345678"
-            maxLength={11}
-            className="mt-1"
+            type="number" step="0.01" min="0"
+            {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })}
+            placeholder="Precio S/"
+            className="h-8 text-xs"
           />
         </div>
+
+        {/* Eliminar */}
+        <button
+          type="button" onClick={onRemove}
+          className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center"
+        >×</button>
       </div>
 
-      {/* ── Líneas postpago / prepago ── */}
-      {isLinea && (
-        <div className="grid grid-cols-2 gap-3 mb-3">
+      {/* Fila extra si es cuotas */}
+      {tipoPago === 'CUOTAS' && (
+        <div className="grid grid-cols-[170px_120px_120px] gap-1.5 pl-2">
           <div>
-            <Label>Plan *</Label>
-            <Select {...register(`ventas.${index}.plan_nombre`)} className="mt-1">
-              <option value="">Selecciona plan</option>
-              {planes.map((p, i) => (
-                <option key={i} value={p.nombre_plan}>
-                  {p.nombre_plan} — {p.tipo_alta}
-                </option>
-              ))}
-            </Select>
-            {e?.plan_nombre && <p className="text-red-500 text-xs mt-1">{e.plan_nombre.message}</p>}
-          </div>
-          <div>
-            <Label>Tipo de alta *</Label>
-            <Select {...register(`ventas.${index}.tipo_alta`)} className="mt-1">
-              <option value="MNP">Portabilidad (MNP)</option>
-              <option value="LN">Alta nueva (LN)</option>
-              <option value="RECUPERO">Recupero</option>
-              <option value="BIFRI">Bifri / Familia</option>
-              <option value="TURISTA">Turista</option>
-              <option value="PAQUETE">Paquete</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Cantidad</Label>
-            <Input
-              type="number"
-              min="1"
-              {...register(`ventas.${index}.cantidad`, { valueAsNumber: true })}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Cobrado unitario (S/)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })}
-              className="mt-1"
-            />
-          </div>
-          <div className="flex items-center gap-4 mt-2">
-            <label className="flex items-center gap-1 text-sm">
-              <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} />
-              Extranjero
-            </label>
-            <label className="flex items-center gap-1 text-sm">
-              <input type="checkbox" {...register(`ventas.${index}.es_remate`)} />
-              Remate
-            </label>
-          </div>
-        </div>
-      )}
-
-      {/* ── Equipo / Accesorio ── */}
-      {isEquipo && (
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="col-span-2">
-            <Label>Producto *</Label>
-            <Input
-              {...register(`ventas.${index}.producto_nombre`)}
-              placeholder="Samsung Galaxy A15 128GB"
-              className="mt-1"
-            />
-            {e?.producto_nombre && <p className="text-red-500 text-xs mt-1">{e.producto_nombre.message}</p>}
-          </div>
-          <div>
-            <Label>IMEI / Serie</Label>
-            <Input
-              {...register(`ventas.${index}.imei_serial`)}
-              placeholder="358461082345678"
-              maxLength={50}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Forma de pago</Label>
-            <Select {...register(`ventas.${index}.tipo_pago`)} className="mt-1">
-              <option value="CONTADO">Contado</option>
-              <option value="CUOTAS">Cuotas (financiera)</option>
-            </Select>
-          </div>
-          <div>
-            <Label>Financiera</Label>
-            <Select {...register(`ventas.${index}.financiera`)} className="mt-1">
+            <Label className="text-[10px]">Financiera</Label>
+            <Select {...register(`ventas.${index}.financiera`)} className="h-7 text-xs mt-0.5">
               <option value="">Ninguna</option>
-              {FINANCIERAS.map((f) => <option key={f} value={f}>{f}</option>)}
+              {FINANCIERAS.map(f => <option key={f} value={f}>{f}</option>)}
             </Select>
           </div>
           <div>
-            <Label>Precio de costo (S/)</Label>
+            <Label className="text-[10px]">Por cobrar financiera (S/)</Label>
             <Input
-              type="number"
-              step="0.01"
-              min="0"
-              {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Por cobrar a financiera (S/)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
+              type="number" step="0.01" min="0"
               {...register(`ventas.${index}.por_cobrar_financiera`, { valueAsNumber: true })}
-              className="mt-1"
+              className="h-7 text-xs mt-0.5"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px]">Costo snap (S/)</Label>
+            <Input
+              type="number" step="0.01" min="0"
+              {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })}
+              className="h-7 text-xs mt-0.5"
             />
           </div>
         </div>
       )}
 
-      {/* ── Otros flujo ── */}
-      {isOtros && (
-        <div className="mb-3">
-          <Label>Descripción / Motivo</Label>
-          <Input
-            {...register(`ventas.${index}.subtipo`)}
-            placeholder="Devolución, recarga manual, etc."
-            className="mt-1"
-          />
-        </div>
-      )}
-
-      {/* ── Campos comunes ── */}
-      <div className="grid grid-cols-2 gap-3 border-t pt-3 mt-2">
-        <div>
-          <Label>Monto total (S/) *</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })}
-            className="mt-1"
-          />
-          {e?.monto_total && <p className="text-red-500 text-xs mt-1">{e.monto_total.message}</p>}
-        </div>
-        <div>
-          <Label>Efectivo recibido (S/)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })}
-            className="mt-1"
-          />
-        </div>
-
-        <div className="col-span-2 flex items-center gap-4">
-          <label className="flex items-center gap-1 text-sm">
-            <input type="checkbox" {...register(`ventas.${index}.cross_selling`)} />
-            Cross-selling (apoyo a otra tienda)
-          </label>
-        </div>
-
-        {cross && (
-          <div>
-            <Label>Tienda destino</Label>
-            <Select {...register(`ventas.${index}.tienda_destino`)} className="mt-1">
-              <option value="">Selecciona</option>
-              {TIENDAS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </Select>
-          </div>
-        )}
+      {/* DNI cliente */}
+      <div className="pl-2">
+        <Input
+          {...register(`ventas.${index}.cliente_dni`)}
+          placeholder="DNI cliente (opcional)"
+          maxLength={15}
+          className="h-7 text-xs w-48"
+        />
       </div>
-    </Card>
+
+      {/* Monto total — para equipos = precio_venta */}
+      <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
+      <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
+    </div>
   )
 }
 
-// ── Página principal ─────────────────────────────────────────────────────────
+// ── Componente: fila compacta para OTROS_FLUJO ───────────────────────────────
+
+function OtroRow({
+  index, register, errors, onRemove,
+}: {
+  index: number
+  register: ReturnType<typeof useForm<FormData>>['register']
+  errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
+  onRemove: () => void
+}) {
+  const e = errors.ventas?.[index]
+  return (
+    <div className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+      <div>
+        <Input
+          {...register(`ventas.${index}.subtipo`)}
+          placeholder="Descripción / Motivo"
+          className="h-8 text-xs"
+        />
+      </div>
+      <div>
+        <Input
+          type="number" step="0.01" min="0"
+          {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })}
+          placeholder="S/"
+          className="h-8 text-xs"
+        />
+        {e?.monto_total && <p className="text-red-500 text-[10px]">{e.monto_total.message}</p>}
+      </div>
+      <button
+        type="button" onClick={onRemove}
+        className="text-red-400 hover:text-red-600 font-bold text-lg leading-none"
+      >×</button>
+      <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
+    </div>
+  )
+}
+
+// ── Sección de ventas (con botón de agregar) ──────────────────────────────────
+
+function VentasSection({ title, count, addLabel, onAdd, children }: {
+  title: string; count: number; addLabel: string; onAdd: () => void; children: React.ReactNode
+}) {
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
+        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+          {title}
+          {count > 0 && (
+            <span className="ml-2 bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold">
+              {count}
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+        >
+          <span className="text-base leading-none">+</span> {addLabel}
+        </button>
+      </div>
+      <div className="px-3 py-1 min-h-[40px]">
+        {count === 0
+          ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros. Haz clic en &ldquo;{addLabel}&rdquo;</p>
+          : children
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Página principal ──────────────────────────────────────────────────────────
 
 export function NuevoReportePage() {
-  const navigate   = useNavigate()
+  const navigate    = useNavigate()
   const { usuario } = useAuth()
   const crear       = useCrearReporte()
   const { data: planesData = [] } = usePlanesComisiones()
@@ -343,26 +395,17 @@ export function NuevoReportePage() {
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: {
-        agente_id:          usuario?.id ?? 0,
-        tienda_id:          usuario?.tienda_id ?? '',
-        fecha:              today,
-        caja_inicial:       0,
-        yape:               0,
-        bipay:              0,
-        transferencia:      0,
-        recarga_bipay:      0,
-        pago_servicio:      0,
-        pago_krece:         0,
-        tickets_tusamy:     0,
-        retiro_bipay:       0,
-        efectivo_entregado: 0,
-        total_salidas:      0,
-        destino_efectivo:   'TIENDA',
-        ventas:             [],
+        agente_id: usuario?.id ?? 0, tienda_id: usuario?.tienda_id ?? '',
+        fecha: today, nombre_cubre: '',
+        caja_inicial: 0, yape: 0, bipay: 0, transferencia: 0,
+        retiro_bipay: 0, recarga_bipay: 0, pago_servicio: 0,
+        pago_krece: 0, tickets_tusamy: 0,
+        efectivo_entregado: 0, total_salidas: 0,
+        destino_efectivo: 'TIENDA', observaciones: '', obs_dia: '',
+        ventas: [],
       },
     })
 
-  // Sincronizar agente_id y tienda_id cuando carga el usuario
   useEffect(() => {
     if (usuario) {
       setValue('agente_id', usuario.id)
@@ -372,19 +415,68 @@ export function NuevoReportePage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'ventas' })
 
-  // Totales calculados en tiempo real
-  const ventas        = watch('ventas')
-  const caja_inicial  = watch('caja_inicial')
-  const total_salidas = watch('total_salidas')
-  const yape          = watch('yape')
-  const bipay         = watch('bipay')
-  const transferencia = watch('transferencia')
-  const efectivo_entregado = watch('efectivo_entregado')
+  // ── Salidas de efectivo (estado local) ─────────────────────────────────────
+  const [salidaItems, setSalidaItems] = useState<SalidaItem[]>([])
 
-  const total_calculado   = ventas.reduce((acc, v) => acc + (v.monto_total || 0), 0)
-  const suma_efectivo_v   = ventas.reduce((acc, v) => acc + (v.efectivo_inicial || 0), 0)
-  const efectivo_esperado = suma_efectivo_v + (caja_inicial || 0) - (total_salidas || 0)
-  const diferencia        = (efectivo_entregado || 0) - efectivo_esperado
+  const agregarSalida = () =>
+    setSalidaItems(prev => [...prev, { id: crypto.randomUUID(), tipo: 'Pasaje', monto: 0, motivo: '' }])
+
+  const actualizarSalida = (id: string, campo: keyof SalidaItem, valor: string | number) =>
+    setSalidaItems(prev => prev.map(s => s.id === id ? { ...s, [campo]: valor } : s))
+
+  const eliminarSalida = (id: string) =>
+    setSalidaItems(prev => prev.filter(s => s.id !== id))
+
+  // Sincronizar total_salidas con el form
+  useEffect(() => {
+    const total = salidaItems.reduce((acc, s) => acc + (Number(s.monto) || 0), 0)
+    setValue('total_salidas', Math.round(total * 100) / 100)
+  }, [salidaItems, setValue])
+
+  // ── Totales en tiempo real ─────────────────────────────────────────────────
+  const ventas            = watch('ventas')
+  const caja_inicial      = watch('caja_inicial')      || 0
+  const total_salidas     = watch('total_salidas')     || 0
+  const yape              = watch('yape')              || 0
+  const bipay             = watch('bipay')             || 0
+  const transferencia     = watch('transferencia')     || 0
+  const retiro_bipay      = watch('retiro_bipay')      || 0
+  const efectivo_entregado= watch('efectivo_entregado')|| 0
+  const destino           = watch('destino_efectivo')
+
+  // Para POSTPAGO/PREPAGO: cobrado_unitario × cantidad = monto_total
+  // Sincronizamos monto_total y efectivo_inicial en tiempo real
+  useEffect(() => {
+    ventas.forEach((v, i) => {
+      if (v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO') {
+        const monto = (v.cobrado_unitario || 0) * (v.cantidad || 1)
+        if (v.monto_total !== monto) setValue(`ventas.${i}.monto_total`, monto)
+        if (v.efectivo_inicial !== monto) setValue(`ventas.${i}.efectivo_inicial`, monto)
+      }
+      if (v.tipo_venta === 'EQUIPO' || v.tipo_venta === 'ACCESORIO') {
+        const precio = v.precio_venta || 0
+        if (v.monto_total !== precio) setValue(`ventas.${i}.monto_total`, precio)
+        if (v.efectivo_inicial !== precio) setValue(`ventas.${i}.efectivo_inicial`, precio)
+      }
+    })
+  }, [ventas, setValue])
+
+  const ventasMap         = fields.map((f, i) => ({ ...f, idx: i, tipo: ventas[i]?.tipo_venta }))
+  const postpagoRows      = ventasMap.filter(v => v.tipo === 'POSTPAGO')
+  const prepagoRows       = ventasMap.filter(v => v.tipo === 'PREPAGO')
+  const equipoRows        = ventasMap.filter(v => v.tipo === 'EQUIPO' || v.tipo === 'ACCESORIO')
+  const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO')
+
+  const totalVentas       = ventas.reduce((acc, v) => acc + (v.monto_total || 0), 0)
+  const totalPostpago     = ventas.filter(v => v.tipo_venta === 'POSTPAGO').reduce((a, v) => a + (v.monto_total||0), 0)
+  const totalPrepago      = ventas.filter(v => v.tipo_venta === 'PREPAGO').reduce((a, v) => a + (v.monto_total||0), 0)
+  const totalEquipos      = ventas.filter(v => v.tipo_venta === 'EQUIPO'||v.tipo_venta === 'ACCESORIO').reduce((a,v)=>a+(v.monto_total||0),0)
+  const totalOtros        = ventas.filter(v => v.tipo_venta === 'OTROS_FLUJO').reduce((a, v) => a + (v.monto_total||0), 0)
+
+  const sumaEfectivoVentas = ventas.reduce((acc, v) => acc + (v.efectivo_inicial || 0), 0)
+  const efectivo_esperado  = sumaEfectivoVentas + caja_inicial - total_salidas
+  const diferencia         = efectivo_entregado - efectivo_esperado
+  const requiereAprobacion = Math.abs(diferencia) > 10
 
   const onSubmit = (data: FormData) => {
     crear.mutate(
@@ -394,10 +486,10 @@ export function NuevoReportePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <PageHeader
         title="Nuevo Reporte Diario"
-        description="Registra las ventas y el cierre de caja del día."
+        description="Cierre de caja y ventas del día."
         actions={
           <Button variant="outline" onClick={() => navigate('/reportes')}>
             Cancelar
@@ -405,200 +497,397 @@ export function NuevoReportePage() {
         }
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-        {/* ── Cabecera del reporte ── */}
-        <Card className="p-5">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Datos del reporte</h2>
-          <div className="grid grid-cols-2 gap-4">
+        {/* ── Cabecera ── */}
+        <Card className="p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <Label htmlFor="fecha">Fecha *</Label>
-              <Input id="fecha" type="date" {...register('fecha')} className="mt-1" />
-              {errors.fecha && <p className="text-red-500 text-xs mt-1">{errors.fecha.message}</p>}
+              <Label htmlFor="fecha" className="text-xs font-medium text-gray-600">Fecha *</Label>
+              <Input id="fecha" type="date" {...register('fecha')} className="mt-1 h-8 text-sm" />
+              {errors.fecha && <p className="text-red-500 text-[10px] mt-0.5">{errors.fecha.message}</p>}
             </div>
             <div>
-              <Label htmlFor="tienda_id">Tienda *</Label>
-              <Select id="tienda_id" {...register('tienda_id')} className="mt-1">
-                <option value="">Selecciona</option>
-                {TIENDAS.map((t) => <option key={t} value={t}>{t}</option>)}
+              <Label htmlFor="tienda_id" className="text-xs font-medium text-gray-600">Tienda *</Label>
+              <Select id="tienda_id" {...register('tienda_id')} className="mt-1 h-8 text-sm">
+                <option value="">— Selecciona —</option>
+                {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
               </Select>
-              {errors.tienda_id && <p className="text-red-500 text-xs mt-1">{errors.tienda_id.message}</p>}
+              {errors.tienda_id && <p className="text-red-500 text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
             </div>
             <div>
-              <Label htmlFor="agente_id">ID Agente *</Label>
-              <Input
-                id="agente_id"
-                type="number"
-                {...register('agente_id', { valueAsNumber: true })}
-                className="mt-1"
-              />
-              {errors.agente_id && <p className="text-red-500 text-xs mt-1">{errors.agente_id.message}</p>}
+              <Label htmlFor="nombre_cubre" className="text-xs font-medium text-gray-600">Cubre tienda (si aplica)</Label>
+              <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Nombre" className="mt-1 h-8 text-sm" />
             </div>
-            <div>
-              <Label htmlFor="nombre_cubre">Nombre cubre tienda (si aplica)</Label>
-              <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Juan Pérez" className="mt-1" />
-            </div>
-            <div>
-              <Label htmlFor="caja_inicial">Caja inicial (S/) *</Label>
-              <Input
-                id="caja_inicial"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('caja_inicial', { valueAsNumber: true })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="total_salidas">Total salidas / adelantos (S/)</Label>
-              <Input
-                id="total_salidas"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('total_salidas', { valueAsNumber: true })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="destino_efectivo">Destino del efectivo</Label>
-              <Select id="destino_efectivo" {...register('destino_efectivo')} className="mt-1">
-                <option value="TIENDA">En tienda</option>
-                <option value="ENTREGADO">Entregado a gerencia</option>
-                <option value="EN_CAJA">En caja central</option>
-              </Select>
-            </div>
-          </div>
-        </Card>
-
-        {/* ── Medios de cobro ── */}
-        <Card className="p-5">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Medios de cobro</h2>
-          <div className="grid grid-cols-3 gap-4">
-            {([
-              ['yape',           'Yape / Plin (S/)'],
-              ['bipay',          'Bipay (S/)'],
-              ['transferencia',  'Transferencia (S/)'],
-              ['recarga_bipay',  'Recarga Bipay (S/)'],
-              ['pago_servicio',  'Pago servicios (S/)'],
-              ['pago_krece',     'Krece (S/)'],
-              ['tickets_tusamy', 'Tickets Tusamy (S/)'],
-              ['retiro_bipay',   'Retiro Bipay (S/)'],
-            ] as const).map(([field, label]) => (
-              <div key={field}>
-                <Label>{label}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register(field as keyof FormData, { valueAsNumber: true })}
-                  className="mt-1"
-                />
+            <div className="flex items-end">
+              <div className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1.5 w-full">
+                <span className="text-gray-400">Agente:</span>{' '}
+                <span className="font-medium text-gray-700">{usuario?.nombre ?? '—'}</span>
+                <input type="hidden" {...register('agente_id', { valueAsNumber: true })} />
               </div>
-            ))}
+            </div>
           </div>
         </Card>
 
-        {/* ── Ventas ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-gray-800">
-              Ventas del día
-              {fields.length > 0 && (
-                <span className="ml-2 text-sm text-gray-500 font-normal">({fields.length} items)</span>
-              )}
-            </h2>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => append({ ...VENTA_DEFAULT })}
-            >
-              + Agregar venta
-            </Button>
-          </div>
+        {/* ── Cuerpo: dos columnas ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,380px)] gap-4 items-start">
 
-          {fields.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center text-gray-400 text-sm">
-              Sin ventas registradas. Haz clic en &ldquo;+ Agregar venta&rdquo; para comenzar.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <VentaCard
-                  key={field.id}
-                  index={index}
-                  register={register}
-                  control={control}
-                  errors={errors}
-                  onRemove={() => remove(index)}
-                  planes={planesData}
+          {/* ═══════════ COLUMNA IZQUIERDA: Ventas ═══════════ */}
+          <div className="space-y-3">
+
+            {/* Postpago */}
+            <VentasSection
+              title="Ventas Postpago"
+              count={postpagoRows.length}
+              addLabel="Agregar Postpago"
+              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' })}
+            >
+              <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span>
+                <span>Cobrado</span><span>Opciones</span><span />
+              </div>
+              {postpagoRows.map(v => (
+                <LineaRow
+                  key={v.id} index={v.idx} register={register} control={control}
+                  errors={errors} tipo="POSTPAGO" planes={planesData} onRemove={() => remove(v.idx)}
                 />
               ))}
-            </div>
-          )}
+              {postpagoRows.length > 0 && (
+                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
+                  Subtotal: <span className="text-blue-700">S/ {totalPostpago.toFixed(2)}</span>
+                </div>
+              )}
+            </VentasSection>
+
+            {/* Prepago */}
+            <VentasSection
+              title="Ventas Prepago / Chips"
+              count={prepagoRows.length}
+              addLabel="Agregar Prepago"
+              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'PREPAGO', tipo_alta: 'LN' })}
+            >
+              <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span>
+                <span>Cobrado</span><span>Opciones</span><span />
+              </div>
+              {prepagoRows.map(v => (
+                <LineaRow
+                  key={v.id} index={v.idx} register={register} control={control}
+                  errors={errors} tipo="PREPAGO" planes={planesData} onRemove={() => remove(v.idx)}
+                />
+              ))}
+              {prepagoRows.length > 0 && (
+                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
+                  Subtotal: <span className="text-blue-700">S/ {totalPrepago.toFixed(2)}</span>
+                </div>
+              )}
+            </VentasSection>
+
+            {/* Equipos y accesorios */}
+            <VentasSection
+              title="Equipos y Accesorios"
+              count={equipoRows.length}
+              addLabel="Vender de Stock"
+              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'EQUIPO' })}
+            >
+              {equipoRows.map(v => (
+                <EquipoRow
+                  key={v.id} index={v.idx} register={register} control={control}
+                  errors={errors} onRemove={() => remove(v.idx)}
+                />
+              ))}
+              {equipoRows.length > 0 && (
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => append({ ...VENTA_DEFAULT, tipo_venta: 'ACCESORIO' })}
+                    className="text-xs text-purple-600 hover:text-purple-800 font-medium"
+                  >
+                    + Agregar Accesorio
+                  </button>
+                  <span className="text-xs font-semibold text-gray-700">
+                    Subtotal: <span className="text-blue-700">S/ {totalEquipos.toFixed(2)}</span>
+                  </span>
+                </div>
+              )}
+            </VentasSection>
+
+            {/* Otros flujo */}
+            <VentasSection
+              title="Otros Ingresos (Flujo)"
+              count={otrosRows.length}
+              addLabel="Agregar"
+              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'OTROS_FLUJO' })}
+            >
+              {otrosRows.map(v => (
+                <OtroRow
+                  key={v.id} index={v.idx} register={register}
+                  errors={errors} onRemove={() => remove(v.idx)}
+                />
+              ))}
+              {otrosRows.length > 0 && (
+                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
+                  Subtotal: <span className="text-blue-700">S/ {totalOtros.toFixed(2)}</span>
+                </div>
+              )}
+            </VentasSection>
+
+            {/* ── Consolidado de ventas ── */}
+            <Card className="p-3 bg-slate-800 text-white">
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-2 font-medium">Total Sistema Consolidado</p>
+              <div className="grid grid-cols-4 gap-2 text-center text-xs mb-3">
+                {[
+                  { label: 'Postpago', val: totalPostpago },
+                  { label: 'Prepago',  val: totalPrepago  },
+                  { label: 'Equipos',  val: totalEquipos  },
+                  { label: 'Otros',    val: totalOtros    },
+                ].map(({ label, val }) => (
+                  <div key={label} className="bg-slate-700 rounded px-2 py-1">
+                    <div className="text-slate-400 text-[10px]">{label}</div>
+                    <div className="font-semibold">S/ {val.toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center">
+                <span className="text-slate-400 text-xs">TOTAL DEL DÍA</span>
+                <div className="font-mono text-cyan-400 text-3xl font-bold">S/ {totalVentas.toFixed(2)}</div>
+              </div>
+            </Card>
+
+          </div>
+
+          {/* ═══════════ COLUMNA DERECHA: Caja y Dinero ═══════════ */}
+          <div className="space-y-3 lg:sticky lg:top-4">
+
+            {/* Caja inicial */}
+            <Card className="p-3">
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Caja Inicial (Sencillo)</Label>
+              <Input
+                id="caja_inicial" type="number" step="0.01" min="0"
+                {...register('caja_inicial', { valueAsNumber: true })}
+                className="mt-1.5 h-9 text-sm font-medium"
+                placeholder="S/ 0.00"
+              />
+            </Card>
+
+            {/* Medios no físicos */}
+            <Card className="p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dinero No Físico</p>
+              {([
+                ['yape',          'Yape / Plin'],
+                ['bipay',         'Bipay'],
+                ['transferencia', 'Transferencia'],
+              ] as const).map(([field, label]) => (
+                <div key={field} className="flex items-center gap-2">
+                  <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
+                  <Input
+                    type="number" step="0.01" min="0"
+                    {...register(field, { valueAsNumber: true })}
+                    className="h-7 text-xs text-right"
+                    placeholder="0.00"
+                  />
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t pt-2">
+                <Label className="text-xs text-red-600 w-28 shrink-0 font-medium">Retiro Bipay</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  {...register('retiro_bipay', { valueAsNumber: true })}
+                  className="h-7 text-xs text-right border-red-200 focus:border-red-400"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="text-right text-xs text-gray-500 pt-1">
+                Total no físico:{' '}
+                <span className="font-semibold text-gray-700">
+                  S/ {(yape + bipay + transferencia - retiro_bipay).toFixed(2)}
+                </span>
+              </div>
+            </Card>
+
+            {/* Ingresos fijos */}
+            <Card className="p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Ingresos Fijos</p>
+              {([
+                ['recarga_bipay', 'Recarga Bipay'],
+                ['pago_servicio', 'Pago de Servicio'],
+                ['pago_krece',    'Pago Krece'],
+                ['tickets_tusamy','Tickets Tusamy'],
+              ] as const).map(([field, label]) => (
+                <div key={field} className="flex items-center gap-2">
+                  <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
+                  <Input
+                    type="number" step="0.01" min="0"
+                    {...register(field, { valueAsNumber: true })}
+                    className="h-7 text-xs text-right"
+                    placeholder="0.00"
+                  />
+                </div>
+              ))}
+            </Card>
+
+            {/* Salidas de efectivo */}
+            <Card className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Salidas de Efectivo</p>
+                <button
+                  type="button" onClick={agregarSalida}
+                  className="text-xs text-red-500 border border-red-300 rounded px-2 py-0.5 hover:bg-red-50 font-medium"
+                >
+                  + Agregar Salida
+                </button>
+              </div>
+              {salidaItems.length === 0
+                ? <p className="text-[11px] text-gray-400 italic text-center py-1">Sin salidas registradas</p>
+                : (
+                  <div className="space-y-1.5">
+                    {salidaItems.map(s => (
+                      <div key={s.id} className="grid grid-cols-[90px_70px_1fr_auto] gap-1 items-center">
+                        <select
+                          value={s.tipo}
+                          onChange={e => actualizarSalida(s.id, 'tipo', e.target.value)}
+                          className="h-7 text-xs rounded border border-gray-300 px-1"
+                        >
+                          {TIPOS_SALIDA.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <input
+                          type="number" step="0.01" min="0" value={s.monto || ''}
+                          onChange={e => actualizarSalida(s.id, 'monto', parseFloat(e.target.value) || 0)}
+                          placeholder="S/"
+                          className="h-7 text-xs rounded border border-gray-300 px-2 text-right"
+                        />
+                        <input
+                          type="text" value={s.motivo}
+                          onChange={e => actualizarSalida(s.id, 'motivo', e.target.value)}
+                          placeholder="Motivo"
+                          className="h-7 text-xs rounded border border-gray-300 px-2"
+                        />
+                        <button
+                          type="button" onClick={() => eliminarSalida(s.id)}
+                          className="text-red-400 hover:text-red-600 font-bold text-sm leading-none"
+                        >×</button>
+                      </div>
+                    ))}
+                    <div className="text-right text-xs font-semibold text-red-600 pt-1">
+                      Total salidas: S/ {total_salidas.toFixed(2)}
+                    </div>
+                  </div>
+                )
+              }
+            </Card>
+
+            {/* ── Cuadre Final ── */}
+            <Card className="p-3 border-2 border-green-400 bg-green-50">
+              <p className="text-xs font-bold text-green-800 uppercase tracking-wide mb-3">Cuadre Final</p>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">Efectivo esperado en cajón:</span>
+                  <span className="font-semibold text-gray-800">S/ {efectivo_esperado.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs font-medium text-gray-700">Mi Efectivo (entrego):</Label>
+                  <Input
+                    type="number" step="0.01" min="0"
+                    {...register('efectivo_entregado', { valueAsNumber: true })}
+                    className="h-8 w-32 text-sm text-right font-semibold"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center pt-1 border-t border-green-200">
+                  <span className="text-xs font-bold text-gray-700">Diferencia:</span>
+                  <span className={`font-mono font-bold text-base ${
+                    Math.abs(diferencia) < 0.01 ? 'text-green-700'
+                    : diferencia < 0             ? 'text-red-600'
+                                                 : 'text-yellow-600'
+                  }`}>
+                    S/ {diferencia.toFixed(2)}
+                    {requiereAprobacion && ' ⚠'}
+                  </span>
+                </div>
+
+                {requiereAprobacion && (
+                  <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    Diferencia mayor a S/10 — el reporte quedará en espera de aprobación.
+                  </p>
+                )}
+              </div>
+
+              {/* Destino del efectivo */}
+              <div className="mt-3 space-y-1.5">
+                <p className="text-xs font-medium text-gray-700">Destino del efectivo:</p>
+                {[
+                  { value: 'ENTREGADO', label: 'Lo Entregué (a gerencia / depósito)' },
+                  { value: 'TIENDA',    label: 'En Tienda (queda en caja)' },
+                  { value: 'EN_CAJA',   label: 'En Caja Central' },
+                ].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-xs text-gray-700">
+                    <input
+                      type="radio"
+                      value={opt.value}
+                      {...register('destino_efectivo')}
+                      className="w-3.5 h-3.5 accent-green-600"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+
+              {/* Observaciones del destino — solo cuando ENTREGADO */}
+              {destino === 'ENTREGADO' && (
+                <div className="mt-2">
+                  <Label className="text-xs text-gray-600">A quién / referencia de depósito *</Label>
+                  <Input
+                    {...register('observaciones')}
+                    placeholder="Nombre o número de operación"
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+              )}
+            </Card>
+
+            {/* Observaciones del día */}
+            <Card className="p-3">
+              <Label className="text-xs font-semibold text-gray-700">Observaciones del Día</Label>
+              <textarea
+                {...register('obs_dia')}
+                rows={2}
+                className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)"
+              />
+            </Card>
+
+          </div>
         </div>
 
-        {/* ── Resumen calculado ── */}
-        <Card className="p-5 bg-gray-50">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Resumen de cierre</h2>
-          <div className="grid grid-cols-2 gap-y-2 text-sm">
-            <span className="text-gray-600">Total ventas calculado:</span>
-            <span className="font-medium">S/ {total_calculado.toFixed(2)}</span>
-
-            <span className="text-gray-600">Efectivo esperado en caja:</span>
-            <span className="font-medium">S/ {efectivo_esperado.toFixed(2)}</span>
-
-            <span className="text-gray-600">No-efectivo (Yape + Bipay + Transf.):</span>
-            <span className="font-medium">
-              S/ {((yape || 0) + (bipay || 0) + (transferencia || 0)).toFixed(2)}
-            </span>
-
-            <span className="text-gray-600">Efectivo entregado:</span>
-            <div>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('efectivo_entregado', { valueAsNumber: true })}
-                className="w-36"
-              />
-            </div>
-
-            <span className="text-gray-600 font-medium">Diferencia:</span>
-            <span className={`font-bold text-base ${Math.abs(diferencia) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
-              S/ {diferencia.toFixed(2)}
-              {Math.abs(diferencia) > 10 && ' ⚠ Requiere aprobación'}
-            </span>
-          </div>
-        </Card>
-
-        {/* ── Observaciones ── */}
-        <Card className="p-5">
-          <Label htmlFor="observaciones">Observaciones / Notas del día</Label>
-          <textarea
-            id="observaciones"
-            {...register('observaciones')}
-            rows={3}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Anotaciones relevantes del día..."
-          />
-        </Card>
-
+        {/* ── Error de envío ── */}
         {crear.isError && (
-          <p className="text-red-500 text-sm">
+          <p className="text-red-500 text-sm border border-red-200 bg-red-50 rounded px-3 py-2">
             {(crear.error as { response?: { data?: { error?: string } } })?.response?.data?.error
-              ?? 'Error al guardar el reporte. Verifica los datos.'}
+              ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
           </p>
         )}
 
-        <div className="flex gap-3 pb-6">
-          <Button type="submit" disabled={crear.isPending} className="flex-1">
-            {crear.isPending ? 'Guardando reporte...' : 'Guardar reporte'}
+        {/* ── Botón principal ── */}
+        <div className="flex gap-3 pb-8">
+          <Button
+            type="submit"
+            disabled={crear.isPending}
+            className="flex-1 h-11 text-base font-semibold bg-cyan-600 hover:bg-cyan-700 text-white"
+          >
+            {crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/reportes')} disabled={crear.isPending}>
+          <Button
+            type="button" variant="outline"
+            onClick={() => navigate('/reportes')}
+            disabled={crear.isPending}
+          >
             Cancelar
           </Button>
         </div>
+
       </form>
     </div>
   )
