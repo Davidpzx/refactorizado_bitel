@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
-import type { PaginationState } from '@tanstack/react-table'
+import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useClientes, useEliminarCliente } from '../../hooks/useClientes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
@@ -11,36 +10,69 @@ import { Badge } from '../../components/ui/badge'
 import { ClienteForm } from './ClienteForm'
 import type { Cliente } from '../../types/cliente'
 
-const col = createColumnHelper<Cliente>()
-
-const tipoDocBadge = (tipo: Cliente['tipo_documento']) => {
-  const map = { DNI: 'default', RUC: 'warning', CE: 'outline', PAS: 'outline' } as const
-  return <Badge variant={map[tipo] ?? 'default'}>{tipo}</Badge>
+type BadgeVariant = 'default' | 'warning' | 'outline'
+const tipoVariant: Record<Cliente['tipo_documento'], BadgeVariant> = {
+  DNI: 'default',
+  RUC: 'warning',
+  CE:  'outline',
+  PAS: 'outline',
 }
 
-const columns = [
-  col.accessor('dni_ruc', { header: 'DNI / RUC' }),
-  col.accessor('nombre',  { header: 'Nombre' }),
-  col.accessor('tipo_documento', {
-    header: 'Tipo',
-    cell: (info) => tipoDocBadge(info.getValue()),
-  }),
-  col.accessor('telefono', {
-    header: 'Teléfono',
-    cell: (info) => info.getValue() ?? '—',
-  }),
-  col.accessor('creado_en', {
-    header: 'Registrado',
-    cell: (info) => info.getValue()?.slice(0, 10) ?? '—',
-  }),
-]
+function getColumns(
+  onEditar: (c: Cliente) => void,
+  onEliminar: (c: Cliente) => void,
+  eliminando: boolean,
+): ColumnDef<Cliente>[] {
+  return [
+    { accessorKey: 'dni_ruc', header: 'DNI / RUC' },
+    { accessorKey: 'nombre',  header: 'Nombre' },
+    {
+      accessorKey: 'tipo_documento',
+      header: 'Tipo',
+      cell: ({ row }) => (
+        <Badge variant={tipoVariant[row.original.tipo_documento]}>
+          {row.original.tipo_documento}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'telefono',
+      header: 'Teléfono',
+      cell: ({ row }) => row.original.telefono ?? '—',
+    },
+    {
+      accessorKey: 'creado_en',
+      header: 'Registrado',
+      cell: ({ row }) => row.original.creado_en?.slice(0, 10) ?? '—',
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
+            Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onEliminar(row.original)}
+            disabled={eliminando}
+          >
+            Eliminar
+          </Button>
+        </div>
+      ),
+    },
+  ]
+}
 
 export function ClientesPage() {
-  const [search, setSearch]     = useState('')
-  const [query, setQuery]       = useState('')
+  const [search, setSearch]         = useState('')
+  const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editando, setEditando]  = useState<Cliente | undefined>()
+  const [editando, setEditando]     = useState<Cliente | undefined>()
 
   const { data, isLoading } = useClientes({
     q:        query || undefined,
@@ -50,46 +82,34 @@ export function ClientesPage() {
 
   const eliminar = useEliminarCliente()
 
-  const abrirCrear = () => { setEditando(undefined); setDialogOpen(true) }
-  const abrirEditar = (cliente: Cliente) => { setEditando(cliente); setDialogOpen(true) }
-  const cerrar = () => setDialogOpen(false)
+  const abrirCrear  = () => { setEditando(undefined); setDialogOpen(true) }
+  const abrirEditar = (c: Cliente) => { setEditando(c); setDialogOpen(true) }
+  const cerrar      = () => setDialogOpen(false)
 
-  const handleEliminar = (cliente: Cliente) => {
-    if (!confirm(`¿Eliminar al cliente ${cliente.nombre}?`)) return
-    eliminar.mutate(cliente.id)
+  const handleEliminar = (c: Cliente) => {
+    if (!confirm(`¿Eliminar al cliente ${c.nombre}?`)) return
+    eliminar.mutate(c.id)
   }
 
-  const columnasFinal = [
-    ...columns,
-    {
-      id: 'acciones',
-      header: 'Acciones',
-      cell: ({ row }: { row: { original: Cliente } }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => abrirEditar(row.original)}>
-            Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleEliminar(row.original)}
-            disabled={eliminar.isPending}
-          >
-            Eliminar
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  const buscar = () => {
+    setQuery(search)
+    setPagination((p) => ({ ...p, pageIndex: 0 }))
+  }
+
+  const limpiar = () => {
+    setSearch('')
+    setQuery('')
+    setPagination((p) => ({ ...p, pageIndex: 0 }))
+  }
+
+  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
 
   return (
     <div>
       <PageHeader
         title="Clientes"
         description="Base de clientes del sistema CRM."
-        actions={
-          <Button onClick={abrirCrear}>+ Nuevo cliente</Button>
-        }
+        actions={<Button onClick={abrirCrear}>+ Nuevo cliente</Button>}
       />
 
       <div className="flex items-center gap-3 mb-4">
@@ -97,33 +117,16 @@ export function ClientesPage() {
           placeholder="Buscar por DNI/RUC o nombre..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              setQuery(search)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button
-          variant="outline"
-          onClick={() => { setQuery(search); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-        >
-          Buscar
-        </Button>
-        {query && (
-          <Button
-            variant="ghost"
-            onClick={() => { setSearch(''); setQuery(''); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-          >
-            Limpiar
-          </Button>
-        )}
+        <Button variant="outline" onClick={buscar}>Buscar</Button>
+        {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </div>
 
       <DataTable
         data={data?.data ?? []}
-        columns={columnasFinal}
+        columns={columns}
         pageCount={data?.last_page ?? 0}
         pagination={pagination}
         onPaginationChange={setPagination}
@@ -137,11 +140,7 @@ export function ClientesPage() {
         title={editando ? 'Editar cliente' : 'Nuevo cliente'}
         maxWidth="md"
       >
-        <ClienteForm
-          cliente={editando}
-          onSuccess={() => { cerrar() }}
-          onCancel={cerrar}
-        />
+        <ClienteForm cliente={editando} onSuccess={cerrar} onCancel={cerrar} />
       </Dialog>
     </div>
   )

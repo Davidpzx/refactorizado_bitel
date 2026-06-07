@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
-import type { PaginationState } from '@tanstack/react-table'
+import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useAgentes, useEliminarAgente } from '../../hooks/useAgentes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
@@ -11,39 +10,65 @@ import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
 import type { Agente } from '../../types/agente'
 
-const col = createColumnHelper<Agente>()
-
-const estadoBadge = (estado: Agente['estado']) => {
-  const map = { ACTIVO: 'success', INACTIVO: 'warning', BAJA: 'destructive' } as const
-  return <Badge variant={map[estado]}>{estado}</Badge>
+type BadgeVariant = 'success' | 'warning' | 'destructive'
+const estadoVariant: Record<Agente['estado'], BadgeVariant> = {
+  ACTIVO:   'success',
+  INACTIVO: 'warning',
+  BAJA:     'destructive',
 }
 
-const columns = [
-  col.accessor('dni',        { header: 'DNI' }),
-  col.accessor('nombres',    { header: 'Nombres' }),
-  col.accessor('tienda_base',{ header: 'Tienda' }),
-  col.accessor('sueldo_base',{
-    header: 'Sueldo',
-    cell: (info) => `S/ ${parseFloat(info.getValue()).toFixed(2)}`,
-  }),
-  col.accessor('estado', {
-    header: 'Estado',
-    cell: (info) => estadoBadge(info.getValue()),
-  }),
-  col.accessor('fecha_ingreso', { header: 'Ingreso' }),
-  col.display({
-    id: 'acciones',
-    header: 'Acciones',
-    cell: () => null, // se reemplaza en AgentesPage con acceso al row
-  }),
-]
+function getColumns(
+  onEditar: (a: Agente) => void,
+  onEliminar: (a: Agente) => void,
+  eliminando: boolean,
+): ColumnDef<Agente>[] {
+  return [
+    { accessorKey: 'dni',         header: 'DNI' },
+    { accessorKey: 'nombres',     header: 'Nombres' },
+    { accessorKey: 'tienda_base', header: 'Tienda' },
+    {
+      accessorKey: 'sueldo_base',
+      header: 'Sueldo',
+      cell: ({ row }) => `S/ ${parseFloat(row.original.sueldo_base).toFixed(2)}`,
+    },
+    {
+      accessorKey: 'estado',
+      header: 'Estado',
+      cell: ({ row }) => (
+        <Badge variant={estadoVariant[row.original.estado]}>
+          {row.original.estado}
+        </Badge>
+      ),
+    },
+    { accessorKey: 'fecha_ingreso', header: 'Ingreso' },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
+            Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onEliminar(row.original)}
+            disabled={eliminando}
+          >
+            Eliminar
+          </Button>
+        </div>
+      ),
+    },
+  ]
+}
 
 export function AgentesPage() {
-  const [search, setSearch]     = useState('')
-  const [query, setQuery]       = useState('')
+  const [search, setSearch]         = useState('')
+  const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editando, setEditando]  = useState<Agente | undefined>()
+  const [editando, setEditando]     = useState<Agente | undefined>()
 
   const { data, isLoading } = useAgentes({
     q:        query || undefined,
@@ -53,46 +78,34 @@ export function AgentesPage() {
 
   const eliminar = useEliminarAgente()
 
-  const abrirCrear = () => { setEditando(undefined); setDialogOpen(true) }
-  const abrirEditar = (agente: Agente) => { setEditando(agente); setDialogOpen(true) }
-  const cerrar = () => setDialogOpen(false)
+  const abrirCrear  = () => { setEditando(undefined); setDialogOpen(true) }
+  const abrirEditar = (a: Agente) => { setEditando(a); setDialogOpen(true) }
+  const cerrar      = () => setDialogOpen(false)
 
-  const handleEliminar = (agente: Agente) => {
-    if (!confirm(`¿Eliminar al agente ${agente.nombres}?`)) return
-    eliminar.mutate(agente.id)
+  const handleEliminar = (a: Agente) => {
+    if (!confirm(`¿Eliminar al agente ${a.nombres}?`)) return
+    eliminar.mutate(a.id)
   }
 
-  const columnasFinal = [
-    ...columns.slice(0, 6),
-    {
-      id: 'acciones',
-      header: 'Acciones',
-      cell: ({ row }: { row: { original: Agente } }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => abrirEditar(row.original)}>
-            Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleEliminar(row.original)}
-            disabled={eliminar.isPending}
-          >
-            Eliminar
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  const buscar = () => {
+    setQuery(search)
+    setPagination((p) => ({ ...p, pageIndex: 0 }))
+  }
+
+  const limpiar = () => {
+    setSearch('')
+    setQuery('')
+    setPagination((p) => ({ ...p, pageIndex: 0 }))
+  }
+
+  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
 
   return (
     <div>
       <PageHeader
         title="Agentes"
         description="Gestión del personal de ventas registrado en el sistema."
-        actions={
-          <Button onClick={abrirCrear}>+ Nuevo agente</Button>
-        }
+        actions={<Button onClick={abrirCrear}>+ Nuevo agente</Button>}
       />
 
       <div className="flex items-center gap-3 mb-4">
@@ -100,33 +113,16 @@ export function AgentesPage() {
           placeholder="Buscar por DNI o nombre..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              setQuery(search)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button
-          variant="outline"
-          onClick={() => { setQuery(search); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-        >
-          Buscar
-        </Button>
-        {query && (
-          <Button
-            variant="ghost"
-            onClick={() => { setSearch(''); setQuery(''); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-          >
-            Limpiar
-          </Button>
-        )}
+        <Button variant="outline" onClick={buscar}>Buscar</Button>
+        {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </div>
 
       <DataTable
         data={data?.data ?? []}
-        columns={columnasFinal}
+        columns={columns}
         pageCount={data?.last_page ?? 0}
         pagination={pagination}
         onPaginationChange={setPagination}
@@ -140,11 +136,7 @@ export function AgentesPage() {
         title={editando ? 'Editar agente' : 'Nuevo agente'}
         maxWidth="lg"
       >
-        <AgenteForm
-          agente={editando}
-          onSuccess={() => { cerrar() }}
-          onCancel={cerrar}
-        />
+        <AgenteForm agente={editando} onSuccess={cerrar} onCancel={cerrar} />
       </Dialog>
     </div>
   )

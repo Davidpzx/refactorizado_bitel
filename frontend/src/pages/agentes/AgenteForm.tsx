@@ -8,32 +8,25 @@ import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import type { Agente } from '../../types/agente'
 
-const baseSchema = z.object({
+// Un único schema: pin siempre opcional, validado manualmente en create
+const schema = z.object({
   dni:           z.string().regex(/^\d{8}$/, 'DNI debe tener exactamente 8 dígitos'),
   nombres:       z.string().min(2, 'Nombres requeridos').max(200),
   tienda_base:   z.string().min(1, 'Tienda requerida').max(10),
-  sueldo_base:   z.coerce.number().min(0, 'Sueldo no puede ser negativo'),
+  sueldo_base:   z.number().min(0, 'El sueldo no puede ser negativo'),
   estado:        z.enum(['ACTIVO', 'INACTIVO', 'BAJA']),
   fecha_ingreso: z.string().min(1, 'Fecha de ingreso requerida'),
-  hora_ingreso:  z.string().optional(),
-  hora_salida:   z.string().optional(),
-  dia_descanso:  z.string().optional(),
+  pin_seguridad: z.string().min(4, 'PIN mínimo 4 caracteres').max(8, 'PIN máximo 8 caracteres').optional().or(z.literal('')),
+  hora_ingreso:  z.string().optional().or(z.literal('')),
+  hora_salida:   z.string().optional().or(z.literal('')),
+  dia_descanso:  z.string().optional().or(z.literal('')),
   correo:        z.string().email('Correo inválido').optional().or(z.literal('')),
   telefono:      z.string().max(15).optional().or(z.literal('')),
   direccion:     z.string().max(300).optional().or(z.literal('')),
   es_gerencia:   z.boolean(),
 })
 
-const createSchema = baseSchema.extend({
-  pin_seguridad: z.string().min(4, 'PIN mínimo 4 caracteres').max(8, 'PIN máximo 8 caracteres'),
-})
-
-const editSchema = baseSchema.extend({
-  pin_seguridad: z.string().min(4).max(8).optional().or(z.literal('')),
-})
-
-type CreateFormData = z.infer<typeof createSchema>
-type EditFormData   = z.infer<typeof editSchema>
+type FormData = z.infer<typeof schema>
 
 interface Props {
   agente?: Agente
@@ -42,12 +35,12 @@ interface Props {
 }
 
 export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
-  const esEdicion = Boolean(agente?.id)
-  const crear     = useCrearAgente()
+  const esEdicion  = Boolean(agente?.id)
+  const crear      = useCrearAgente()
   const actualizar = useActualizarAgente()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<CreateFormData | EditFormData>({
-    resolver: zodResolver(esEdicion ? editSchema : createSchema),
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
     defaultValues: agente
       ? {
           nombres:       agente.nombres,
@@ -55,30 +48,38 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           sueldo_base:   parseFloat(agente.sueldo_base),
           estado:        agente.estado,
           fecha_ingreso: agente.fecha_ingreso,
-          hora_ingreso:  agente.hora_ingreso ?? '',
-          hora_salida:   agente.hora_salida ?? '',
-          dia_descanso:  agente.dia_descanso ?? '',
-          correo:        agente.correo ?? '',
-          telefono:      agente.telefono ?? '',
-          direccion:     agente.direccion ?? '',
+          hora_ingreso:  agente.hora_ingreso  ?? '',
+          hora_salida:   agente.hora_salida   ?? '',
+          dia_descanso:  agente.dia_descanso  ?? '',
+          correo:        agente.correo        ?? '',
+          telefono:      agente.telefono      ?? '',
+          direccion:     agente.direccion     ?? '',
           es_gerencia:   agente.es_gerencia,
           pin_seguridad: '',
         }
       : { estado: 'ACTIVO', es_gerencia: false, sueldo_base: 0 },
   })
 
-  const onSubmit = (data: CreateFormData | EditFormData) => {
+  const onSubmit = (data: FormData) => {
+    if (!esEdicion && !data.pin_seguridad) {
+      setError('pin_seguridad', { message: 'El PIN es obligatorio para nuevos agentes' })
+      return
+    }
+
+    const pin = data.pin_seguridad || undefined
+    const payload = { ...data, ...(pin ? { pin_seguridad: pin } : {}) }
+
     if (esEdicion && agente) {
-      const { pin_seguridad, ...rest } = data as EditFormData
-      const payload = pin_seguridad ? { ...rest, pin_seguridad } : rest
-      actualizar.mutate({ id: agente.id, data: payload }, { onSuccess })
+      const { pin_seguridad: _, ...rest } = payload
+      const update = pin ? { ...rest, pin_seguridad: pin } : rest
+      actualizar.mutate({ id: agente.id, data: update }, { onSuccess })
     } else {
-      crear.mutate(data as CreateFormData, { onSuccess })
+      crear.mutate(payload as FormData & { pin_seguridad: string }, { onSuccess })
     }
   }
 
   const isPending = crear.isPending || actualizar.isPending
-  const errorMsg  = (crear.error || actualizar.error) as { response?: { data?: { message?: string } } } | null
+  const mutError  = (crear.error || actualizar.error) as { response?: { data?: { message?: string } } } | null
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -116,7 +117,14 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="sueldo_base">Sueldo base (S/) *</Label>
-          <Input id="sueldo_base" type="number" step="0.01" min="0" {...register('sueldo_base')} className="mt-1" />
+          <Input
+            id="sueldo_base"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('sueldo_base', { valueAsNumber: true })}
+            className="mt-1"
+          />
           {errors.sueldo_base && <p className="text-red-500 text-xs mt-1">{errors.sueldo_base.message}</p>}
         </div>
         <div>
@@ -128,7 +136,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
 
       <div>
         <Label htmlFor="pin_seguridad">
-          PIN de seguridad {esEdicion ? '(dejar vacío para no cambiar)' : '*'}
+          PIN de seguridad {esEdicion ? '(vacío = sin cambio)' : '*'}
         </Label>
         <Input
           id="pin_seguridad"
@@ -183,13 +191,18 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
-        <input id="es_gerencia" type="checkbox" {...register('es_gerencia')} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+        <input
+          id="es_gerencia"
+          type="checkbox"
+          {...register('es_gerencia')}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600"
+        />
         <Label htmlFor="es_gerencia">¿Es personal de gerencia?</Label>
       </div>
 
-      {errorMsg && (
+      {mutError && (
         <p className="text-red-500 text-sm">
-          {errorMsg.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
+          {mutError.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
         </p>
       )}
 
