@@ -1,19 +1,17 @@
-import axios from 'axios'
+import { api } from './api'
 import type { InventarioFilters, InventarioItem, InventarioPayload } from '../types/inventario'
 import type { PaginatedResponse } from '../types/pagination'
 
-const BASE = import.meta.env.VITE_API_BASE_URL
-
 export const inventarioApi = {
   listar: (params: InventarioFilters) =>
-    axios.get<PaginatedResponse<InventarioItem>>(`${BASE}/inventario`, { params }),
+    api.get<PaginatedResponse<InventarioItem>>('/v1/inventario', { params }).then((r) => r.data),
 
   crear: (data: InventarioPayload) =>
-    axios.post<InventarioItem>(`${BASE}/inventario`, data),
+    api.post<InventarioItem>('/v1/inventario', data).then((r) => r.data),
 
   actualizar: (id: number, data: Partial<InventarioPayload>) =>
-    axios.put<InventarioItem>(`${BASE}/inventario/${id}`, data),
+    api.put<InventarioItem>(`/v1/inventario/${id}`, data).then((r) => r.data),
 
   eliminar: (id: number) =>
-    axios.delete(`${BASE}/inventario/${id}`),
+    api.delete(`/v1/inventario/${id}`),
 }

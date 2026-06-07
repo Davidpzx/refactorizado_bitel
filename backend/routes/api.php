@@ -3,8 +3,10 @@
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClienteController;
+use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\InventarioController;
+use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\VentaController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,8 +31,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('agentes',     AgenteController::class);
     Route::apiResource('clientes',    ClienteController::class);
     Route::apiResource('inventario',  InventarioController::class);
+    Route::apiResource('reportes',    ReporteController::class);
     Route::apiResource('ventas',      VentaController::class);
     Route::apiResource('comprobantes',ComprobanteController::class);
+
+    Route::get('comisiones-planes', [ComisionPlanController::class, 'index']);
 
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
 });

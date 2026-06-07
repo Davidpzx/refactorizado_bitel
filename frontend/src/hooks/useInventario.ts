@@ -5,14 +5,14 @@ import type { InventarioFilters, InventarioPayload } from '../types/inventario'
 export function useInventario(filters: InventarioFilters) {
   return useQuery({
     queryKey: ['inventario', filters],
-    queryFn: () => inventarioApi.listar(filters).then((r) => r.data),
+    queryFn: () => inventarioApi.listar(filters),
   })
 }
 
 export function useCrearInventario() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: InventarioPayload) => inventarioApi.crear(data).then((r) => r.data),
+    mutationFn: (data: InventarioPayload) => inventarioApi.crear(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inventario'] }),
   })
 }
@@ -21,7 +21,7 @@ export function useActualizarInventario() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<InventarioPayload> }) =>
-      inventarioApi.actualizar(id, data).then((r) => r.data),
+      inventarioApi.actualizar(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inventario'] }),
   })
 }

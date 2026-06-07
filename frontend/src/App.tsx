@@ -7,6 +7,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { AgentesPage } from './pages/agentes/AgentesPage'
 import { ClientesPage } from './pages/clientes/ClientesPage'
 import { InventarioPage } from './pages/inventario/InventarioPage'
+import { ReportesPage } from './pages/reportes/ReportesPage'
+import { NuevoReportePage } from './pages/reportes/NuevoReportePage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,9 +31,11 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
-              <Route path="/agentes"    element={<AgentesPage />} />
-              <Route path="/clientes"  element={<ClientesPage />} />
-              <Route path="/inventario" element={<InventarioPage />} />
+              <Route path="/agentes"         element={<AgentesPage />} />
+              <Route path="/clientes"        element={<ClientesPage />} />
+              <Route path="/inventario"      element={<InventarioPage />} />
+              <Route path="/reportes"        element={<ReportesPage />} />
+              <Route path="/reportes/nuevo"  element={<NuevoReportePage />} />
             </Route>
           </Route>
 

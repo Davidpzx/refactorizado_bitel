@@ -3,9 +3,10 @@ import { useAuth } from '../hooks/useAuth'
 
 const navItems = [
   { to: '/',           label: 'Dashboard' },
+  { to: '/reportes',   label: 'Reportes' },
+  { to: '/inventario', label: 'Inventario' },
   { to: '/agentes',    label: 'Agentes' },
   { to: '/clientes',   label: 'Clientes' },
-  { to: '/inventario', label: 'Inventario' },
 ]
 
 export function AppLayout() {
