@@ -272,9 +272,14 @@ export function CrmPage() {
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
 
-  const params = filtroTienda ? { tienda_id: filtroTienda, per_page: 200 } : { per_page: 200 }
+  const params: Record<string, string | number> = filtroTienda
+    ? { tienda_id: filtroTienda, per_page: 200 }
+    : { per_page: 200 }
+  const pipelineParams: Record<string, string | number> | undefined = filtroTienda
+    ? { tienda_id: filtroTienda }
+    : undefined
   const { data: leadsData, isLoading } = useLeads(params)
-  const { data: pipeline } = usePipeline(filtroTienda ? { tienda_id: filtroTienda } : undefined)
+  const { data: pipeline } = usePipeline(pipelineParams)
 
   const actualizar = useActualizarLead()
   const eliminar   = useEliminarLead()
@@ -359,7 +364,11 @@ export function CrmPage() {
       )}
 
       {/* Dialog nuevo/editar lead */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={leadEdicion ? 'Editar lead' : 'Nuevo lead'}
+      >
         <LeadForm
           leadInicial={leadEdicion}
           onSuccess={() => setDialogOpen(false)}
