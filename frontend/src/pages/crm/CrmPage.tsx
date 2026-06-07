@@ -32,7 +32,7 @@ const TIENDAS = [
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const leadSchema = z.object({
-  agente_id: z.coerce.number().int().positive('Requerido'),
+  agente_id: z.number({ invalid_type_error: 'Requerido' }).int().positive('Requerido'),
   tienda_id: z.string().min(1, 'Requerido'),
   estado:    z.enum(['NUEVO','CONTACTADO','INTERESADO','CONVERTIDO','PERDIDO']),
   fuente:    z.enum(['PRESENCIAL','WHATSAPP','REFERIDO','LLAMADA']),
@@ -93,7 +93,7 @@ function LeadForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">ID Agente</Label>
-          <Input type="number" {...register('agente_id')} placeholder="ID del agente" className="mt-1" />
+          <Input type="number" {...register('agente_id', { valueAsNumber: true })} placeholder="ID del agente" className="mt-1" />
           {errors.agente_id && <p className="text-red-400 text-xs mt-1">{errors.agente_id.message}</p>}
         </div>
         <div>
