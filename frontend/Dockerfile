@@ -9,6 +9,12 @@ RUN npm ci
 
 # Copy source and compile
 COPY . .
+
+# Vite bakes VITE_* env vars at build time — pass the production API URL here.
+# Override with: docker build --build-arg VITE_API_BASE_URL=https://...
+ARG VITE_API_BASE_URL=https://refactor.kyrocodelabs.cloud/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
 # ── Stage 2: Serve ──────────────────────────────────────────────────────────
