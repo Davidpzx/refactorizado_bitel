@@ -32,7 +32,7 @@ const TIENDAS = [
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const leadSchema = z.object({
-  agente_id: z.coerce.number().min(1, 'Seleccione un agente'),
+  agente_id: z.number().min(1, 'Seleccione un agente'),
   tienda_id: z.string().min(1, 'Requerido'),
   estado:    z.enum(['NUEVO','CONTACTADO','INTERESADO','CONVERTIDO','PERDIDO']),
   fuente:    z.enum(['PRESENCIAL','WHATSAPP','REFERIDO','LLAMADA']),
