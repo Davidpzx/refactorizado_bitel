@@ -4,6 +4,8 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { AgentesPage } from './pages/agentes/AgentesPage'
+import { ClientesPage } from './pages/clientes/ClientesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,7 +28,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
-              {/* Fase 2: agregar rutas de reportes, inventario, planilla, etc. */}
+              <Route path="/agentes"  element={<AgentesPage />} />
+              <Route path="/clientes" element={<ClientesPage />} />
             </Route>
           </Route>
 

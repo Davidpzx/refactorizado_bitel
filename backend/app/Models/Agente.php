@@ -56,4 +56,10 @@ class Agente extends Model
     {
         return $query->where('tienda_base', $tienda);
     }
+
+    public function scopeBuscar($query, string $termino)
+    {
+        return $query->where('dni', 'like', "%{$termino}%")
+                     ->orWhere('nombres', 'like', "%{$termino}%");
+    }
 }

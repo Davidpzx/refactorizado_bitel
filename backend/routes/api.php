@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComprobanteController;
@@ -24,6 +25,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('auth/me',     [AuthController::class, 'me']);
     Route::post('auth/logout',[AuthController::class, 'logout']);
 
+    Route::apiResource('agentes',     AgenteController::class);
     Route::apiResource('clientes',    ClienteController::class);
     Route::apiResource('ventas',      VentaController::class);
     Route::apiResource('comprobantes',ComprobanteController::class);
