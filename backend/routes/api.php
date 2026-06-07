@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\InventarioController;
+use App\Http\Controllers\Api\LeadController;
+use App\Http\Controllers\Api\PlanillaController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\VentaController;
 use Illuminate\Support\Facades\Route;
@@ -38,4 +40,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('comisiones-planes', [ComisionPlanController::class, 'index']);
 
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
+
+    // ── Planilla ─────────────────────────────────────────────────────────────
+    Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular']);
+    Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste']);
+    Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones']);
+
+    // ── CRM ──────────────────────────────────────────────────────────────────
+    Route::get('crm/pipeline',                             [LeadController::class, 'pipeline']);
+    Route::apiResource('leads',                            LeadController::class);
+    Route::get('leads/{lead}/interacciones',               [LeadController::class, 'interacciones']);
+    Route::post('leads/{lead}/interacciones',              [LeadController::class, 'agregarInteraccion']);
 });

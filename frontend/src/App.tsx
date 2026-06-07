@@ -9,6 +9,8 @@ import { ClientesPage } from './pages/clientes/ClientesPage'
 import { InventarioPage } from './pages/inventario/InventarioPage'
 import { ReportesPage } from './pages/reportes/ReportesPage'
 import { NuevoReportePage } from './pages/reportes/NuevoReportePage'
+import { PlanillaPage } from './pages/planilla/PlanillaPage'
+import { CrmPage } from './pages/crm/CrmPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +38,8 @@ export default function App() {
               <Route path="/inventario"      element={<InventarioPage />} />
               <Route path="/reportes"        element={<ReportesPage />} />
               <Route path="/reportes/nuevo"  element={<NuevoReportePage />} />
+              <Route path="/planilla"        element={<PlanillaPage />} />
+              <Route path="/crm"             element={<CrmPage />} />
             </Route>
           </Route>
 

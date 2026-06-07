@@ -7,6 +7,8 @@ const navItems = [
   { to: '/inventario', label: 'Inventario' },
   { to: '/agentes',    label: 'Agentes' },
   { to: '/clientes',   label: 'Clientes' },
+  { to: '/planilla',   label: 'Planilla' },
+  { to: '/crm',        label: 'CRM' },
 ]
 
 export function AppLayout() {
