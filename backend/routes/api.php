@@ -21,7 +21,7 @@ Route::get('/v1/health', fn() => response()->json([
 
 // ── Auth (público) ───────────────────────────────────────────────────────────
 Route::prefix('v1/auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login']);
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 });
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
