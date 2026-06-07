@@ -1,0 +1,221 @@
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useCrearInventario, useActualizarInventario } from '../../hooks/useInventario'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { Select } from '../../components/ui/select'
+import type { InventarioItem } from '../../types/inventario'
+
+const TIENDAS = [
+  'PUNDA50', 'PUNDA11', 'PUNSC01', 'PUNDA23',
+  'TACDA13', 'TACDA17', 'TACDA21', 'TACDA25', 'TACDA27', 'TACDA30',
+]
+
+const schema = z.object({
+  tienda_id:         z.string().min(1, 'La tienda es obligatoria'),
+  producto_nombre:   z.string().min(1, 'El nombre del producto es obligatorio').max(150),
+  tipo:              z.enum(['EQUIPO', 'ACCESORIO', 'CHIP']),
+  imei_serial:       z.string().max(50).optional().or(z.literal('')),
+  precio_costo:      z.number().min(0, 'El precio no puede ser negativo'),
+  precio_minimo:     z.number().min(0, 'El precio no puede ser negativo'),
+  precio_normal:     z.number().min(0, 'El precio no puede ser negativo'),
+  cantidad:          z.number().int().min(1, 'La cantidad mínima es 1'),
+  estado:            z.enum(['DISPONIBLE', 'VENDIDO', 'TRASLADO']),
+  comision_especial: z.number().min(0).optional(),
+})
+
+type FormData = z.infer<typeof schema>
+
+interface Props {
+  item?: InventarioItem
+  onSuccess: () => void
+  onCancel: () => void
+}
+
+export function InventarioForm({ item, onSuccess, onCancel }: Props) {
+  const esEdicion  = Boolean(item?.id)
+  const crear      = useCrearInventario()
+  const actualizar = useActualizarInventario()
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: item
+      ? {
+          tienda_id:         item.tienda_id,
+          producto_nombre:   item.producto_nombre,
+          tipo:              item.tipo,
+          imei_serial:       item.imei_serial ?? '',
+          precio_costo:      parseFloat(item.precio_costo),
+          precio_minimo:     parseFloat(item.precio_minimo),
+          precio_normal:     parseFloat(item.precio_normal),
+          cantidad:          item.cantidad,
+          estado:            item.estado,
+          comision_especial: item.comision_especial ? parseFloat(item.comision_especial) : undefined,
+        }
+      : {
+          tipo: 'EQUIPO',
+          estado: 'DISPONIBLE',
+          cantidad: 1,
+          precio_costo: 0,
+          precio_minimo: 0,
+          precio_normal: 0,
+        },
+  })
+
+  const onSubmit = (data: FormData) => {
+    const payload = {
+      ...data,
+      imei_serial: data.imei_serial || null,
+    }
+
+    if (esEdicion && item) {
+      actualizar.mutate({ id: item.id, data: payload }, { onSuccess })
+    } else {
+      crear.mutate(payload, { onSuccess })
+    }
+  }
+
+  const isPending = crear.isPending || actualizar.isPending
+  const mutError  = (crear.error || actualizar.error) as { response?: { data?: { message?: string } } } | null
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="tienda_id">Tienda *</Label>
+          <Select id="tienda_id" {...register('tienda_id')} className="mt-1">
+            <option value="">Selecciona una tienda</option>
+            {TIENDAS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </Select>
+          {errors.tienda_id && <p className="text-red-500 text-xs mt-1">{errors.tienda_id.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="tipo">Tipo *</Label>
+          <Select id="tipo" {...register('tipo')} className="mt-1">
+            <option value="EQUIPO">Equipo</option>
+            <option value="ACCESORIO">Accesorio</option>
+            <option value="CHIP">Chip</option>
+          </Select>
+          {errors.tipo && <p className="text-red-500 text-xs mt-1">{errors.tipo.message}</p>}
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="producto_nombre">Nombre del producto *</Label>
+        <Input
+          id="producto_nombre"
+          {...register('producto_nombre')}
+          placeholder="Samsung Galaxy A15 128GB"
+          className="mt-1"
+        />
+        {errors.producto_nombre && <p className="text-red-500 text-xs mt-1">{errors.producto_nombre.message}</p>}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="imei_serial">IMEI / Serie</Label>
+          <Input
+            id="imei_serial"
+            {...register('imei_serial')}
+            placeholder="358461082345678"
+            maxLength={50}
+            className="mt-1"
+          />
+          {errors.imei_serial && <p className="text-red-500 text-xs mt-1">{errors.imei_serial.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="cantidad">Cantidad *</Label>
+          <Input
+            id="cantidad"
+            type="number"
+            min="1"
+            {...register('cantidad', { valueAsNumber: true })}
+            className="mt-1"
+          />
+          {errors.cantidad && <p className="text-red-500 text-xs mt-1">{errors.cantidad.message}</p>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="precio_costo">Precio costo (S/) *</Label>
+          <Input
+            id="precio_costo"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('precio_costo', { valueAsNumber: true })}
+            className="mt-1"
+          />
+          {errors.precio_costo && <p className="text-red-500 text-xs mt-1">{errors.precio_costo.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="precio_minimo">Precio mínimo (S/) *</Label>
+          <Input
+            id="precio_minimo"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('precio_minimo', { valueAsNumber: true })}
+            className="mt-1"
+          />
+          {errors.precio_minimo && <p className="text-red-500 text-xs mt-1">{errors.precio_minimo.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="precio_normal">Precio normal (S/) *</Label>
+          <Input
+            id="precio_normal"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('precio_normal', { valueAsNumber: true })}
+            className="mt-1"
+          />
+          {errors.precio_normal && <p className="text-red-500 text-xs mt-1">{errors.precio_normal.message}</p>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="estado">Estado *</Label>
+          <Select id="estado" {...register('estado')} className="mt-1">
+            <option value="DISPONIBLE">Disponible</option>
+            <option value="VENDIDO">Vendido</option>
+            <option value="TRASLADO">Traslado</option>
+          </Select>
+          {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="comision_especial">Comisión especial (S/)</Label>
+          <Input
+            id="comision_especial"
+            type="number"
+            step="0.01"
+            min="0"
+            {...register('comision_especial', { valueAsNumber: true })}
+            className="mt-1"
+          />
+        </div>
+      </div>
+
+      {mutError && (
+        <p className="text-red-500 text-sm">
+          {mutError.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
+        </p>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        <Button type="submit" disabled={isPending} className="flex-1">
+          {isPending ? 'Guardando...' : esEdicion ? 'Actualizar item' : 'Registrar item'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
+}
