@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 class Usuario extends Authenticatable
 {
+    use HasApiTokens;
+
     protected $table = 'usuarios';
+    public $timestamps = false;
 
     protected $fillable = [
         'nombre', 'email', 'password', 'rol', 'tienda_id', 'activo',
     ];
 
-    protected $hidden = ['password'];
+    protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
         'activo'     => 'boolean',
@@ -21,14 +25,12 @@ class Usuario extends Authenticatable
         'created_at' => 'datetime',
     ];
 
-    public $timestamps = false;
-
-    public function scopeActivos($query)
+    public function scopeActivos(Builder $query): Builder
     {
         return $query->where('activo', 1);
     }
 
-    public function scopePorRol($query, string $rol)
+    public function scopePorRol(Builder $query, string $rol): Builder
     {
         return $query->where('rol', $rol);
     }

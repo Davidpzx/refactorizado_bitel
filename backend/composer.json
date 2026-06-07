@@ -11,6 +11,7 @@
         "endroid/qr-code": "^6.0",
         "greenter/greenter": "^5.1",
         "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
         "predis/predis": "^3.5"
     },

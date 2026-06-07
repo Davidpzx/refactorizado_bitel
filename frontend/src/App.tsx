@@ -1,4 +1,9 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { AppLayout } from './components/AppLayout'
+import { LoginPage } from './pages/auth/LoginPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -9,24 +14,26 @@ const queryClient = new QueryClient({
   },
 })
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-xl font-semibold text-gray-800">
-            SIS-KYRO-REFACTOR
-          </h1>
-        </header>
-        <main className="p-6">
-          <p className="text-gray-600">
-            Sistema ERP — Backend conectado a BD{' '}
-            <code className="bg-gray-100 px-1 rounded text-sm">migracion</code>
-          </p>
-        </main>
-      </div>
+      <BrowserRouter>
+        <Routes>
+          {/* Pública */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Protegidas */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<DashboardPage />} />
+              {/* Fase 2: agregar rutas de reportes, inventario, planilla, etc. */}
+            </Route>
+          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
-
-export default App

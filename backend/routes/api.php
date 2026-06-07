@@ -1,14 +1,32 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClienteController;
-use App\Http\Controllers\Api\VentaController;
 use App\Http\Controllers\Api\ComprobanteController;
+use App\Http\Controllers\Api\VentaController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/health', fn() => response()->json(['status' => 'ok', 'app' => config('app.name')]));
+// ── Health (público) ─────────────────────────────────────────────────────────
+Route::get('/v1/health', fn() => response()->json([
+    'status' => 'ok',
+    'app'    => config('app.name'),
+    'env'    => config('app.env'),
+]));
 
-Route::apiResource('clientes', ClienteController::class);
-Route::apiResource('ventas', VentaController::class);
-Route::apiResource('comprobantes', ComprobanteController::class);
+// ── Auth (público) ───────────────────────────────────────────────────────────
+Route::prefix('v1/auth')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+});
 
-Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
+// ── Recursos protegidos ──────────────────────────────────────────────────────
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+
+    Route::get('auth/me',     [AuthController::class, 'me']);
+    Route::post('auth/logout',[AuthController::class, 'logout']);
+
+    Route::apiResource('clientes',    ClienteController::class);
+    Route::apiResource('ventas',      VentaController::class);
+    Route::apiResource('comprobantes',ComprobanteController::class);
+
+    Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
+});
