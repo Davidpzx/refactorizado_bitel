@@ -14,8 +14,9 @@ const ClientesPage     = lazy(() => import('./pages/clientes/ClientesPage').then
 const InventarioPage   = lazy(() => import('./pages/inventario/InventarioPage').then(m => ({ default: m.InventarioPage })))
 const ReportesPage     = lazy(() => import('./pages/reportes/ReportesPage').then(m => ({ default: m.ReportesPage })))
 const NuevoReportePage = lazy(() => import('./pages/reportes/NuevoReportePage').then(m => ({ default: m.NuevoReportePage })))
-const PlanillaPage     = lazy(() => import('./pages/planilla/PlanillaPage').then(m => ({ default: m.PlanillaPage })))
-const CrmPage          = lazy(() => import('./pages/crm/CrmPage').then(m => ({ default: m.CrmPage })))
+const PlanillaPage        = lazy(() => import('./pages/planilla/PlanillaPage').then(m => ({ default: m.PlanillaPage })))
+const CrmPage             = lazy(() => import('./pages/crm/CrmPage').then(m => ({ default: m.CrmPage })))
+const ReporteDetallePage  = lazy(() => import('./pages/reportes/ReporteDetallePage').then(m => ({ default: m.ReporteDetallePage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +74,11 @@ export default function App() {
               <Route path="/reportes/nuevo" element={
                 <Suspense fallback={<PageLoader />}>
                   <NuevoReportePage />
+                </Suspense>
+              } />
+              <Route path="/reportes/:id" element={
+                <Suspense fallback={<PageLoader />}>
+                  <ReporteDetallePage />
                 </Suspense>
               } />
               <Route path="/planilla" element={

@@ -102,3 +102,62 @@ export interface ComisionPlan {
   fee_monto: string
   comision_dni_n: string
 }
+
+// ─── Tipos para el endpoint show() — reporte con relaciones cargadas ─────────
+
+export interface VentaEquipoDetalle {
+  id: number
+  venta_id: number
+  inventario_tienda_id: number
+  producto_nombre_snap: string
+  imei_serial_snap: string | null
+  tipo_item: 'EQUIPO' | 'ACCESORIO'
+  tipo_pago: 'CONTADO' | 'CUOTAS'
+  financiera: string | null
+  precio_venta: string
+  costo_snap: string
+  ganancia_snap: string | null
+  por_cobrar_financiera: string
+}
+
+export interface VentaLineaDetalle {
+  id: number
+  venta_id: number
+  plan_nombre_snap: string
+  tipo_alta: string
+  cantidad: number
+  cobrado_unitario: string
+  comision_unitaria: string
+  es_esim: boolean
+}
+
+export interface ClienteResumen {
+  id: number
+  dni_ruc: string
+  nombre: string
+  tipo_documento: string
+}
+
+export interface VentaConDetalle {
+  id: number
+  reporte_id: number
+  vendedor_id: number
+  cliente_id: number | null
+  tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO'
+  subtipo: string | null
+  monto_total: string
+  efectivo_inicial: string
+  cross_selling: boolean
+  tienda_destino: string | null
+  es_remate: boolean
+  es_extranjero: boolean
+  comision_generada: string
+  comision_estado: 'ACTIVA' | 'ANULADA'
+  equipo: VentaEquipoDetalle | null
+  linea: VentaLineaDetalle | null
+  cliente: ClienteResumen | null
+}
+
+export interface ReporteConVentas extends Reporte {
+  ventas: VentaConDetalle[]
+}

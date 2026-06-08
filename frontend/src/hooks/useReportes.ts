@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reportesApi } from '../services/reportes.api'
 import type { CreateReportePayload, ReporteFilters } from '../types/reporte'
+export type { ReporteConVentas } from '../types/reporte'
 
 export function useReportes(filters: ReporteFilters) {
   return useQuery({

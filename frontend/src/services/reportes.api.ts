@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { ComisionPlan, CreateReportePayload, Reporte, ReporteFilters } from '../types/reporte'
+import type { ComisionPlan, CreateReportePayload, Reporte, ReporteConVentas, ReporteFilters } from '../types/reporte'
 import type { PaginatedResponse } from '../types/pagination'
 
 export const reportesApi = {
@@ -7,7 +7,7 @@ export const reportesApi = {
     api.get<PaginatedResponse<Reporte>>('/v1/reportes', { params }).then((r) => r.data),
 
   obtener: (id: number) =>
-    api.get<Reporte>(`/v1/reportes/${id}`).then((r) => r.data),
+    api.get<ReporteConVentas>(`/v1/reportes/${id}`).then((r) => r.data),
 
   crear: (data: CreateReportePayload) =>
     api.post<Reporte>('/v1/reportes', data).then((r) => r.data),
