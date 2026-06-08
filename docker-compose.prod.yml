@@ -1,0 +1,152 @@
+# docker-compose.prod.yml — Stack de producción para Dokploy
+#
+# Cómo usarlo en Dokploy:
+#   1. Apuntar este archivo como Compose file.
+#   2. Definir las variables de entorno sensibles en el panel de Dokploy
+#      (APP_KEY, DB_HOST, DB_PASSWORD, REDIS_PASSWORD, etc.).
+#   3. Las variables VITE_* se inyectan en build-time del frontend vía ARG.
+#
+# Servicios:
+#   backend  → Laravel 11 (PHP-FPM + artisan serve)
+#   frontend → React 18 compilado servido por Nginx
+#   redis    → Cola + caché + sesiones
+
+version: '3.8'
+
+services:
+
+  # ── Backend Laravel ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_NAME: "${APP_NAME:-SIS-KYRO-REFACTOR}"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: "${APP_KEY}"
+      APP_URL: "${APP_URL:-https://refactor.kyrocodelabs.cloud}"
+
+      LOG_CHANNEL: stack
+      LOG_LEVEL: error
+
+      DB_CONNECTION: mysql
+      DB_HOST: "${DB_HOST}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_DATABASE: "${DB_DATABASE:-migracion}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+
+      SESSION_DRIVER: redis
+      SESSION_ENCRYPT: "true"
+      SESSION_DOMAIN: ".kyrocodelabs.cloud"
+
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_PREFIX: "siskyro_"
+      CACHE_PREFIX: "siskyro_cache_"
+
+      SUNAT_RUC: "${SUNAT_RUC}"
+      SUNAT_USUARIO_SOL: "${SUNAT_USUARIO_SOL}"
+      SUNAT_CLAVE_SOL: "${SUNAT_CLAVE_SOL}"
+      SUNAT_ENV: "${SUNAT_ENV:-beta}"
+      SUNAT_CERT_PATH: /var/certs/empresa.pfx
+      SUNAT_CERT_PASSWORD: "${SUNAT_CERT_PASSWORD:-}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - siskyro
+    # Ejecutar optimizaciones de Laravel al arrancar
+    command: >
+      sh -c "php artisan config:cache &&
+             php artisan route:cache &&
+             php artisan view:cache &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+    healthcheck:
+      test: ["CMD", "php", "artisan", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Queue Worker ─────────────────────────────────────────────────────────
+  queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_KEY: "${APP_KEY}"
+      DB_HOST: "${DB_HOST}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_DATABASE: "${DB_DATABASE:-migracion}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      QUEUE_CONNECTION: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_PREFIX: "siskyro_"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - siskyro
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+
+  # ── Frontend React (Nginx) ───────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-https://refactor.kyrocodelabs.cloud/api}"
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - siskyro
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # En VPS con 1 GB de RAM, limitar a 128 MB deja margen para PHP y Nginx
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --requirepass "${REDIS_PASSWORD:-}"
+    volumes:
+      - redis_data:/data
+    networks:
+      - siskyro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  siskyro:
+    driver: bridge
+
+volumes:
+  redis_data:
