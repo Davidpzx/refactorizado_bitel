@@ -6,7 +6,6 @@ import { Dialog } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
-import { Users } from 'lucide-react'
 
 interface Usuario {
   id: number

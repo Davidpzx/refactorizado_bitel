@@ -19,13 +19,6 @@ const COLORS = {
   otros:    '#94a3b8',
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  postpago:   'Postpago',
-  prepago:    'Prepago/Chips',
-  eq_cuotas:  'Eq. Cuotas',
-  eq_contado: 'Eq. Contado',
-  accesorios: 'Accesorios',
-}
 
 interface Totales {
   postpago: number
@@ -225,7 +218,7 @@ export function EstadisticasPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [v, 'Ventas']} />
+                <Tooltip formatter={(v) => [Number(v ?? 0), 'Ventas']} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {categoriaBar.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Bar>

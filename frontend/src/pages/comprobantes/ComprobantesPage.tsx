@@ -92,10 +92,8 @@ export function ComprobantesPage() {
   })
 
   const comprobantes = data?.data ?? []
-  const meta         = data?.meta ?? data as { current_page?: number; last_page?: number; total?: number } | null
-
-  const totalPags = (meta as { last_page?: number } | null)?.last_page ?? 1
-  const total     = (meta as { total?: number } | null)?.total ?? comprobantes.length
+  const totalPags    = data?.last_page ?? 1
+  const total        = data?.total ?? comprobantes.length
 
   return (
     <div className="space-y-6">
