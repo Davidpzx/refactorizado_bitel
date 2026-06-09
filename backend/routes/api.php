@@ -8,7 +8,9 @@ use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
+use App\Http\Controllers\Api\ConfiguracionController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DniController;
 use App\Http\Controllers\Api\EstadisticasController;
 use App\Http\Controllers\Api\HistorialController;
 use App\Http\Controllers\Api\InventarioController;
@@ -67,7 +69,22 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('ventas',      VentaController::class);
     Route::apiResource('comprobantes', ComprobanteController::class);
 
-    Route::get('comisiones-planes', [ComisionPlanController::class, 'index']);
+    // ── Comisiones de Planes ──────────────────────────────────────────────────
+    Route::get('comisiones-planes',                    [ComisionPlanController::class, 'index']);
+    Route::post('comisiones-planes',                   [ComisionPlanController::class, 'store']);
+    Route::put('comisiones-planes/{comisionesPlan}',   [ComisionPlanController::class, 'update']);
+    Route::delete('comisiones-planes/{comisionesPlan}',[ComisionPlanController::class, 'destroy']);
+    Route::post('comisiones-planes/recalcular',        [ComisionPlanController::class, 'recalcularMasivo']);
+
+    // ── Configuración Empresa ─────────────────────────────────────────────────
+    Route::get('configuracion',             [ConfiguracionController::class, 'show']);
+    Route::get('configuracion/con-logo',    [ConfiguracionController::class, 'showConLogo']);
+    Route::put('configuracion',             [ConfiguracionController::class, 'update']);
+    Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo']);
+    Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo']);
+
+    // ── RENIEC DNI ────────────────────────────────────────────────────────────
+    Route::get('dni/{dni}',                 [DniController::class, 'consultar']);
 
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
 

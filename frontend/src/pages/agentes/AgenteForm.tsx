@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Search, Loader2 } from 'lucide-react'
 import { useCrearAgente, useActualizarAgente } from '../../hooks/useAgentes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
+import { api } from '../../services/api'
 import type { Agente } from '../../types/agente'
 
 // Un único schema: pin siempre opcional, validado manualmente en create
@@ -38,8 +41,10 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
   const esEdicion  = Boolean(agente?.id)
   const crear      = useCrearAgente()
   const actualizar = useActualizarAgente()
+  const [dniLoading, setDniLoading] = useState(false)
+  const [dniError,   setDniError]   = useState<string | null>(null)
 
-  const { register, handleSubmit, setError, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setError, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: agente
       ? {
@@ -59,6 +64,32 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
         }
       : { estado: 'ACTIVO', es_gerencia: false, sueldo_base: 0 },
   })
+
+  const dniValue = watch('dni') ?? ''
+
+  const buscarDni = async () => {
+    if (!/^\d{8}$/.test(dniValue)) {
+      setDniError('Ingresa un DNI de 8 dígitos antes de buscar.')
+      return
+    }
+    setDniLoading(true)
+    setDniError(null)
+    try {
+      const res = await api.get<{ nombres?: string; apellido_paterno?: string; apellido_materno?: string; nombre_completo?: string }>(`/v1/dni/${dniValue}`)
+      const d = res.data
+      const nombreCompleto = d.nombre_completo
+        ?? [d.nombres, d.apellido_paterno, d.apellido_materno].filter(Boolean).join(' ')
+      if (nombreCompleto) {
+        setValue('nombres', nombreCompleto, { shouldValidate: true })
+      } else {
+        setDniError('DNI encontrado pero sin nombre registrado.')
+      }
+    } catch {
+      setDniError('No se encontró información para ese DNI.')
+    } finally {
+      setDniLoading(false)
+    }
+  }
 
   const onSubmit = (data: FormData) => {
     if (!esEdicion && !data.pin_seguridad) {
@@ -87,8 +118,20 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
         {!esEdicion && (
           <div>
             <Label htmlFor="dni">DNI *</Label>
-            <Input id="dni" {...register('dni')} placeholder="12345678" maxLength={8} className="mt-1" />
+            <div className="flex gap-2 mt-1">
+              <Input id="dni" {...register('dni')} placeholder="12345678" maxLength={8} />
+              <button
+                type="button"
+                onClick={buscarDni}
+                disabled={dniLoading}
+                title="Buscar en RENIEC"
+                className="px-3 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50"
+              >
+                {dniLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+              </button>
+            </div>
             {errors.dni && <p className="text-red-500 text-xs mt-1">{errors.dni.message}</p>}
+            {dniError && <p className="text-amber-600 text-xs mt-1">{dniError}</p>}
           </div>
         )}
         <div className={esEdicion ? 'col-span-2' : ''}>

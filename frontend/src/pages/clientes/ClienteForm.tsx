@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Search, Loader2 } from 'lucide-react'
 import { useCrearCliente, useActualizarCliente } from '../../hooks/useClientes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
+import { api } from '../../services/api'
 import type { Cliente } from '../../types/cliente'
 
 const schema = z.object({
@@ -28,8 +31,10 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
   const esEdicion  = Boolean(cliente?.id)
   const crear      = useCrearCliente()
   const actualizar = useActualizarCliente()
+  const [dniLoading, setDniLoading] = useState(false)
+  const [dniError,   setDniError]   = useState<string | null>(null)
 
-  const { register, handleSubmit, formState: { errors } } = useForm<ClienteFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ClienteFormData>({
     resolver: zodResolver(schema),
     defaultValues: cliente
       ? {
@@ -41,6 +46,33 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
         }
       : { tipo_documento: 'DNI' },
   })
+
+  const dniRucValue    = watch('dni_ruc') ?? ''
+  const tipoDocumento  = watch('tipo_documento')
+
+  const buscarDni = async () => {
+    if (!/^\d{8}$/.test(dniRucValue)) {
+      setDniError('Ingresa un DNI de 8 dígitos antes de buscar.')
+      return
+    }
+    setDniLoading(true)
+    setDniError(null)
+    try {
+      const res = await api.get<{ nombres?: string; apellido_paterno?: string; apellido_materno?: string; nombre_completo?: string }>(`/v1/dni/${dniRucValue}`)
+      const d = res.data
+      const nombreCompleto = d.nombre_completo
+        ?? [d.nombres, d.apellido_paterno, d.apellido_materno].filter(Boolean).join(' ')
+      if (nombreCompleto) {
+        setValue('nombre', nombreCompleto, { shouldValidate: true })
+      } else {
+        setDniError('DNI encontrado pero sin nombre registrado.')
+      }
+    } catch {
+      setDniError('No se encontró información para ese DNI.')
+    } finally {
+      setDniLoading(false)
+    }
+  }
 
   const onSubmit = (data: ClienteFormData) => {
     if (esEdicion && cliente) {
@@ -58,14 +90,27 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="dni_ruc">DNI / RUC *</Label>
-          <Input
-            id="dni_ruc"
-            {...register('dni_ruc')}
-            placeholder="12345678"
-            disabled={esEdicion}
-            className="mt-1"
-          />
+          <div className="flex gap-2 mt-1">
+            <Input
+              id="dni_ruc"
+              {...register('dni_ruc')}
+              placeholder="12345678"
+              disabled={esEdicion}
+            />
+            {!esEdicion && tipoDocumento === 'DNI' && (
+              <button
+                type="button"
+                onClick={buscarDni}
+                disabled={dniLoading}
+                title="Buscar en RENIEC"
+                className="px-3 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50"
+              >
+                {dniLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+              </button>
+            )}
+          </div>
           {errors.dni_ruc && <p className="text-red-500 text-xs mt-1">{errors.dni_ruc.message}</p>}
+          {dniError && <p className="text-amber-600 text-xs mt-1">{dniError}</p>}
         </div>
         <div>
           <Label htmlFor="tipo_documento">Tipo de documento</Label>

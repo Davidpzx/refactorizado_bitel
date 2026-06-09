@@ -7,7 +7,7 @@ import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, TrendingUp, Menu,
+  ClipboardList, TrendingUp, Menu, Receipt,
 } from 'lucide-react'
 
 interface NavItem {
@@ -31,16 +31,17 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/agentes',       label: 'Agentes',          Icon: Users,           roles: ['admin'] },
   { to: '/asistencias',   label: 'Asistencias',      Icon: Clock,           roles: ['admin'] },
   { to: '/planilla',      label: 'Planilla',         Icon: DollarSign,      roles: ['admin'] },
-  { to: '/comisiones',    label: 'Comisiones',       Icon: TrendingUp,      roles: ['admin'], soon: true },
+  { to: '/comisiones',    label: 'Comisiones',       Icon: TrendingUp,      roles: ['admin'] },
   // ── Operaciones ──
   { to: '/inventario',    label: 'Inventario',       Icon: Package,         roles: ['admin', 'tienda'] },
   { to: '/bitacora-stock',label: 'Bitácora Stock',   Icon: BookOpen,        roles: ['admin', 'tienda'] },
   { to: '/clientes',      label: 'Clientes',         Icon: UserCog,         roles: ['admin', 'tienda'] },
   { to: '/crm',           label: 'CRM',              Icon: BarChart2,       roles: ['admin', 'tienda'] },
+  { to: '/comprobantes',  label: 'Comprobantes',     Icon: Receipt,         roles: ['admin'] },
   // ── Admin ──
   { to: '/usuarios',      label: 'Usuarios',         Icon: Users,           roles: ['admin'] },
   { to: '/tiendas',       label: 'Tiendas',          Icon: Store,           roles: ['admin'] },
-  { to: '/configuracion', label: 'Configuración',    Icon: Settings,        roles: ['admin'], soon: true },
+  { to: '/configuracion', label: 'Configuración',    Icon: Settings,        roles: ['admin'] },
 ]
 
 export function AppLayout() {

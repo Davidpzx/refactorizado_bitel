@@ -25,6 +25,9 @@ const UsuariosPage       = lazy(() => import('./pages/admin/UsuariosPage').then(
 const TiendasPage        = lazy(() => import('./pages/admin/TiendasPage').then(m => ({ default: m.TiendasPage })))
 const PanelBipayPage     = lazy(() => import('./pages/bipay/PanelBipayPage').then(m => ({ default: m.PanelBipayPage })))
 const AsistenciasPage    = lazy(() => import('./pages/asistencias/AsistenciasPage').then(m => ({ default: m.AsistenciasPage })))
+const ComisionesPage     = lazy(() => import('./pages/comisiones/ComisionesPage').then(m => ({ default: m.ComisionesPage })))
+const ConfiguracionPage  = lazy(() => import('./pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
+const ComprobantesPage   = lazy(() => import('./pages/comprobantes/ComprobantesPage').then(m => ({ default: m.ComprobantesPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -65,7 +68,10 @@ export default function App() {
               <Route path="/usuarios"      element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
               <Route path="/tiendas"       element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
               <Route path="/panel-bipay"   element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
-              <Route path="/asistencias"   element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
+              <Route path="/asistencias"    element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
+              <Route path="/comisiones"    element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
+              <Route path="/configuracion" element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
+              <Route path="/comprobantes"  element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
             </Route>
           </Route>
 
