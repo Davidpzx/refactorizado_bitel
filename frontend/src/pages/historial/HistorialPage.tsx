@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { historialApi } from '../../services/historial.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Download } from 'lucide-react'
+import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -66,7 +67,40 @@ export function HistorialPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Historial Completo de Reportes</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Historial Completo de Reportes</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const params = new URLSearchParams()
+            if (applied.fecha_desde) params.set('fecha_desde', applied.fecha_desde)
+            if (applied.fecha_hasta) params.set('fecha_hasta', applied.fecha_hasta)
+            if (applied.tienda) params.set('tienda', applied.tienda)
+            if (applied.agente_id) params.set('agente_id', String(applied.agente_id))
+            if (applied.estado) params.set('estado', applied.estado)
+            const token = localStorage.getItem('auth_token')
+            const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+            const url = `${base}/v1/historial/exportar?${params.toString()}`
+            const a = document.createElement('a')
+            a.href = url
+            a.setAttribute('data-auth', token ?? '')
+            // Open in new tab — the browser will download the CSV
+            fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+              .then(r => r.blob())
+              .then(blob => {
+                const burl = URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = burl
+                link.download = `historial_${new Date().toISOString().slice(0, 10)}.csv`
+                link.click()
+                URL.revokeObjectURL(burl)
+              })
+          }}
+        >
+          <Download size={14} /> Exportar CSV
+        </Button>
+      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">

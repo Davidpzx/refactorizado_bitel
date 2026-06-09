@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useAgentes, useEliminarAgente } from '../../hooks/useAgentes'
 import { DataTable } from '../../components/DataTable'
@@ -46,6 +47,12 @@ function getColumns(
       header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
+          <Link
+            to={`/agentes/${row.original.id}`}
+            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 h-8 px-3 text-xs font-medium transition-colors"
+          >
+            Ver
+          </Link>
           <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
             Editar
           </Button>

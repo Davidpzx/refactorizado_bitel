@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/',              label: 'Dashboard',        Icon: LayoutDashboard, roles: ['admin', 'tienda'] },
   { to: '/historial',     label: 'Historial',        Icon: History,         roles: ['admin'] },
   { to: '/reportes/nuevo',label: 'Nuevo Cuadre',     Icon: ClipboardList,   roles: ['tienda'] },
-  { to: '/mi-historial',  label: 'Mi Historial',     Icon: History,         roles: ['tienda'], soon: true },
+  { to: '/mi-historial',  label: 'Mi Historial',     Icon: History,         roles: ['tienda'] },
   { to: '/estadisticas',  label: 'Estadísticas',     Icon: BarChart2,       roles: ['admin'], soon: true },
   { to: '/panel-bipay',   label: 'Panel Bipay',      Icon: CreditCard,      roles: ['admin'], soon: true },
   { to: '/reporte-bcp',   label: 'Reporte BCP',      Icon: FileText,        roles: ['admin'], soon: true },
@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/comisiones',    label: 'Comisiones',       Icon: TrendingUp,      roles: ['admin'], soon: true },
   // ── Operaciones ──
   { to: '/inventario',    label: 'Inventario',       Icon: Package,         roles: ['admin', 'tienda'] },
-  { to: '/bitacora-stock',label: 'Bitácora Stock',   Icon: BookOpen,        roles: ['admin', 'tienda'], soon: true },
+  { to: '/bitacora-stock',label: 'Bitácora Stock',   Icon: BookOpen,        roles: ['admin', 'tienda'] },
   { to: '/clientes',      label: 'Clientes',         Icon: UserCog,         roles: ['admin', 'tienda'] },
   { to: '/crm',           label: 'CRM',              Icon: BarChart2,       roles: ['admin', 'tienda'] },
   // ── Admin ──

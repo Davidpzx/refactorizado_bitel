@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
+use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\HistorialController;
 use App\Http\Controllers\Api\InventarioController;
@@ -37,7 +38,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias']);
 
     // ── Historial Completo ────────────────────────────────────────────────────
-    Route::get('historial', [HistorialController::class, 'index']);
+    Route::get('historial',           [HistorialController::class, 'index']);
+    Route::get('historial/exportar',  [HistorialController::class, 'exportar']);
+
+    // ── Bitácora de Stock ─────────────────────────────────────────────────────
+    Route::get('bitacora-stock',      [BitacoraStockController::class, 'index']);
+    Route::get('bitacora-stock/kpis', [BitacoraStockController::class, 'kpis']);
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
     Route::get('reportes/mis-reportes', [ReporteController::class, 'misReportes']);
@@ -60,9 +66,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
 
     // ── Agentes — acciones adicionales ───────────────────────────────────────
-    Route::get('agentes/{agente}/ventas',      [AgenteController::class, 'ventas']);
-    Route::get('agentes/{agente}/comisiones',  [AgenteController::class, 'comisiones']);
-    Route::get('agentes/{agente}/asistencias', [AgenteController::class, 'asistencias']);
+    Route::get('agentes/{agente}/ventas',     [AgenteController::class, 'ventas']);
+    Route::get('agentes/{agente}/comisiones', [AgenteController::class, 'comisiones']);
 
     // ── Planilla ─────────────────────────────────────────────────────────────
     Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular']);

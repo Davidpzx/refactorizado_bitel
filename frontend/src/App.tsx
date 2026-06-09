@@ -16,6 +16,9 @@ const ReporteDetallePage = lazy(() => import('./pages/reportes/ReporteDetallePag
 const PlanillaPage       = lazy(() => import('./pages/planilla/PlanillaPage').then(m => ({ default: m.PlanillaPage })))
 const CrmPage            = lazy(() => import('./pages/crm/CrmPage').then(m => ({ default: m.CrmPage })))
 const HistorialPage      = lazy(() => import('./pages/historial/HistorialPage').then(m => ({ default: m.HistorialPage })))
+const MiHistorialPage    = lazy(() => import('./pages/reportes/MiHistorialPage').then(m => ({ default: m.MiHistorialPage })))
+const BitacoraStockPage  = lazy(() => import('./pages/inventario/BitacoraStockPage').then(m => ({ default: m.BitacoraStockPage })))
+const VerAgentePage      = lazy(() => import('./pages/agentes/VerAgentePage').then(m => ({ default: m.VerAgentePage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -40,7 +43,10 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
               <Route path="/historial" element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
-              <Route path="/agentes" element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
+              <Route path="/mi-historial"   element={<Suspense fallback={<PageLoader />}><MiHistorialPage /></Suspense>} />
+              <Route path="/bitacora-stock" element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
+              <Route path="/agentes"        element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
+              <Route path="/agentes/:id"    element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
               <Route path="/clientes" element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
               <Route path="/inventario" element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
               <Route path="/reportes" element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
