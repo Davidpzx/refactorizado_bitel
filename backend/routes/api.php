@@ -1,17 +1,23 @@
 <?php
 
 use App\Http\Controllers\Api\AgenteController;
+use App\Http\Controllers\Api\AsistenciaController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BipayController;
+use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
-use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\EstadisticasController;
 use App\Http\Controllers\Api\HistorialController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\PlanillaController;
+use App\Http\Controllers\Api\ReporteBcpController;
 use App\Http\Controllers\Api\ReporteController;
+use App\Http\Controllers\Api\TiendaController;
+use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VentaController;
 use Illuminate\Support\Facades\Route;
 
@@ -79,4 +85,31 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('leads',              LeadController::class);
     Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
     Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
+
+    // ── Estadísticas ─────────────────────────────────────────────────────────
+    Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas']);
+    Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad']);
+    Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes']);
+
+    // ── Reporte BCP ───────────────────────────────────────────────────────────
+    Route::get('reporte-bcp',         [ReporteBcpController::class, 'index']);
+    Route::post('reporte-bcp',        [ReporteBcpController::class, 'store']);
+    Route::get('reporte-bcp/tiendas', [ReporteBcpController::class, 'tiendas']);
+
+    // ── Usuarios ──────────────────────────────────────────────────────────────
+    Route::apiResource('usuarios', UsuarioController::class);
+
+    // ── Tiendas ───────────────────────────────────────────────────────────────
+    Route::apiResource('tiendas', TiendaController::class);
+
+    // ── Bipay ─────────────────────────────────────────────────────────────────
+    Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
+    Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
+    Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
+
+    // ── Asistencias ───────────────────────────────────────────────────────────
+    Route::get('asistencias',                     [AsistenciaController::class, 'index']);
+    Route::post('asistencias',                    [AsistenciaController::class, 'registrar']);
+    Route::post('asistencias/{id}/aprobar',       [AsistenciaController::class, 'aprobar']);
+    Route::get('asistencias/exportar',            [AsistenciaController::class, 'exportar']);
 });

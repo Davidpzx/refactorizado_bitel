@@ -24,12 +24,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/historial',     label: 'Historial',        Icon: History,         roles: ['admin'] },
   { to: '/reportes/nuevo',label: 'Nuevo Cuadre',     Icon: ClipboardList,   roles: ['tienda'] },
   { to: '/mi-historial',  label: 'Mi Historial',     Icon: History,         roles: ['tienda'] },
-  { to: '/estadisticas',  label: 'Estadísticas',     Icon: BarChart2,       roles: ['admin'], soon: true },
-  { to: '/panel-bipay',   label: 'Panel Bipay',      Icon: CreditCard,      roles: ['admin'], soon: true },
-  { to: '/reporte-bcp',   label: 'Reporte BCP',      Icon: FileText,        roles: ['admin'], soon: true },
+  { to: '/estadisticas',  label: 'Estadísticas',     Icon: BarChart2,       roles: ['admin'] },
+  { to: '/panel-bipay',   label: 'Panel Bipay',      Icon: CreditCard,      roles: ['admin'] },
+  { to: '/reporte-bcp',   label: 'Reporte BCP',      Icon: FileText,        roles: ['admin', 'tienda'] },
   // ── Agentes y personal ──
   { to: '/agentes',       label: 'Agentes',          Icon: Users,           roles: ['admin'] },
-  { to: '/asistencias',   label: 'Asistencias',      Icon: Clock,           roles: ['admin'], soon: true },
+  { to: '/asistencias',   label: 'Asistencias',      Icon: Clock,           roles: ['admin'] },
   { to: '/planilla',      label: 'Planilla',         Icon: DollarSign,      roles: ['admin'] },
   { to: '/comisiones',    label: 'Comisiones',       Icon: TrendingUp,      roles: ['admin'], soon: true },
   // ── Operaciones ──
@@ -38,8 +38,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clientes',      label: 'Clientes',         Icon: UserCog,         roles: ['admin', 'tienda'] },
   { to: '/crm',           label: 'CRM',              Icon: BarChart2,       roles: ['admin', 'tienda'] },
   // ── Admin ──
-  { to: '/usuarios',      label: 'Usuarios',         Icon: Users,           roles: ['admin'], soon: true },
-  { to: '/tiendas',       label: 'Tiendas',          Icon: Store,           roles: ['admin'], soon: true },
+  { to: '/usuarios',      label: 'Usuarios',         Icon: Users,           roles: ['admin'] },
+  { to: '/tiendas',       label: 'Tiendas',          Icon: Store,           roles: ['admin'] },
   { to: '/configuracion', label: 'Configuración',    Icon: Settings,        roles: ['admin'], soon: true },
 ]
 

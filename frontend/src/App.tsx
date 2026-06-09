@@ -19,6 +19,12 @@ const HistorialPage      = lazy(() => import('./pages/historial/HistorialPage').
 const MiHistorialPage    = lazy(() => import('./pages/reportes/MiHistorialPage').then(m => ({ default: m.MiHistorialPage })))
 const BitacoraStockPage  = lazy(() => import('./pages/inventario/BitacoraStockPage').then(m => ({ default: m.BitacoraStockPage })))
 const VerAgentePage      = lazy(() => import('./pages/agentes/VerAgentePage').then(m => ({ default: m.VerAgentePage })))
+const EstadisticasPage   = lazy(() => import('./pages/estadisticas/EstadisticasPage').then(m => ({ default: m.EstadisticasPage })))
+const ReporteBcpPage     = lazy(() => import('./pages/bcp/ReporteBcpPage').then(m => ({ default: m.ReporteBcpPage })))
+const UsuariosPage       = lazy(() => import('./pages/admin/UsuariosPage').then(m => ({ default: m.UsuariosPage })))
+const TiendasPage        = lazy(() => import('./pages/admin/TiendasPage').then(m => ({ default: m.TiendasPage })))
+const PanelBipayPage     = lazy(() => import('./pages/bipay/PanelBipayPage').then(m => ({ default: m.PanelBipayPage })))
+const AsistenciasPage    = lazy(() => import('./pages/asistencias/AsistenciasPage').then(m => ({ default: m.AsistenciasPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -54,6 +60,12 @@ export default function App() {
               <Route path="/reportes/:id" element={<Suspense fallback={<PageLoader />}><ReporteDetallePage /></Suspense>} />
               <Route path="/planilla" element={<Suspense fallback={<PageLoader />}><PlanillaPage /></Suspense>} />
               <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
+              <Route path="/estadisticas"  element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
+              <Route path="/reporte-bcp"   element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
+              <Route path="/usuarios"      element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
+              <Route path="/tiendas"       element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
+              <Route path="/panel-bipay"   element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
+              <Route path="/asistencias"   element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
             </Route>
           </Route>
 
