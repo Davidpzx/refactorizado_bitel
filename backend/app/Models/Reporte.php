@@ -47,4 +47,9 @@ class Reporte extends Model
     {
         return $this->hasMany(Venta::class);
     }
+
+    public function agente(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Agente::class);
+    }
 }

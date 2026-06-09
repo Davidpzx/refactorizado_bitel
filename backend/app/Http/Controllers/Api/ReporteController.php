@@ -224,4 +224,67 @@ class ReporteController extends Controller
         $reporte->delete();
         return response()->json(null, 204);
     }
+
+    public function misReportes(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $reportes = Reporte::query()
+            ->where('usuario_id', $user->id)
+            ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('fecha', '>=', $f))
+            ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('fecha', '<=', $f))
+            ->when($request->estado,      fn ($q, $e) => $q->where('estado', $e))
+            ->withCount('ventas')
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->paginate($request->integer('per_page', 20));
+
+        return response()->json($reportes);
+    }
+
+    public function actualizarDestino(Request $request, Reporte $reporte): JsonResponse
+    {
+        $validated = $request->validate([
+            'destino_efectivo' => 'required|string|max:50',
+        ]);
+
+        $reporte->update(['destino_efectivo' => $validated['destino_efectivo']]);
+        return response()->json($reporte->fresh());
+    }
+
+    public function solicitarEdicion(Request $request, Reporte $reporte): JsonResponse
+    {
+        $validated = $request->validate([
+            'motivo_edicion' => 'required|string|max:500',
+        ]);
+
+        if ($reporte->estado === 'borrador') {
+            return response()->json(['error' => 'El reporte aún está en borrador y puede editarse directamente.'], 422);
+        }
+
+        if ($reporte->estado_edicion === 'SOLICITADO') {
+            return response()->json(['error' => 'Ya existe una solicitud de edición pendiente.'], 422);
+        }
+
+        $reporte->update([
+            'estado_edicion' => 'SOLICITADO',
+            'motivo_edicion' => $validated['motivo_edicion'],
+        ]);
+
+        return response()->json($reporte->fresh());
+    }
+
+    public function aprobarEdicion(Request $request, Reporte $reporte): JsonResponse
+    {
+        if ($reporte->estado_edicion !== 'SOLICITADO') {
+            return response()->json(['error' => 'No hay solicitud de edición pendiente.'], 422);
+        }
+
+        $reporte->update([
+            'estado_edicion' => 'APROBADO',
+            'estado'         => 'borrador',
+        ]);
+
+        return response()->json($reporte->fresh());
+    }
 }
