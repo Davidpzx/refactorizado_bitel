@@ -32,7 +32,16 @@ Route::get('/v1/health', fn() => response()->json([
 
 // ── Auth (público) ───────────────────────────────────────────────────────────
 Route::prefix('v1/auth')->group(function () {
-    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('login',      [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('verify-pin', [AuthController::class, 'verifyPin'])->middleware('throttle:20,1');
+});
+
+// ── Terminal de Asistencias (público, throttled) ──────────────────────────────
+Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
+    Route::get('status/{dni}',  [AsistenciaController::class, 'status']);
+    Route::post('mark',         [AsistenciaController::class, 'mark']);
+    Route::post('mark-qr',      [AsistenciaController::class, 'markQr']);
+    Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto']);
 });
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
@@ -59,6 +68,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
     Route::post('reportes/{reporte}/aprobar-edicion',   [ReporteController::class, 'aprobarEdicion']);
+    Route::get('reportes/{reporte}/historial',           [ReporteController::class, 'historial']);
 
     Route::apiResource('reportes', ReporteController::class);
 
@@ -124,9 +134,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
     Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
 
-    // ── Asistencias ───────────────────────────────────────────────────────────
-    Route::get('asistencias',                     [AsistenciaController::class, 'index']);
-    Route::post('asistencias',                    [AsistenciaController::class, 'registrar']);
-    Route::post('asistencias/{id}/aprobar',       [AsistenciaController::class, 'aprobar']);
-    Route::get('asistencias/exportar',            [AsistenciaController::class, 'exportar']);
+    // ── Asistencias (panel admin) ─────────────────────────────────────────────
+    Route::get('asistencias',                        [AsistenciaController::class, 'index']);
+    Route::post('asistencias',                       [AsistenciaController::class, 'registrar']);
+    Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar']);
+    Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar']);
+    Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes']);
+    Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction']);
+    Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
 });

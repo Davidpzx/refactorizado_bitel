@@ -1,8 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { reportesApi, type HistorialReporteEntry } from '../../services/reportes.api'
 import type { ReporteConVentas, VentaConDetalle } from '../../types/reporte'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -435,6 +437,75 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
   )
 }
 
+// ─── Historial de Auditoría ───────────────────────────────────────────────────
+
+const ACCION_CONFIG: Record<HistorialReporteEntry['accion'], { label: string; color: string; dot: string }> = {
+  crear:               { label: 'Reporte creado',          color: 'text-green-700',   dot: 'bg-green-500' },
+  solicito_edicion:    { label: 'Edición solicitada',      color: 'text-amber-700',   dot: 'bg-amber-500' },
+  edicion_aprobada:    { label: 'Edición aprobada',        color: 'text-blue-700',    dot: 'bg-blue-500' },
+  edicion_rechazada:   { label: 'Edición rechazada',       color: 'text-red-700',     dot: 'bg-red-500' },
+  edicion_reporte:     { label: 'Reporte editado',         color: 'text-purple-700',  dot: 'bg-purple-500' },
+  edicion_critica:     { label: 'Edición crítica',         color: 'text-red-700',     dot: 'bg-red-600' },
+  edicion_restaurada:  { label: 'Reporte restaurado',      color: 'text-teal-700',    dot: 'bg-teal-500' },
+  destino_modificado:  { label: 'Destino modificado',      color: 'text-indigo-700',  dot: 'bg-indigo-500' },
+}
+
+function HistorialTimeline({ reporteId }: { reporteId: number }) {
+  const { data: historial = [], isLoading } = useQuery<HistorialReporteEntry[]>({
+    queryKey: ['historial-reporte', reporteId],
+    queryFn: () => reportesApi.historial(reporteId),
+    staleTime: 30_000,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2].map(i => (
+          <div key={i} className="flex gap-3 animate-pulse">
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1.5 shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 bg-gray-200 rounded w-1/3" />
+              <div className="h-3 bg-gray-100 rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!historial.length) {
+    return <p className="text-xs text-gray-400 italic py-2">Sin eventos registrados.</p>
+  }
+
+  return (
+    <ol className="relative border-l border-gray-200 ml-1.5 space-y-4">
+      {historial.map((entry) => {
+        const cfg = ACCION_CONFIG[entry.accion] ?? { label: entry.accion, color: 'text-gray-700', dot: 'bg-gray-400' }
+        const fecha = new Date(entry.created_at)
+        const fechaStr = `${fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })} ${fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
+
+        return (
+          <li key={entry.id} className="ml-4">
+            <span className={`absolute -left-1.5 w-3 h-3 rounded-full border-2 border-white ${cfg.dot}`} />
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</span>
+              <span className="text-[10px] text-gray-400 shrink-0">{fechaStr}</span>
+            </div>
+            {entry.usuario?.nombre && (
+              <p className="text-xs text-gray-500 mt-0.5">por {entry.usuario.nombre}</p>
+            )}
+            {entry.detalle && (
+              <p className="text-xs text-gray-600 mt-1 bg-gray-50 rounded px-2 py-1 leading-relaxed">
+                {entry.detalle}
+              </p>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 // ─── Skeleton de carga ────────────────────────────────────────────────────────
 
 function SkeletonBloque({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
@@ -700,6 +771,18 @@ export function ReporteDetallePage() {
           <span>{reporte.fecha_aprobacion.slice(0, 10)}</span>
         </div>
       )}
+
+      {/* ── Historial de Auditoría ── */}
+      <Card className="mt-6">
+        <CardHeader className="py-3 px-4 border-b border-gray-100">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+            Historial de auditoría
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 py-4">
+          <HistorialTimeline reporteId={reporte.id} />
+        </CardContent>
+      </Card>
 
     </div>
   )

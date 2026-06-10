@@ -67,4 +67,24 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }
+
+    public function verifyPin(Request $request): JsonResponse
+    {
+        $request->validate([
+            'dni' => 'required|string',
+            'pin' => 'required|string|size:4',
+        ]);
+
+        $agente = \App\Models\Agente::where('dni', $request->dni)->first();
+
+        if (! $agente || $agente->pin_seguridad !== $request->pin) {
+            return response()->json(['valid' => false, 'error' => 'DNI o PIN incorrecto'], 422);
+        }
+
+        return response()->json([
+            'valid'     => true,
+            'agente_id' => $agente->id,
+            'nombre'    => $agente->nombre ?? $agente->nombres,
+        ]);
+    }
 }

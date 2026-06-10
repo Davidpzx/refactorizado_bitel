@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use App\Models\HistorialReporte;
 use App\Models\Reporte;
 use App\Models\Venta;
 use App\Models\VentaEquipo;
@@ -271,6 +272,13 @@ class ReporteController extends Controller
             'motivo_edicion' => $validated['motivo_edicion'],
         ]);
 
+        HistorialReporte::create([
+            'reporte_id' => $reporte->id,
+            'usuario_id' => auth()->id(),
+            'accion'     => 'solicito_edicion',
+            'detalle'    => $validated['motivo_edicion'],
+        ]);
+
         return response()->json($reporte->fresh());
     }
 
@@ -285,6 +293,23 @@ class ReporteController extends Controller
             'estado'         => 'borrador',
         ]);
 
+        HistorialReporte::create([
+            'reporte_id' => $reporte->id,
+            'usuario_id' => auth()->id(),
+            'accion'     => 'edicion_aprobada',
+            'detalle'    => 'Edición aprobada por administración.',
+        ]);
+
         return response()->json($reporte->fresh());
+    }
+
+    public function historial(Reporte $reporte): JsonResponse
+    {
+        $historial = $reporte->historialReportes()
+            ->with('usuario:id,nombre')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($historial);
     }
 }

@@ -26,4 +26,20 @@ export const reportesApi = {
 
   editarAprobado: (id: number, data: { efectivo_entregado?: number; destino_efectivo?: string; observaciones?: string; motivo_edicion?: string }) =>
     api.put<Reporte>(`/v1/reportes/${id}`, data).then((r) => r.data),
+
+  historial: (id: number) =>
+    api.get<HistorialReporteEntry[]>(`/v1/reportes/${id}/historial`).then((r) => r.data),
+}
+
+export interface HistorialReporteEntry {
+  id: number
+  reporte_id: number
+  usuario_id: number | null
+  accion: 'crear' | 'solicito_edicion' | 'edicion_aprobada' | 'edicion_rechazada' | 'edicion_reporte' | 'edicion_critica' | 'edicion_restaurada' | 'destino_modificado'
+  detalle: string | null
+  snapshot_antes: Record<string, unknown> | null
+  snapshot_despues: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+  usuario?: { id: number; nombre: string } | null
 }

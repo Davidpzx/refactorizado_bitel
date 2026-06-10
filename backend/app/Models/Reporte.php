@@ -52,4 +52,9 @@ class Reporte extends Model
     {
         return $this->belongsTo(Agente::class);
     }
+
+    public function historialReportes(): HasMany
+    {
+        return $this->hasMany(HistorialReporte::class);
+    }
 }

@@ -29,6 +29,8 @@ const AsistenciasPage    = lazy(() => import('./pages/asistencias/AsistenciasPag
 const ComisionesPage     = lazy(() => import('./pages/comisiones/ComisionesPage').then(m => ({ default: m.ComisionesPage })))
 const ConfiguracionPage  = lazy(() => import('./pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
 const ComprobantesPage   = lazy(() => import('./pages/comprobantes/ComprobantesPage').then(m => ({ default: m.ComprobantesPage })))
+const TerminalAsistenciaPage = lazy(() => import('./pages/asistencias/TerminalAsistenciaPage').then(m => ({ default: m.TerminalAsistenciaPage })))
+const QrDisplayPage      = lazy(() => import('./pages/asistencias/QrDisplayPage').then(m => ({ default: m.QrDisplayPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -48,6 +50,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+
+          {/* ── Rutas públicas ── */}
+          <Route path="/terminal" element={<Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
@@ -71,6 +76,7 @@ export default function App() {
               <Route path="/tiendas"       element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
               <Route path="/panel-bipay"   element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
               <Route path="/asistencias"    element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
+              <Route path="/asistencias/qr" element={<Suspense fallback={<PageLoader />}><QrDisplayPage /></Suspense>} />
               <Route path="/comisiones"    element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
               <Route path="/configuracion" element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
               <Route path="/comprobantes"  element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
