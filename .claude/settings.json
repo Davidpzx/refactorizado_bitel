@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__codex-cli__codex",
+      "mcp__codex-cli__review",
+      "mcp__codex-cli__listSessions",
+      "mcp__codex-cli__ping",
+      "mcp__gemini-cli__ask-gemini",
+      "mcp__gemini-cli__brainstorm",
+      "mcp__gemini-cli__fetch-chunk",
+      "mcp__gemini-cli__ping"
+    ]
+  },
+  "env": {
+    "GEMINI_CLI_TRUST_WORKSPACE": "true"
+  }
+}
