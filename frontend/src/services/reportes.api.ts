@@ -20,4 +20,10 @@ export const reportesApi = {
 
   planesComisiones: (tipo_servicio?: string) =>
     api.get<ComisionPlan[]>('/v1/comisiones-planes', { params: { tipo_servicio } }).then((r) => r.data),
+
+  cambiarDestino: (id: number, destino_efectivo: string) =>
+    api.patch(`/v1/reportes/${id}/destino-efectivo`, { destino_efectivo }).then((r) => r.data),
+
+  editarAprobado: (id: number, data: { efectivo_entregado?: number; destino_efectivo?: string; observaciones?: string; motivo_edicion?: string }) =>
+    api.put<Reporte>(`/v1/reportes/${id}`, data).then((r) => r.data),
 }

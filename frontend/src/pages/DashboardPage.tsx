@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Bell, TrendingDown, TrendingUp } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X } from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
+import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
 
@@ -14,6 +15,8 @@ function diferenciaClass(val: number) {
   if (val === 0) return 'bg-gray-100 text-gray-600'
   return val < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
 }
+
+const DESTINOS = ['TIENDA', 'BANCO', 'GERENCIA', 'AGENTE']
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -59,6 +62,9 @@ function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?
   if (estadoEdicion === 'SOLICITADO') {
     return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 font-medium">Edición solicitada</span>
   }
+  if (estadoEdicion === 'APROBADO') {
+    return <span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-indigo-50 text-indigo-700 border-indigo-200">Edición aprobada</span>
+  }
   const map: Record<string, string> = {
     borrador: 'bg-gray-100 text-gray-600',
     enviado:  'bg-blue-100 text-blue-700',
@@ -72,6 +78,51 @@ function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?
   )
 }
 
+function ModalEditarDestino({
+  reporteId, current, onClose,
+}: {
+  reporteId: number; current: string; onClose: () => void
+}) {
+  const [destino, setDestino] = useState(current ?? 'TIENDA')
+  const qc = useQueryClient()
+
+  const { mutate, isPending, error } = useMutation({
+    mutationFn: () => reportesApi.cambiarDestino(reporteId, destino),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dashboard-kpis'] }); onClose() },
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-xs p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900 text-sm">Modificar Destino Efectivo</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Reporte <span className="font-mono font-semibold">#{String(reporteId).padStart(4, '0')}</span>
+        </p>
+        <select
+          value={destino}
+          onChange={(e) => setDestino(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {DESTINOS.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        {error && (
+          <p className="text-xs text-red-600">{(error as any)?.response?.data?.error ?? 'Error al actualizar'}</p>
+        )}
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button disabled={isPending || destino === (current ?? 'TIENDA')} onClick={() => mutate()}>
+            {isPending ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
@@ -81,6 +132,7 @@ export function DashboardPage() {
   const [rawFilters, setRawFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr, tienda: '' })
   const [appliedFilters, setAppliedFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr })
   const [showAnomalias, setShowAnomalias] = useState(false)
+  const [editingDestino, setEditingDestino] = useState<{ id: number; current: string } | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-kpis', appliedFilters],
@@ -170,27 +222,15 @@ export function DashboardPage() {
         <Button variant="outline" onClick={resetToToday}>Hoy</Button>
       </div>
 
-      {/* KPIs principales — 4 tarjetas */}
+      {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          title="Total General (Inc. Digital)"
-          value={isLoading ? null : totales?.total_general}
-          colorClass="text-blue-700"
-        />
-        <KpiCard
-          title="Físico Esperado (Sist.)"
-          value={isLoading ? null : totales?.fisico_esperado}
-          colorClass="text-green-700"
-        />
-        <KpiCard
-          title="Físico Declarado (Agente)"
-          value={isLoading ? null : totales?.fisico_declarado}
-          colorClass="text-indigo-700"
-        />
-        <KpiCardDiferencia value={isLoading ? null : totales?.diferencia_fisica} />
+        <KpiCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}     colorClass="text-blue-700" />
+        <KpiCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}   colorClass="text-green-700" />
+        <KpiCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado}  colorClass="text-indigo-700" />
+        <KpiCardDiferencia                              value={isLoading ? null : totales?.diferencia_fisica} />
       </div>
 
-      {/* KPIs digitales + ganancia */}
+      {/* KPIs digitales */}
       <div className={`grid gap-4 ${usuario?.rol === 'admin' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}>
         <KpiCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          colorClass="text-purple-700" />
         <KpiCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         colorClass="text-orange-600" />
@@ -218,7 +258,11 @@ export function DashboardPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 {['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Destino', 'Estado'].map((h) => (
-                  <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 ${h === 'Total' || h === 'F. Entregado' || h === 'Diferencia' ? 'text-right' : 'text-left'}`}>
+                  <th
+                    key={h}
+                    className={`px-4 py-3 text-xs font-semibold text-gray-500
+                      ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
+                  >
                     {h}
                   </th>
                 ))}
@@ -226,18 +270,10 @@ export function DashboardPage() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">
-                    Cargando datos...
-                  </td>
-                </tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">Cargando datos...</td></tr>
               )}
               {!isLoading && reportes.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">
-                    Sin reportes en el período seleccionado
-                  </td>
-                </tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">Sin reportes en el período seleccionado</td></tr>
               )}
               {reportes.map((r) => {
                 const dif = Number(r.diferencia)
@@ -249,7 +285,7 @@ export function DashboardPage() {
                   : 'border-b border-gray-100 hover:bg-gray-50/60'
 
                 return (
-                  <tr key={r.id} className={rowCls}>
+                  <tr key={r.id} className={`group ${rowCls}`}>
                     <td className="px-4 py-3 font-mono text-gray-600 text-xs">
                       #{String(r.id).padStart(4, '0')}
                     </td>
@@ -267,7 +303,20 @@ export function DashboardPage() {
                         {dif > 0 ? '+' : ''}{fmt(dif)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{r.destino_efectivo ?? 'TIENDA'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <span>{r.destino_efectivo ?? 'TIENDA'}</span>
+                        {usuario?.rol === 'admin' && (
+                          <button
+                            onClick={() => setEditingDestino({ id: r.id, current: r.destino_efectivo ?? 'TIENDA' })}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-600 transition-all"
+                            title="Modificar destino"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
@@ -282,10 +331,7 @@ export function DashboardPage() {
       {/* Offcanvas Anomalías */}
       {showAnomalias && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowAnomalias(false)}
-          />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAnomalias(false)} />
           <div className="relative bg-white w-full max-w-sm shadow-2xl flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-red-50">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
@@ -297,18 +343,11 @@ export function DashboardPage() {
                   </span>
                 )}
               </h3>
-              <button
-                onClick={() => setShowAnomalias(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-              >
-                ×
-              </button>
+              <button onClick={() => setShowAnomalias(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {anomaliasList.length === 0 ? (
-                <p className="text-center text-gray-400 text-sm py-8">
-                  Sin anomalías recientes
-                </p>
+                <p className="text-center text-gray-400 text-sm py-8">Sin anomalías recientes</p>
               ) : (
                 anomaliasList.map((a) => {
                   const dif = Number(a.diferencia)
@@ -336,6 +375,15 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal destino efectivo */}
+      {editingDestino && (
+        <ModalEditarDestino
+          reporteId={editingDestino.id}
+          current={editingDestino.current}
+          onClose={() => setEditingDestino(null)}
+        />
       )}
     </div>
   )

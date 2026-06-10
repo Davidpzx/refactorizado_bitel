@@ -5,7 +5,7 @@ import { api } from '../../services/api'
 import type { PaginatedResponse } from '../../types/pagination'
 import type { Reporte } from '../../types/reporte'
 import { Button } from '../../components/ui/button'
-import { ChevronLeft, ChevronRight, Eye, Edit } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Edit, PenLine } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -171,7 +171,7 @@ export function MiHistorialPage() {
               )}
               {reportes.map(r => {
                 const dif = Number(r.diferencia)
-                const puedeEditar = r.estado !== 'borrador' && r.estado !== 'aprobado' && r.estado_edicion !== 'SOLICITADO'
+                const puedeEditar = r.estado !== 'borrador' && r.estado !== 'aprobado' && r.estado_edicion === 'CERRADO'
                 return (
                   <tr key={r.id} className={`border-b ${dif < 0 ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:bg-gray-50/60'}`}>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600">#{String(r.id).padStart(4, '0')}</td>
@@ -199,6 +199,14 @@ export function MiHistorialPage() {
                         )}
                         {r.estado_edicion === 'SOLICITADO' && (
                           <span className="text-xs text-yellow-600 font-medium">Pendiente aprobación</span>
+                        )}
+                        {r.estado_edicion === 'APROBADO' && (
+                          <Link
+                            to={`/reportes/${r.id}/editar`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                          >
+                            <PenLine size={13} /> Editar ahora
+                          </Link>
                         )}
                       </div>
                     </td>

@@ -17,6 +17,7 @@ const PlanillaPage       = lazy(() => import('./pages/planilla/PlanillaPage').th
 const CrmPage            = lazy(() => import('./pages/crm/CrmPage').then(m => ({ default: m.CrmPage })))
 const HistorialPage      = lazy(() => import('./pages/historial/HistorialPage').then(m => ({ default: m.HistorialPage })))
 const MiHistorialPage    = lazy(() => import('./pages/reportes/MiHistorialPage').then(m => ({ default: m.MiHistorialPage })))
+const EditarReportePage  = lazy(() => import('./pages/reportes/EditarReportePage').then(m => ({ default: m.EditarReportePage })))
 const BitacoraStockPage  = lazy(() => import('./pages/inventario/BitacoraStockPage').then(m => ({ default: m.BitacoraStockPage })))
 const VerAgentePage      = lazy(() => import('./pages/agentes/VerAgentePage').then(m => ({ default: m.VerAgentePage })))
 const EstadisticasPage   = lazy(() => import('./pages/estadisticas/EstadisticasPage').then(m => ({ default: m.EstadisticasPage })))
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="/reportes" element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
               <Route path="/reportes/nuevo" element={<Suspense fallback={<PageLoader />}><NuevoReportePage /></Suspense>} />
               <Route path="/reportes/:id" element={<Suspense fallback={<PageLoader />}><ReporteDetallePage /></Suspense>} />
+              <Route path="/reportes/:id/editar" element={<Suspense fallback={<PageLoader />}><EditarReportePage /></Suspense>} />
               <Route path="/planilla" element={<Suspense fallback={<PageLoader />}><PlanillaPage /></Suspense>} />
               <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
               <Route path="/estadisticas"  element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />

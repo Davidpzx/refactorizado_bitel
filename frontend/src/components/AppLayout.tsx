@@ -3,11 +3,12 @@ import { Outlet, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '../services/dashboard.api'
+import { useTheme } from '../context/ThemeContext'
 import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, TrendingUp, Menu, Receipt,
+  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon,
 } from 'lucide-react'
 
 interface NavItem {
@@ -39,7 +40,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'] },
 ]
 
-/* Separadores de sección por índice visual */
 const SECTION_SEPARATORS: Record<number, string> = {
   0:  'Operaciones',
   7:  'Personal',
@@ -49,6 +49,7 @@ const SECTION_SEPARATORS: Record<number, string> = {
 
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -63,7 +64,6 @@ export function AppLayout() {
   const userRole     = usuario?.rol ?? 'tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
 
-  /* Mapa posición-real → índice-visible para separadores */
   function buildSeparatorMap() {
     const map: Record<number, string> = {}
     let visIdx = 0
@@ -76,71 +76,116 @@ export function AppLayout() {
   }
   const separatorMap = buildSeparatorMap()
 
+  /* ── Theme-conditional styles ── */
+  const sidebarBg = isDark
+    ? { background: 'rgba(9,9,11,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.06)' }
+    : { background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(0,0,0,0.07)', boxShadow: '2px 0 16px -4px rgba(0,0,0,0.07)' }
+
+  const mobileBg = isDark
+    ? { background: '#18181b', borderBottom: '1px solid rgba(255,255,255,0.06)' }
+    : { background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }
+
+  const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
+  const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
+
+  const navActive = isDark
+    ? 'bg-zinc-800 text-zinc-100 border border-[rgba(255,255,255,0.08)] shadow-sm'
+    : 'bg-gray-100 text-gray-900 border border-gray-200 shadow-sm'
+  const navInactive = isDark
+    ? 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+
+  const sectionLabelCls = isDark ? 'text-zinc-600' : 'text-gray-400'
+  const dividerCls      = isDark ? 'border-[rgba(255,255,255,0.05)]' : 'border-gray-100'
+  const logoTextCls     = isDark ? 'text-white' : 'text-gray-900'
+  const collapseBtnCls  = isDark
+    ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
+    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+  const userNameCls     = isDark ? 'text-zinc-200' : 'text-gray-800'
+  const userRoleCls     = isDark ? 'text-zinc-600' : 'text-gray-400'
+  const logoutCls       = isDark
+    ? 'text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300'
+    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+  const soonCls         = isDark ? 'text-zinc-700' : 'text-gray-300'
+  const soonBadgeCls    = isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400'
+  const mobileMenuCls   = isDark
+    ? 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
+    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+
   function SidebarContent() {
     return (
       <div className="flex flex-col h-full">
-        {/* ── Logo ─────────────────────────────────────────────────────── */}
+        {/* Logo ─────────────────────────────────────────────────────────── */}
         <div
-          className={`flex items-center h-16 px-4 border-b shrink-0
-            border-[rgba(255,255,255,0.06)]
+          className={`flex items-center h-16 px-4 border-b shrink-0 ${headerBorder}
             ${collapsed ? 'justify-center' : 'justify-between'}`}
         >
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2 min-w-0">
               <span
-                className="text-base font-bold tracking-widest uppercase text-white"
+                className={`text-base font-bold tracking-widest uppercase ${logoTextCls}`}
                 style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: '0.18em' }}
               >
                 SIS-KYRO
               </span>
               {usuario?.tienda_id && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0"
-                  style={{ background: 'rgba(255,194,0,0.15)', color: '#ffc200' }}>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0"
+                  style={{ background: 'rgba(255,194,0,0.15)', color: isDark ? '#ffc200' : '#d97706' }}
+                >
                   {usuario.tienda_id}
                 </span>
               )}
             </Link>
           )}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-md
-              text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors shrink-0"
-          >
-            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
+          <div className={`flex items-center gap-1 ${collapsed ? '' : 'ml-auto'}`}>
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
+            >
+              {isDark ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
+            {/* Collapse toggle (desktop only) */}
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              className={`hidden lg:flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+          </div>
         </div>
 
-        {/* ── Nav ──────────────────────────────────────────────────────── */}
+        {/* Nav ─────────────────────────────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visibleItems.map(({ to, label, Icon, soon }, idx) => {
             const sectionLabel = separatorMap[idx]
 
             return (
               <div key={to}>
-                {/* Separador de sección */}
                 {sectionLabel && !collapsed && idx !== 0 && (
                   <div className="pt-3 pb-1 px-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+                    <span className={`text-[10px] font-semibold uppercase tracking-widest ${sectionLabelCls}`}>
                       {sectionLabel}
                     </span>
                   </div>
                 )}
                 {sectionLabel && !collapsed && idx !== 0 && (
-                  <div className="mx-3 mb-1 border-t border-[rgba(255,255,255,0.05)]" />
+                  <div className={`mx-3 mb-1 border-t ${dividerCls}`} />
                 )}
 
                 {soon ? (
                   <div
                     title={collapsed ? label : undefined}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-md
-                      text-zinc-700 cursor-not-allowed select-none
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-not-allowed select-none ${soonCls}
                       ${collapsed ? 'justify-center' : ''}`}
                   >
                     <Icon size={15} className="shrink-0" />
                     {!collapsed && (
                       <>
                         <span className="text-xs font-medium truncate flex-1">{label}</span>
-                        <span className="text-[9px] bg-zinc-800 text-zinc-600 px-1.5 py-0.5 rounded">Soon</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${soonBadgeCls}`}>Soon</span>
                       </>
                     )}
                   </div>
@@ -154,26 +199,25 @@ export function AppLayout() {
                       [
                         'flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150',
                         collapsed ? 'justify-center' : '',
-                        isActive
-                          ? 'bg-zinc-800 text-zinc-100 border border-[rgba(255,255,255,0.08)] shadow-sm'
-                          : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200',
+                        isActive ? navActive : navInactive,
                       ].join(' ')
                     }
                   >
                     {({ isActive }) => {
                       const showBell = to === '/historial' && anomaliasCount > 0 && !collapsed
+                      const iconColor = isActive
+                        ? isDark ? 'text-[#ffc200]' : 'text-amber-600'
+                        : ''
                       return (
                         <>
-                          <Icon
-                            size={15}
-                            className={`shrink-0 ${isActive ? 'text-[#ffc200]' : ''}`}
-                          />
+                          <Icon size={15} className={`shrink-0 ${iconColor}`} />
                           {!collapsed && <span className="truncate flex-1">{label}</span>}
                           {showBell && (
                             <span className={`badge-pulse text-[10px] rounded-full px-1.5 py-0.5 font-bold shrink-0
                               ${isActive
-                                ? 'bg-[rgba(255,194,0,0.2)] text-[#ffc200]'
-                                : 'bg-[rgba(239,68,68,0.2)] text-red-400 border border-red-500/30'}`}
+                                ? isDark ? 'bg-[rgba(255,194,0,0.2)] text-[#ffc200]' : 'bg-amber-100 text-amber-700'
+                                : isDark ? 'bg-[rgba(239,68,68,0.2)] text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600 border border-red-200'
+                              }`}
                             >
                               {anomaliasCount > 99 ? '99+' : anomaliasCount}
                             </span>
@@ -188,8 +232,8 @@ export function AppLayout() {
           })}
         </nav>
 
-        {/* ── Usuario + logout ──────────────────────────────────────────── */}
-        <div className="border-t border-[rgba(255,255,255,0.06)] p-3 shrink-0">
+        {/* Usuario ─────────────────────────────────────────────────────── */}
+        <div className={`border-t ${footerBorder} p-3 shrink-0`}>
           {!collapsed ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -200,15 +244,14 @@ export function AppLayout() {
                   {(usuario?.nombre ?? 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-zinc-200 truncate">{usuario?.nombre}</p>
-                  <p className="text-[10px] text-zinc-600 uppercase tracking-wider">{usuario?.rol}</p>
+                  <p className={`text-[12px] font-semibold truncate ${userNameCls}`}>{usuario?.nombre}</p>
+                  <p className={`text-[10px] uppercase tracking-wider ${userRoleCls}`}>{usuario?.rol}</p>
                 </div>
               </div>
               <button
                 onClick={() => logout()}
                 disabled={isLoggingOut}
-                className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs
-                  text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300 transition-colors disabled:opacity-40"
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40 ${logoutCls}`}
               >
                 <LogOut size={12} />
                 {isLoggingOut ? 'Saliendo...' : 'Cerrar sesión'}
@@ -219,8 +262,7 @@ export function AppLayout() {
               onClick={() => logout()}
               disabled={isLoggingOut}
               title="Cerrar sesión"
-              className="w-full flex justify-center p-2 rounded-md text-zinc-600
-                hover:bg-zinc-800 hover:text-zinc-300 transition-colors"
+              className={`w-full flex justify-center p-2 rounded-md transition-colors ${logoutCls}`}
             >
               <LogOut size={15} />
             </button>
@@ -231,16 +273,13 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#09090b' }}>
-
-      {/* ── Sidebar desktop ───────────────────────────────────────────── */}
+    <div
+      className="flex min-h-screen"
+      style={{ background: isDark ? '#09090b' : '#f8fafc' }}
+    >
+      {/* Sidebar desktop ────────────────────────────────────────────────── */}
       <aside
-        style={{
-          background: 'rgba(9, 9, 11, 0.85)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-        }}
+        style={sidebarBg}
         className={[
           'hidden lg:flex flex-col shrink-0 transition-all duration-200',
           collapsed ? 'w-16' : 'w-60',
@@ -249,16 +288,15 @@ export function AppLayout() {
         <SidebarContent />
       </aside>
 
-      {/* ── Sidebar mobile overlay ────────────────────────────────────── */}
+      {/* Sidebar mobile overlay ──────────────────────────────────────────── */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setMobileOpen(false)}
+          />
           <aside
-            style={{
-              background: 'rgba(9, 9, 11, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRight: '1px solid rgba(255,255,255,0.06)',
-            }}
+            style={{ ...sidebarBg, background: isDark ? 'rgba(9,9,11,0.97)' : 'rgba(255,255,255,0.97)' }}
             className="relative w-64 flex flex-col z-10"
           >
             <SidebarContent />
@@ -266,34 +304,46 @@ export function AppLayout() {
         </div>
       )}
 
-      {/* ── Main content ─────────────────────────────────────────────── */}
+      {/* Main content ────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
         <header
-          style={{
-            background: '#18181b',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-          }}
+          style={mobileBg}
           className="lg:hidden px-4 py-3 flex items-center gap-3"
         >
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+            className={`p-1.5 rounded-md transition-colors ${mobileMenuCls}`}
           >
             <Menu size={18} />
           </button>
           <span
-            className="font-bold text-white tracking-widest text-sm uppercase"
+            className={`font-bold tracking-widest text-sm uppercase ${logoTextCls}`}
             style={{ fontFamily: "'Orbitron', sans-serif" }}
           >
             SIS-KYRO
           </span>
-          {anomaliasCount > 0 && usuario?.rol === 'admin' && (
-            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full badge-pulse"
-              style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
-              <Bell size={10} /> {anomaliasCount}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              title={isDark ? 'Modo claro' : 'Modo oscuro'}
+              className={`p-1.5 rounded-md transition-colors ${mobileMenuCls}`}
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            {anomaliasCount > 0 && usuario?.rol === 'admin' && (
+              <span
+                className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full badge-pulse"
+                style={{
+                  background: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.12)',
+                  color: isDark ? '#f87171' : '#dc2626',
+                  border: isDark ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(239,68,68,0.25)',
+                }}
+              >
+                <Bell size={10} /> {anomaliasCount}
+              </span>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
