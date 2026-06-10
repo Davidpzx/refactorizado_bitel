@@ -1,19 +1,114 @@
 @import "tailwindcss";
 
-:root {
-  font-family: system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
+/* ── Tailwind v4: custom theme tokens ──────────────────────────────────────── */
+@theme {
+  --font-inter:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-orbitron: 'Orbitron', sans-serif;
+
+  --color-kyro-base:         #09090b;
+  --color-kyro-panel:        #18181b;
+  --color-kyro-card:         #1c1c1f;
+  --color-kyro-elevated:     #27272a;
+  --color-kyro-gold:         #ffc200;
+  --color-kyro-gold-dim:     rgba(255, 194, 0, 0.15);
+  --color-kyro-indigo:       #6366f1;
+  --color-kyro-indigo-dim:   rgba(99, 102, 241, 0.15);
+  --color-kyro-border:       rgba(255, 255, 255, 0.08);
+  --color-kyro-border-input: #3f3f46;
+  --color-kyro-text:         #f4f4f5;
+  --color-kyro-muted:        #a1a1aa;
+  --color-kyro-body:         #e4e4e7;
+  --color-kyro-subtle:       #52525b;
 }
 
-* {
-  box-sizing: border-box;
+/* ── Reset & base ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
-  background-color: #f9fafb;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background-color: #09090b;
+  color: #e4e4e7;
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(255, 194, 0, 0.04) 0%, transparent 40%);
+  background-attachment: fixed;
 }
 
-#root {
-  min-height: 100vh;
+#root { min-height: 100vh; }
+
+/* ── Scrollbar personalizada ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* ── Focus ring global estilo Stripe ───────────────────────────────────────── */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px rgba(99, 102, 241, 0.45);
+}
+
+/* ── Animación badge pulsante ──────────────────────────────────────────────── */
+@keyframes kyro-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.12); }
+}
+.badge-pulse { animation: kyro-pulse 1.8s ease-in-out infinite; }
+
+/* ── Glassmorphism ─────────────────────────────────────────────────────────── */
+.kyro-glass {
+  background: rgba(9, 9, 11, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Card premium ──────────────────────────────────────────────────────────── */
+.kyro-card {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+}
+
+/* ── Input dark ────────────────────────────────────────────────────────────── */
+.kyro-input {
+  background: #09090b;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+.kyro-input::placeholder { color: #52525b; }
+.kyro-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px rgba(99, 102, 241, 0.4);
+}
+
+/* ── Tabla premium headers ─────────────────────────────────────────────────── */
+.kyro-table-head th {
+  background: rgba(39, 39, 42, 0.5);
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
