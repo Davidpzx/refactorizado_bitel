@@ -1,10 +1,15 @@
 import { useState, useCallback } from 'react'
 import { format, startOfMonth } from 'date-fns'
+import { FileText } from 'lucide-react'
 import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } from '../../hooks/usePlanilla'
 import { PageHeader } from '../../components/PageHeader'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Dialog } from '../../components/ui/dialog'
+import { Label } from '../../components/ui/label'
+import { api } from '../../services/api'
 import type { FilaPlanilla } from '../../types/planilla'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,6 +84,171 @@ function CeldaEditable({
   )
 }
 
+// ── Boleta Dialog ─────────────────────────────────────────────────────────────
+
+interface BoletaForm {
+  fecha_inicio: string
+  fecha_fin: string
+  sueldo_base: string
+  bonos: string
+  dscto_tardanza: string
+  dscto_adelantos: string
+}
+
+function BoletaDialog({
+  fila,
+  mes,
+  open,
+  onClose,
+}: {
+  fila: FilaPlanilla
+  mes: string
+  open: boolean
+  onClose: () => void
+}) {
+  const mesDate = mes.length === 7 ? mes : mes.slice(0, 7)
+  const [form, setForm] = useState<BoletaForm>({
+    fecha_inicio:   `${mesDate}-01`,
+    fecha_fin:      `${mesDate}-${new Date(parseInt(mesDate.slice(0,4)), parseInt(mesDate.slice(5,7)), 0).getDate()}`,
+    sueldo_base:    fila.sueldo_base.toFixed(2),
+    bonos:          (fila.comision_equipo + fila.comision_planes + fila.comision_online + fila.comision_jefe).toFixed(2),
+    dscto_tardanza: fila.tardanzas.toFixed(2),
+    dscto_adelantos: fila.adelanto_incluido.toFixed(2),
+  })
+  const [enviando, setEnviando] = useState(false)
+
+  const setField = (field: keyof BoletaForm, val: string) =>
+    setForm(prev => ({ ...prev, [field]: val }))
+
+  const totalNeto =
+    (parseFloat(form.sueldo_base) || 0) +
+    (parseFloat(form.bonos) || 0) -
+    (parseFloat(form.dscto_tardanza) || 0) -
+    (parseFloat(form.dscto_adelantos) || 0)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setEnviando(true)
+    try {
+      const resp = await api.post(
+        '/v1/constancias/boleta',
+        {
+          agente_id:      fila.agente_id,
+          fecha_inicio:   form.fecha_inicio,
+          fecha_fin:      form.fecha_fin,
+          sueldo_base:    parseFloat(form.sueldo_base) || 0,
+          bonos:          parseFloat(form.bonos) || 0,
+          dscto_tardanza: parseFloat(form.dscto_tardanza) || 0,
+          dscto_adelantos: parseFloat(form.dscto_adelantos) || 0,
+          total_neto:     totalNeto,
+        },
+        { responseType: 'blob' },
+      )
+      const url = window.URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `boleta-${fila.nombres.replace(/\s+/g, '-')}-${mes}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      onClose()
+    } catch {
+      // silently fail
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} title={`Boleta PDF — ${fila.nombres}`} maxWidth="md">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Fecha inicio</Label>
+            <Input
+              type="date"
+              value={form.fecha_inicio}
+              onChange={e => setField('fecha_inicio', e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label>Fecha fin</Label>
+            <Input
+              type="date"
+              value={form.fecha_fin}
+              onChange={e => setField('fecha_fin', e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Sueldo base</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.sueldo_base}
+              onChange={e => setField('sueldo_base', e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label>Bonos (comisiones)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.bonos}
+              onChange={e => setField('bonos', e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Dsct. tardanza</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.dscto_tardanza}
+              onChange={e => setField('dscto_tardanza', e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label>Dsct. adelantos</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.dscto_adelantos}
+              onChange={e => setField('dscto_adelantos', e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+          <span className="text-sm font-semibold text-gray-700">
+            Total neto: <span className="text-green-600">S/ {totalNeto.toFixed(2)}</span>
+          </span>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={enviando}>
+              {enviando ? 'Generando...' : 'Descargar PDF'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Dialog>
+  )
+}
+
 // ── Fila de la tabla ──────────────────────────────────────────────────────────
 
 function FilaTabla({
@@ -93,6 +263,7 @@ function FilaTabla({
   onReset: (agente_id: number, mes: string) => void
 }) {
   const [expandida, setExpandida] = useState(false)
+  const [boletaOpen, setBoletaOpen] = useState(false)
 
   const estadoBadge =
     fila.estado === 'ACTIVO' ? <Badge variant="success">ACTIVO</Badge> :
@@ -134,7 +305,7 @@ function FilaTabla({
         <td className="py-1 px-1 text-right font-bold text-red-400 font-mono">{fmt(fila.total_descuentos)}</td>
         <td className="py-1 px-1 text-right font-bold text-cyan-400 font-mono text-sm">{fmt(fila.total_pagar)}</td>
         <td className="py-1 px-1 text-center">
-          <div className="flex gap-1 justify-center">
+          <div className="flex gap-1 justify-center items-center">
             <button
               onClick={() => setExpandida(v => !v)}
               className="text-muted-foreground hover:text-white px-1"
@@ -151,9 +322,24 @@ function FilaTabla({
                 ↺
               </button>
             )}
+            <button
+              onClick={() => setBoletaOpen(true)}
+              className="text-indigo-400 hover:text-indigo-300 px-1"
+              title="Generar Boleta PDF"
+            >
+              <FileText size={13} />
+            </button>
           </div>
         </td>
       </tr>
+      {boletaOpen && (
+        <BoletaDialog
+          fila={fila}
+          mes={mes}
+          open={boletaOpen}
+          onClose={() => setBoletaOpen(false)}
+        />
+      )}
       {expandida && (
         <tr className="bg-white/[0.015] border-b border-white/5">
           <td colSpan={18} className="px-4 py-2">

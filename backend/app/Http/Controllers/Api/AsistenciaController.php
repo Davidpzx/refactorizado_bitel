@@ -488,4 +488,128 @@ class AsistenciaController extends Controller
             'Content-Disposition' => 'attachment; filename="asistencias_' . $desde . '_' . $hasta . '.csv"',
         ]);
     }
+
+    // ── POST /attendance/salvavidas — Perdonar tardanza con descuento en refrigerio ──
+    public function salvavidas(Request $request): JsonResponse
+    {
+        $asistenciaPasadaId = (int) $request->input('asistencia_id', 0);
+        $minutos            = (int) $request->input('minutos', 0);
+
+        if ($asistenciaPasadaId <= 0) {
+            return response()->json(['success' => false, 'mensaje' => 'ID de asistencia inválido.']);
+        }
+        if ($minutos <= 0 || $minutos > 120) {
+            return response()->json(['success' => false, 'mensaje' => "Los minutos deben estar entre 1 y 120. Valor recibido: {$minutos}."]);
+        }
+
+        // Identificar al agente por DNI
+        $dni    = trim($request->input('dni', ''));
+        $agente = DB::table('agentes')->where('dni', $dni)->first();
+        if (!$agente) {
+            return response()->json(['success' => false, 'mensaje' => 'Agente no encontrado.']);
+        }
+
+        $fechaHoy = now()->toDateString();
+
+        try {
+            DB::beginTransaction();
+
+            $asistenciaPasada = DB::table('asistencias')
+                ->where('id', $asistenciaPasadaId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$asistenciaPasada) {
+                throw new \Exception('El registro de asistencia no existe.');
+            }
+
+            // Solo tardanzas de esta semana
+            $inicioSemana = now()->startOfWeek()->toDateString();
+            $finSemana    = now()->endOfWeek()->toDateString();
+
+            if ($asistenciaPasada->fecha < $inicioSemana || $asistenciaPasada->fecha > $finSemana) {
+                throw new \Exception('Solo puedes recuperar tardanzas de la semana actual.');
+            }
+
+            // Verificar que no usó salvavidas esta semana
+            $yaUso = DB::table('asistencias')
+                ->where('agente_id', $asistenciaPasada->agente_id)
+                ->whereBetween('fecha', [$inicioSemana, $finSemana])
+                ->where('comodin_usado', 1)
+                ->exists();
+
+            if ($yaUso) {
+                throw new \Exception('Ya utilizaste tu salvavidas esta semana. Solo se permite 1 uso por semana.');
+            }
+
+            // Asistencia de hoy
+            $asistenciaHoy = DB::table('asistencias')
+                ->where('agente_id', $asistenciaPasada->agente_id)
+                ->where('fecha', $fechaHoy)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$asistenciaHoy) {
+                throw new \Exception('Para usar el salvavidas, primero debes haber marcado tu INGRESO del día de HOY.');
+            }
+            if (!empty($asistenciaHoy->inicio_refrigerio)) {
+                throw new \Exception('Ya saliste a refrigerio hoy. Usa el salvavidas ANTES de tu hora de almuerzo.');
+            }
+
+            // Perdonar tardanza del día pasado
+            DB::table('asistencias')
+                ->where('id', $asistenciaPasadaId)
+                ->update(['minutos_tardanza' => 0]);
+
+            // Aplicar descuento al día de hoy
+            DB::table('asistencias')
+                ->where('id', $asistenciaHoy->id)
+                ->update(['comodin_usado' => 1, 'min_comodin' => $minutos]);
+
+            DB::commit();
+
+            $fechaFormateada = \Carbon\Carbon::parse($asistenciaPasada->fecha)->format('d/m/Y');
+            return response()->json([
+                'success' => true,
+                'mensaje' => "¡Salvavidas aplicado! Se perdonó tu tardanza del {$fechaFormateada}. Hoy se descontarán {$minutos} minutos de tu refrigerio.",
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'mensaje' => $e->getMessage()]);
+        }
+    }
+
+    // ── PATCH /asistencias/{id} — Edición admin de tiempos de una asistencia ──
+    public function editar(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+
+        $asistencia = DB::table('asistencias')->where('id', $id)->first();
+        if (!$asistencia) {
+            return response()->json(['success' => false, 'message' => 'Asistencia no encontrada.'], 404);
+        }
+
+        $update = [];
+        foreach (['hora_ingreso', 'hora_salida', 'inicio_refrigerio', 'fin_refrigerio'] as $campo) {
+            if ($request->has($campo)) {
+                $update[$campo] = $request->input($campo) ?: null;
+            }
+        }
+        if ($request->has('omitio_refrigerio')) {
+            $update['omitio_refrigerio'] = $request->boolean('omitio_refrigerio') ? 1 : 0;
+        }
+        if ($request->has('observacion_admin')) {
+            $update['observacion_admin'] = substr(trim($request->input('observacion_admin', '')), 0, 500);
+        }
+
+        if (!empty($update)) {
+            $update['updated_at'] = now();
+            DB::table('asistencias')->where('id', $id)->update($update);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Asistencia actualizada correctamente.']);
+    }
 }

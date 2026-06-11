@@ -31,6 +31,17 @@ const ConfiguracionPage  = lazy(() => import('./pages/admin/ConfiguracionPage').
 const ComprobantesPage   = lazy(() => import('./pages/comprobantes/ComprobantesPage').then(m => ({ default: m.ComprobantesPage })))
 const TerminalAsistenciaPage = lazy(() => import('./pages/asistencias/TerminalAsistenciaPage').then(m => ({ default: m.TerminalAsistenciaPage })))
 const QrDisplayPage      = lazy(() => import('./pages/asistencias/QrDisplayPage').then(m => ({ default: m.QrDisplayPage })))
+const TrasladosPage      = lazy(() => import('./pages/traslados/TrasladosPage').then(m => ({ default: m.TrasladosPage })))
+const TrasladoChipsPage  = lazy(() => import('./pages/traslados/TrasladoChipsPage').then(m => ({ default: m.TrasladoChipsPage })))
+const MatrizInventarioPage = lazy(() => import('./pages/inventario/MatrizInventarioPage').then(m => ({ default: m.MatrizInventarioPage })))
+const ChipsGestionPage   = lazy(() => import('./pages/inventario/ChipsGestionPage').then(m => ({ default: m.ChipsGestionPage })))
+const KardexInventarioPage = lazy(() => import('./pages/inventario/KardexInventarioPage').then(m => ({ default: m.KardexInventarioPage })))
+const PanelFinancierasPage = lazy(() => import('./pages/admin/PanelFinancierasPage').then(m => ({ default: m.PanelFinancierasPage })))
+const DiagnosticoPage    = lazy(() => import('./pages/admin/DiagnosticoPage').then(m => ({ default: m.DiagnosticoPage })))
+const PostulacionesPage  = lazy(() => import('./pages/admin/PostulacionesPage').then(m => ({ default: m.PostulacionesPage })))
+const TicketsPage        = lazy(() => import('./pages/tickets/TicketsPage').then(m => ({ default: m.TicketsPage })))
+const PostulacionPublicaPage = lazy(() => import('./pages/PostulacionPublicaPage').then(m => ({ default: m.PostulacionPublicaPage })))
+const TicketImpresionPage   = lazy(() => import('./pages/tickets/TicketImpresionPage').then(m => ({ default: m.TicketImpresionPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -52,7 +63,9 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* ── Rutas públicas ── */}
-          <Route path="/terminal" element={<Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>} />
+          <Route path="/terminal"           element={<Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>} />
+          <Route path="/postular"           element={<Suspense fallback={<PageLoader />}><PostulacionPublicaPage /></Suspense>} />
+          <Route path="/tickets/imprimir/:id" element={<Suspense fallback={<PageLoader />}><TicketImpresionPage /></Suspense>} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
@@ -80,6 +93,15 @@ export default function App() {
               <Route path="/comisiones"    element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
               <Route path="/configuracion" element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
               <Route path="/comprobantes"  element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
+              <Route path="/traslados"     element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
+              <Route path="/traslados-chips"   element={<Suspense fallback={<PageLoader />}><TrasladoChipsPage /></Suspense>} />
+              <Route path="/inventario/matriz"  element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
+              <Route path="/inventario/kardex" element={<Suspense fallback={<PageLoader />}><KardexInventarioPage /></Suspense>} />
+              <Route path="/chips-gestion"     element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
+              <Route path="/financieras"        element={<Suspense fallback={<PageLoader />}><PanelFinancierasPage /></Suspense>} />
+              <Route path="/diagnostico"        element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
+              <Route path="/admin/postulaciones" element={<Suspense fallback={<PageLoader />}><PostulacionesPage /></Suspense>} />
+              <Route path="/tickets"            element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
             </Route>
           </Route>
 

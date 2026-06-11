@@ -8,7 +8,8 @@ import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon,
+  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight, Layers,
+  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText,
 } from 'lucide-react'
 
 interface NavItem {
@@ -31,10 +32,19 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'] },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'] },
   { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'] },
-  { to: '/inventario',     label: 'Inventario',      Icon: Package,         roles: ['admin', 'tienda'] },
-  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'] },
-  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'] },
+  { to: '/inventario',     label: 'Inventario',      Icon: Package,          roles: ['admin', 'tienda'] },
+  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,         roles: ['admin', 'tienda'] },
+  { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,   roles: ['admin', 'tienda'] },
+  { to: '/traslados-chips',  label: 'Traslados Chips',  Icon: Layers,          roles: ['admin', 'tienda'] },
+  { to: '/inventario/matriz',  label: 'Matriz Inventario', Icon: Grid3x3,        roles: ['admin', 'tienda'] },
+  { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText,     roles: ['admin'] },
+  { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,            roles: ['admin', 'tienda'] },
+  { to: '/financieras',      label: 'Financieras',      Icon: Landmark,        roles: ['admin'] },
+  { to: '/diagnostico',      label: 'Diagnóstico',      Icon: Stethoscope,     roles: ['admin'] },
+  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,          roles: ['admin', 'tienda'] },
+  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,           roles: ['admin', 'tienda'] },
   { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'] },
+  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'] },
   { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'] },
   { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'] },
   { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'] },
@@ -44,7 +54,7 @@ const SECTION_SEPARATORS: Record<number, string> = {
   0:  'Operaciones',
   7:  'Personal',
   11: 'Recursos',
-  15: 'Administración',
+  17: 'Administración',
 }
 
 export function AppLayout() {

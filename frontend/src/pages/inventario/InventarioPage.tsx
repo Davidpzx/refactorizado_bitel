@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
+import { api } from '../../services/api'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { Dialog } from '../../components/ui/dialog'
@@ -8,6 +11,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
+import { Label } from '../../components/ui/label'
 import { InventarioForm } from './InventarioForm'
 import type { InventarioItem } from '../../types/inventario'
 
@@ -98,6 +102,110 @@ function getColumns(
   ]
 }
 
+// ── Campana Costos ────────────────────────────────────────────────────────────
+
+interface CampanaItem {
+  rc_id: number
+  producto: string
+  imei: string | null
+  precio_venta: number | null
+  tienda: string
+  fecha: string
+}
+
+interface CampanaResponse {
+  count: number
+  items: CampanaItem[]
+}
+
+function CampanaCostosWidget() {
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [costos, setCostos] = useState<Record<number, string>>({})
+  const [guardando, setGuardando] = useState<number | null>(null)
+
+  const { data, refetch } = useQuery<CampanaResponse>({
+    queryKey: ['inventario-campana-costos'],
+    queryFn: () => api.get('/v1/inventario/campana-costos').then(r => r.data),
+    staleTime: 60_000,
+  })
+
+  const fijarCosto = useMutation({
+    mutationFn: ({ rc_id, precio_costo, precio_venta }: { rc_id: number; precio_costo: number; precio_venta: number | null }) =>
+      api.post(`/v1/reporte-categorias/${rc_id}/fijar-costo`, { precio_costo, precio_venta }).then(r => r.data),
+    onSuccess: () => {
+      refetch()
+      qc.invalidateQueries({ queryKey: ['inventario-campana-costos'] })
+    },
+  })
+
+  const count = data?.count ?? 0
+  if (count === 0) return null
+
+  const handleGuardar = async (item: CampanaItem) => {
+    const val = parseFloat(costos[item.rc_id] ?? '')
+    if (isNaN(val) || val <= 0) return
+    setGuardando(item.rc_id)
+    await fijarCosto.mutateAsync({ rc_id: item.rc_id, precio_costo: val, precio_venta: item.precio_venta })
+    setGuardando(null)
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 mb-4 px-4 py-2.5 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors text-sm font-medium"
+      >
+        <AlertTriangle size={15} className="shrink-0" />
+        <span>{count} {count === 1 ? 'venta sin' : 'ventas sin'} precio de costo — Haz clic para corregir</span>
+      </button>
+
+      <Dialog open={open} onClose={() => setOpen(false)} title="Ventas sin precio de costo" maxWidth="lg">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+          {(data?.items ?? []).map(item => (
+            <div key={item.rc_id} className="flex items-end gap-3 border-b border-gray-100 pb-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{item.producto}</p>
+                <p className="text-xs text-gray-500">
+                  {item.tienda} · {item.fecha?.slice(0, 10)}
+                  {item.imei ? ` · ${item.imei}` : ''}
+                  {item.precio_venta != null ? ` · Venta: S/ ${parseFloat(String(item.precio_venta)).toFixed(2)}` : ''}
+                </p>
+              </div>
+              <div className="flex items-end gap-2 shrink-0">
+                <div>
+                  <Label className="text-xs">P. Costo</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    className="w-24 text-right"
+                    value={costos[item.rc_id] ?? ''}
+                    onChange={e => setCostos(prev => ({ ...prev, [item.rc_id]: e.target.value }))}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleGuardar(item)}
+                  disabled={guardando === item.rc_id || !costos[item.rc_id]}
+                >
+                  {guardando === item.rc_id ? '...' : 'Guardar'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end pt-3">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
+        </div>
+      </Dialog>
+    </>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export function InventarioPage() {
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
@@ -153,6 +261,8 @@ export function InventarioPage() {
         description="Stock de equipos, accesorios y chips por tienda."
         actions={<Button onClick={abrirCrear}>+ Nuevo item</Button>}
       />
+
+      <CampanaCostosWidget />
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <Input

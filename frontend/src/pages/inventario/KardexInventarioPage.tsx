@@ -1,0 +1,270 @@
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Download, RotateCcw } from 'lucide-react'
+import { api } from '../../services/api'
+import { useAuth } from '../../hooks/useAuth'
+import { PageHeader } from '../../components/PageHeader'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { Select } from '../../components/ui/select'
+import { Dialog } from '../../components/ui/dialog'
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface KardexRow {
+  id: number
+  nombre: string
+  tipo: string
+  imei: string | null
+  tienda: string
+  tienda_nombre: string
+  fecha_ingreso: string
+  estado: 'DISPONIBLE' | 'VENDIDO' | 'TRASLADO'
+  precio_costo: number | null
+  fecha_venta: string | null
+  agente: string | null
+  precio: number | null
+  es_cuota: boolean | number
+}
+
+interface TiendaItem {
+  id?: number
+  codigo: string
+  nombre: string
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmtSol = (n: number | null | undefined) =>
+  n != null ? `S/ ${parseFloat(String(n)).toFixed(2)}` : '—'
+
+const fmtFecha = (s: string | null | undefined) =>
+  s ? s.slice(0, 10) : '—'
+
+type EstadoVariant = 'success' | 'destructive' | 'warning'
+const estadoVariant: Record<KardexRow['estado'], EstadoVariant> = {
+  DISPONIBLE: 'success',
+  VENDIDO:    'destructive',
+  TRASLADO:   'warning',
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export function KardexInventarioPage() {
+  const { usuario } = useAuth()
+  const isAdmin = usuario?.rol === 'admin'
+  const qc = useQueryClient()
+
+  const [tienda, setTienda] = useState('')
+  const [estado, setEstado] = useState('')
+  const [exportando, setExportando] = useState(false)
+  const [confirmRow, setConfirmRow] = useState<KardexRow | null>(null)
+
+  // Tiendas para el dropdown
+  const { data: tiendasData } = useQuery<{ data: TiendaItem[] } | TiendaItem[]>({
+    queryKey: ['tiendas-list'],
+    queryFn: () => api.get('/v1/tiendas').then(r => r.data),
+    staleTime: 300_000,
+  })
+
+  const tiendas: TiendaItem[] = Array.isArray(tiendasData)
+    ? tiendasData
+    : (tiendasData as { data: TiendaItem[] })?.data ?? []
+
+  // Kardex rows
+  const { data, isLoading } = useQuery<{ ok: boolean; rows: KardexRow[] }>({
+    queryKey: ['inventario-kardex', tienda, estado],
+    queryFn: () =>
+      api
+        .get('/v1/inventario/kardex', { params: { tienda: tienda || undefined, estado: estado || undefined } })
+        .then(r => r.data),
+  })
+
+  const rows = data?.rows ?? []
+
+  // Restaurar item vendido
+  const restaurar = useMutation({
+    mutationFn: (id: number) => api.post(`/v1/inventario/${id}/restaurar`).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventario-kardex'] })
+      setConfirmRow(null)
+    },
+  })
+
+  // Exportar CSV via blob
+  const handleExportar = async () => {
+    setExportando(true)
+    try {
+      const params: Record<string, string> = {}
+      if (tienda) params.tienda = tienda
+      if (estado) params.estado = estado
+
+      const resp = await api.get('/v1/inventario/exportar-kardex', {
+        params,
+        responseType: 'blob',
+      })
+
+      const url = window.URL.createObjectURL(new Blob([resp.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `kardex-${Date.now()}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      // silently fail — user sees nothing if error
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Kardex de Inventario"
+        description="Historial completo de movimientos de stock."
+        actions={
+          <Button variant="outline" size="sm" onClick={handleExportar} disabled={exportando}>
+            <Download size={14} className="mr-1.5" />
+            {exportando ? 'Exportando...' : 'Exportar CSV'}
+          </Button>
+        }
+      />
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <Select
+          value={tienda}
+          onChange={e => setTienda(e.target.value)}
+          className="w-52"
+        >
+          <option value="">Todas las tiendas</option>
+          {tiendas.map(t => (
+            <option key={t.codigo} value={t.codigo}>
+              {t.nombre ?? t.codigo}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={estado}
+          onChange={e => setEstado(e.target.value)}
+          className="w-40"
+        >
+          <option value="">Todos los estados</option>
+          <option value="DISPONIBLE">Disponible</option>
+          <option value="VENDIDO">Vendido</option>
+          <option value="TRASLADO">Traslado</option>
+        </Select>
+
+        {(tienda || estado) && (
+          <Button variant="ghost" size="sm" onClick={() => { setTienda(''); setEstado('') }}>
+            Limpiar filtros
+          </Button>
+        )}
+      </div>
+
+      {/* Tabla */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+          Cargando kardex...
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+          Sin registros para los filtros seleccionados.
+        </div>
+      ) : (
+        <div className="rounded-lg border border-zinc-800 overflow-x-auto">
+          <table className="w-full text-xs" style={{ minWidth: '1100px' }}>
+            <thead>
+              <tr className="border-b border-zinc-800 text-muted-foreground/70 text-[0.65rem] uppercase tracking-wide">
+                <th className="py-2 px-3 text-left">Tienda</th>
+                <th className="py-2 px-3 text-left">Producto</th>
+                <th className="py-2 px-3 text-left">IMEI / Serie</th>
+                <th className="py-2 px-2 text-center">Tipo</th>
+                <th className="py-2 px-2 text-center">Estado</th>
+                <th className="py-2 px-2 text-center">Ingreso</th>
+                <th className="py-2 px-2 text-right">P. Costo</th>
+                <th className="py-2 px-2 text-right">P. Venta</th>
+                <th className="py-2 px-3 text-left">Vendido a</th>
+                <th className="py-2 px-2 text-center">F. Venta</th>
+                <th className="py-2 px-2 text-center">Cuotas</th>
+                {isAdmin && <th className="py-2 px-2 w-20"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.id} className="border-b border-zinc-800/60 hover:bg-white/[0.02] text-xs">
+                  <td className="py-1.5 px-3 text-muted-foreground/80 whitespace-nowrap">
+                    {row.tienda_nombre ?? row.tienda}
+                  </td>
+                  <td className="py-1.5 px-3 font-medium whitespace-nowrap">{row.nombre}</td>
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{row.imei ?? '—'}</td>
+                  <td className="py-1.5 px-2 text-center">
+                    <Badge variant={row.tipo === 'EQUIPO' ? 'default' : row.tipo === 'ACCESORIO' ? 'outline' : 'warning'}>
+                      {row.tipo}
+                    </Badge>
+                  </td>
+                  <td className="py-1.5 px-2 text-center">
+                    <Badge variant={estadoVariant[row.estado]}>{row.estado}</Badge>
+                  </td>
+                  <td className="py-1.5 px-2 text-center text-muted-foreground">{fmtFecha(row.fecha_ingreso)}</td>
+                  <td className="py-1.5 px-2 text-right font-mono">{fmtSol(row.precio_costo)}</td>
+                  <td className="py-1.5 px-2 text-right font-mono">{fmtSol(row.precio)}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground">{row.agente ?? '—'}</td>
+                  <td className="py-1.5 px-2 text-center text-muted-foreground">{fmtFecha(row.fecha_venta)}</td>
+                  <td className="py-1.5 px-2 text-center">
+                    {row.es_cuota ? (
+                      <Badge variant="warning">Sí</Badge>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                  {isAdmin && (
+                    <td className="py-1.5 px-2 text-center">
+                      {row.estado === 'VENDIDO' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setConfirmRow(row)}
+                          title="Restaurar a disponible"
+                        >
+                          <RotateCcw size={12} className="mr-1" />
+                          Restaurar
+                        </Button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Confirm restaurar */}
+      <Dialog
+        open={!!confirmRow}
+        onClose={() => setConfirmRow(null)}
+        title="Restaurar item"
+      >
+        <p className="text-sm text-gray-700 mb-4">
+          ¿Restaurar <strong>{confirmRow?.nombre}</strong>{confirmRow?.imei ? ` (${confirmRow.imei})` : ''} a estado DISPONIBLE?
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setConfirmRow(null)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => confirmRow && restaurar.mutate(confirmRow.id)}
+            disabled={restaurar.isPending}
+          >
+            {restaurar.isPending ? 'Restaurando...' : 'Confirmar'}
+          </Button>
+        </div>
+      </Dialog>
+    </div>
+  )
+}
