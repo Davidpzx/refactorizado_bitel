@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
+import { Printer, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
+import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { Dialog } from '../../components/ui/dialog'
@@ -22,21 +24,59 @@ const TIENDAS = [
   { codigo: 'TACDA30', nombre: 'Tacna — TACDA30' },
 ]
 
+const FORMA_PAGO_OPCIONES = ['EFECTIVO', 'YAPE', 'BIPAY', 'PLIN', 'TRANSFERENCIA', 'MIXTO']
+
+const FORMA_PAGO_COLORS: Record<string, string> = {
+  EFECTIVO:      'bg-green-100 text-green-800',
+  YAPE:          'bg-purple-100 text-purple-800',
+  BIPAY:         'bg-cyan-100 text-cyan-800',
+  PLIN:          'bg-orange-100 text-orange-800',
+  TRANSFERENCIA: 'bg-blue-100 text-blue-800',
+  MIXTO:         'bg-gray-100 text-gray-800',
+}
+
 function padTicket(id: number) {
   return String(id).padStart(6, '0')
 }
 
-function formaPago(t: Ticket) {
+function detectFormaPago(t: Ticket): string {
+  const activos = [t.efectivo, t.yape, t.bipay, t.plin].filter(v => v && parseFloat(v) > 0)
+  if (activos.length > 1) return 'MIXTO'
+  if (t.efectivo && parseFloat(t.efectivo) > 0) return 'EFECTIVO'
+  if (t.yape     && parseFloat(t.yape)     > 0) return 'YAPE'
+  if (t.bipay    && parseFloat(t.bipay)    > 0) return 'BIPAY'
+  if (t.plin     && parseFloat(t.plin)     > 0) return 'PLIN'
+  return '—'
+}
+
+function formaPagoDetalle(t: Ticket) {
   const partes: string[] = []
   if (t.efectivo && parseFloat(t.efectivo) > 0) partes.push(`Efect. S/${parseFloat(t.efectivo).toFixed(2)}`)
-  if (t.yape   && parseFloat(t.yape)   > 0) partes.push(`Yape S/${parseFloat(t.yape).toFixed(2)}`)
-  if (t.bipay  && parseFloat(t.bipay)  > 0) partes.push(`Bipay S/${parseFloat(t.bipay).toFixed(2)}`)
-  if (t.plin   && parseFloat(t.plin)   > 0) partes.push(`Plin S/${parseFloat(t.plin).toFixed(2)}`)
+  if (t.yape     && parseFloat(t.yape)     > 0) partes.push(`Yape S/${parseFloat(t.yape).toFixed(2)}`)
+  if (t.bipay    && parseFloat(t.bipay)    > 0) partes.push(`Bipay S/${parseFloat(t.bipay).toFixed(2)}`)
+  if (t.plin     && parseFloat(t.plin)     > 0) partes.push(`Plin S/${parseFloat(t.plin).toFixed(2)}`)
   return partes.length ? partes.join(' + ') : '—'
+}
+
+function FormaPagoBadge({ ticket }: { ticket: Ticket }) {
+  const tipo = detectFormaPago(ticket)
+  const color = FORMA_PAGO_COLORS[tipo] ?? 'bg-gray-100 text-gray-800'
+  const detalle = formaPagoDetalle(ticket)
+  return (
+    <div className="flex flex-col gap-0.5">
+      {tipo !== '—' && (
+        <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${color}`}>{tipo}</span>
+      )}
+      <span className="text-xs text-gray-500">{detalle}</span>
+    </div>
+  )
 }
 
 function getColumns(
   onEditar: (t: Ticket) => void,
+  onReimprimir: (t: Ticket) => void,
+  onAnular: (t: Ticket) => void,
+  isAdmin: boolean,
 ): ColumnDef<Ticket>[] {
   return [
     {
@@ -49,13 +89,20 @@ function getColumns(
     {
       accessorKey: 'nombre_cliente',
       header: 'Cliente',
-      cell: ({ row }) => row.original.nombre_cliente ?? '—',
+      cell: ({ row }) => (
+        <div>
+          <div>{row.original.nombre_cliente ?? '—'}</div>
+          {row.original.dni_cliente && (
+            <div className="text-xs text-gray-400">DNI: {row.original.dni_cliente}</div>
+          )}
+        </div>
+      ),
     },
     {
       accessorKey: 'descripcion',
       header: 'Descripción',
       cell: ({ row }) => (
-        <span className="max-w-[200px] truncate block" title={row.original.descripcion}>
+        <span className="max-w-[180px] truncate block text-xs" title={row.original.descripcion}>
           {row.original.descripcion}
         </span>
       ),
@@ -68,7 +115,7 @@ function getColumns(
     {
       id: 'forma_pago',
       header: 'Forma de pago',
-      cell: ({ row }) => <span className="text-xs">{formaPago(row.original)}</span>,
+      cell: ({ row }) => <FormaPagoBadge ticket={row.original} />,
     },
     {
       accessorKey: 'created_at',
@@ -79,9 +126,30 @@ function getColumns(
       id: 'acciones',
       header: 'Acciones',
       cell: ({ row }) => (
-        <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-          Editar
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
+            Editar
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Reimprimir ticket"
+            onClick={() => onReimprimir(row.original)}
+          >
+            <Printer size={14} />
+          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Anular ticket"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              onClick={() => onAnular(row.original)}
+            >
+              <Trash2 size={14} />
+            </Button>
+          )}
+        </div>
       ),
     },
   ]
@@ -90,18 +158,18 @@ function getColumns(
 function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const crear = useCrearTicket()
 
-  const [tienda_id, setTiendaId]     = useState('')
-  const [vendedor, setVendedor]      = useState('')
-  const [descripcion, setDescripcion] = useState('')
-  const [monto, setMonto]            = useState('')
-  const [cantidad, setCantidad]      = useState('1')
+  const [tienda_id, setTiendaId]           = useState('')
+  const [vendedor, setVendedor]            = useState('')
+  const [descripcion, setDescripcion]      = useState('')
+  const [monto, setMonto]                  = useState('')
+  const [cantidad, setCantidad]            = useState('1')
   const [nombre_cliente, setNombreCliente] = useState('')
-  const [dni_cliente, setDniCliente]      = useState('')
-  const [telefono, setTelefono]           = useState('')
-  const [efectivo, setEfectivo]           = useState('')
-  const [yape, setYape]                   = useState('')
-  const [bipay, setBipay]                 = useState('')
-  const [plin, setPlin]                   = useState('')
+  const [dni_cliente, setDniCliente]       = useState('')
+  const [telefono, setTelefono]            = useState('')
+  const [efectivo, setEfectivo]            = useState('')
+  const [yape, setYape]                    = useState('')
+  const [bipay, setBipay]                  = useState('')
+  const [plin, setPlin]                    = useState('')
 
   const totalPago = useMemo(() => {
     return (parseFloat(efectivo) || 0) + (parseFloat(yape) || 0) + (parseFloat(bipay) || 0) + (parseFloat(plin) || 0)
@@ -155,25 +223,11 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Monto (S/) *</label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-            required
-            placeholder="0.00"
-          />
+          <Input type="number" step="0.01" min="0" value={monto} onChange={(e) => setMonto(e.target.value)} required placeholder="0.00" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Cantidad *</label>
-          <Input
-            type="number"
-            min="1"
-            value={cantidad}
-            onChange={(e) => setCantidad(e.target.value)}
-            required
-          />
+          <Input type="number" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} required />
         </div>
       </div>
 
@@ -212,7 +266,6 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
             <Input type="number" step="0.01" min="0" value={plin} onChange={(e) => setPlin(e.target.value)} placeholder="0.00" />
           </div>
         </div>
-
         {totalPago > 0 && (
           <div className="mt-3 flex items-center gap-6 text-sm">
             <span className="text-gray-500">Total recibido: <strong>S/ {totalPago.toFixed(2)}</strong></span>
@@ -268,7 +321,6 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
           <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         </div>
       </div>
-
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Efectivo (S/)</label>
@@ -287,7 +339,6 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
           <Input type="number" step="0.01" min="0" value={plin} onChange={(e) => setPlin(e.target.value)} />
         </div>
       </div>
-
       <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" disabled={actualizar.isPending}>
@@ -299,36 +350,54 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
 }
 
 export function TicketsPage() {
-  const [desde, setDesde]           = useState('')
-  const [hasta, setHasta]           = useState('')
-  const [tienda_id, setTiendaId]    = useState('')
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editando, setEditando]     = useState<Ticket | undefined>()
-  const [modoNuevo, setModoNuevo]   = useState(false)
+  const { usuario }                        = useAuth()
+  const isAdmin                            = usuario?.rol === 'admin'
+  const [desde, setDesde]                  = useState('')
+  const [hasta, setHasta]                  = useState('')
+  const [tienda_id, setTiendaId]           = useState('')
+  const [q, setQ]                          = useState('')
+  const [dniCliente, setDniCliente]        = useState('')
+  const [formaPago, setFormaPago]          = useState('')
+  const [pagination, setPagination]        = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
+  const [dialogOpen, setDialogOpen]        = useState(false)
+  const [editando, setEditando]            = useState<Ticket | undefined>()
+  const [modoNuevo, setModoNuevo]          = useState(false)
+
+  const anular = useActualizarTicket()
 
   const { data, isLoading } = useTickets({
-    desde:    desde    || undefined,
-    hasta:    hasta    || undefined,
-    tienda_id: tienda_id || undefined,
-    page:     pagination.pageIndex + 1,
-    per_page: pagination.pageSize,
+    desde:       desde       || undefined,
+    hasta:       hasta       || undefined,
+    tienda_id:   tienda_id   || undefined,
+    q:           q           || undefined,
+    dni_cliente: dniCliente  || undefined,
+    forma_pago:  formaPago   || undefined,
+    page:        pagination.pageIndex + 1,
+    per_page:    pagination.pageSize,
   })
 
   const abrirNuevo  = () => { setEditando(undefined); setModoNuevo(true); setDialogOpen(true) }
   const abrirEditar = (t: Ticket) => { setEditando(t); setModoNuevo(false); setDialogOpen(true) }
   const cerrar      = () => setDialogOpen(false)
 
+  const handleReimprimir = (t: Ticket) => {
+    window.open(`/tickets/imprimir/${t.id}?print=1`, '_blank')
+  }
+
+  const handleAnular = (t: Ticket) => {
+    if (!window.confirm(`¿Anular el ticket #${padTicket(t.id)}? Esta acción no se puede deshacer.`)) return
+    anular.mutate({ id: t.id, data: { estado: 'ANULADO' } })
+  }
+
   const limpiarFiltros = () => {
-    setDesde('')
-    setHasta('')
-    setTiendaId('')
+    setDesde(''); setHasta(''); setTiendaId('')
+    setQ(''); setDniCliente(''); setFormaPago('')
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
-  const hayFiltros = desde || hasta || tienda_id
+  const hayFiltros = desde || hasta || tienda_id || q || dniCliente || formaPago
 
-  const columns = getColumns(abrirEditar)
+  const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin)
 
   return (
     <div>
@@ -338,48 +407,43 @@ export function TicketsPage() {
         actions={<Button onClick={abrirNuevo}>+ Nuevo ticket</Button>}
       />
 
+      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
           <label className="text-xs text-gray-500">Desde</label>
-          <Input
-            type="date"
-            value={desde}
-            onChange={(e) => {
-              setDesde(e.target.value)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
-            className="w-36"
-          />
+          <Input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-gray-500">Hasta</label>
-          <Input
-            type="date"
-            value={hasta}
-            onChange={(e) => {
-              setHasta(e.target.value)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
-            className="w-36"
-          />
+          <Input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
         </div>
-
-        <Select
-          value={tienda_id}
-          onChange={(e) => {
-            setTiendaId(e.target.value)
-            setPagination((p) => ({ ...p, pageIndex: 0 }))
-          }}
-          className="w-44"
-        >
+        <Select value={tienda_id} onChange={(e) => { setTiendaId(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-44">
           <option value="">Todas las tiendas</option>
           {TIENDAS.map((t) => (
             <option key={t.codigo} value={t.codigo}>{t.nombre}</option>
           ))}
         </Select>
-
+        <Input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }}
+          placeholder="Buscar descripción..."
+          className="w-44"
+        />
+        <Input
+          value={dniCliente}
+          onChange={(e) => { setDniCliente(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }}
+          placeholder="Cliente / DNI..."
+          className="w-36"
+          maxLength={20}
+        />
+        <Select value={formaPago} onChange={(e) => { setFormaPago(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-40">
+          <option value="">Forma de pago</option>
+          {FORMA_PAGO_OPCIONES.map(fp => (
+            <option key={fp} value={fp}>{fp}</option>
+          ))}
+        </Select>
         {hayFiltros && (
-          <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>
+          <Button variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>
         )}
       </div>
 

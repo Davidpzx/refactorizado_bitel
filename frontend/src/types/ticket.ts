@@ -22,6 +22,9 @@ export interface TicketFilters {
   hasta?: string
   tienda_id?: string
   agente_id?: number
+  q?: string
+  dni_cliente?: string
+  forma_pago?: string
   page?: number
   per_page?: number
 }
@@ -49,4 +52,5 @@ export interface TicketUpdatePayload {
   yape?: number
   bipay?: number
   plin?: number
+  estado?: string
 }
