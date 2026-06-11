@@ -37,8 +37,8 @@ const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
 
 const crearSchema = z.object({
   tienda_destino: z.string().min(1, 'Requerido'),
-  producto_id:    z.number({ invalid_type_error: 'Requerido' }).int().positive(),
-  cantidad:       z.number({ invalid_type_error: 'Requerido' }).int().min(1).default(1),
+  producto_id:    z.number({ error: 'Requerido' }).int().positive(),
+  cantidad:       z.number({ error: 'Requerido' }).int().min(1),
   notas:          z.string().optional(),
   auth_dni:       z.string().min(1, 'Requerido'),
   auth_agente_id: z.number().int().positive().optional(),
