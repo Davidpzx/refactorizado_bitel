@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Outlet, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
-import { dashboardApi } from '../services/dashboard.api'
+import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../context/ThemeContext'
+import { ControlCenterPanel } from './ControlCenterPanel'
 import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
   Users, Clock, DollarSign, Package, BookOpen, Settings,
@@ -30,6 +31,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'] },
   { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'] },
   { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'] },
+  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'] },
+  { to: '/revisar-stock',  label: 'Revisar Stock',   Icon: Package,         roles: ['admin'] },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'] },
   { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'] },
   { to: '/inventario',     label: 'Inventario',      Icon: Package,          roles: ['admin', 'tienda'] },
@@ -62,14 +65,31 @@ export function AppLayout() {
   const { isDark, toggleTheme } = useTheme()
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [ccOpen, setCcOpen]         = useState(false)
 
-  const { data: anomaliasData } = useQuery({
-    queryKey: ['dashboard-anomalias'],
-    queryFn: () => dashboardApi.anomalias(),
-    staleTime: 60_000,
+  const { data: cc } = useQuery({
+    queryKey: ['control-center'],
+    queryFn: () => controlCenterApi.get(),
+    staleTime: 25_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     enabled: usuario?.rol === 'admin',
   })
-  const anomaliasCount = anomaliasData?.count ?? 0
+  const anomaliasCount = cc?.anomalias_caja.count ?? 0
+
+  /* Conteo de badge por ruta del sidebar (Control Center vivo) */
+  const badgeByRoute: Record<string, number> = {
+    '/historial':            cc?.anomalias_caja.count ?? 0,
+    '/revisar-stock':        cc?.precios_pendientes.count ?? 0,
+    '/traslados':            cc?.traslados_pendientes.count ?? 0,
+    '/financieras':          cc?.financieras_pendientes.count ?? 0,
+    '/admin/postulaciones':  cc?.postulantes_pendientes.count ?? 0,
+    '/reporte-bcp':          cc?.alertas_bcp.count ?? 0,
+    '/panel-bipay':          cc?.alertas_bipay.count ?? 0,
+  }
+  const notifCount = cc?.notificaciones_sistema.count ?? 0
+  const ccAlertCount = anomaliasCount + (cc?.traslados_pendientes.count ?? 0) + notifCount
+  const isAdmin = usuario?.rol === 'admin'
 
   const userRole     = usuario?.rol ?? 'tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
@@ -149,6 +169,29 @@ export function AppLayout() {
             </Link>
           )}
           <div className={`flex items-center gap-1 ${collapsed ? '' : 'ml-auto'}`}>
+            {/* Centro de Control (campana) — solo admin */}
+            {isAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => setCcOpen((o) => !o)}
+                  title="Centro de Control"
+                  className={`relative flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
+                >
+                  <Bell size={14} />
+                  {ccAlertCount > 0 && (
+                    <span className="badge-pulse absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center text-[8px] font-bold rounded-full text-white"
+                      style={{ background: '#ef4444' }}>
+                      {ccAlertCount > 99 ? '99+' : ccAlertCount}
+                    </span>
+                  )}
+                </button>
+                {ccOpen && (
+                  <div className="absolute right-0 top-full mt-2">
+                    <ControlCenterPanel cc={cc} isDark={isDark} onClose={() => setCcOpen(false)} />
+                  </div>
+                )}
+              </div>
+            )}
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
@@ -214,22 +257,27 @@ export function AppLayout() {
                     }
                   >
                     {({ isActive }) => {
-                      const showBell = to === '/historial' && anomaliasCount > 0 && !collapsed
+                      const badgeCount = badgeByRoute[to] ?? 0
                       const iconColor = isActive
                         ? isDark ? 'text-[#ffc200]' : 'text-amber-600'
                         : ''
                       return (
                         <>
-                          <Icon size={15} className={`shrink-0 ${iconColor}`} />
+                          <span className="relative shrink-0">
+                            <Icon size={15} className={iconColor} />
+                            {badgeCount > 0 && collapsed && (
+                              <span className="badge-pulse absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                            )}
+                          </span>
                           {!collapsed && <span className="truncate flex-1">{label}</span>}
-                          {showBell && (
+                          {badgeCount > 0 && !collapsed && (
                             <span className={`badge-pulse text-[10px] rounded-full px-1.5 py-0.5 font-bold shrink-0
                               ${isActive
                                 ? isDark ? 'bg-[rgba(255,194,0,0.2)] text-[#ffc200]' : 'bg-amber-100 text-amber-700'
                                 : isDark ? 'bg-[rgba(239,68,68,0.2)] text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600 border border-red-200'
                               }`}
                             >
-                              {anomaliasCount > 99 ? '99+' : anomaliasCount}
+                              {badgeCount > 99 ? '99+' : badgeCount}
                             </span>
                           )}
                         </>
@@ -341,17 +389,27 @@ export function AppLayout() {
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            {anomaliasCount > 0 && usuario?.rol === 'admin' && (
-              <span
-                className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full badge-pulse"
-                style={{
-                  background: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.12)',
-                  color: isDark ? '#f87171' : '#dc2626',
-                  border: isDark ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(239,68,68,0.25)',
-                }}
-              >
-                <Bell size={10} /> {anomaliasCount}
-              </span>
+            {isAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => setCcOpen((o) => !o)}
+                  title="Centro de Control"
+                  className={`relative p-1.5 rounded-md transition-colors ${mobileMenuCls}`}
+                >
+                  <Bell size={16} />
+                  {ccAlertCount > 0 && (
+                    <span className="badge-pulse absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[8px] font-bold rounded-full text-white"
+                      style={{ background: '#ef4444' }}>
+                      {ccAlertCount > 99 ? '99+' : ccAlertCount}
+                    </span>
+                  )}
+                </button>
+                {ccOpen && (
+                  <div className="absolute right-0 top-full mt-2">
+                    <ControlCenterPanel cc={cc} isDark={isDark} onClose={() => setCcOpen(false)} />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </header>

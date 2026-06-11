@@ -13,7 +13,7 @@ class UpdateAgenteRequest extends FormRequest
         return [
             'nombres'       => ['sometimes', 'string', 'max:200'],
             'tienda_base'   => ['sometimes', 'string', 'max:10'],
-            'pin_seguridad' => ['sometimes', 'nullable', 'string', 'min:4', 'max:8'],
+            'pin_seguridad' => ['sometimes', 'nullable', 'string', 'digits:4'],
             'sueldo_base'   => ['sometimes', 'numeric', 'min:0'],
             'estado'        => ['sometimes', 'in:ACTIVO,INACTIVO,BAJA'],
             'hora_ingreso'  => ['nullable', 'string', 'max:8'],
@@ -33,8 +33,7 @@ class UpdateAgenteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'pin_seguridad.min' => 'El PIN debe tener mínimo 4 caracteres.',
-            'pin_seguridad.max' => 'El PIN no puede superar 8 caracteres.',
+            'pin_seguridad.digits' => 'El PIN debe tener exactamente 4 dígitos.',
         ];
     }
 }

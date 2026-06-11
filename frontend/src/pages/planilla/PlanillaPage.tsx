@@ -397,6 +397,24 @@ export function PlanillaPage() {
     [resetar],
   )
 
+  const [exportando, setExportando] = useState(false)
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const resp = await api.get(`/v1/planilla/${mes}/exportar`, { responseType: 'blob' })
+      const url = window.URL.createObjectURL(
+        new Blob([resp.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      )
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `planilla_${mes}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } finally {
+      setExportando(false)
+    }
+  }
+
   const t = data?.totales
 
   return (
@@ -405,12 +423,17 @@ export function PlanillaPage() {
         title="Planilla CD08"
         subtitle={`Cálculo mensual de remuneraciones y comisiones`}
       >
-        <Input
-          type="month"
-          value={mes}
-          onChange={e => setMes(e.target.value)}
-          className="w-36"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            type="month"
+            value={mes}
+            onChange={e => setMes(e.target.value)}
+            className="w-36"
+          />
+          <Button type="button" variant="outline" onClick={exportarExcel} disabled={exportando}>
+            <FileText size={14} className="mr-1" /> {exportando ? 'Generando…' : 'Exportar Excel'}
+          </Button>
+        </div>
       </PageHeader>
 
       {/* KPIs */}

@@ -42,6 +42,8 @@ const PostulacionesPage  = lazy(() => import('./pages/admin/PostulacionesPage').
 const TicketsPage        = lazy(() => import('./pages/tickets/TicketsPage').then(m => ({ default: m.TicketsPage })))
 const PostulacionPublicaPage = lazy(() => import('./pages/PostulacionPublicaPage').then(m => ({ default: m.PostulacionPublicaPage })))
 const TicketImpresionPage   = lazy(() => import('./pages/tickets/TicketImpresionPage').then(m => ({ default: m.TicketImpresionPage })))
+const RevisarStockPage   = lazy(() => import('./pages/admin/RevisarStockPage').then(m => ({ default: m.RevisarStockPage })))
+const RevisarFotosPage   = lazy(() => import('./pages/admin/RevisarFotosPage').then(m => ({ default: m.RevisarFotosPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -101,6 +103,8 @@ export default function App() {
               <Route path="/financieras"        element={<Suspense fallback={<PageLoader />}><PanelFinancierasPage /></Suspense>} />
               <Route path="/diagnostico"        element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
               <Route path="/admin/postulaciones" element={<Suspense fallback={<PageLoader />}><PostulacionesPage /></Suspense>} />
+              <Route path="/revisar-stock"      element={<Suspense fallback={<PageLoader />}><RevisarStockPage /></Suspense>} />
+              <Route path="/revisar-fotos"      element={<Suspense fallback={<PageLoader />}><RevisarFotosPage /></Suspense>} />
               <Route path="/tickets"            element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
             </Route>
           </Route>

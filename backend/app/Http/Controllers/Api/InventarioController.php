@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class InventarioController extends Controller
 {
@@ -22,6 +23,41 @@ class InventarioController extends Controller
             ->paginate($request->integer('per_page', 20));
 
         return response()->json($items);
+    }
+
+    // ── GET /inventario/precios-pendientes — Stock DISPONIBLE sin precios (admin) ──
+    public function preciosPendientes(Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('inventario_tiendas')) {
+            return response()->json(['data' => [], 'total' => 0, 'tiendas' => []]);
+        }
+
+        $filtroPrecios = fn ($q) => $q
+            ->whereNull('precio_minimo')->orWhere('precio_minimo', '<=', 0)
+            ->orWhereNull('precio_normal')->orWhere('precio_normal', '<=', 0)
+            ->orWhereNull('precio_costo')->orWhere('precio_costo', '<=', 0);
+
+        $base = DB::table('inventario_tiendas')
+            ->where('estado', 'DISPONIBLE')
+            ->where('tipo', '!=', 'CHIP')
+            ->where($filtroPrecios);
+
+        $items = (clone $base)
+            ->when($request->filled('tienda'), fn ($q) => $q->where('tienda_id', $request->tienda))
+            ->select([
+                'id', 'tienda_id', 'producto_nombre', 'tipo', 'imei_serial',
+                'cantidad', 'precio_costo', 'precio_minimo', 'precio_normal', 'fecha_registro',
+            ])
+            ->orderBy('tienda_id')->orderBy('producto_nombre')
+            ->get();
+
+        $tiendas = (clone $base)->distinct()->orderBy('tienda_id')->pluck('tienda_id');
+
+        return response()->json([
+            'data' => $items,
+            'total' => $items->count(),
+            'tiendas' => $tiendas,
+        ]);
     }
 
     public function store(Request $request): JsonResponse

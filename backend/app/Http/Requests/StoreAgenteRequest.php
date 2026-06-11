@@ -14,7 +14,7 @@ class StoreAgenteRequest extends FormRequest
             'dni'           => ['required', 'string', 'size:8', 'regex:/^\d{8}$/', 'unique:agentes,dni'],
             'nombres'       => ['required', 'string', 'max:200'],
             'tienda_base'   => ['required', 'string', 'max:10'],
-            'pin_seguridad' => ['required', 'string', 'min:4', 'max:8'],
+            'pin_seguridad' => ['required', 'string', 'digits:4'],
             'sueldo_base'   => ['required', 'numeric', 'min:0'],
             'estado'        => ['sometimes', 'in:ACTIVO,INACTIVO,BAJA'],
             'hora_ingreso'  => ['nullable', 'string', 'max:8'],
@@ -35,8 +35,7 @@ class StoreAgenteRequest extends FormRequest
             'dni.size'          => 'El DNI debe tener exactamente 8 dígitos.',
             'dni.regex'         => 'El DNI debe contener solo dígitos.',
             'dni.unique'        => 'Ya existe un agente registrado con ese DNI.',
-            'pin_seguridad.min' => 'El PIN debe tener mínimo 4 caracteres.',
-            'pin_seguridad.max' => 'El PIN no puede superar 8 caracteres.',
+            'pin_seguridad.digits' => 'El PIN debe tener exactamente 4 dígitos.',
         ];
     }
 }

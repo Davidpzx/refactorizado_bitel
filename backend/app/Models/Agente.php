@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Hash;
 
 class Agente extends Model
 {
@@ -61,5 +62,20 @@ class Agente extends Model
     {
         return $query->where('dni', 'like', "%{$termino}%")
                      ->orWhere('nombres', 'like', "%{$termino}%");
+    }
+
+    public function verificarPin(string $pin): bool
+    {
+        $pinGuardado = trim((string) $this->pin_seguridad);
+
+        if ($pinGuardado === '') {
+            return false;
+        }
+
+        if (! Hash::isHashed($pinGuardado)) {
+            return hash_equals($pinGuardado, $pin);
+        }
+
+        return Hash::check($pin, $pinGuardado);
     }
 }

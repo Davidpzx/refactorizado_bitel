@@ -11,6 +11,9 @@ import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { Card } from '../../components/ui/card'
 import { PageHeader } from '../../components/PageHeader'
+import { borradorApi } from '../../services/borrador.api'
+import { BipayConsole } from '../../components/BipayConsole'
+import { ChipStockBadge } from '../../components/ChipStockBadge'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -391,7 +394,7 @@ export function NuevoReportePage() {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } =
+  const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } =
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: {
@@ -432,6 +435,41 @@ export function NuevoReportePage() {
     const total = salidaItems.reduce((acc, s) => acc + (Number(s.monto) || 0), 0)
     setValue('total_salidas', Math.round(total * 100) / 100)
   }, [salidaItems, setValue])
+
+  // ── Borrador en la nube (auto-save 60s + manual) ──────────────────────────────
+  const esTienda = usuario?.rol === 'tienda'
+  const [borradorMsg, setBorradorMsg] = useState('')
+  const [borradorDisponible, setBorradorDisponible] = useState<Record<string, unknown> | null>(null)
+
+  async function guardarBorrador(silencioso = false) {
+    try {
+      await borradorApi.guardar({ form: getValues(), salidaItems } as unknown as Record<string, unknown>)
+      if (!silencioso) { setBorradorMsg('Borrador guardado'); setTimeout(() => setBorradorMsg(''), 2000) }
+    } catch { if (!silencioso) setBorradorMsg('No se pudo guardar el borrador') }
+  }
+
+  function restaurarBorrador(data: Record<string, unknown>) {
+    const d = data as { form?: FormData; salidaItems?: SalidaItem[] }
+    if (d.form) reset(d.form)
+    if (Array.isArray(d.salidaItems)) setSalidaItems(d.salidaItems)
+    setBorradorDisponible(null)
+    setBorradorMsg('Borrador cargado')
+    setTimeout(() => setBorradorMsg(''), 2000)
+  }
+
+  // Detectar borrador disponible al entrar (solo tienda)
+  useEffect(() => {
+    if (!esTienda) return
+    borradorApi.cargar().then((r) => { if (r.borrador) setBorradorDisponible(r.borrador) }).catch(() => {})
+  }, [esTienda])
+
+  // Auto-guardado cada 60s
+  useEffect(() => {
+    if (!esTienda) return
+    const t = setInterval(() => guardarBorrador(true), 60_000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esTienda, salidaItems])
 
   // ── Totales en tiempo real ─────────────────────────────────────────────────
   const ventas            = watch('ventas')
@@ -491,13 +529,31 @@ export function NuevoReportePage() {
         title="Nuevo Reporte Diario"
         description="Cierre de caja y ventas del día."
         actions={
-          <Button variant="outline" onClick={() => navigate('/reportes')}>
-            Cancelar
-          </Button>
+          <div className="flex items-center gap-2">
+            {esTienda && <ChipStockBadge />}
+            {esTienda && borradorDisponible && (
+              <Button variant="outline" type="button" className="text-amber-600 border-amber-400"
+                onClick={() => restaurarBorrador(borradorDisponible)}>
+                Cargar Borrador
+              </Button>
+            )}
+            {esTienda && (
+              <Button variant="outline" type="button" onClick={() => guardarBorrador(false)}>
+                Guardar Borrador
+              </Button>
+            )}
+            {borradorMsg && <span className="text-xs text-zinc-500">{borradorMsg}</span>}
+            <Button variant="outline" onClick={() => navigate('/reportes')}>
+              Cancelar
+            </Button>
+          </div>
         }
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+        {/* ── Consola Bipay/Anypay (rol tienda) ── */}
+        {esTienda && <BipayConsole />}
 
         {/* ── Cabecera ── */}
         <Card className="p-4">

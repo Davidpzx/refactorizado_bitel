@@ -9,6 +9,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlanillaController extends Controller
 {
@@ -29,6 +34,12 @@ class PlanillaController extends Controller
             return response()->json(['error' => 'Formato de mes inválido. Use YYYY-MM.'], 422);
         }
 
+        return response()->json($this->construirPlanilla($mes));
+    }
+
+    /** Arma las filas + totales de la planilla del mes (reutilizado por JSON y export Excel). */
+    private function construirPlanilla(string $mes): array
+    {
         $fechaInicio = $mes . '-01';
         $fechaFin    = date('Y-m-t', strtotime($fechaInicio));
 
@@ -43,7 +54,7 @@ class PlanillaController extends Controller
         $agentesIds = $agentes->pluck('id')->all();
 
         if (empty($agentesIds)) {
-            return response()->json(['mes' => $mes, 'agentes' => [], 'totales' => $this->totalesVacios()]);
+            return ['mes' => $mes, 'agentes' => [], 'totales' => $this->totalesVacios()];
         }
 
         // ── 2. Ajustes manuales del mes ─────────────────────────────────────────
@@ -151,10 +162,97 @@ class PlanillaController extends Controller
             $totales[$k] = round($v, 2);
         }
 
-        return response()->json([
+        return [
             'mes'     => $mes,
             'agentes' => $filas,
             'totales' => $totales,
+        ];
+    }
+
+    /**
+     * GET /api/v1/planilla/{mes}/exportar
+     * Exporta la planilla del mes a .xlsx (PhpSpreadsheet) para importación bancaria/contable.
+     */
+    public function exportarExcel(Request $request, string $mes): StreamedResponse
+    {
+        abort_unless((bool) preg_match('/^\d{4}-\d{2}$/', $mes), 422, 'Formato de mes inválido. Use YYYY-MM.');
+
+        $planilla = $this->construirPlanilla($mes);
+        $filas    = $planilla['agentes'];
+        $totales  = $planilla['totales'];
+
+        $cabeceras = [
+            'N°', 'DNI', 'NOMBRES', 'TIENDA', 'CARGO', 'ESTADO', 'SUELDO BASE', 'DÍAS TRAB.',
+            'SUELDO X DÍAS', 'COM. JEFE', 'COM. EQUIPO', 'COM. PLANES', 'COM. ONLINE',
+            'TOTAL REMUNERACIÓN', 'RET. UNIFORME', 'FALTAS/PERMISOS', 'TARDANZAS',
+            'FALTANTE EFECTIVO', 'ADELANTO', 'TOTAL DESCUENTOS', 'TOTAL A PAGAR',
+        ];
+        $ultimaCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cabeceras));
+
+        $ss    = new Spreadsheet();
+        $hoja  = $ss->getActiveSheet();
+        $hoja->setTitle('Planilla ' . $mes);
+
+        // Título
+        $hoja->setCellValue('A1', 'PLANILLA DE PAGOS — ' . $mes);
+        $hoja->mergeCells("A1:{$ultimaCol}1");
+        $hoja->getStyle('A1')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 13, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF0F172A']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        // Cabeceras
+        foreach ($cabeceras as $i => $label) {
+            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i + 1);
+            $hoja->setCellValue("{$col}2", $label);
+        }
+        $hoja->getStyle("A2:{$ultimaCol}2")->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF1E293B']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        // Filas
+        $fila = 3;
+        foreach ($filas as $i => $f) {
+            $valores = [
+                $i + 1, $f['dni'], $f['nombres'], $f['tienda_base'], $f['cargo'], $f['estado'],
+                $f['sueldo_base'], $f['dias_trabajados'], $f['sueldo_dias_lab'],
+                $f['comision_jefe'], $f['comision_equipo'], $f['comision_planes'], $f['comision_online'],
+                $f['total_remuneracion'], $f['retencion_uniforme'], $f['faltas_permisos'], $f['tardanzas'],
+                $f['faltante_efectivo'], $f['adelanto_incluido'], $f['total_descuentos'], $f['total_pagar'],
+            ];
+            foreach ($valores as $c => $v) {
+                $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1);
+                $hoja->setCellValue("{$col}{$fila}", $v);
+            }
+            $fila++;
+        }
+
+        // Totales
+        $hoja->setCellValue("F{$fila}", 'TOTALES');
+        $hoja->setCellValue("G{$fila}", $totales['sueldo_base']);
+        $hoja->setCellValue("N{$fila}", $totales['total_remuneracion']);
+        $hoja->setCellValue("T{$fila}", $totales['total_descuentos']);
+        $hoja->setCellValue("U{$fila}", $totales['total_pagar']);
+        $hoja->getStyle("A{$fila}:{$ultimaCol}{$fila}")->applyFromArray([
+            'font' => ['bold' => true],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFE2E8F0']],
+        ]);
+
+        // Formato numérico (columnas G..U) y autosize
+        $hoja->getStyle("G3:U{$fila}")->getNumberFormat()->setFormatCode('#,##0.00');
+        for ($c = 1; $c <= count($cabeceras); $c++) {
+            $hoja->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c))->setAutoSize(true);
+        }
+
+        $nombre = "planilla_{$mes}.xlsx";
+
+        return response()->streamDownload(function () use ($ss) {
+            (new Xlsx($ss))->save('php://output');
+        }, $nombre, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 

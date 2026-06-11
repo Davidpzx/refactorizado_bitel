@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\ConfiguracionController;
+use App\Http\Controllers\Api\ControlCenterController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DniController;
 use App\Http\Controllers\Api\EstadisticasController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\PlanillaController;
 use App\Http\Controllers\Api\ReporteBcpController;
+use App\Http\Controllers\Api\ReporteBorradorController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\TiendaController;
 use App\Http\Controllers\Api\ChipsController;
@@ -70,6 +72,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Dashboard ────────────────────────────────────────────────────────────
     Route::get('dashboard/kpis',      [DashboardController::class, 'kpis']);
     Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias']);
+    Route::get('control-center',      [ControlCenterController::class, 'index']);
+    Route::post('marcar-notificacion', [ControlCenterController::class, 'marcarNotificacion']);
 
     // ── Historial Completo ────────────────────────────────────────────────────
     Route::get('historial',           [HistorialController::class, 'index']);
@@ -82,6 +86,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
     Route::get('reportes/mis-reportes', [ReporteController::class, 'misReportes']);
+    Route::get('reportes/borrador', [ReporteBorradorController::class, 'show']);
+    Route::post('reportes/borrador', [ReporteBorradorController::class, 'store']);
+    Route::delete('reportes/borrador', [ReporteBorradorController::class, 'destroy']);
+    Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy']);
 
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
@@ -100,6 +108,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('inventario/kardex',          [InventarioController::class, 'kardex']);
     Route::get('inventario/stock-estancado', [InventarioController::class, 'stockEstancado']);
     Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos']);
+    Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes']);
     Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex']);
     Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index']);
     Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar']);
@@ -135,6 +144,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('agentes/{id}/token-seguridad',        [AgenteController::class, 'tokenSeguridad']);
 
     // ── Planilla ─────────────────────────────────────────────────────────────
+    Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel']);
     Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular']);
     Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste']);
     Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones']);
@@ -165,6 +175,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
     Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
+    Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
+    Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
+    Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);
 
     // ── Tickets Emitidos ─────────────────────────────────────────────────────
     Route::get('tickets',              [TicketController::class, 'index']);

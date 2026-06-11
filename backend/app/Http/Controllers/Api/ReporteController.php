@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Cliente;
 use App\Models\HistorialReporte;
 use App\Models\Reporte;
+use App\Models\ReporteBorrador;
 use App\Models\Venta;
 use App\Models\VentaEquipo;
 use App\Models\VentaLinea;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReporteController extends Controller
 {
@@ -189,6 +191,23 @@ class ReporteController extends Controller
             }
 
             DB::commit();
+
+            $user = $request->user();
+            if ($user && $user->tienda_id) {
+                try {
+                    ReporteBorrador::query()
+                        ->where('agente_id', $user->id)
+                        ->where('tienda_id', $user->tienda_id)
+                        ->whereDate('fecha', now(config('reportes.timezone'))->toDateString())
+                        ->delete();
+                } catch (\Throwable $cleanupError) {
+                    Log::warning('No se pudo limpiar el borrador tras guardar el reporte.', [
+                        'reporte_id' => $reporte->id,
+                        'usuario_id' => $user->id,
+                        'error' => $cleanupError->getMessage(),
+                    ]);
+                }
+            }
 
             $reporte->load('ventas');
             return response()->json($reporte, 201);

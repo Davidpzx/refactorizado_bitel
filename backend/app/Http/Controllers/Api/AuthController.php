@@ -77,7 +77,7 @@ class AuthController extends Controller
 
         $agente = \App\Models\Agente::where('dni', $request->dni)->first();
 
-        if (! $agente || $agente->pin_seguridad !== $request->pin) {
+        if (! $agente || ! $agente->verificarPin($request->pin)) {
             return response()->json(['valid' => false, 'error' => 'DNI o PIN incorrecto'], 422);
         }
 
