@@ -2,9 +2,11 @@ FROM php:8.3-fpm-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache git curl mysql-client
+RUN apk add --no-cache git curl mysql-client \
+    libpng-dev libjpeg-turbo-dev freetype-dev libzip-dev
 
-RUN docker-php-ext-install pdo pdo_mysql bcmath
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql bcmath gd zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
