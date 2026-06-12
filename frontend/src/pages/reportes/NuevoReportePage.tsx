@@ -21,6 +21,7 @@ import { calcularCuadre, calcularComision, validarStock } from '../../lib/cuadre
 import { api } from '../../services/api'
 import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
+import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
@@ -405,6 +406,7 @@ export function NuevoReportePage() {
   const esTienda = usuario?.rol === 'tienda'
   const [borradorMsg, setBorradorMsg] = useState('')
   const [borradorDisponible, setBorradorDisponible] = useState<Record<string, unknown> | null>(null)
+  const [ticketDesc, setTicketDesc] = useState<string | null>(null)
 
   const LS_KEY = `reporte_borrador_${usuario?.tienda_id ?? 'x'}`
 
@@ -808,6 +810,10 @@ export function NuevoReportePage() {
                   <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
                   <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
                     className="h-7 text-xs text-right" placeholder="0.00" />
+                  {esTienda && (
+                    <button type="button" title="Generar ticket de ingreso" onClick={() => setTicketDesc(label)}
+                      className="shrink-0 text-cyan-500 hover:text-cyan-300 text-sm leading-none px-1">🧾</button>
+                  )}
                 </div>
               ))}
             </GlassPanel>
@@ -959,6 +965,17 @@ export function NuevoReportePage() {
         </div>
 
       </form>
+
+      {esTienda && (
+        <TicketIngresoModal
+          open={ticketDesc !== null}
+          onClose={() => setTicketDesc(null)}
+          defaultDescripcion={ticketDesc ?? ''}
+          tiendaId={usuario?.tienda_id ?? ''}
+          agenteId={usuario?.id ?? 0}
+          vendedor={usuario?.nombre ?? ''}
+        />
+      )}
     </div>
   )
 }
