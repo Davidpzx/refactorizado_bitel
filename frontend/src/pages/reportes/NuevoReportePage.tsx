@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,7 +17,8 @@ import { PageHeader } from '../../components/PageHeader'
 import { borradorApi } from '../../services/borrador.api'
 import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
-import { calcularCuadre, calcularComision } from '../../lib/cuadre'
+import { calcularCuadre, calcularComision, validarStock } from '../../lib/cuadre'
+import { api } from '../../services/api'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
@@ -516,6 +518,21 @@ export function NuevoReportePage() {
       efectivoEntregado: efectivo_entregado,
     })
 
+  // ── Validación de stock de chips en vivo ───────────────────────────────────
+  // NOTA: /v1/inventario-chips no entrega stock por origen/tienda; se valida por
+  // TOTAL (consumo prepago+apoyo vs disponible) hasta tener desglose por origen.
+  const { data: chipsData } = useQuery({
+    queryKey: ['inventario-chips-cuadre'],
+    queryFn: () => api.get<{ data: Array<{ stock_actual?: number }> }>('/v1/inventario-chips').then((r) => r.data.data),
+    staleTime: 60_000, retry: false, enabled: esTienda,
+  })
+  const chipsDisponibles = (chipsData ?? []).reduce((a, c) => a + (Number(c.stock_actual) || 0), 0)
+  const chipsConsumidos = ventas
+    .filter(v => v.tipo_venta === 'PREPAGO' || v.tipo_venta === 'APOYO')
+    .reduce((a, v) => a + (v.cantidad || 1), 0)
+  const stockChk = validarStock([{ codigo: 'CHIP', disponible: chipsDisponibles }], { CHIP: chipsConsumidos })
+  const stockInsuficiente = esTienda && chipsData !== undefined && stockChk.hayError
+
   const onSubmit = (data: FormData) => {
     crear.mutate(
       { ...data, usuario_id: usuario?.id ?? data.agente_id },
@@ -883,10 +900,16 @@ export function NuevoReportePage() {
           </p>
         )}
 
+        {stockInsuficiente && (
+          <p className="text-red-500 text-sm border border-red-300 bg-red-50 rounded px-3 py-2 font-semibold">
+            STOCK INSUFICIENTE — estás reportando {chipsConsumidos} chips pero solo hay {chipsDisponibles} en stock.
+          </p>
+        )}
+
         <div className="flex gap-3 pb-8">
-          <Button type="submit" disabled={crear.isPending}
+          <Button type="submit" disabled={crear.isPending || stockInsuficiente}
             className="flex-1 h-11 text-base font-semibold bg-cyan-600 hover:bg-cyan-700 text-white">
-            {crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
+            {stockInsuficiente ? 'STOCK INSUFICIENTE' : crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate('/reportes')} disabled={crear.isPending}>
             Cancelar
