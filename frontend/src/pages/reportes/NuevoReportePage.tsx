@@ -16,7 +16,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { borradorApi } from '../../services/borrador.api'
 import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
-import { calcularCuadre } from '../../lib/cuadre'
+import { calcularCuadre, calcularComision } from '../../lib/cuadre'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
@@ -59,6 +59,10 @@ const ventaSchema = z.object({
   tienda_destino:       z.string().optional().or(z.literal('')),
   es_remate:            z.boolean(),
   es_extranjero:        z.boolean(),
+  es_migracion:         z.boolean(),
+  es_upgrade:           z.boolean(),
+  es_esim:              z.boolean(),
+  plan_anterior:        z.number().min(0),
   cliente_dni:          z.string().max(15).optional().or(z.literal('')),
   producto_nombre:      z.string().optional().or(z.literal('')),
   imei_serial:          z.string().optional().or(z.literal('')),
@@ -103,6 +107,7 @@ type VentaFormData = z.infer<typeof ventaSchema>
 const VENTA_DEFAULT: VentaFormData = {
   tipo_venta:'POSTPAGO', subtipo:'', monto_total:0, efectivo_inicial:0,
   cross_selling:false, tienda_destino:'', es_remate:false, es_extranjero:false,
+  es_migracion:false, es_upgrade:false, es_esim:false, plan_anterior:0,
   cliente_dni:'', producto_nombre:'', imei_serial:'', tipo_pago:'CONTADO',
   financiera:'', precio_venta:0, costo_snap:0, por_cobrar_financiera:0,
   inventario_tienda_id:0, plan_nombre:'', tipo_alta:'MNP', cantidad:1,
@@ -126,8 +131,8 @@ function LineaRow({
   onRemove: () => void
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
 }) {
-  const cross = useWatch({ control, name: `ventas.${index}.cross_selling` })
-  const e     = errors.ventas?.[index]
+  const up = useWatch({ control, name: `ventas.${index}.es_upgrade` })
+  const e  = errors.ventas?.[index]
 
   return (
     <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
@@ -155,27 +160,28 @@ function LineaRow({
         <label className="flex items-center gap-1 cursor-pointer">
           <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} className="w-3 h-3" /> Ext
         </label>
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.es_remate`)} className="w-3 h-3" /> Rem
-        </label>
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.cross_selling`)} className="w-3 h-3" /> Cruz
-        </label>
-        {tipo === 'PREPAGO' && (
+        {tipo === 'POSTPAGO' && (
           <label className="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" {...register(`ventas.${index}.comision_unitaria`, { valueAsNumber: true })} className="w-3 h-3" /> eSIM
+            <input type="checkbox" {...register(`ventas.${index}.es_migracion`)} className="w-3 h-3" /> Migr
           </label>
         )}
+        {tipo === 'POSTPAGO' && (
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input type="checkbox" {...register(`ventas.${index}.es_upgrade`)} className="w-3 h-3" /> Upg
+          </label>
+        )}
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input type="checkbox" {...register(`ventas.${index}.es_esim`)} className="w-3 h-3" /> eSIM
+        </label>
       </div>
       <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
 
-      {cross && (
+      {up && (
         <div className="col-span-full pl-0 pt-1">
-          <Label className="text-[10px] text-gray-500">Tienda destino (apoyo)</Label>
-          <Select {...register(`ventas.${index}.tienda_destino`)} className="h-7 text-xs w-40 mt-0.5">
-            <option value="">— Selecciona —</option>
-            {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
-          </Select>
+          <Label className="text-[10px] text-gray-500">Fee plan anterior (S/) — para calcular comisión de upgrade</Label>
+          <Input type="number" step="0.01" min="0"
+            {...register(`ventas.${index}.plan_anterior`, { valueAsNumber: true })}
+            className="h-7 text-xs w-40 mt-0.5" placeholder="0.00" />
         </div>
       )}
 
@@ -457,6 +463,28 @@ export function NuevoReportePage() {
       }
     })
   }, [ventas, setValue])
+
+  // Comisión por línea en vivo (POSTPAGO / PREPAGO) según el plan seleccionado.
+  // NOTA: el backend solo expone comision_dni_n; el caso extranjero usa la misma
+  // base hasta que se agregue un campo comision_ext en ComisionPlan.
+  useEffect(() => {
+    ventas.forEach((v, i) => {
+      if (v.tipo_venta !== 'POSTPAGO' && v.tipo_venta !== 'PREPAGO') return
+      const plan = planesData.find(p => p.nombre_plan === v.plan_nombre)
+      const base = plan ? Number(plan.comision_dni_n) || 0 : 0
+      const com = calcularComision({
+        comDni: base, comExt: base,
+        esExtranjero: !!v.es_extranjero,
+        esMigracion:  !!v.es_migracion,
+        esUpgrade:    !!v.es_upgrade,
+        esEsim:       !!v.es_esim,
+        feePlanNuevo: plan ? Number(plan.fee_monto) || 0 : 0,
+        feePlanAnterior: v.plan_anterior || 0,
+      })
+      if (v.comision_unitaria !== com) setValue(`ventas.${i}.comision_unitaria`, com)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ventas, planesData, setValue])
 
   const ventasMap         = fields.map((f, i) => ({ ...f, idx: i, tipo: ventas[i]?.tipo_venta }))
   const postpagoRows      = ventasMap.filter(v => v.tipo === 'POSTPAGO')
