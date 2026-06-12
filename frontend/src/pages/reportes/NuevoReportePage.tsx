@@ -373,11 +373,20 @@ export function NuevoReportePage() {
   const [borradorMsg, setBorradorMsg] = useState('')
   const [borradorDisponible, setBorradorDisponible] = useState<Record<string, unknown> | null>(null)
 
+  const LS_KEY = `reporte_borrador_${usuario?.tienda_id ?? 'x'}`
+
   async function guardarBorrador(silencioso = false) {
+    const payload = { form: getValues(), salidaItems, timestamp: Date.now() }
     try {
-      await borradorApi.guardar({ form: getValues(), salidaItems } as unknown as Record<string, unknown>)
-      if (!silencioso) { setBorradorMsg('Borrador guardado'); setTimeout(() => setBorradorMsg(''), 2000) }
-    } catch { if (!silencioso) setBorradorMsg('No se pudo guardar el borrador') }
+      await borradorApi.guardar(payload as unknown as Record<string, unknown>)
+      // Espejo local para rescate por timestamp si luego se cae la conexión
+      try { localStorage.setItem(LS_KEY, JSON.stringify(payload)) } catch { /* quota */ }
+      if (!silencioso) { setBorradorMsg('Guardado en la nube ☁️'); setTimeout(() => setBorradorMsg(''), 2000) }
+    } catch {
+      // Sin conexión: fallback a localStorage
+      try { localStorage.setItem(LS_KEY, JSON.stringify(payload)) } catch { /* quota */ }
+      if (!silencioso) { setBorradorMsg('Sin conexión — guardado local'); setTimeout(() => setBorradorMsg(''), 2500) }
+    }
   }
 
   function restaurarBorrador(data: Record<string, unknown>) {
@@ -391,7 +400,23 @@ export function NuevoReportePage() {
 
   useEffect(() => {
     if (!esTienda) return
-    borradorApi.cargar().then((r) => { if (r.borrador) setBorradorDisponible(r.borrador) }).catch(() => {})
+    let cloud: (Record<string, unknown> & { _cloud_ts?: number }) | null = null
+    borradorApi.cargar()
+      .then((r) => { cloud = r.borrador })
+      .catch(() => {})
+      .finally(() => {
+        let local: { form?: FormData; salidaItems?: SalidaItem[]; timestamp?: number } | null = null
+        try { const raw = localStorage.getItem(LS_KEY); if (raw) local = JSON.parse(raw) } catch { /* corrupt */ }
+        const cloudTs = Number(cloud?._cloud_ts ?? 0)
+        const localTs = Number(local?.timestamp ?? 0)
+        // Rescate: si el local es más nuevo que la nube, ofrecer el local y re-sincronizar
+        if (local && localTs > cloudTs) {
+          setBorradorDisponible({ form: local.form, salidaItems: local.salidaItems } as Record<string, unknown>)
+        } else if (cloud) {
+          setBorradorDisponible(cloud)
+        }
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esTienda])
 
   useEffect(() => {
