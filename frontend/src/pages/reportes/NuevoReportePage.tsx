@@ -19,6 +19,8 @@ import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
 import { calcularCuadre, calcularComision, validarStock } from '../../lib/cuadre'
 import { api } from '../../services/api'
+import { inventarioApi } from '../../services/inventario.api'
+import type { InventarioItem } from '../../types/inventario'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
@@ -236,23 +238,46 @@ function ApoyoRow({
 // ── Componente: fila compacta para EQUIPO / ACCESORIO ────────────────────────
 
 function EquipoRow({
-  index, register, control, errors, onRemove,
+  index, register, control, errors, onRemove, items, setValue,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
   control: ReturnType<typeof useForm<FormData>>['control']
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   onRemove: () => void
+  items: InventarioItem[]
+  setValue: ReturnType<typeof useForm<FormData>>['setValue']
 }) {
-  const tipoPago = useWatch({ control, name: `ventas.${index}.tipo_pago` })
+  const tipoPago    = useWatch({ control, name: `ventas.${index}.tipo_pago` })
+  const productoNom = useWatch({ control, name: `ventas.${index}.producto_nombre` })
+  const precioVenta = useWatch({ control, name: `ventas.${index}.precio_venta` })
   const e        = errors.ventas?.[index]
+  const matched  = items.find(it => it.producto_nombre === productoNom)
+  const precioMin = matched ? Number(matched.precio_minimo) || 0 : 0
+  const bajoMinimo = !!matched && (precioVenta || 0) > 0 && (precioVenta || 0) < precioMin
+  const reg = register(`ventas.${index}.producto_nombre`)
 
   return (
     <div className="space-y-1 py-1.5 border-b border-gray-100 last:border-0">
       <div className="grid grid-cols-[1fr_140px_110px_90px_auto] gap-1.5 items-end">
         <div>
-          <Input {...register(`ventas.${index}.producto_nombre`)} placeholder="Producto (nombre o búsqueda)" className="h-8 text-xs" />
+          <Input {...reg} list="inv-equipos-datalist"
+            placeholder="Producto (nombre o búsqueda)" className="h-8 text-xs"
+            onChange={(ev) => {
+              reg.onChange(ev)
+              const m = items.find(it => it.producto_nombre === ev.target.value)
+              if (m) {
+                setValue(`ventas.${index}.inventario_tienda_id`, m.id)
+                setValue(`ventas.${index}.costo_snap`, Number(m.precio_costo) || 0)
+                if (!precioVenta) setValue(`ventas.${index}.precio_venta`, Number(m.precio_normal) || 0)
+              }
+            }} />
           {e?.producto_nombre && <p className="text-red-500 text-[10px]">{e.producto_nombre.message}</p>}
+          {bajoMinimo && (
+            <p className="text-[10px] font-semibold" style={{ color: '#fbbf24' }}>
+              ⚠ Precio bajo el mínimo (S/ {precioMin.toFixed(2)})
+            </p>
+          )}
         </div>
         <div>
           <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="h-8 text-xs" />
@@ -533,6 +558,16 @@ export function NuevoReportePage() {
   const stockChk = validarStock([{ codigo: 'CHIP', disponible: chipsDisponibles }], { CHIP: chipsConsumidos })
   const stockInsuficiente = esTienda && chipsData !== undefined && stockChk.hayError
 
+  // ── Inventario de la tienda para el datalist de equipos (T7) ───────────────
+  const { data: invData } = useQuery({
+    queryKey: ['inventario-cuadre', usuario?.tienda_id],
+    queryFn: () => inventarioApi.listar({ tienda: usuario?.tienda_id, per_page: 300 }).then((r) => r.data),
+    staleTime: 60_000, retry: false, enabled: esTienda,
+  })
+  const inventarioItems = (invData ?? []).filter(
+    it => it.estado === 'DISPONIBLE' && (it.tipo === 'EQUIPO' || it.tipo === 'ACCESORIO'),
+  )
+
   const onSubmit = (data: FormData) => {
     crear.mutate(
       { ...data, usuario_id: usuario?.id ?? data.agente_id },
@@ -649,11 +684,18 @@ export function NuevoReportePage() {
               subtotal={totalEquipos}
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'EQUIPO' })}
             >
+              <datalist id="inv-equipos-datalist">
+                {inventarioItems.map(it => (
+                  <option key={it.id} value={it.producto_nombre}>
+                    {it.tipo} · stock {it.cantidad} · S/ {Number(it.precio_normal).toFixed(2)}
+                  </option>
+                ))}
+              </datalist>
               {equipoRows.length === 0
                 ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
                     <EquipoRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} onRemove={() => remove(v.idx)} />
+                      errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} />
                   ))}
               {equipoRows.length > 0 && (
                 <button type="button"
