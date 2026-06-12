@@ -45,7 +45,7 @@ export interface ReporteFilters {
 }
 
 export interface VentaItem {
-  tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO'
+  tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO' | 'APOYO'
   subtipo?: string
   monto_total: number
   efectivo_inicial: number
@@ -143,7 +143,7 @@ export interface VentaConDetalle {
   reporte_id: number
   vendedor_id: number
   cliente_id: number | null
-  tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO'
+  tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO' | 'APOYO'
   subtipo: string | null
   monto_total: string
   efectivo_inicial: string

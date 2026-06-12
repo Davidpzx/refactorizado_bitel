@@ -9,11 +9,24 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
-import { Card } from '../../components/ui/card'
+import { GlassPanel } from '../../components/ui/GlassPanel'
+import { SectionPanel } from '../../components/ui/SectionPanel'
+import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { PageHeader } from '../../components/PageHeader'
 import { borradorApi } from '../../services/borrador.api'
 import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
+import { calcularCuadre } from '../../lib/cuadre'
+
+// ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
+const ACCENT = {
+  postpago: '#60a5fa',
+  prepago:  '#22d3ee',
+  equipos:  '#fbbf24',
+  otros:    '#e4e4e7',
+  apoyo:    '#a78bfa',
+  total:    '#22d3ee',
+} as const
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -38,7 +51,7 @@ const TIPOS_SALIDA = ['Pasaje','Gasto','Adelanto','Otro']
 // ── Zod ───────────────────────────────────────────────────────────────────────
 
 const ventaSchema = z.object({
-  tipo_venta:           z.enum(['EQUIPO','ACCESORIO','POSTPAGO','PREPAGO','OTROS_FLUJO']),
+  tipo_venta:           z.enum(['EQUIPO','ACCESORIO','POSTPAGO','PREPAGO','OTROS_FLUJO','APOYO']),
   subtipo:              z.string().optional().or(z.literal('')),
   monto_total:          z.number().min(0),
   efectivo_inicial:     z.number().min(0),
@@ -118,75 +131,44 @@ function LineaRow({
 
   return (
     <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
-      {/* DNI */}
       <div>
-        <Input
-          {...register(`ventas.${index}.cliente_dni`)}
-          placeholder="DNI / Celular"
-          maxLength={15}
-          className="h-8 text-xs"
-        />
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Celular" maxLength={15} className="h-8 text-xs" />
       </div>
-
-      {/* Plan */}
       <div>
         <Select {...register(`ventas.${index}.plan_nombre`)} className="h-8 text-xs">
           <option value="">— Plan —</option>
           {planes.map((p, i) => (
-            <option key={i} value={p.nombre_plan}>
-              {p.nombre_plan} ({p.tipo_alta})
-            </option>
+            <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>
           ))}
         </Select>
         {e?.plan_nombre && <p className="text-red-500 text-[10px]">{e.plan_nombre.message}</p>}
       </div>
-
-      {/* Tipo Alta */}
       <div>
         <Select {...register(`ventas.${index}.tipo_alta`)} className="h-8 text-xs">
           {TIPOS_ALTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </Select>
       </div>
-
-      {/* Cobrado */}
       <div>
-        <Input
-          type="number" step="0.01" min="0"
-          {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })}
-          placeholder="S/"
-          className="h-8 text-xs"
-        />
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/" className="h-8 text-xs" />
       </div>
-
-      {/* Toggles */}
       <div className="flex flex-col gap-0.5 text-[10px]">
         <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} className="w-3 h-3" />
-          Ext
+          <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} className="w-3 h-3" /> Ext
         </label>
         <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.es_remate`)} className="w-3 h-3" />
-          Rem
+          <input type="checkbox" {...register(`ventas.${index}.es_remate`)} className="w-3 h-3" /> Rem
         </label>
         <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.cross_selling`)} className="w-3 h-3" />
-          Cruz
+          <input type="checkbox" {...register(`ventas.${index}.cross_selling`)} className="w-3 h-3" /> Cruz
         </label>
         {tipo === 'PREPAGO' && (
           <label className="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" {...register(`ventas.${index}.comision_unitaria`, { valueAsNumber: true })} className="w-3 h-3" />
-            eSIM
+            <input type="checkbox" {...register(`ventas.${index}.comision_unitaria`, { valueAsNumber: true })} className="w-3 h-3" /> eSIM
           </label>
         )}
       </div>
+      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
 
-      {/* Eliminar */}
-      <button
-        type="button" onClick={onRemove}
-        className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center"
-      >×</button>
-
-      {/* Cross-selling expand */}
       {cross && (
         <div className="col-span-full pl-0 pt-1">
           <Label className="text-[10px] text-gray-500">Tienda destino (apoyo)</Label>
@@ -197,7 +179,46 @@ function LineaRow({
         </div>
       )}
 
-      {/* Monto total oculto — para POSTPAGO/PREPAGO = cobrado_unitario × cantidad */}
+      <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
+      <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
+    </div>
+  )
+}
+
+// ── Componente: fila para VENTAS DE APOYO (otras tiendas) ────────────────────
+
+function ApoyoRow({
+  index, register, errors, onRemove, planes,
+}: {
+  index: number
+  register: ReturnType<typeof useForm<FormData>>['register']
+  errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
+  onRemove: () => void
+  planes: Array<{ nombre_plan: string; tipo_alta: string }>
+}) {
+  const e = errors.ventas?.[index]
+  return (
+    <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+      <div>
+        <Select {...register(`ventas.${index}.tienda_destino`)} className="h-8 text-xs">
+          <option value="">— Tienda —</option>
+          {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
+        </Select>
+        {e?.tienda_destino && <p className="text-red-500 text-[10px]">{e.tienda_destino.message}</p>}
+      </div>
+      <div>
+        <Select {...register(`ventas.${index}.plan_nombre`)} className="h-8 text-xs">
+          <option value="">— Plan —</option>
+          {planes.map((p, i) => <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>)}
+        </Select>
+      </div>
+      <div>
+        <Input type="number" step="1" min="1" {...register(`ventas.${index}.cantidad`, { valueAsNumber: true })} placeholder="Cant" className="h-8 text-xs" />
+      </div>
+      <div>
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/ c/u" className="h-8 text-xs" />
+      </div>
+      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
@@ -221,52 +242,25 @@ function EquipoRow({
   return (
     <div className="space-y-1 py-1.5 border-b border-gray-100 last:border-0">
       <div className="grid grid-cols-[1fr_140px_110px_90px_auto] gap-1.5 items-end">
-        {/* Producto */}
         <div>
-          <Input
-            {...register(`ventas.${index}.producto_nombre`)}
-            placeholder="Producto (nombre o búsqueda)"
-            className="h-8 text-xs"
-          />
+          <Input {...register(`ventas.${index}.producto_nombre`)} placeholder="Producto (nombre o búsqueda)" className="h-8 text-xs" />
           {e?.producto_nombre && <p className="text-red-500 text-[10px]">{e.producto_nombre.message}</p>}
         </div>
-
-        {/* IMEI */}
         <div>
-          <Input
-            {...register(`ventas.${index}.imei_serial`)}
-            placeholder="IMEI / Serie"
-            maxLength={50}
-            className="h-8 text-xs"
-          />
+          <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="h-8 text-xs" />
         </div>
-
-        {/* Tipo pago */}
         <div>
           <Select {...register(`ventas.${index}.tipo_pago`)} className="h-8 text-xs">
             <option value="CONTADO">Contado</option>
             <option value="CUOTAS">A cuotas</option>
           </Select>
         </div>
-
-        {/* Precio venta */}
         <div>
-          <Input
-            type="number" step="0.01" min="0"
-            {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })}
-            placeholder="Precio S/"
-            className="h-8 text-xs"
-          />
+          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="Precio S/" className="h-8 text-xs" />
         </div>
-
-        {/* Eliminar */}
-        <button
-          type="button" onClick={onRemove}
-          className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center"
-        >×</button>
+        <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
       </div>
 
-      {/* Fila extra si es cuotas */}
       {tipoPago === 'CUOTAS' && (
         <div className="grid grid-cols-[170px_120px_120px] gap-1.5 pl-2">
           <div>
@@ -278,34 +272,19 @@ function EquipoRow({
           </div>
           <div>
             <Label className="text-[10px]">Por cobrar financiera (S/)</Label>
-            <Input
-              type="number" step="0.01" min="0"
-              {...register(`ventas.${index}.por_cobrar_financiera`, { valueAsNumber: true })}
-              className="h-7 text-xs mt-0.5"
-            />
+            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.por_cobrar_financiera`, { valueAsNumber: true })} className="h-7 text-xs mt-0.5" />
           </div>
           <div>
             <Label className="text-[10px]">Costo snap (S/)</Label>
-            <Input
-              type="number" step="0.01" min="0"
-              {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })}
-              className="h-7 text-xs mt-0.5"
-            />
+            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })} className="h-7 text-xs mt-0.5" />
           </div>
         </div>
       )}
 
-      {/* DNI cliente */}
       <div className="pl-2">
-        <Input
-          {...register(`ventas.${index}.cliente_dni`)}
-          placeholder="DNI cliente (opcional)"
-          maxLength={15}
-          className="h-7 text-xs w-48"
-        />
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI cliente (opcional)" maxLength={15} className="h-7 text-xs w-48" />
       </div>
 
-      {/* Monto total — para equipos = precio_venta */}
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
@@ -326,60 +305,14 @@ function OtroRow({
   return (
     <div className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
       <div>
-        <Input
-          {...register(`ventas.${index}.subtipo`)}
-          placeholder="Descripción / Motivo"
-          className="h-8 text-xs"
-        />
+        <Input {...register(`ventas.${index}.subtipo`)} placeholder="Descripción / Motivo" className="h-8 text-xs" />
       </div>
       <div>
-        <Input
-          type="number" step="0.01" min="0"
-          {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })}
-          placeholder="S/"
-          className="h-8 text-xs"
-        />
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} placeholder="S/" className="h-8 text-xs" />
         {e?.monto_total && <p className="text-red-500 text-[10px]">{e.monto_total.message}</p>}
       </div>
-      <button
-        type="button" onClick={onRemove}
-        className="text-red-400 hover:text-red-600 font-bold text-lg leading-none"
-      >×</button>
+      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none">×</button>
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
-    </div>
-  )
-}
-
-// ── Sección de ventas (con botón de agregar) ──────────────────────────────────
-
-function VentasSection({ title, count, addLabel, onAdd, children }: {
-  title: string; count: number; addLabel: string; onAdd: () => void; children: React.ReactNode
-}) {
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="bg-gray-50 px-3 py-2 flex items-center justify-between border-b border-gray-200">
-        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-          {title}
-          {count > 0 && (
-            <span className="ml-2 bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold">
-              {count}
-            </span>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-        >
-          <span className="text-base leading-none">+</span> {addLabel}
-        </button>
-      </div>
-      <div className="px-3 py-1 min-h-[40px]">
-        {count === 0
-          ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros. Haz clic en &ldquo;{addLabel}&rdquo;</p>
-          : children
-        }
-      </div>
     </div>
   )
 }
@@ -404,7 +337,7 @@ export function NuevoReportePage() {
         retiro_bipay: 0, recarga_bipay: 0, pago_servicio: 0,
         pago_krece: 0, tickets_tusamy: 0,
         efectivo_entregado: 0, total_salidas: 0,
-        destino_efectivo: 'TIENDA', observaciones: '', obs_dia: '',
+        destino_efectivo: 'EN_CAJA', observaciones: '', obs_dia: '',
         ventas: [],
       },
     })
@@ -430,7 +363,6 @@ export function NuevoReportePage() {
   const eliminarSalida = (id: string) =>
     setSalidaItems(prev => prev.filter(s => s.id !== id))
 
-  // Sincronizar total_salidas con el form
   useEffect(() => {
     const total = salidaItems.reduce((acc, s) => acc + (Number(s.monto) || 0), 0)
     setValue('total_salidas', Math.round(total * 100) / 100)
@@ -457,13 +389,11 @@ export function NuevoReportePage() {
     setTimeout(() => setBorradorMsg(''), 2000)
   }
 
-  // Detectar borrador disponible al entrar (solo tienda)
   useEffect(() => {
     if (!esTienda) return
     borradorApi.cargar().then((r) => { if (r.borrador) setBorradorDisponible(r.borrador) }).catch(() => {})
   }, [esTienda])
 
-  // Auto-guardado cada 60s
   useEffect(() => {
     if (!esTienda) return
     const t = setInterval(() => guardarBorrador(true), 60_000)
@@ -479,14 +409,18 @@ export function NuevoReportePage() {
   const bipay             = watch('bipay')             || 0
   const transferencia     = watch('transferencia')     || 0
   const retiro_bipay      = watch('retiro_bipay')      || 0
+  const recarga_bipay     = watch('recarga_bipay')     || 0
+  const pago_servicio     = watch('pago_servicio')     || 0
+  const pago_krece        = watch('pago_krece')        || 0
+  const tickets_tusamy    = watch('tickets_tusamy')    || 0
   const efectivo_entregado= watch('efectivo_entregado')|| 0
   const destino           = watch('destino_efectivo')
 
-  // Para POSTPAGO/PREPAGO: cobrado_unitario × cantidad = monto_total
-  // Sincronizamos monto_total y efectivo_inicial en tiempo real
+  // POSTPAGO/PREPAGO/APOYO: monto_total = cobrado_unitario × cantidad
+  // EQUIPO/ACCESORIO: monto_total = precio_venta
   useEffect(() => {
     ventas.forEach((v, i) => {
-      if (v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO') {
+      if (v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO' || v.tipo_venta === 'APOYO') {
         const monto = (v.cobrado_unitario || 0) * (v.cantidad || 1)
         if (v.monto_total !== monto) setValue(`ventas.${i}.monto_total`, monto)
         if (v.efectivo_inicial !== monto) setValue(`ventas.${i}.efectivo_inicial`, monto)
@@ -504,17 +438,30 @@ export function NuevoReportePage() {
   const prepagoRows       = ventasMap.filter(v => v.tipo === 'PREPAGO')
   const equipoRows        = ventasMap.filter(v => v.tipo === 'EQUIPO' || v.tipo === 'ACCESORIO')
   const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO')
+  const apoyoRows         = ventasMap.filter(v => v.tipo === 'APOYO')
 
-  const totalVentas       = ventas.reduce((acc, v) => acc + (v.monto_total || 0), 0)
-  const totalPostpago     = ventas.filter(v => v.tipo_venta === 'POSTPAGO').reduce((a, v) => a + (v.monto_total||0), 0)
-  const totalPrepago      = ventas.filter(v => v.tipo_venta === 'PREPAGO').reduce((a, v) => a + (v.monto_total||0), 0)
-  const totalEquipos      = ventas.filter(v => v.tipo_venta === 'EQUIPO'||v.tipo_venta === 'ACCESORIO').reduce((a,v)=>a+(v.monto_total||0),0)
-  const totalOtros        = ventas.filter(v => v.tipo_venta === 'OTROS_FLUJO').reduce((a, v) => a + (v.monto_total||0), 0)
+  const sub = (t: VentaFormData['tipo_venta'] | VentaFormData['tipo_venta'][]) => {
+    const tipos = Array.isArray(t) ? t : [t]
+    return ventas.filter(v => tipos.includes(v.tipo_venta)).reduce((a, v) => a + (v.monto_total || 0), 0)
+  }
+  const totalPostpago     = sub('POSTPAGO')
+  const totalPrepago      = sub('PREPAGO')
+  const totalEquipos      = sub(['EQUIPO','ACCESORIO'])
+  const totalOtrosFlujo   = sub('OTROS_FLUJO')
+  const totalApoyo        = sub('APOYO')
+  const ingresosFijos     = recarga_bipay + pago_servicio + pago_krece + tickets_tusamy
+  const otrosFijos        = totalOtrosFlujo + ingresosFijos
 
-  const sumaEfectivoVentas = ventas.reduce((acc, v) => acc + (v.efectivo_inicial || 0), 0)
-  const efectivo_esperado  = sumaEfectivoVentas + caja_inicial - total_salidas
-  const diferencia         = efectivo_entregado - efectivo_esperado
-  const requiereAprobacion = Math.abs(diferencia) > 10
+  // total_sistema (legacy): suma de las 5 secciones de venta
+  const totalSistema = totalPostpago + totalPrepago + totalEquipos + otrosFijos + totalApoyo
+
+  const { totalNoFisico, efectivoEsperado, totalEnCajon, diferencia, requiereAprobacion } =
+    calcularCuadre({
+      totalSistema,
+      yape, bipay, transferencia, retiroBipay: retiro_bipay,
+      totalSalidas: total_salidas, cajaInicial: caja_inicial,
+      efectivoEntregado: efectivo_entregado,
+    })
 
   const onSubmit = (data: FormData) => {
     crear.mutate(
@@ -524,9 +471,9 @@ export function NuevoReportePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-[1100px] mx-auto">
       <PageHeader
-        title="Nuevo Reporte Diario"
+        title="Registrar Cuadre Diario"
         description="Cierre de caja y ventas del día."
         actions={
           <div className="flex items-center gap-2">
@@ -543,20 +490,17 @@ export function NuevoReportePage() {
               </Button>
             )}
             {borradorMsg && <span className="text-xs text-zinc-500">{borradorMsg}</span>}
-            <Button variant="outline" onClick={() => navigate('/reportes')}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => navigate('/reportes')}>Cancelar</Button>
           </div>
         }
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-        {/* ── Consola Bipay/Anypay (rol tienda) ── */}
         {esTienda && <BipayConsole />}
 
         {/* ── Cabecera ── */}
-        <Card className="p-4">
+        <GlassPanel className="p-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <Label htmlFor="fecha" className="text-xs font-medium text-gray-600">Fecha *</Label>
@@ -583,151 +527,141 @@ export function NuevoReportePage() {
               </div>
             </div>
           </div>
-        </Card>
+        </GlassPanel>
 
         {/* ── Cuerpo: dos columnas ── */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,380px)] gap-4 items-start">
 
           {/* ═══════════ COLUMNA IZQUIERDA: Ventas ═══════════ */}
-          <div className="space-y-3">
+          <div>
 
-            {/* Postpago */}
-            <VentasSection
-              title="Ventas Postpago"
-              count={postpagoRows.length}
-              addLabel="Agregar Postpago"
+            <SectionPanel
+              title="Ventas Postpago" accent={ACCENT.postpago}
+              count={postpagoRows.length} addLabel="Agregar Postpago"
+              subtotal={totalPostpago}
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' })}
             >
-              <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
-                <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span>
-                <span>Cobrado</span><span>Opciones</span><span />
-              </div>
-              {postpagoRows.map(v => (
-                <LineaRow
-                  key={v.id} index={v.idx} register={register} control={control}
-                  errors={errors} tipo="POSTPAGO" planes={planesData} onRemove={() => remove(v.idx)}
-                />
-              ))}
               {postpagoRows.length > 0 && (
-                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
-                  Subtotal: <span className="text-blue-700">S/ {totalPostpago.toFixed(2)}</span>
+                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                  <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
-            </VentasSection>
+              {postpagoRows.length === 0
+                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                : postpagoRows.map(v => (
+                    <LineaRow key={v.id} index={v.idx} register={register} control={control}
+                      errors={errors} tipo="POSTPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
+                  ))}
+            </SectionPanel>
 
-            {/* Prepago */}
-            <VentasSection
-              title="Ventas Prepago / Chips"
-              count={prepagoRows.length}
-              addLabel="Agregar Prepago"
+            <SectionPanel
+              title="Ventas Prepago / Chips" accent={ACCENT.prepago}
+              count={prepagoRows.length} addLabel="Agregar Prepago"
+              subtotal={totalPrepago}
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'PREPAGO', tipo_alta: 'LN' })}
             >
-              <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
-                <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span>
-                <span>Cobrado</span><span>Opciones</span><span />
-              </div>
-              {prepagoRows.map(v => (
-                <LineaRow
-                  key={v.id} index={v.idx} register={register} control={control}
-                  errors={errors} tipo="PREPAGO" planes={planesData} onRemove={() => remove(v.idx)}
-                />
-              ))}
               {prepagoRows.length > 0 && (
-                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
-                  Subtotal: <span className="text-blue-700">S/ {totalPrepago.toFixed(2)}</span>
+                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                  <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
-            </VentasSection>
+              {prepagoRows.length === 0
+                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                : prepagoRows.map(v => (
+                    <LineaRow key={v.id} index={v.idx} register={register} control={control}
+                      errors={errors} tipo="PREPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
+                  ))}
+            </SectionPanel>
 
-            {/* Equipos y accesorios */}
-            <VentasSection
-              title="Equipos y Accesorios"
-              count={equipoRows.length}
-              addLabel="Vender de Stock"
+            <SectionPanel
+              title="Equipos y Accesorios" accent={ACCENT.equipos}
+              count={equipoRows.length} addLabel="Vender de Stock"
+              subtotal={totalEquipos}
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'EQUIPO' })}
             >
-              {equipoRows.map(v => (
-                <EquipoRow
-                  key={v.id} index={v.idx} register={register} control={control}
-                  errors={errors} onRemove={() => remove(v.idx)}
-                />
-              ))}
+              {equipoRows.length === 0
+                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                : equipoRows.map(v => (
+                    <EquipoRow key={v.id} index={v.idx} register={register} control={control}
+                      errors={errors} onRemove={() => remove(v.idx)} />
+                  ))}
               {equipoRows.length > 0 && (
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => append({ ...VENTA_DEFAULT, tipo_venta: 'ACCESORIO' })}
-                    className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                  >
-                    + Agregar Accesorio
-                  </button>
-                  <span className="text-xs font-semibold text-gray-700">
-                    Subtotal: <span className="text-blue-700">S/ {totalEquipos.toFixed(2)}</span>
-                  </span>
-                </div>
+                <button type="button"
+                  onClick={() => append({ ...VENTA_DEFAULT, tipo_venta: 'ACCESORIO' })}
+                  className="text-xs font-medium mt-1" style={{ color: ACCENT.apoyo }}>
+                  + Agregar Accesorio
+                </button>
               )}
-            </VentasSection>
+            </SectionPanel>
 
-            {/* Otros flujo */}
-            <VentasSection
-              title="Otros Ingresos (Flujo)"
-              count={otrosRows.length}
-              addLabel="Agregar"
+            <SectionPanel
+              title="Otros Ingresos (Flujo)" accent={ACCENT.otros}
+              count={otrosRows.length} addLabel="Agregar"
+              subtotal={totalOtrosFlujo}
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'OTROS_FLUJO' })}
             >
-              {otrosRows.map(v => (
-                <OtroRow
-                  key={v.id} index={v.idx} register={register}
-                  errors={errors} onRemove={() => remove(v.idx)}
-                />
-              ))}
-              {otrosRows.length > 0 && (
-                <div className="text-right text-xs font-semibold text-gray-700 pt-1">
-                  Subtotal: <span className="text-blue-700">S/ {totalOtros.toFixed(2)}</span>
+              {otrosRows.length === 0
+                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                : otrosRows.map(v => (
+                    <OtroRow key={v.id} index={v.idx} register={register} errors={errors} onRemove={() => remove(v.idx)} />
+                  ))}
+            </SectionPanel>
+
+            <SectionPanel
+              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo}
+              count={apoyoRows.length} addLabel="Agregar Venta de Apoyo"
+              subtotal={totalApoyo}
+              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'APOYO', tipo_alta: 'LN' })}
+            >
+              {apoyoRows.length > 0 && (
+                <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                  <span>Tienda</span><span>Plan</span><span>Cant</span><span>Cobrado c/u</span><span />
                 </div>
               )}
-            </VentasSection>
+              {apoyoRows.length === 0
+                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin ventas de apoyo.</p>
+                : apoyoRows.map(v => (
+                    <ApoyoRow key={v.id} index={v.idx} register={register} errors={errors}
+                      planes={planesData} onRemove={() => remove(v.idx)} />
+                  ))}
+            </SectionPanel>
 
-            {/* ── Consolidado de ventas ── */}
-            <Card className="p-3 bg-slate-800 text-white">
-              <p className="text-xs text-slate-400 uppercase tracking-widest mb-2 font-medium">Total Sistema Consolidado</p>
-              <div className="grid grid-cols-4 gap-2 text-center text-xs mb-3">
+            {/* ── Consolidado de ventas (Total Sistema) ── */}
+            <GlassPanel className="p-3" style={{ background: 'rgba(6,182,212,0.07)' }}>
+              <p className="text-xs uppercase tracking-widest mb-2 font-medium" style={{ color: ACCENT.total }}>Total Sistema Consolidado</p>
+              <div className="grid grid-cols-5 gap-2 text-center text-xs mb-3">
                 {[
-                  { label: 'Postpago', val: totalPostpago },
-                  { label: 'Prepago',  val: totalPrepago  },
-                  { label: 'Equipos',  val: totalEquipos  },
-                  { label: 'Otros',    val: totalOtros    },
-                ].map(({ label, val }) => (
-                  <div key={label} className="bg-slate-700 rounded px-2 py-1">
-                    <div className="text-slate-400 text-[10px]">{label}</div>
-                    <div className="font-semibold">S/ {val.toFixed(2)}</div>
+                  { label: 'Postpago', val: totalPostpago, n: postpagoRows.length },
+                  { label: 'Prepago',  val: totalPrepago,  n: prepagoRows.length },
+                  { label: 'Equipos',  val: totalEquipos,  n: equipoRows.length },
+                  { label: 'Otros',    val: otrosFijos,    n: otrosRows.length },
+                  { label: 'Apoyo',    val: totalApoyo,    n: apoyoRows.length },
+                ].map(({ label, val, n }) => (
+                  <div key={label} className="rounded px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <div className="text-[10px] text-gray-400">{label}{n > 0 && ` (${n})`}</div>
+                    <div className="font-semibold text-gray-200">S/ {val.toFixed(2)}</div>
                   </div>
                 ))}
               </div>
               <div className="text-center">
-                <span className="text-slate-400 text-xs">TOTAL DEL DÍA</span>
-                <div className="font-mono text-cyan-400 text-3xl font-bold">S/ {totalVentas.toFixed(2)}</div>
+                <span className="text-gray-400 text-xs">TOTAL DEL DÍA</span>
+                <div><MoneyTotal value={totalSistema} color={ACCENT.total} size="2rem" /></div>
               </div>
-            </Card>
+            </GlassPanel>
 
           </div>
 
           {/* ═══════════ COLUMNA DERECHA: Caja y Dinero ═══════════ */}
           <div className="space-y-3 lg:sticky lg:top-4">
 
-            {/* Caja inicial */}
-            <Card className="p-3">
+            <GlassPanel className="p-3">
               <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Caja Inicial (Sencillo)</Label>
-              <Input
-                id="caja_inicial" type="number" step="0.01" min="0"
+              <Input id="caja_inicial" type="number" step="0.01" min="0"
                 {...register('caja_inicial', { valueAsNumber: true })}
-                className="mt-1.5 h-9 text-sm font-medium"
-                placeholder="S/ 0.00"
-              />
-            </Card>
+                className="mt-1.5 h-9 text-sm font-medium" placeholder="S/ 0.00" />
+            </GlassPanel>
 
-            {/* Medios no físicos */}
-            <Card className="p-3 space-y-2">
+            <GlassPanel className="p-3 space-y-2">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dinero No Físico</p>
               {([
                 ['yape',          'Yape / Plin'],
@@ -736,33 +670,21 @@ export function NuevoReportePage() {
               ] as const).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
                   <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
-                  <Input
-                    type="number" step="0.01" min="0"
-                    {...register(field, { valueAsNumber: true })}
-                    className="h-7 text-xs text-right"
-                    placeholder="0.00"
-                  />
+                  <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
+                    className="h-7 text-xs text-right" placeholder="0.00" />
                 </div>
               ))}
               <div className="flex items-center gap-2 border-t pt-2">
                 <Label className="text-xs text-red-600 w-28 shrink-0 font-medium">Retiro Bipay</Label>
-                <Input
-                  type="number" step="0.01" min="0"
-                  {...register('retiro_bipay', { valueAsNumber: true })}
-                  className="h-7 text-xs text-right border-red-200 focus:border-red-400"
-                  placeholder="0.00"
-                />
+                <Input type="number" step="0.01" min="0" {...register('retiro_bipay', { valueAsNumber: true })}
+                  className="h-7 text-xs text-right border-red-200 focus:border-red-400" placeholder="0.00" />
               </div>
               <div className="text-right text-xs text-gray-500 pt-1">
-                Total no físico:{' '}
-                <span className="font-semibold text-gray-700">
-                  S/ {(yape + bipay + transferencia - retiro_bipay).toFixed(2)}
-                </span>
+                Total no físico: <span className="font-semibold text-gray-300">S/ {totalNoFisico.toFixed(2)}</span>
               </div>
-            </Card>
+            </GlassPanel>
 
-            {/* Ingresos fijos */}
-            <Card className="p-3 space-y-2">
+            <GlassPanel className="p-3 space-y-2">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Ingresos Fijos</p>
               {([
                 ['recarga_bipay', 'Recarga Bipay'],
@@ -772,24 +694,17 @@ export function NuevoReportePage() {
               ] as const).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
                   <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
-                  <Input
-                    type="number" step="0.01" min="0"
-                    {...register(field, { valueAsNumber: true })}
-                    className="h-7 text-xs text-right"
-                    placeholder="0.00"
-                  />
+                  <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
+                    className="h-7 text-xs text-right" placeholder="0.00" />
                 </div>
               ))}
-            </Card>
+            </GlassPanel>
 
-            {/* Salidas de efectivo */}
-            <Card className="p-3">
+            <GlassPanel className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Salidas de Efectivo</p>
-                <button
-                  type="button" onClick={agregarSalida}
-                  className="text-xs text-red-500 border border-red-300 rounded px-2 py-0.5 hover:bg-red-50 font-medium"
-                >
+                <button type="button" onClick={agregarSalida}
+                  className="text-xs text-red-500 border border-red-300 rounded px-2 py-0.5 hover:bg-red-50 font-medium">
                   + Agregar Salida
                 </button>
               </div>
@@ -799,126 +714,115 @@ export function NuevoReportePage() {
                   <div className="space-y-1.5">
                     {salidaItems.map(s => (
                       <div key={s.id} className="grid grid-cols-[90px_70px_1fr_auto] gap-1 items-center">
-                        <select
-                          value={s.tipo}
-                          onChange={e => actualizarSalida(s.id, 'tipo', e.target.value)}
-                          className="h-7 text-xs rounded border border-gray-300 px-1"
-                        >
+                        <select value={s.tipo} onChange={e => actualizarSalida(s.id, 'tipo', e.target.value)}
+                          className="h-7 text-xs rounded border border-gray-300 px-1">
                           {TIPOS_SALIDA.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
-                        <input
-                          type="number" step="0.01" min="0" value={s.monto || ''}
+                        <input type="number" step="0.01" min="0" value={s.monto || ''}
                           onChange={e => actualizarSalida(s.id, 'monto', parseFloat(e.target.value) || 0)}
-                          placeholder="S/"
-                          className="h-7 text-xs rounded border border-gray-300 px-2 text-right"
-                        />
-                        <input
-                          type="text" value={s.motivo}
+                          placeholder="S/" className="h-7 text-xs rounded border border-gray-300 px-2 text-right" />
+                        <input type="text" value={s.motivo}
                           onChange={e => actualizarSalida(s.id, 'motivo', e.target.value)}
-                          placeholder="Motivo"
-                          className="h-7 text-xs rounded border border-gray-300 px-2"
-                        />
-                        <button
-                          type="button" onClick={() => eliminarSalida(s.id)}
-                          className="text-red-400 hover:text-red-600 font-bold text-sm leading-none"
-                        >×</button>
+                          placeholder="Motivo" className="h-7 text-xs rounded border border-gray-300 px-2" />
+                        <button type="button" onClick={() => eliminarSalida(s.id)}
+                          className="text-red-400 hover:text-red-600 font-bold text-sm leading-none">×</button>
                       </div>
                     ))}
-                    <div className="text-right text-xs font-semibold text-red-600 pt-1">
+                    <div className="text-right text-xs font-semibold text-red-500 pt-1">
                       Total salidas: S/ {total_salidas.toFixed(2)}
                     </div>
                   </div>
                 )
               }
-            </Card>
+            </GlassPanel>
 
             {/* ── Cuadre Final ── */}
-            <Card className="p-3 border-2 border-green-400 bg-green-50">
-              <p className="text-xs font-bold text-green-800 uppercase tracking-wide mb-3">Cuadre Final</p>
+            <GlassPanel className="p-3" style={{ border: '1px solid rgba(34,197,94,0.4)' }}>
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#22c55e' }}>Cuadre Final</p>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Efectivo esperado en cajón:</span>
-                  <span className="font-semibold text-gray-800">S/ {efectivo_esperado.toFixed(2)}</span>
+                  <span className="text-xs text-gray-500">Total en cajón:</span>
+                  <span className="font-semibold text-gray-300">S/ {totalEnCajon.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Efectivo esperado:</span>
+                  <span className="font-semibold text-gray-200">S/ {efectivoEsperado.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs font-medium text-gray-700">Mi Efectivo (entrego):</Label>
-                  <Input
-                    type="number" step="0.01" min="0"
-                    {...register('efectivo_entregado', { valueAsNumber: true })}
-                    className="h-8 w-32 text-sm text-right font-semibold"
-                    placeholder="0.00"
-                  />
+                  <Label className="text-xs font-medium text-gray-300">Mi Efectivo (entrego):</Label>
+                  <Input type="number" step="0.01" min="0" {...register('efectivo_entregado', { valueAsNumber: true })}
+                    className="h-8 w-32 text-sm text-right font-semibold" placeholder="0.00" />
                 </div>
 
-                <div className="flex justify-between items-center pt-1 border-t border-green-200">
-                  <span className="text-xs font-bold text-gray-700">Diferencia:</span>
-                  <span className={`font-mono font-bold text-base ${
-                    Math.abs(diferencia) < 0.01 ? 'text-green-700'
-                    : diferencia < 0             ? 'text-red-600'
-                                                 : 'text-yellow-600'
-                  }`}>
-                    S/ {diferencia.toFixed(2)}
-                    {requiereAprobacion && ' ⚠'}
+                <div className="flex justify-between items-center pt-1 border-t" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
+                  <span className="text-xs font-bold text-gray-300">Diferencia:</span>
+                  <span className="font-mono font-bold text-base" style={{
+                    color: Math.abs(diferencia) < 0.01 ? '#e4e4e7' : diferencia < 0 ? '#f87171' : '#fbbf24',
+                  }}>
+                    S/ {diferencia.toFixed(2)}{requiereAprobacion && ' ⚠'}
                   </span>
                 </div>
 
                 {requiereAprobacion && (
-                  <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                  <p className="text-[10px] text-amber-400 rounded px-2 py-1" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
                     Diferencia mayor a S/10 — el reporte quedará en espera de aprobación.
                   </p>
                 )}
               </div>
 
-              {/* Destino del efectivo */}
-              <div className="mt-3 space-y-1.5">
-                <p className="text-xs font-medium text-gray-700">Destino del efectivo:</p>
-                {[
-                  { value: 'ENTREGADO', label: 'Lo Entregué (a gerencia / depósito)' },
-                  { value: 'TIENDA',    label: 'En Tienda (queda en caja)' },
-                  { value: 'EN_CAJA',   label: 'En Caja Central' },
-                ].map(opt => (
-                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-xs text-gray-700">
-                    <input
-                      type="radio"
-                      value={opt.value}
-                      {...register('destino_efectivo')}
-                      className="w-3.5 h-3.5 accent-green-600"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+              {/* Destino del efectivo — toggles glow (paridad legacy) */}
+              <div className="mt-3">
+                <p className="text-xs font-medium text-gray-300 mb-1.5">Destino del efectivo:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'ENTREGADO', label: 'Lo Entregué', accent: '#22c55e' },
+                    { value: 'EN_CAJA',   label: 'En Tienda',   accent: '#fbbf24' },
+                  ] as const).map(opt => {
+                    const active = destino === opt.value
+                    return (
+                      <label key={opt.value}
+                        className="flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold rounded-md py-2 transition-all"
+                        style={active
+                          ? { background: opt.accent, color: '#0a0a0a', border: `2px solid ${opt.accent}`,
+                              boxShadow: `0 0 20px ${opt.accent}80`, transform: 'scale(1.02)' }
+                          : { background: 'transparent', color: '#a1a1aa', border: `2px solid ${opt.accent}`, opacity: 0.45 }}>
+                        <input type="radio" value={opt.value} {...register('destino_efectivo')} className="hidden" />
+                        {opt.label}
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
 
-              {/* Observaciones del destino — solo cuando ENTREGADO */}
+              {/* Observaciones condicionales del destino */}
               {destino === 'ENTREGADO' && (
                 <div className="mt-2">
-                  <Label className="text-xs text-gray-600">A quién / referencia de depósito *</Label>
-                  <Input
-                    {...register('observaciones')}
-                    placeholder="Nombre o número de operación"
-                    className="mt-1 h-8 text-xs"
-                  />
+                  <Label className="text-xs text-gray-400">A quién / referencia de depósito *</Label>
+                  <Input {...register('observaciones')} placeholder="Nombre o número de operación" className="mt-1 h-8 text-xs" />
                 </div>
               )}
-            </Card>
+              {destino === 'EN_CAJA' && (
+                <div className="mt-2">
+                  <Label className="text-xs text-gray-400">Observación de caja (opcional)</Label>
+                  <textarea {...register('observaciones')} rows={2}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                    placeholder="Detalle de por qué el efectivo queda en tienda" />
+                </div>
+              )}
+            </GlassPanel>
 
-            {/* Observaciones del día */}
-            <Card className="p-3">
+            <GlassPanel className="p-3">
               <Label className="text-xs font-semibold text-gray-700">Observaciones del Día</Label>
-              <textarea
-                {...register('obs_dia')}
-                rows={2}
+              <textarea {...register('obs_dia')} rows={2}
                 className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)"
-              />
-            </Card>
+                placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)" />
+            </GlassPanel>
 
           </div>
         </div>
 
-        {/* ── Error de envío ── */}
         {crear.isError && (
           <p className="text-red-500 text-sm border border-red-200 bg-red-50 rounded px-3 py-2">
             {(crear.error as { response?: { data?: { error?: string } } })?.response?.data?.error
@@ -926,20 +830,12 @@ export function NuevoReportePage() {
           </p>
         )}
 
-        {/* ── Botón principal ── */}
         <div className="flex gap-3 pb-8">
-          <Button
-            type="submit"
-            disabled={crear.isPending}
-            className="flex-1 h-11 text-base font-semibold bg-cyan-600 hover:bg-cyan-700 text-white"
-          >
+          <Button type="submit" disabled={crear.isPending}
+            className="flex-1 h-11 text-base font-semibold bg-cyan-600 hover:bg-cyan-700 text-white">
             {crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
           </Button>
-          <Button
-            type="button" variant="outline"
-            onClick={() => navigate('/reportes')}
-            disabled={crear.isPending}
-          >
+          <Button type="button" variant="outline" onClick={() => navigate('/reportes')} disabled={crear.isPending}>
             Cancelar
           </Button>
         </div>
