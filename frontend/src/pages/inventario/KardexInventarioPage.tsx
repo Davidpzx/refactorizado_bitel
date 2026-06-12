@@ -4,6 +4,7 @@ import { Download, RotateCcw } from 'lucide-react'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
@@ -132,8 +133,7 @@ export function KardexInventarioPage() {
         }
       />
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <ListToolbar description="Consulta el historial por tienda y estado de inventario.">
         <Select
           value={tienda}
           onChange={e => setTienda(e.target.value)}
@@ -163,7 +163,7 @@ export function KardexInventarioPage() {
             Limpiar filtros
           </Button>
         )}
-      </div>
+      </ListToolbar>
 
       {/* Tabla */}
       {isLoading ? (
@@ -175,10 +175,15 @@ export function KardexInventarioPage() {
           Sin registros para los filtros seleccionados.
         </div>
       ) : (
-        <div className="rounded-lg border border-zinc-800 overflow-x-auto">
-          <table className="w-full text-xs" style={{ minWidth: '1100px' }}>
-            <thead>
-              <tr className="border-b border-zinc-800 text-muted-foreground/70 text-[0.65rem] uppercase tracking-wide">
+        <div className="relative overflow-x-auto rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 z-20 h-px"
+            style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.6), rgba(99,102,241,0.35), transparent 70%)' }}
+          />
+          <table className="w-full border-separate border-spacing-0 text-xs" style={{ minWidth: '1100px' }}>
+            <thead className="[&_th]:border-b [&_th]:border-gray-200 [&_th]:bg-gray-50/90 [&_th]:text-gray-500 dark:[&_th]:border-white/[0.07] dark:[&_th]:bg-white/[0.035] dark:[&_th]:text-zinc-400">
+              <tr className="text-[0.65rem] uppercase tracking-wide">
                 <th className="py-2 px-3 text-left">Tienda</th>
                 <th className="py-2 px-3 text-left">Producto</th>
                 <th className="py-2 px-3 text-left">IMEI / Serie</th>
@@ -195,7 +200,7 @@ export function KardexInventarioPage() {
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.id} className="border-b border-zinc-800/60 hover:bg-white/[0.02] text-xs">
+                <tr key={row.id} className="text-xs transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035] [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045]">
                   <td className="py-1.5 px-3 text-muted-foreground/80 whitespace-nowrap">
                     {row.tienda_nombre ?? row.tienda}
                   </td>

@@ -6,7 +6,8 @@ import type { Reporte } from '../../types/reporte'
 import type { PaginatedResponse } from '../../types/pagination'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck } from 'lucide-react'
+import { Badge } from '../../components/ui/badge'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -15,13 +16,18 @@ const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' 
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
 
 interface AgenteVentasResponse {
-  agente: Agente
+  agente: AgenteLaboral
   stats: {
     total_reportes: number
     total_vendido: string
     diferencia_acumulada: string
   }
   reportes: PaginatedResponse<Reporte>
+}
+
+interface AgenteLaboral extends Agente {
+  fecha_prueba_inicio?: string | null
+  fecha_prueba_fin?: string | null
 }
 
 interface TokenResult {
@@ -32,39 +38,44 @@ interface TokenResult {
   accion?: string
 }
 
-function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: Agente }) {
-  const [fechaIngreso,      setFechaIngreso]      = useState((agente as any).fecha_ingreso ?? '')
-  const [fechaPruebaInicio, setFechaPruebaInicio] = useState((agente as any).fecha_prueba_inicio ?? '')
-  const [fechaPruebaFin,    setFechaPruebaFin]    = useState((agente as any).fecha_prueba_fin ?? '')
+interface FechasLaboralesResult {
+  msg?: string
+}
+
+function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: AgenteLaboral }) {
+  const [fechaIngreso,      setFechaIngreso]      = useState(agente.fecha_ingreso ?? '')
+  const [fechaPruebaInicio, setFechaPruebaInicio] = useState(agente.fecha_prueba_inicio ?? '')
+  const [fechaPruebaFin,    setFechaPruebaFin]    = useState(agente.fecha_prueba_fin ?? '')
   const [msg, setMsg]                              = useState<string | null>(null)
 
   const mut = useMutation({
     mutationFn: (data: Record<string, string>) =>
-      api.patch(`/v1/agentes/${agenteId}/fechas-laborales`, data).then(r => r.data),
-    onSuccess: (res: any) => setMsg(res.msg ?? 'Fechas actualizadas.'),
+      api.patch<FechasLaboralesResult>(`/v1/agentes/${agenteId}/fechas-laborales`, data).then(r => r.data),
+    onSuccess: (res) => setMsg(res.msg ?? 'Fechas actualizadas.'),
     onError: () => setMsg('Error al guardar fechas.'),
   })
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-sm text-gray-900 mb-4 flex items-center gap-2">
-        <Calendar size={15} className="text-gray-500" /> Fechas Laborales
+    <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+        <Calendar size={15} className="text-indigo-500" /> Fechas laborales
       </h3>
-      <div className="grid grid-cols-3 gap-4">
+      <p className="mb-4 text-xs text-gray-400 dark:text-zinc-500">Ingreso y vigencia del periodo de prueba.</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Fecha ingreso</label>
+          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Fecha ingreso</label>
           <Input type="date" value={fechaIngreso} onChange={e => setFechaIngreso(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Inicio prueba</label>
+          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Inicio prueba</label>
           <Input type="date" value={fechaPruebaInicio} onChange={e => setFechaPruebaInicio(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Fin prueba</label>
+          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Fin prueba</label>
           <Input type="date" value={fechaPruebaFin} onChange={e => setFechaPruebaFin(e.target.value)} />
         </div>
       </div>
-      {msg && <p className={`mt-2 text-xs ${msg.startsWith('Error') ? 'text-red-500' : 'text-green-600'}`}>{msg}</p>}
+      {msg && <p className={`mt-3 rounded-lg px-3 py-2 text-xs ${msg.startsWith('Error') ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300'}`}>{msg}</p>}
       <div className="mt-3 flex justify-end">
         <Button
           size="sm"
@@ -81,7 +92,7 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
           {mut.isPending ? 'Guardando...' : 'Guardar fechas'}
         </Button>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -101,20 +112,21 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
   })
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-sm text-gray-900 mb-4 flex items-center gap-2">
-        <ShieldCheck size={15} className="text-gray-500" /> Token de Seguridad
+    <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+        <ShieldCheck size={15} className="text-indigo-500" /> Token de seguridad
       </h3>
+      <p className="mb-4 text-xs text-gray-400 dark:text-zinc-500">Genera o revoca credenciales de acceso temporal.</p>
 
       {resultado?.token && (
-        <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-          <p className="text-xs text-blue-600 mb-1">Token generado ({resultado.tipo}):</p>
-          <p className="font-mono text-2xl font-bold text-blue-800 tracking-widest">{resultado.token}</p>
-          <p className="text-xs text-blue-500 mt-1">Expira: {resultado.expiracion}</p>
+        <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3 dark:border-indigo-400/15 dark:bg-indigo-500/10">
+          <p className="mb-1 text-xs text-indigo-600 dark:text-indigo-300">Token generado ({resultado.tipo}):</p>
+          <p className="break-all font-mono text-2xl font-bold tracking-widest text-indigo-800 dark:text-indigo-200">{resultado.token}</p>
+          <p className="mt-1 text-xs text-indigo-500 dark:text-indigo-400">Expira: {resultado.expiracion}</p>
         </div>
       )}
 
-      {msg && <p className="mb-3 text-xs text-gray-500">{msg}</p>}
+      {msg && <p className="mb-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.04] dark:text-zinc-400">{msg}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate('diario')}>
@@ -127,13 +139,13 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
           size="sm"
           variant="outline"
           disabled={mut.isPending}
-          className="text-red-600 border-red-200 hover:bg-red-50"
+          className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-400/20 dark:text-red-300 dark:hover:bg-red-500/10"
           onClick={() => { setResultado(null); mut.mutate('revocar') }}
         >
           Revocar token
         </Button>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -156,13 +168,18 @@ export function VerAgentePage() {
   const meta    = data?.reportes
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Cargando perfil...</div>
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">
+        <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        Cargando perfil...
+      </div>
+    )
   }
 
   if (!agente) {
     return (
-      <div className="text-center py-12 space-y-4">
-        <p className="text-gray-500">Agente no encontrado</p>
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-gray-500 dark:text-zinc-400">Agente no encontrado</p>
         <Link to="/agentes"><Button variant="outline"><ArrowLeft size={14} /> Volver a Agentes</Button></Link>
       </div>
     )
@@ -175,32 +192,32 @@ export function VerAgentePage() {
     .join('')
     .toUpperCase()
 
-  const estadoColor = agente.estado === 'ACTIVO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
   const dif = Number(stats?.diferencia_acumulada ?? 0)
 
   return (
     <div className="space-y-6">
-      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
-        <ArrowLeft size={15} /> Volver a Agentes
+      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300">
+        <ArrowLeft size={15} /> Volver a agentes
       </Link>
 
-      {/* Profile header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-start gap-5 flex-wrap">
-          <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shrink-0">
+      <section className="relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70 sm:p-6">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400 to-transparent" />
+        <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-indigo-500/[0.07] blur-3xl" />
+        <div className="relative flex flex-wrap items-start gap-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-2xl font-bold text-white shadow-lg shadow-indigo-500/20">
             {initials}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-bold text-gray-900">{agente.nombres}</h1>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estadoColor}`}>{agente.estado}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-50">{agente.nombres}</h1>
+              <Badge variant={agente.estado === 'ACTIVO' ? 'success' : agente.estado === 'INACTIVO' ? 'warning' : 'destructive'}>
+                {agente.estado}
+              </Badge>
               {agente.es_gerencia && String(agente.es_gerencia) !== 'NO' && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium uppercase">
-                  {agente.es_gerencia}
-                </span>
+                <Badge>Gerencia</Badge>
               )}
             </div>
-            <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-zinc-400">
               {agente.dni && (
                 <span className="flex items-center gap-1"><User size={13} /> DNI: {agente.dni}</span>
               )}
@@ -220,37 +237,41 @@ export function VerAgentePage() {
               )}
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Sueldo Base</p>
-            <p className="text-lg font-bold text-gray-900">{fmt(agente.sueldo_base)}</p>
+          <div className="ml-auto rounded-xl border border-gray-200/80 bg-gray-50/70 px-4 py-3 text-right dark:border-white/[0.07] dark:bg-white/[0.035]">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-gray-400">Sueldo base</p>
+            <p className="mt-1 font-mono text-lg font-bold tabular-nums text-gray-900 dark:text-zinc-100">{fmt(agente.sueldo_base)}</p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Reportes</p>
-            <p className="text-xl font-bold text-gray-900">{stats.total_reportes}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-blue-200 p-4">
-            <div className="flex items-center gap-1 mb-1">
-              <DollarSign size={13} className="text-blue-500" />
-              <p className="text-xs text-gray-500">Total Vendido</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-gray-200/80 bg-white/85 p-4 dark:border-white/[0.08] dark:bg-zinc-900/70">
+            <div className="mb-2 flex items-center gap-2 text-gray-400 dark:text-zinc-500">
+              <FileText size={14} />
+              <p className="text-xs">Total reportes</p>
             </div>
-            <p className="text-xl font-bold text-blue-700">{fmt(stats.total_vendido)}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-zinc-100">{stats.total_reportes}</p>
           </div>
-          <div className={`bg-white rounded-xl border p-4 ${dif < 0 ? 'border-red-200' : dif > 0 ? 'border-yellow-200' : 'border-gray-200'}`}>
-            <p className="text-xs text-gray-500 mb-1">Diferencia Acumulada</p>
-            <p className={`text-xl font-bold ${dif < 0 ? 'text-red-600' : dif > 0 ? 'text-yellow-600' : 'text-gray-600'}`}>
+          <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-400/15 dark:bg-indigo-500/[0.06]">
+            <div className="mb-2 flex items-center gap-2 text-indigo-500 dark:text-indigo-300">
+              <DollarSign size={14} />
+              <p className="text-xs">Total vendido</p>
+            </div>
+            <p className="font-mono text-xl font-bold tabular-nums text-indigo-700 dark:text-indigo-200">{fmt(stats.total_vendido)}</p>
+          </div>
+          <div className={`rounded-xl border bg-white/85 p-4 dark:bg-zinc-900/70 ${dif < 0 ? 'border-red-200 dark:border-red-400/15' : dif > 0 ? 'border-amber-200 dark:border-amber-400/15' : 'border-gray-200 dark:border-white/[0.08]'}`}>
+            <div className="mb-2 flex items-center gap-2 text-gray-400 dark:text-zinc-500">
+              <TrendingUp size={14} />
+              <p className="text-xs">Diferencia acumulada</p>
+            </div>
+            <p className={`font-mono text-xl font-bold tabular-nums ${dif < 0 ? 'text-red-600 dark:text-red-300' : dif > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-gray-600 dark:text-zinc-300'}`}>
               {dif > 0 ? '+' : ''}{fmt(dif)}
             </p>
           </div>
         </div>
       )}
 
-      {/* Paneles admin */}
       {isAdmin && id && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <FechasLaboralesPanel agenteId={id} agente={agente} />
@@ -258,20 +279,23 @@ export function VerAgentePage() {
         </div>
       )}
 
-      {/* Reports history */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 text-sm">Historial de Reportes</h2>
-          <span className="text-xs text-gray-400">
+      <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
+        <div aria-hidden className="absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-amber-400 via-indigo-500/40 to-transparent" />
+        <div className="flex flex-col gap-2 border-b border-gray-200/80 p-4 dark:border-white/[0.07] sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Historial de reportes</h2>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-zinc-500">Movimientos y cierres asociados al agente.</p>
+          </div>
+          <span className="text-xs tabular-nums text-gray-400 dark:text-zinc-500">
             {meta?.total ?? 0} reportes · Pág. {meta?.current_page ?? 1}/{meta?.last_page ?? 1}
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr>
                 {['ID', 'Fecha', 'Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Estado', ''].map(h => (
-                  <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                  <th key={h} className={`border-b border-gray-200 bg-gray-50/90 px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400 ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -282,12 +306,12 @@ export function VerAgentePage() {
               {reportes.map(r => {
                 const difR = Number(r.diferencia)
                 return (
-                  <tr key={r.id} className={`border-b ${difR < 0 ? 'border-red-100 bg-red-50/30' : 'border-gray-100 hover:bg-gray-50/60'}`}>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">#{String(r.id).padStart(4, '0')}</td>
-                    <td className="px-4 py-3 text-gray-700">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
-                    <td className="px-4 py-3"><span className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono">{r.tienda_id}</span></td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800">{fmt(r.total_calculado)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800">{fmt(r.efectivo_entregado)}</td>
+                  <tr key={r.id} className={`transition-colors [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045] ${difR < 0 ? 'bg-red-50/30 dark:bg-red-500/[0.025]' : 'hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035]'}`}>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-zinc-400">#{String(r.id).padStart(4, '0')}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
+                    <td className="px-4 py-3"><span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700 dark:bg-white/[0.06] dark:text-zinc-300">{r.tienda_id}</span></td>
+                    <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.total_calculado)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${difR === 0 ? 'bg-gray-100 text-gray-600' : difR < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                         {difR > 0 ? '+' : ''}{fmt(difR)}
@@ -299,7 +323,7 @@ export function VerAgentePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link to={`/reportes/${r.id}`} className="text-xs text-blue-600 hover:text-blue-800">Ver</Link>
+                      <Link to={`/reportes/${r.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">Ver</Link>
                     </td>
                   </tr>
                 )
@@ -308,7 +332,7 @@ export function VerAgentePage() {
           </table>
         </div>
         {meta && meta.last_page > 1 && (
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="flex items-center justify-between border-t border-gray-200/80 bg-gray-50/50 p-3.5 dark:border-white/[0.07] dark:bg-black/10">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
               <ChevronLeft size={14} /> Anterior
             </Button>
@@ -318,7 +342,7 @@ export function VerAgentePage() {
             </Button>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

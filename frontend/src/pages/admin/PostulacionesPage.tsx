@@ -8,6 +8,7 @@ import {
 } from '../../hooks/usePostulaciones'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -325,7 +326,7 @@ export function PostulacionesPage() {
         description="Gestión de postulaciones recibidas."
       />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <ListToolbar description="Busca postulantes y filtra por etapa del proceso.">
         <Input
           placeholder="Buscar por nombre, DNI..."
           value={search}
@@ -353,7 +354,7 @@ export function PostulacionesPage() {
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>
         )}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}

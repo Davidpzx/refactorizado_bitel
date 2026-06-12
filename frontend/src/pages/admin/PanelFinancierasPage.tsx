@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
+import { Input } from '../../components/ui/input'
 import { Card, CardContent } from '../../components/ui/card'
 
 interface TiendaFiltro {
@@ -125,12 +127,12 @@ export function PanelFinancierasPage() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input
+      <ListToolbar description="Segmenta desembolsos por periodo, financiera, tienda y estado.">
+        <Input
           type="month"
           value={mes}
           onChange={(e) => setMes(e.target.value)}
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-40"
         />
 
         <Select
@@ -164,16 +166,21 @@ export function PanelFinancierasPage() {
           <option value="PENDIENTE">Pendiente</option>
           <option value="APROBADA">Aprobada</option>
         </Select>
-      </div>
+      </ListToolbar>
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48 text-sm text-gray-400">
           Cargando...
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
+        <div className="relative overflow-x-auto rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 z-20 h-px"
+            style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.6), rgba(99,102,241,0.35), transparent 70%)' }}
+          />
+          <table className="min-w-full border-separate border-spacing-0 text-sm">
+            <thead className="[&_th]:border-b [&_th]:border-gray-200 [&_th]:bg-gray-50/90 [&_th]:text-[0.68rem] [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-gray-500 dark:[&_th]:border-white/[0.07] dark:[&_th]:bg-white/[0.035] dark:[&_th]:text-zinc-400">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-gray-700">Fecha</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-700">Tienda</th>
@@ -185,7 +192,7 @@ export function PanelFinancierasPage() {
                 <th className="px-4 py-3 text-right font-semibold text-gray-700">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
@@ -194,7 +201,7 @@ export function PanelFinancierasPage() {
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className="transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035] [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045]">
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                       {item.fecha?.slice(0, 10) ?? '—'}
                     </td>

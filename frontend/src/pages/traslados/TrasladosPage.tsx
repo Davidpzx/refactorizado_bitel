@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -377,7 +378,7 @@ export function TrasladosPage() {
         actions={<Button onClick={() => setDialogCrear(true)}>+ Nuevo Traslado</Button>}
       />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <ListToolbar description="Consulta traslados por estado, origen y destino.">
         <Select
           value={estado}
           onChange={(e) => {
@@ -425,7 +426,7 @@ export function TrasladosPage() {
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>
         )}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}

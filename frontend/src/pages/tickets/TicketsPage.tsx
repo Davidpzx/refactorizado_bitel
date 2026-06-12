@@ -5,6 +5,7 @@ import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/use
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -407,8 +408,7 @@ export function TicketsPage() {
         actions={<Button onClick={abrirNuevo}>+ Nuevo ticket</Button>}
       />
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <ListToolbar description="Combina fechas, tienda, cliente y forma de pago.">
         <div className="flex items-center gap-2">
           <label className="text-xs text-gray-500">Desde</label>
           <Input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
@@ -445,7 +445,7 @@ export function TicketsPage() {
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>
         )}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}

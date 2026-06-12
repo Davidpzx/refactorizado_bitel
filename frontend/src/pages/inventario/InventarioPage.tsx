@@ -6,6 +6,7 @@ import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -264,7 +265,7 @@ export function InventarioPage() {
 
       <CampanaCostosWidget />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <ListToolbar description="Busca y segmenta el stock por tienda, tipo y estado.">
         <Input
           placeholder="Buscar por producto o IMEI..."
           value={search}
@@ -319,7 +320,7 @@ export function InventarioPage() {
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>
         )}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}

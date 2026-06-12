@@ -6,7 +6,8 @@ import { Dialog } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
-import { AlertTriangle, Store } from 'lucide-react'
+import { ListToolbar } from '../../components/ListToolbar'
+import { AlertTriangle, MapPin, Pencil, Phone, Plus, Search, Store, Trash2 } from 'lucide-react'
 
 interface Tienda {
   id: number
@@ -15,6 +16,22 @@ interface Tienda {
   direccion: string | null
   telefono: string | null
   activo: boolean
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string
+      errors?: Record<string, string[]>
+    }
+  }
+}
+
+interface TiendasResponse {
+  data: Tienda[]
+  current_page: number
+  last_page: number
+  warning?: string
 }
 
 function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSuccess: () => void; onCancel: () => void }) {
@@ -37,7 +54,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
       qc.invalidateQueries({ queryKey: ['tiendas'] })
       onSuccess()
     },
-    onError: (e: any) => {
+    onError: (e: ApiError) => {
       const msg = e?.response?.data?.message ?? Object.values(e?.response?.data?.errors ?? {}).flat().join(' ') ?? 'Error'
       setErr(String(msg))
     },
@@ -45,34 +62,59 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
 
   return (
     <form className="space-y-4" onSubmit={e => { e.preventDefault(); save.mutate(form) }}>
-      {err && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded">{err}</p>}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Código (ID único)</label>
-          <Input value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value.toUpperCase() }))} required placeholder="PUNDA95" />
+      {err && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-400/15 dark:bg-red-500/10 dark:text-red-300">{err}</p>}
+      <section className="rounded-xl border border-gray-200/80 bg-gray-50/45 p-4 dark:border-white/[0.07] dark:bg-white/[0.025]">
+        <div className="mb-4 flex items-center gap-2.5 border-b border-gray-200/70 pb-3 dark:border-white/[0.06]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Store size={15} /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-zinc-100">Identificación</h3>
+            <p className="text-xs text-gray-400 dark:text-zinc-500">Código y nombre visible de la sucursal.</p>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Nombre</label>
-          <Input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="tienda-codigo" className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Código (ID único)</label>
+            <Input id="tienda-codigo" value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value.toUpperCase() }))} required placeholder="PUNDA95" className="font-mono uppercase" />
+          </div>
+          <div>
+            <label htmlFor="tienda-nombre" className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Nombre</label>
+            <Input id="tienda-nombre" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+          </div>
         </div>
-        <div className="col-span-2">
-          <label className="block text-xs text-gray-500 mb-1">Dirección</label>
-          <Input value={form.direccion ?? ''} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} />
+      </section>
+
+      <section className="rounded-xl border border-gray-200/80 bg-gray-50/45 p-4 dark:border-white/[0.07] dark:bg-white/[0.025]">
+        <div className="mb-4 flex items-center gap-2.5 border-b border-gray-200/70 pb-3 dark:border-white/[0.06]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><MapPin size={15} /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-zinc-100">Ubicación y contacto</h3>
+            <p className="text-xs text-gray-400 dark:text-zinc-500">Datos operativos de la tienda.</p>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Teléfono</label>
-          <Input value={form.telefono ?? ''} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
-        </div>
-        <div className="flex items-end pb-1.5">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} />
-            Activa
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label htmlFor="tienda-direccion" className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Dirección</label>
+            <div className="relative">
+              <MapPin size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input id="tienda-direccion" className="pl-9" value={form.direccion ?? ''} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="tienda-telefono" className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Teléfono</label>
+            <div className="relative">
+              <Phone size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input id="tienda-telefono" className="pl-9" inputMode="tel" value={form.telefono ?? ''} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 self-end rounded-lg border border-gray-200 bg-white/70 px-3 py-2.5 text-sm text-gray-700 dark:border-white/[0.08] dark:bg-black/10 dark:text-zinc-300">
+            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-indigo-600" />
+            Tienda activa
           </label>
         </div>
-      </div>
-      <div className="flex gap-2 pt-2">
-        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar'}</Button>
+      </section>
+      <div className="flex flex-col-reverse gap-2 border-t border-gray-200/80 pt-4 dark:border-white/[0.07] sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar tienda'}</Button>
       </div>
     </form>
   )
@@ -88,7 +130,7 @@ export function TiendasPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['tiendas', query, page],
-    queryFn: () => api.get('/v1/tiendas', { params: { q: query || undefined, page, per_page: 30 } }).then(r => r.data),
+    queryFn: () => api.get<TiendasResponse>('/v1/tiendas', { params: { q: query || undefined, page, per_page: 30 } }).then(r => r.data),
   })
 
   const eliminar = useMutation({
@@ -98,7 +140,7 @@ export function TiendasPage() {
 
   if (data?.warning) {
     return (
-      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+      <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-400/15 dark:bg-amber-500/10 dark:text-amber-300">
         <AlertTriangle size={18} /> {data.warning}
       </div>
     )
@@ -111,48 +153,56 @@ export function TiendasPage() {
       <PageHeader
         title="Tiendas"
         description="Catálogo de sucursales registradas en el sistema."
-        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Store size={14} /> Nueva tienda</Button>}
+        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
       />
 
-      <div className="flex items-center gap-3 mb-4">
-        <Input placeholder="Buscar por código o nombre..."
-          value={search} onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setQuery(search); setPage(1) } }}
-          className="max-w-xs"
-        />
-        <Button variant="outline" onClick={() => { setQuery(search); setPage(1) }}>Buscar</Button>
+      <ListToolbar description="Busca sucursales por código o nombre.">
+        <div className="relative w-full sm:max-w-xs">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+          <Input placeholder="Buscar por código o nombre..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { setQuery(search); setPage(1) } }}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="outline" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1) }}>Limpiar</Button>}
-      </div>
+      </ListToolbar>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70 dark:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.95)]">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 z-20 h-px"
+          style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.6), rgba(99,102,241,0.35), transparent 70%)' }}
+        />
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr>
                 {['Código', 'Nombre', 'Dirección', 'Teléfono', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
+                  <th key={h} className="border-b border-gray-200 bg-gray-50/90 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.045]">
               {isLoading && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">Cargando...</td></tr>}
               {!isLoading && tiendas.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
-                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50/60">
-                  <td className="px-4 py-3 font-mono font-bold text-slate-700">{t.codigo}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{t.nombre}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{t.direccion ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{t.telefono ?? '—'}</td>
+                <tr key={t.id} className="transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035] [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045]">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-700 dark:text-zinc-200">{t.codigo}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-zinc-200">{t.nombre}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-zinc-400">{t.direccion ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-zinc-400">{t.telefono ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge variant={t.activo ? 'success' : 'warning'}>{t.activo ? 'Activa' : 'Inactiva'}</Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setEditando(t); setDialogOpen(true) }}>Editar</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setEditando(t); setDialogOpen(true) }}><Pencil size={13} /> Editar</Button>
                       <Button size="sm" variant="destructive"
                         disabled={eliminar.isPending}
                         onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }}>
-                        Eliminar
+                        <Trash2 size={13} /> Eliminar
                       </Button>
                     </div>
                   </td>
@@ -161,11 +211,11 @@ export function TiendasPage() {
             </tbody>
           </table>
         </div>
-        {data?.last_page > 1 && (
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+        {(data?.last_page ?? 0) > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-200/80 bg-gray-50/50 p-3.5 dark:border-white/[0.07] dark:bg-black/10">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-            <span className="text-xs text-gray-500">Página {data.current_page} de {data.last_page}</span>
-            <Button variant="outline" size="sm" disabled={page >= data.last_page} onClick={() => setPage(p => p + 1)}>Siguiente</Button>
+            <span className="text-xs text-gray-500">Página {data?.current_page ?? page} de {data?.last_page ?? 1}</span>
+            <Button variant="outline" size="sm" disabled={page >= (data?.last_page ?? 1)} onClick={() => setPage(p => p + 1)}>Siguiente</Button>
           </div>
         )}
       </div>

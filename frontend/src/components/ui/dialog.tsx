@@ -19,22 +19,28 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: Dial
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-slate-950/65 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
         className={[
-          'relative z-10 w-full mx-4 rounded-lg bg-white shadow-xl',
+          'relative z-10 w-full overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl',
+          'dark:border-white/10 dark:bg-zinc-900/95 dark:shadow-[0_28px_80px_-24px_rgba(0,0,0,0.95)]',
           maxWidthClasses[maxWidth],
         ].join(' ')}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: 'linear-gradient(90deg, #6366f1, #ffc200 45%, transparent 85%)' }}
+        />
+        <div className="flex items-center justify-between border-b border-gray-200/80 px-5 py-4 dark:border-white/[0.07]">
+          <h2 className="text-base font-bold tracking-tight text-gray-900 dark:text-zinc-50">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors text-xl leading-none"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-xl leading-none text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
             aria-label="Cerrar"
           >
             ×

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { historialApi } from '../../services/historial.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, Download } from 'lucide-react'
 import { api } from '../../services/api'
 
@@ -67,9 +69,10 @@ export function HistorialPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Historial Completo de Reportes</h1>
-        <Button
+      <PageHeader
+        title="Historial Completo de Reportes"
+        description="Audita reportes, diferencias y estados con trazabilidad por período."
+        actions={<Button
           variant="outline"
           size="sm"
           onClick={() => {
@@ -99,19 +102,17 @@ export function HistorialPage() {
           }}
         >
           <Download size={14} /> Exportar CSV
-        </Button>
-      </div>
+        </Button>}
+      />
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <ListToolbar description="Combina fechas, tienda, agente y estado para localizar reportes específicos.">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
             <input
               type="date"
               value={filters.fecha_desde}
               onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
             />
           </div>
           <div>
@@ -120,7 +121,7 @@ export function HistorialPage() {
               type="date"
               value={filters.fecha_hasta}
               onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
             />
           </div>
           {usuario?.rol === 'admin' && (
@@ -132,7 +133,7 @@ export function HistorialPage() {
                   placeholder="Todas"
                   value={filters.tienda}
                   onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28"
+                  className="h-9 w-32 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
                 />
               </div>
               <div>
@@ -142,7 +143,7 @@ export function HistorialPage() {
                   placeholder="Todos"
                   value={filters.agente_id}
                   onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
+                  className="h-9 w-28 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
                 />
               </div>
             </>
@@ -152,7 +153,7 @@ export function HistorialPage() {
             <select
               value={filters.estado}
               onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-36 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-zinc-950/65 dark:text-zinc-100"
             >
               {ESTADOS.map((e) => (
                 <option key={e} value={e}>
@@ -163,12 +164,11 @@ export function HistorialPage() {
           </div>
           <Button onClick={applyFilters}>Buscar</Button>
           <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
-        </div>
-      </div>
+      </ListToolbar>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/45 to-transparent" />
+        <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
           <h2 className="font-semibold text-gray-900 text-sm">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros encontrados`}
           </h2>
@@ -179,11 +179,11 @@ export function HistorialPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-white/[0.07] dark:bg-zinc-800/50">
                 {['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Estado', ''].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-xs font-semibold text-gray-500 ${['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-gray-500 ${['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
                   >
                     {h}
                   </th>
@@ -212,7 +212,7 @@ export function HistorialPage() {
                   ? 'border-b border-yellow-300 bg-yellow-50 animate-pulse'
                   : dif < 0
                   ? 'border-b border-red-100 bg-red-50/40'
-                  : 'border-b border-gray-100 hover:bg-gray-50/60'
+                  : 'border-b border-gray-100 transition-colors hover:bg-amber-50/40 dark:border-white/[0.05] dark:hover:bg-amber-400/[0.04]'
 
                 return (
                   <tr key={r.id} className={rowCls}>
@@ -238,7 +238,7 @@ export function HistorialPage() {
                     <td className="px-4 py-3">
                       <Link
                         to={`/reportes/${r.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-400/10"
                       >
                         <Eye size={13} /> Ver
                       </Link>
@@ -252,7 +252,7 @@ export function HistorialPage() {
 
         {/* Pagination */}
         {!isLoading && meta && meta.last_page > 1 && (
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="flex items-center justify-between border-t border-gray-200/80 p-4 dark:border-white/[0.07]">
             <Button
               variant="outline"
               size="sm"

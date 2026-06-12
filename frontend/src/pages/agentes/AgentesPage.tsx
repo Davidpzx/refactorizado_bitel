@@ -4,12 +4,14 @@ import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useAgentes, useEliminarAgente } from '../../hooks/useAgentes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
 import type { Agente } from '../../types/agente'
+import { Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
 
 type BadgeVariant = 'success' | 'warning' | 'destructive'
 const estadoVariant: Record<Agente['estado'], BadgeVariant> = {
@@ -30,7 +32,11 @@ function getColumns(
     {
       accessorKey: 'sueldo_base',
       header: 'Sueldo',
-      cell: ({ row }) => `S/ ${parseFloat(row.original.sueldo_base).toFixed(2)}`,
+      cell: ({ row }) => (
+        <span className="font-mono text-xs font-semibold tabular-nums text-gray-700 dark:text-zinc-200">
+          S/ {parseFloat(row.original.sueldo_base).toFixed(2)}
+        </span>
+      ),
     },
     {
       accessorKey: 'estado',
@@ -41,7 +47,15 @@ function getColumns(
         </Badge>
       ),
     },
-    { accessorKey: 'fecha_ingreso', header: 'Ingreso' },
+    {
+      accessorKey: 'fecha_ingreso',
+      header: 'Ingreso',
+      cell: ({ row }) => (
+        <span className="text-xs tabular-nums text-gray-500 dark:text-zinc-400">
+          {new Date(`${row.original.fecha_ingreso}T00:00:00`).toLocaleDateString('es-PE')}
+        </span>
+      ),
+    },
     {
       id: 'acciones',
       header: 'Acciones',
@@ -49,12 +63,12 @@ function getColumns(
         <div className="flex items-center gap-2">
           <Link
             to={`/agentes/${row.original.id}`}
-            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 h-8 px-3 text-xs font-medium transition-colors"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 transition-all hover:-translate-y-px hover:bg-gray-50 dark:border-white/12 dark:bg-zinc-900/50 dark:text-zinc-200 dark:hover:border-white/25 dark:hover:bg-white/[0.06]"
           >
-            Ver
+            <Eye size={13} /> Ver
           </Link>
           <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-            Editar
+            <Pencil size={13} /> Editar
           </Button>
           <Button
             size="sm"
@@ -62,7 +76,7 @@ function getColumns(
             onClick={() => onEliminar(row.original)}
             disabled={eliminando}
           >
-            Eliminar
+            <Trash2 size={13} /> Eliminar
           </Button>
         </div>
       ),
@@ -112,20 +126,23 @@ export function AgentesPage() {
       <PageHeader
         title="Agentes"
         description="Gestión del personal de ventas registrado en el sistema."
-        actions={<Button onClick={abrirCrear}>+ Nuevo agente</Button>}
+        actions={<Button onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>}
       />
 
-      <div className="flex items-center gap-3 mb-4">
-        <Input
-          placeholder="Buscar por DNI o nombre..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
-          className="max-w-xs"
-        />
-        <Button variant="outline" onClick={buscar}>Buscar</Button>
+      <ListToolbar description="Busca por documento o nombre del agente.">
+        <div className="relative w-full sm:max-w-xs">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+          <Input
+            placeholder="Buscar por DNI o nombre..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="outline" onClick={buscar}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}
@@ -141,8 +158,21 @@ export function AgentesPage() {
         open={dialogOpen}
         onClose={cerrar}
         title={editando ? 'Editar agente' : 'Nuevo agente'}
-        maxWidth="lg"
+        maxWidth="xl"
       >
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 dark:border-indigo-400/10 dark:bg-indigo-500/[0.06]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+            <UserRound size={17} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-zinc-100">
+              {editando ? editando.nombres : 'Datos del nuevo agente'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400">
+              Completa la información personal, laboral y de acceso.
+            </p>
+          </div>
+        </div>
         <AgenteForm agente={editando} onSuccess={cerrar} onCancel={cerrar} />
       </Dialog>
     </div>

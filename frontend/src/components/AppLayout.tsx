@@ -332,7 +332,7 @@ export function AppLayout() {
 
   return (
     <div
-      className="flex min-h-screen"
+      className="flex h-screen overflow-hidden"
       style={{ background: isDark ? '#09090b' : '#f8fafc' }}
     >
       {/* Sidebar desktop ────────────────────────────────────────────────── */}

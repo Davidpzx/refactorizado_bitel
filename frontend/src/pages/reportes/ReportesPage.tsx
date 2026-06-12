@@ -4,6 +4,7 @@ import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useReportes, useEliminarReporte } from '../../hooks/useReportes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
@@ -142,7 +143,7 @@ export function ReportesPage() {
         }
       />
 
-      <div className="flex flex-wrap items-end gap-3 mb-4">
+      <ListToolbar description="Acota el historial por tienda, estado o rango de fechas.">
         <Select
           value={tienda}
           onChange={(e) => { setTienda(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
@@ -183,7 +184,7 @@ export function ReportesPage() {
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiar}>Limpiar filtros</Button>
         )}
-      </div>
+      </ListToolbar>
 
       <DataTable
         data={data?.data ?? []}

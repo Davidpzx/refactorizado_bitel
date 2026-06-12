@@ -7,6 +7,8 @@ import {
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Download, TrendingUp } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -130,31 +132,28 @@ export function EstadisticasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <TrendingUp size={20} className="text-blue-600" /> Estadísticas de Ventas
-        </h1>
-        <Button variant="outline" size="sm" onClick={exportarExcel}>
+      <PageHeader
+        title="Estadísticas de Ventas"
+        description="Explora el rendimiento comercial por categoría, tienda, producto y agente."
+        accent="#6366f1"
+        actions={<Button variant="outline" size="sm" onClick={exportarExcel}>
           <Download size={14} /> Exportar
-        </Button>
-      </div>
+        </Button>}
+      />
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <ListToolbar description="Ajusta el período de análisis y limita los resultados a una tienda.">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
             <input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
             />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Hasta</label>
             <input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
             />
           </div>
           {usuario?.rol === 'admin' && (
@@ -162,7 +161,7 @@ export function EstadisticasPage() {
               <label className="block text-xs text-gray-500 mb-1">Tienda</label>
               <input type="text" placeholder="Todas" value={filters.tienda}
                 onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 w-32 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
               />
             </div>
           )}
@@ -171,8 +170,7 @@ export function EstadisticasPage() {
             const reset = { fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), tienda: '' }
             setFilters(reset); setApplied(reset)
           }}>Hoy</Button>
-        </div>
-      </div>
+      </ListToolbar>
 
       {/* KPI Cards */}
       {totales && (
@@ -185,9 +183,10 @@ export function EstadisticasPage() {
             { label: 'Eq. Contado',  value: totales.eq_contado,   sub: '' },
             { label: 'Accesorios',   value: totales.accesorios,   sub: '' },
           ].map(kpi => (
-            <div key={kpi.label} className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500 mb-1">{kpi.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+            <div key={kpi.label} className="group relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/80 via-amber-400/35 to-transparent" />
+              <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">{kpi.label}</p>
+              <p className="text-2xl font-bold tracking-tight text-gray-900">{kpi.value}</p>
               {kpi.sub && <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>}
             </div>
           ))}
@@ -195,10 +194,10 @@ export function EstadisticasPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-gray-200/80 bg-white/70 p-1.5 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
+            className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${tab === t.id ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100'}`}
           >
             {t.label}
           </button>
@@ -211,8 +210,9 @@ export function EstadisticasPage() {
       {!isLoading && tab === 'resumen' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Bar por categoría */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-800 mb-4 text-sm">Ventas por Categoría</h3>
+          <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 p-4 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800"><span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />Ventas por Categoría</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={categoriaBar} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -227,8 +227,9 @@ export function EstadisticasPage() {
           </div>
 
           {/* Line series de tiempo */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-800 mb-4 text-sm">Tendencia Diaria</h3>
+          <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 p-4 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800"><TrendingUp size={15} className="text-amber-500" />Tendencia Diaria</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={series} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -249,14 +250,15 @@ export function EstadisticasPage() {
 
       {/* TAB: Por Tienda */}
       {!isLoading && tab === 'tiendas' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
+        <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/40 to-transparent" />
+          <div className="border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
             <h3 className="font-semibold text-gray-800 text-sm">Ranking por Tienda</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-white/[0.07] dark:bg-zinc-800/50">
                   {['#', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Total'].map(h => (
                     <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
                   ))}
@@ -264,7 +266,7 @@ export function EstadisticasPage() {
               </thead>
               <tbody>
                 {porTienda.map((t, i) => (
-                  <tr key={t.tienda_id} className="border-b border-gray-100 hover:bg-gray-50/60">
+                  <tr key={t.tienda_id} className="border-b border-gray-100 transition-colors hover:bg-amber-50/40 dark:border-white/[0.05] dark:hover:bg-amber-400/[0.04]">
                     <td className="px-4 py-3 text-gray-400 text-xs">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-mono font-medium text-slate-700">{t.tienda_id}</td>
                     <td className="px-4 py-3 font-bold text-blue-700">{t.postpago}</td>
@@ -293,14 +295,15 @@ export function EstadisticasPage() {
 
       {/* TAB: Ranking Agentes */}
       {!isLoading && tab === 'ranking' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
+        <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/40 to-transparent" />
+          <div className="border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
             <h3 className="font-semibold text-gray-800 text-sm">Ranking de Productividad por Agente</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-white/[0.07] dark:bg-zinc-800/50">
                   {['#', 'Agente', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Comisión', 'Total'].map(h => (
                     <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
                   ))}
@@ -308,7 +311,7 @@ export function EstadisticasPage() {
               </thead>
               <tbody>
                 {ranking.map((a, i) => (
-                  <tr key={a.vendedor_id} className={`border-b border-gray-100 ${i < 3 ? 'bg-yellow-50/30' : 'hover:bg-gray-50/60'}`}>
+                  <tr key={a.vendedor_id} className={`border-b border-gray-100 transition-colors dark:border-white/[0.05] ${i < 3 ? 'bg-yellow-50/30 dark:bg-amber-400/[0.04]' : 'hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.04]'}`}>
                     <td className="px-4 py-3 text-xs text-gray-400">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{a.nombres}</td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-500">{a.tienda_base}</td>
@@ -337,13 +340,14 @@ function TopList({ title, items, color }: { title: string; items: { name: string
     blue: 'text-blue-700', orange: 'text-orange-700', green: 'text-green-700',
   }
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
+    <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent" />
+      <div className="border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
         <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
       </div>
       <div className="divide-y divide-gray-100">
         {items.map((item, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/60">
+          <div key={i} className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.04]">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs text-gray-400 w-5 shrink-0">
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}

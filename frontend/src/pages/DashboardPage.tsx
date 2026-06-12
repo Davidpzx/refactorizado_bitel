@@ -5,6 +5,8 @@ import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
+import { PageHeader } from '../components/PageHeader'
+import { ListToolbar } from '../components/ListToolbar'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -29,12 +31,14 @@ function KpiCard({
   highlight?: boolean
 }) {
   return (
-    <div className={`bg-white rounded-xl border ${highlight ? 'border-emerald-300 shadow-md' : 'border-gray-200'} p-4 space-y-2`}>
-      <p className="text-xs font-medium text-gray-500 leading-tight">{title}</p>
-      <p className={`text-xl font-bold ${colorClass}`}>
+    <div className={`group relative overflow-hidden rounded-xl border bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)] ${highlight ? 'border-emerald-300/80 dark:border-emerald-400/25' : 'border-gray-200/80 dark:border-white/[0.08]'}`}>
+      <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${highlight ? 'bg-gradient-to-r from-emerald-400 via-emerald-300/40 to-transparent' : 'bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent'}`} />
+      <div aria-hidden className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]" />
+      <p className="relative text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{title}</p>
+      <p className={`relative mt-2 text-xl font-bold tracking-tight ${colorClass}`}>
         {value === null ? <span className="text-gray-300 animate-pulse">···</span> : fmt(value)}
       </p>
-      {highlight && <div className="w-6 h-0.5 bg-emerald-400 rounded" />}
+      {highlight && <div className="relative mt-2 h-0.5 w-8 rounded bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />}
     </div>
   )
 }
@@ -46,11 +50,12 @@ function KpiCardDiferencia({ value }: { value: number | string | null | undefine
   const Icon = num < 0 ? TrendingDown : TrendingUp
 
   return (
-    <div className={`bg-white rounded-xl border ${bgClass} p-4 space-y-2`}>
-      <p className="text-xs font-medium text-gray-500 leading-tight">Diferencia Física</p>
-      <div className="flex items-center gap-2">
+    <div className={`group relative overflow-hidden rounded-xl border bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)] ${bgClass} dark:border-white/[0.08]`}>
+      <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${num < 0 ? 'bg-gradient-to-r from-red-500/80 to-transparent' : 'bg-gradient-to-r from-amber-400/80 to-transparent'}`} />
+      <p className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">Diferencia Física</p>
+      <div className="mt-2 flex items-center gap-2">
         {value !== null && <Icon size={18} className={colorClass} />}
-        <p className={`text-xl font-bold ${colorClass}`}>
+        <p className={`text-xl font-bold tracking-tight ${colorClass}`}>
           {value === null ? <span className="text-gray-300 animate-pulse">···</span> : (num > 0 ? '+' : '') + fmt(num)}
         </p>
       </div>
@@ -93,8 +98,9 @@ function ModalEditarDestino({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-xs p-6 space-y-4">
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-xs space-y-4 overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:bg-zinc-900/95">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400/60 to-transparent" />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 text-sm">Modificar Destino Efectivo</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
@@ -167,34 +173,34 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">Dashboard Gerencial</h1>
-        {usuario?.rol === 'admin' && (
+      <PageHeader
+        title="Dashboard Gerencial"
+        description="Visión consolidada de caja, canales digitales y reportes operativos."
+        actions={usuario?.rol === 'admin' ? (
           <button
             onClick={() => setShowAnomalias(true)}
-            className="relative p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600 transition-colors"
+            className="relative flex h-9 items-center gap-2 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300"
             title="Reportes con anomalías"
           >
             <Bell size={18} />
+            <span>Anomalías</span>
             {anomaliasCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">
                 {anomaliasCount > 99 ? '99+' : anomaliasCount}
               </span>
             )}
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-end gap-3">
+      <ListToolbar description="Define el período operativo y, para administradores, limita la lectura a una tienda.">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Desde</label>
           <input
             type="date"
             value={rawFilters.fecha_desde}
             onChange={(e) => setRawFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
           />
         </div>
         <div>
@@ -203,7 +209,7 @@ export function DashboardPage() {
             type="date"
             value={rawFilters.fecha_hasta}
             onChange={(e) => setRawFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
           />
         </div>
         {usuario?.rol === 'admin' && (
@@ -214,13 +220,13 @@ export function DashboardPage() {
               placeholder="Todas"
               value={rawFilters.tienda}
               onChange={(e) => setRawFilters((f) => ({ ...f, tienda: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-28"
+              className="h-9 w-32 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
             />
           </div>
         )}
         <Button onClick={applyFilters}>Filtrar</Button>
         <Button variant="outline" onClick={resetToToday}>Hoy</Button>
-      </div>
+      </ListToolbar>
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -246,8 +252,9 @@ export function DashboardPage() {
       </div>
 
       {/* Tabla últimos reportes */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/35 to-transparent" />
+        <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
           <h2 className="font-semibold text-gray-900 text-sm">Últimos Reportes del Período</h2>
           <span className="text-xs text-gray-400">
             {isLoading ? '—' : `${totales?.total_reportes ?? 0} reportes`}
@@ -256,11 +263,11 @@ export function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-white/[0.07] dark:bg-zinc-800/50">
                 {['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Destino', 'Estado'].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-xs font-semibold text-gray-500
+                    className={`px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-gray-500
                       ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
                   >
                     {h}
@@ -282,7 +289,7 @@ export function DashboardPage() {
                   ? 'border-b border-yellow-300 bg-yellow-50 animate-pulse'
                   : dif < 0
                   ? 'border-b border-red-100 bg-red-50/50'
-                  : 'border-b border-gray-100 hover:bg-gray-50/60'
+                  : 'border-b border-gray-100 transition-colors hover:bg-amber-50/40 dark:border-white/[0.05] dark:hover:bg-amber-400/[0.04]'
 
                 return (
                   <tr key={r.id} className={`group ${rowCls}`}>
@@ -331,9 +338,9 @@ export function DashboardPage() {
       {/* Offcanvas Anomalías */}
       {showAnomalias && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAnomalias(false)} />
-          <div className="relative bg-white w-full max-w-sm shadow-2xl flex flex-col">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-red-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAnomalias(false)} />
+          <div className="relative flex w-full max-w-sm flex-col border-l border-white/10 bg-white/95 shadow-2xl backdrop-blur-2xl dark:bg-zinc-950/95">
+            <div className="flex items-center justify-between border-b border-red-200/70 bg-red-50/80 p-4 dark:border-red-400/15 dark:bg-red-500/[0.08]">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
                 <AlertTriangle size={16} className="text-red-500" />
                 Anomalías — últimos 30 días
@@ -352,7 +359,7 @@ export function DashboardPage() {
                 anomaliasList.map((a) => {
                   const dif = Number(a.diferencia)
                   return (
-                    <div key={a.id} className="rounded-lg border border-gray-200 p-3 space-y-1 hover:border-gray-300">
+                    <div key={a.id} className="space-y-1 rounded-xl border border-gray-200/80 bg-white/60 p-3 shadow-sm transition-colors hover:border-red-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:border-red-400/30">
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-sm text-gray-700 font-semibold">
                           #{String(a.id).padStart(4, '0')}
