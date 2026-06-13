@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/button'
 import { GlassPanel } from '../../components/ui/GlassPanel'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle } from 'lucide-react'
+import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
@@ -37,7 +37,7 @@ interface SaldoData {
 
 export function PanelBipayPage() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga'>('saldo')
+  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar'>('saldo')
 
   // Saldo query
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
@@ -80,6 +80,24 @@ export function PanelBipayPage() {
     onError: (e: any) => setRecargaErr(e?.response?.data?.error ?? 'Error al registrar recarga.'),
   })
 
+  // D3 — Transferencia entre cuentas (admin)
+  const [transForm, setTransForm] = useState({ cuenta_origen_id: '', cuenta_destino_id: '', monto: '', observacion: '' })
+  const [transMsg, setTransMsg] = useState(''); const [transErr, setTransErr] = useState('')
+  const transferir = useMutation({
+    mutationFn: (p: Record<string, unknown>) => api.post('/v1/bipay/transferir', p).then(r => r.data),
+    onSuccess: (res) => { setTransMsg(res.message ?? 'Transferencia realizada.'); setTransErr(''); setTransForm(f => ({ ...f, monto: '', observacion: '' })); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
+    onError: (e: any) => setTransErr(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Error al transferir.'),
+  })
+
+  // D3 — Ajuste manual de saldo (admin)
+  const [ajusteForm, setAjusteForm] = useState({ cuenta_id: '', saldo_bipay: '', saldo_anypay: '', motivo: '' })
+  const [ajusteMsg, setAjusteMsg] = useState(''); const [ajusteErr, setAjusteErr] = useState('')
+  const ajustar = useMutation({
+    mutationFn: (p: Record<string, unknown>) => api.post('/v1/bipay/ajustar', p).then(r => r.data),
+    onSuccess: (res) => { setAjusteMsg(res.message ?? 'Saldo ajustado.'); setAjusteErr(''); setAjusteForm(f => ({ ...f, motivo: '' })); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
+    onError: (e: any) => setAjusteErr(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Error al ajustar.'),
+  })
+
   const warning = saldoData?.warning
 
   if (warning) {
@@ -95,6 +113,8 @@ export function PanelBipayPage() {
     { id: 'saldo',         label: 'Saldos',        Icon: Wallet },
     { id: 'transacciones', label: 'Transacciones',  Icon: ArrowRightLeft },
     { id: 'recarga',       label: 'Nueva Recarga',  Icon: RefreshCw },
+    { id: 'transferir',    label: 'Transferir',     Icon: Send },
+    { id: 'ajustar',       label: 'Ajustar Saldo',  Icon: SlidersHorizontal },
   ] as const
 
   const inputCls =
@@ -319,6 +339,83 @@ export function PanelBipayPage() {
               })}
             >
               {recarga.isPending ? 'Registrando…' : 'Registrar Recarga'}
+            </Button>
+          </div>
+        </GlassPanel>
+      )}
+
+      {/* TAB: Transferir ───────────────────────────────────────────────────────── */}
+      {tab === 'transferir' && (
+        <GlassPanel accentTop={BIPAY} className="max-w-md p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-zinc-100">
+            <Send size={15} style={{ color: BIPAY }} /> Transferir Saldo entre Cuentas
+          </h2>
+          {transMsg && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"><CheckCircle2 size={15} /> {transMsg}</div>)}
+          {transErr && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400"><XCircle size={15} /> {transErr}</div>)}
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta origen</label>
+              <select value={transForm.cuenta_origen_id} onChange={e => setTransForm(f => ({ ...f, cuenta_origen_id: e.target.value }))} className={inputCls}>
+                <option value="">-- Origen --</option>
+                {(saldoData?.cuentas ?? []).map(c => <option key={c.id} value={c.id}>{c.alias} ({pen.format(c.saldo_actual)})</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta destino</label>
+              <select value={transForm.cuenta_destino_id} onChange={e => setTransForm(f => ({ ...f, cuenta_destino_id: e.target.value }))} className={inputCls}>
+                <option value="">-- Destino --</option>
+                {(saldoData?.cuentas ?? []).filter(c => String(c.id) !== transForm.cuenta_origen_id).map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Monto (S/)</label>
+              <input type="number" min="0" step="0.01" value={transForm.monto} onChange={e => setTransForm(f => ({ ...f, monto: e.target.value }))} className={`${inputCls} tabular-nums`} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Observación</label>
+              <input type="text" value={transForm.observacion} onChange={e => setTransForm(f => ({ ...f, observacion: e.target.value }))} className={inputCls} />
+            </div>
+            <Button disabled={transferir.isPending || !transForm.cuenta_origen_id || !transForm.cuenta_destino_id || !transForm.monto}
+              onClick={() => transferir.mutate({ cuenta_origen_id: Number(transForm.cuenta_origen_id), cuenta_destino_id: Number(transForm.cuenta_destino_id), monto: Number(transForm.monto), observacion: transForm.observacion || undefined })}>
+              {transferir.isPending ? 'Transfiriendo…' : 'Transferir'}
+            </Button>
+          </div>
+        </GlassPanel>
+      )}
+
+      {/* TAB: Ajustar Saldo ────────────────────────────────────────────────────── */}
+      {tab === 'ajustar' && (
+        <GlassPanel accentTop={GOLD} className="max-w-md p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-zinc-100">
+            <SlidersHorizontal size={15} style={{ color: GOLD }} /> Ajuste Manual de Saldo
+          </h2>
+          {ajusteMsg && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"><CheckCircle2 size={15} /> {ajusteMsg}</div>)}
+          {ajusteErr && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400"><XCircle size={15} /> {ajusteErr}</div>)}
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta</label>
+              <select value={ajusteForm.cuenta_id} onChange={e => setAjusteForm(f => ({ ...f, cuenta_id: e.target.value }))} className={inputCls}>
+                <option value="">-- Seleccionar --</option>
+                {(saldoData?.cuentas ?? []).map(c => <option key={c.id} value={c.id}>{c.alias} ({pen.format(c.saldo_actual)})</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Nuevo Bipay (S/)</label>
+                <input type="number" min="0" step="0.01" value={ajusteForm.saldo_bipay} onChange={e => setAjusteForm(f => ({ ...f, saldo_bipay: e.target.value }))} className={`${inputCls} tabular-nums`} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Nuevo Anypay (S/)</label>
+                <input type="number" min="0" step="0.01" value={ajusteForm.saldo_anypay} onChange={e => setAjusteForm(f => ({ ...f, saldo_anypay: e.target.value }))} className={`${inputCls} tabular-nums`} />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Motivo del ajuste (obligatorio)</label>
+              <input type="text" value={ajusteForm.motivo} onChange={e => setAjusteForm(f => ({ ...f, motivo: e.target.value }))} placeholder="Conteo físico, corrección, etc." className={inputCls} />
+            </div>
+            <Button disabled={ajustar.isPending || !ajusteForm.cuenta_id || ajusteForm.motivo.trim().length < 5}
+              onClick={() => ajustar.mutate({ cuenta_id: Number(ajusteForm.cuenta_id), saldo_bipay: Number(ajusteForm.saldo_bipay || 0), saldo_anypay: Number(ajusteForm.saldo_anypay || 0), motivo: ajusteForm.motivo })}>
+              {ajustar.isPending ? 'Ajustando…' : 'Aplicar Ajuste'}
             </Button>
           </div>
         </GlassPanel>
