@@ -167,22 +167,17 @@ export function KardexInventarioPage() {
 
       {/* Tabla */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+        <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">
           Cargando kardex...
         </div>
       ) : rows.length === 0 ? (
-        <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+        <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">
           Sin registros para los filtros seleccionados.
         </div>
       ) : (
-        <div className="relative overflow-x-auto rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70">
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 z-20 h-px"
-            style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.6), rgba(99,102,241,0.35), transparent 70%)' }}
-          />
+        <div className="kyro-card relative overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 text-xs" style={{ minWidth: '1100px' }}>
-            <thead className="[&_th]:border-b [&_th]:border-gray-200 [&_th]:bg-gray-50/90 [&_th]:text-gray-500 dark:[&_th]:border-white/[0.07] dark:[&_th]:bg-white/[0.035] dark:[&_th]:text-zinc-400">
+            <thead className="[&_th]:kyro-table-head">
               <tr className="text-[0.65rem] uppercase tracking-wide">
                 <th className="py-2 px-3 text-left">Tienda</th>
                 <th className="py-2 px-3 text-left">Producto</th>
@@ -200,7 +195,7 @@ export function KardexInventarioPage() {
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.id} className="text-xs transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035] [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045]">
+                <tr key={row.id} className="text-xs text-kyro-body transition-colors hover:bg-kyro-elevated/50 [&>td]:border-b [&>td]:border-kyro-border">
                   <td className="py-1.5 px-3 text-muted-foreground/80 whitespace-nowrap">
                     {row.tienda_nombre ?? row.tienda}
                   </td>
@@ -254,7 +249,7 @@ export function KardexInventarioPage() {
         onClose={() => setConfirmRow(null)}
         title="Restaurar item"
       >
-        <p className="text-sm text-gray-700 mb-4">
+        <p className="mb-4 text-sm text-kyro-body">
           ¿Restaurar <strong>{confirmRow?.nombre}</strong>{confirmRow?.imei ? ` (${confirmRow.imei})` : ''} a estado DISPONIBLE?
         </p>
         <div className="flex justify-end gap-2">

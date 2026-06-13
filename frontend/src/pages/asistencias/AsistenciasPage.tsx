@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { Input } from '../../components/ui/input'
 import { Download, AlertTriangle, Clock, UserCheck, UserX, AlertCircle } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -94,7 +95,7 @@ export function AsistenciasPage() {
 
   if (data?.warning) {
     return (
-      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+      <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
         <AlertTriangle size={18} /> {data.warning}
       </div>
     )
@@ -106,7 +107,7 @@ export function AsistenciasPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes" accent="#2563eb">
+      <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes">
         <Button variant="outline" size="sm" onClick={exportar}>
           <Download size={14} /> Exportar CSV
         </Button>
@@ -117,24 +118,24 @@ export function AsistenciasPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
-            <input type="date" value={filters.fecha_desde}
+            <Input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="kyro-input"
             />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Hasta</label>
-            <input type="date" value={filters.fecha_hasta}
+            <Input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="kyro-input"
             />
           </div>
           {usuario?.rol === 'admin' && (
             <div>
               <label className="block text-xs text-gray-500 mb-1">ID Agente</label>
-              <input type="number" placeholder="Todos" value={filters.agente_id}
+              <Input type="number" placeholder="Todos" value={filters.agente_id}
                 onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="kyro-input w-24"
               />
             </div>
           )}
@@ -150,12 +151,12 @@ export function AsistenciasPage() {
       {kpis && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Presentes',     value: kpis.presentes,          Icon: UserCheck,   color: 'text-green-700',  border: 'border-green-200' },
-            { label: 'Ausentes',      value: kpis.ausentes,           Icon: UserX,       color: 'text-red-700',    border: 'border-red-200' },
-            { label: 'Tardanzas',     value: kpis.tardanzas,          Icon: AlertCircle, color: 'text-amber-700',  border: 'border-amber-200' },
-            { label: 'Pend. Revisión',value: kpis.pendientes_revision, Icon: Clock,      color: 'text-blue-700',   border: 'border-blue-200' },
+            { label: 'Presentes',     value: kpis.presentes,          Icon: UserCheck,   color: 'text-kyro-success', border: 'border-l-kyro-success' },
+            { label: 'Ausentes',      value: kpis.ausentes,           Icon: UserX,       color: 'text-kyro-danger',  border: 'border-l-kyro-danger' },
+            { label: 'Tardanzas',     value: kpis.tardanzas,          Icon: AlertCircle, color: 'text-kyro-warning', border: 'border-l-kyro-warning' },
+            { label: 'Pend. Revisión',value: kpis.pendientes_revision, Icon: Clock,      color: 'text-kyro-info',    border: 'border-l-kpi-total' },
           ].map(k => (
-            <div key={k.label} className={`premium-kpi p-4 ${k.border}`}>
+            <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
               <div className="flex items-center gap-1 mb-1">
                 <k.Icon size={13} className={k.color} />
                 <p className="text-xs text-gray-500">{k.label}</p>
@@ -167,19 +168,19 @@ export function AsistenciasPage() {
       )}
 
       {/* Tabla */}
-      <div className="premium-surface">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 text-sm">
+      <div className="kyro-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-kyro-border p-4">
+          <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros`}
           </h2>
           <span className="text-xs text-gray-400">Pág. {meta?.current_page ?? 1}/{meta?.last_page ?? 1}</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="premium-table w-full text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr>
                 {['Fecha', 'Día', 'Agente', 'Tienda', 'Ingreso', 'Salida', 'Método', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
+                  <th key={h} className="kyro-table-head px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -195,7 +196,7 @@ export function AsistenciasPage() {
 
                 return (
                   <tr key={a.id}
-                    className={`border-b ${esRevision ? 'border-yellow-200 bg-yellow-50/40' : esTarde ? 'border-amber-100 bg-amber-50/20' : 'border-gray-100 hover:bg-gray-50/60'}`}
+                    className={`border-b ${esRevision ? 'border-kyro-warning/30 bg-kyro-warning/10' : esTarde ? 'border-kyro-warning/20 bg-kyro-warning/5' : 'border-kyro-border hover:bg-kyro-elevated/50'}`}
                   >
                     <td className="px-4 py-3 text-gray-700">{fechaObj.toLocaleDateString('es-PE')}</td>
                     <td className="px-4 py-3 text-xs text-gray-400">{DIAS[fechaObj.getDay()]}</td>
@@ -236,7 +237,7 @@ export function AsistenciasPage() {
         </div>
 
         {meta && meta.last_page > 1 && (
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="flex items-center justify-between border-t border-kyro-border p-4">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
             <span className="text-xs text-gray-500">{meta.total} registros</span>
             <Button variant="outline" size="sm" disabled={page >= meta.last_page} onClick={() => setPage(p => p + 1)}>Siguiente</Button>

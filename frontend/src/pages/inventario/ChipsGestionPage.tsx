@@ -141,24 +141,24 @@ export function ChipsGestionPage() {
       />
 
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border border-gray-200/80 bg-white/70 text-sm text-gray-400 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/60 dark:text-zinc-500">
+        <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">
           <span className="inline-flex items-center gap-2">
             <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
             Cargando...
           </span>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_22px_50px_-30px_rgba(0,0,0,0.95)]">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.8), rgba(255,194,0,0.55) 45%, transparent 82%)' }} />
+        <div className="kyro-card relative overflow-hidden">
+          <div aria-hidden className="hidden" />
           <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                <th className="border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">Tienda</th>
-                <th className="border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">Código Origen</th>
-                <th className="border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">Tipo</th>
-                <th className="border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">Stock</th>
-                <th className="border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-right text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">Acciones</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Tienda</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Código Origen</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Tipo</th>
+                <th className="kyro-table-head px-4 py-3 text-center">Stock</th>
+                <th className="kyro-table-head px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -169,11 +169,11 @@ export function ChipsGestionPage() {
               ) : (
                 chips.map((chip) => (
                   <tr key={chip.id} className="group transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-400/[0.035]">
-                    <td className="border-b border-gray-100 px-4 py-3 text-gray-900 dark:border-white/[0.05] dark:text-zinc-100">
+                    <td className="border-b border-kyro-border px-4 py-3 text-kyro-text">
                       <span className="font-semibold">{chip.tienda.codigo}</span>
                       <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">{chip.tienda.nombre}</span>
                     </td>
-                    <td className="border-b border-gray-100 px-4 py-3 font-mono text-gray-700 dark:border-white/[0.05] dark:text-zinc-300">{chip.tienda_origen}</td>
+                    <td className="border-b border-kyro-border px-4 py-3 font-mono text-kyro-body">{chip.tienda_origen}</td>
                     <td className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
                       <Badge variant="outline">{chip.tipo_chip}</Badge>
                     </td>
@@ -230,7 +230,7 @@ export function ChipsGestionPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Código destino</label>
+            <label className="mb-1 block text-sm font-medium text-kyro-body">Código destino</label>
             <Input
               value={codigoDestino}
               onChange={(e) => setCodigoDestino(e.target.value)}
@@ -238,7 +238,7 @@ export function ChipsGestionPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+            <label className="mb-1 block text-sm font-medium text-kyro-body">Cantidad</label>
             <Input
               type="number"
               value={cantidadCambiar}
@@ -275,7 +275,7 @@ export function ChipsGestionPage() {
                 <p className="text-sm text-gray-400 text-center py-4">Sin movimientos registrados</p>
               ) : (
                 historialData.timeline.map((ev, idx) => (
-                  <div key={idx} className="flex items-start gap-3 rounded-xl border border-gray-200/80 bg-white/70 p-3 shadow-[0_8px_20px_-18px_rgba(15,23,42,0.5)] transition-colors hover:border-indigo-200 dark:border-white/[0.07] dark:bg-white/[0.025] dark:hover:border-indigo-400/20">
+                  <div key={idx} className="kyro-card flex items-start gap-3 p-3 transition-colors hover:border-kyro-indigo">
                     <div className="shrink-0 pt-0.5">
                       <Badge variant={tipoEventoBadge(ev.tipo)}>{ev.tipo}</Badge>
                     </div>
@@ -308,7 +308,7 @@ export function ChipsGestionPage() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tienda ID</label>
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Tienda ID</label>
               <Input
                 type="number"
                 value={agregarForm.tienda_id}
@@ -317,7 +317,7 @@ export function ChipsGestionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código Origen</label>
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Código Origen</label>
               <Input
                 value={agregarForm.tienda_origen}
                 onChange={(e) => setAgregarForm((f) => ({ ...f, tienda_origen: e.target.value }))}
@@ -325,7 +325,7 @@ export function ChipsGestionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Chip</label>
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Tipo de Chip</label>
               <Input
                 value={agregarForm.tipo_chip}
                 onChange={(e) => setAgregarForm((f) => ({ ...f, tipo_chip: e.target.value }))}
@@ -333,7 +333,7 @@ export function ChipsGestionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Cantidad</label>
               <Input
                 type="number"
                 value={agregarForm.cantidad}

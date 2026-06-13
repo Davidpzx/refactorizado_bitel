@@ -153,21 +153,22 @@ function CampanaCostosWidget() {
 
   return (
     <>
-      <button
+      <Button
+        variant="outline"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-2 mb-4 px-4 py-2.5 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors text-sm font-medium"
+        className="mb-4 h-auto w-full justify-start gap-2 border-kyro-warning/40 bg-kyro-warning/10 px-4 py-2.5 text-kyro-warning hover:bg-kyro-warning/20"
       >
         <AlertTriangle size={15} className="shrink-0" />
         <span>{count} {count === 1 ? 'venta sin' : 'ventas sin'} precio de costo — Haz clic para corregir</span>
-      </button>
+      </Button>
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Ventas sin precio de costo" maxWidth="lg">
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           {(data?.items ?? []).map(item => (
-            <div key={item.rc_id} className="flex items-end gap-3 border-b border-gray-100 pb-3">
+            <div key={item.rc_id} className="flex items-end gap-3 border-b border-kyro-border pb-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{item.producto}</p>
-                <p className="text-xs text-gray-500">
+                <p className="truncate text-sm font-medium text-kyro-text">{item.producto}</p>
+                <p className="text-xs text-kyro-muted">
                   {item.tienda} · {item.fecha?.slice(0, 10)}
                   {item.imei ? ` · ${item.imei}` : ''}
                   {item.precio_venta != null ? ` · Venta: S/ ${parseFloat(String(item.precio_venta)).toFixed(2)}` : ''}

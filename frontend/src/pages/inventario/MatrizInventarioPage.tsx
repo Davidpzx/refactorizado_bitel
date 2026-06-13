@@ -66,52 +66,53 @@ export function MatrizInventarioPage() {
         }
       />
 
-      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-gray-200/80 bg-white/70 p-1.5 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65">
+      <div className="kyro-card flex w-fit max-w-full gap-1 overflow-x-auto p-1.5">
         {TABS.map(({ key, label }) => (
-          <button
+          <Button
             key={key}
+            variant="ghost"
+            size="sm"
             onClick={() => setTab(key)}
             className={[
-              'rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+              'px-4 text-xs font-semibold',
               tab === key
-                ? 'bg-indigo-600 text-white shadow-[0_6px_16px_-8px_rgba(79,70,229,0.9)] dark:bg-indigo-500'
-                : 'text-gray-500 hover:bg-white/80 hover:text-gray-800 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100',
+                ? 'bg-kyro-gold text-kyro-gold-ink hover:bg-kyro-gold'
+                : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text',
             ].join(' ')}
           >
             {label}
-          </button>
+          </Button>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border border-gray-200/80 bg-white/70 text-sm text-gray-400 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/60 dark:text-zinc-500">
+        <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">
           <span className="inline-flex items-center gap-2">
             <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
             Cargando...
           </span>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_22px_50px_-30px_rgba(0,0,0,0.95)]">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.8), rgba(255,194,0,0.55) 45%, transparent 82%)' }} />
+        <div className="kyro-card relative overflow-hidden">
           <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-10 whitespace-nowrap border-b border-gray-200 bg-gray-50/95 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-zinc-800/95 dark:text-zinc-400">
+                <th className="kyro-table-head sticky left-0 top-0 z-10 whitespace-nowrap px-4 py-3 text-left">
                   {tab === 'chips' ? 'Código Origen' : 'Producto'}
                 </th>
                 {tiendas.map((t) => (
-                  <th key={t.codigo} className="whitespace-nowrap border-b border-gray-200 bg-gray-50/95 px-3 py-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">
+                  <th key={t.codigo} className="kyro-table-head whitespace-nowrap px-3 py-3 text-center">
                     {t.codigo}
                   </th>
                 ))}
-                <th className="border-b border-gray-200 bg-indigo-50/90 px-3 py-3 text-center text-[0.68rem] font-bold uppercase tracking-[0.08em] text-indigo-600 backdrop-blur dark:border-white/[0.07] dark:bg-indigo-400/[0.07] dark:text-indigo-300">Total</th>
+                <th className="kyro-table-head bg-kyro-indigo/10 px-3 py-3 text-center font-bold text-kyro-gold">Total</th>
               </tr>
             </thead>
             <tbody>
               {filas.length === 0 ? (
                 <tr>
-                  <td colSpan={tiendas.length + 2} className="px-4 py-14 text-center text-gray-400 dark:text-zinc-500">
+                  <td colSpan={tiendas.length + 2} className="px-4 py-14 text-center text-kyro-muted">
                     Sin datos
                   </td>
                 </tr>
@@ -122,25 +123,25 @@ export function MatrizInventarioPage() {
                     <tr
                       key={idx}
                       className={tieneStock
-                        ? 'group bg-emerald-50/25 transition-colors hover:bg-emerald-50/55 dark:bg-emerald-400/[0.015] dark:hover:bg-emerald-400/[0.045]'
-                        : 'group transition-colors hover:bg-gray-50/80 dark:hover:bg-white/[0.025]'}
+                        ? 'group bg-kyro-success/5 transition-colors hover:bg-kyro-success/10'
+                        : 'group transition-colors hover:bg-kyro-elevated/50'}
                     >
-                      <td className="sticky left-0 z-[1] whitespace-nowrap border-b border-gray-100 bg-white/95 px-4 py-2.5 font-medium text-gray-900 backdrop-blur transition-colors group-hover:bg-inherit dark:border-white/[0.05] dark:bg-zinc-900/95 dark:text-zinc-200">
+                      <td className="sticky left-0 z-[1] whitespace-nowrap border-b border-kyro-border bg-kyro-panel px-4 py-2.5 font-medium text-kyro-text transition-colors group-hover:bg-inherit">
                         {fila.nombre}
                       </td>
                       {tiendas.map((t) => {
                         const val = fila[t.codigo] as number | undefined
                         return (
-                          <td key={t.codigo} className="border-b border-gray-100 px-3 py-2.5 text-center text-gray-700 dark:border-white/[0.05] dark:text-zinc-300">
+                          <td key={t.codigo} className="border-b border-kyro-border px-3 py-2.5 text-center text-kyro-body">
                             {val && val > 0 ? (
-                              <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{val}</span>
+                              <span className="font-mono font-semibold text-kyro-success">{val}</span>
                             ) : (
                               <span className="text-gray-300">—</span>
                             )}
                           </td>
                         )
                       })}
-                      <td className="border-b border-gray-100 bg-indigo-50/30 px-3 py-2.5 text-center font-bold text-gray-900 dark:border-white/[0.05] dark:bg-indigo-400/[0.025] dark:text-zinc-100">
+                      <td className="border-b border-kyro-border bg-kyro-indigo/5 px-3 py-2.5 text-center font-bold text-kyro-text">
                         {(fila.total as number) > 0 ? (
                           <Badge variant="default" className="min-w-9 justify-center font-mono">{fila.total}</Badge>
                         ) : (

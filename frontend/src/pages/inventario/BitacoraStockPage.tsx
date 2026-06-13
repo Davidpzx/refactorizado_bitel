@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
+import { Select } from '../../components/ui/select'
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store } from 'lucide-react'
 
 interface BitacoraKpis {
@@ -88,7 +89,7 @@ export function BitacoraStockPage() {
       />
 
       {data?.warning && (
-        <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-800 shadow-sm backdrop-blur-xl dark:border-amber-400/20 dark:bg-amber-500/[0.08] dark:text-amber-300">
+        <div className="rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
           ⚠️ {data.warning}
         </div>
       )}
@@ -96,28 +97,28 @@ export function BitacoraStockPage() {
       {/* KPI Cards */}
       {kpis && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="group relative overflow-hidden rounded-xl border border-blue-200/70 bg-blue-50/45 p-4 shadow-[0_12px_30px_-22px_rgba(37,99,235,0.45)] backdrop-blur-xl transition-all hover:-translate-y-0.5 dark:border-blue-400/15 dark:bg-blue-500/[0.055]">
+          <div className="kyro-card border-l-4 border-l-kpi-total p-4 transition-all hover:-translate-y-0.5">
             <div className="flex items-center gap-2 mb-1">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200/70 bg-white/65 text-blue-600 dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300"><Activity size={15} /></span>
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">Total Movimientos</p>
             </div>
             <p className="mt-2 font-mono text-xl font-bold text-blue-700 dark:text-blue-300">{kpis.total_mov.toLocaleString()}</p>
           </div>
-          <div className="group relative overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-50/45 p-4 shadow-[0_12px_30px_-22px_rgba(16,185,129,0.45)] backdrop-blur-xl transition-all hover:-translate-y-0.5 dark:border-emerald-400/15 dark:bg-emerald-500/[0.055]">
+          <div className="kyro-card border-l-4 border-l-kyro-success p-4 transition-all hover:-translate-y-0.5">
             <div className="flex items-center gap-2 mb-1">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-200/70 bg-white/65 text-emerald-600 dark:border-emerald-400/15 dark:bg-emerald-500/10 dark:text-emerald-300"><TrendingUp size={15} /></span>
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">Entradas (+)</p>
             </div>
             <p className="mt-2 font-mono text-xl font-bold text-emerald-700 dark:text-emerald-300">+{kpis.total_entradas.toLocaleString()}</p>
           </div>
-          <div className="group relative overflow-hidden rounded-xl border border-red-200/70 bg-red-50/45 p-4 shadow-[0_12px_30px_-22px_rgba(220,38,38,0.4)] backdrop-blur-xl transition-all hover:-translate-y-0.5 dark:border-red-400/15 dark:bg-red-500/[0.055]">
+          <div className="kyro-card border-l-4 border-l-kyro-danger p-4 transition-all hover:-translate-y-0.5">
             <div className="flex items-center gap-2 mb-1">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-200/70 bg-white/65 text-red-600 dark:border-red-400/15 dark:bg-red-500/10 dark:text-red-300"><TrendingDown size={15} /></span>
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">Salidas (-)</p>
             </div>
             <p className="mt-2 font-mono text-xl font-bold text-red-700 dark:text-red-300">-{kpis.total_salidas.toLocaleString()}</p>
           </div>
-          <div className="group relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all hover:-translate-y-0.5 dark:border-white/[0.08] dark:bg-zinc-900/65">
+          <div className="kyro-card border-l-4 border-l-kpi-neutral p-4 transition-all hover:-translate-y-0.5">
             <div className="flex items-center gap-2 mb-1">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200/80 bg-gray-50/80 text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-300"><Store size={15} /></span>
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">Balance Neto</p>
@@ -154,20 +155,19 @@ export function BitacoraStockPage() {
         )}
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-400">Acción</label>
-          <select value={filters.accion} onChange={e => setFilters(f => ({ ...f, accion: e.target.value }))}
-            className="h-9 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm text-gray-700 shadow-sm transition-all dark:border-white/10 dark:bg-black/20 dark:text-zinc-200">
+          <Select value={filters.accion} onChange={e => setFilters(f => ({ ...f, accion: e.target.value }))}>
             <option value="">Todos</option>
             <option value="SUMA">Entradas (SUMA)</option>
             <option value="RESTA">Salidas (RESTA)</option>
-          </select>
+          </Select>
         </div>
         <Button onClick={applyFilters}>Filtrar</Button>
         <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
       {/* Table */}
-      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_22px_50px_-30px_rgba(0,0,0,0.95)]">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.8), rgba(255,194,0,0.55) 45%, transparent 82%)' }} />
+      <div className="kyro-card relative overflow-hidden">
+        <div aria-hidden className="hidden" />
         <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} movimientos`}
@@ -177,7 +177,7 @@ export function BitacoraStockPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/90 dark:border-white/[0.07] dark:bg-white/[0.035]">
+              <tr className="kyro-table-head">
                 {['Fecha/Hora', 'Tienda', 'Agente', 'Producto', 'Tipo', 'Acción', 'Cant.', 'Motivo'].map(h => (
                   <th key={h} className={`px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400 ${h === 'Cant.' ? 'text-center' : ''}`}>{h}</th>
                 ))}
