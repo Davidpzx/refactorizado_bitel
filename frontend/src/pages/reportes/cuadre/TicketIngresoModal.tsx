@@ -62,48 +62,48 @@ export function TicketIngresoModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <GlassPanel className="relative z-10 w-full max-w-md p-4 max-h-[90vh] overflow-auto">
+      <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-md p-4 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold" style={{ color: '#22d3ee' }}>Ticket de Ingreso</h3>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-200 text-lg leading-none">×</button>
+          <h3 className="text-sm font-bold text-kyro-info">Ticket de Ingreso</h3>
+          <button type="button" onClick={onClose} className="text-kyro-muted hover:text-kyro-text rounded-kyro text-lg leading-none">×</button>
         </div>
 
         <div className="space-y-2">
           {items.map((it, i) => (
             <div key={i} className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end">
-              <Input value={it.descripcion} onChange={e => setItem(i, 'descripcion', e.target.value)} placeholder="Descripción" className="h-8 text-xs" />
-              <Input type="number" step="0.01" min="0" value={it.monto || ''} onChange={e => setItem(i, 'monto', parseFloat(e.target.value) || 0)} placeholder="S/" className="h-8 text-xs text-right" />
-              <button type="button" onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none">×</button>
+              <Input value={it.descripcion} onChange={e => setItem(i, 'descripcion', e.target.value)} placeholder="Descripción" className="kyro-input h-8 text-xs" />
+              <Input type="number" step="0.01" min="0" value={it.monto || ''} onChange={e => setItem(i, 'monto', parseFloat(e.target.value) || 0)} placeholder="S/" className="kyro-input h-8 text-xs text-right" />
+              <button type="button" onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none">×</button>
             </div>
           ))}
-          <button type="button" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])} className="text-xs font-medium" style={{ color: '#22d3ee' }}>+ Agregar ítem</button>
+          <button type="button" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])} className="text-xs font-medium text-kyro-info hover:text-kyro-gold">+ Agregar ítem</button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-kyro-border">
           {([['Efectivo', efectivo, setEfectivo], ['Yape', yape, setYape], ['Bipay', bipay, setBipay], ['Plin', plin, setPlin]] as const).map(([label, val, set]) => (
             <div key={label}>
-              <Label className="text-[10px] text-gray-400">{label}</Label>
-              <Input type="number" step="0.01" min="0" value={val || ''} onChange={e => set(parseFloat(e.target.value) || 0)} className="h-7 text-xs text-right" placeholder="0.00" />
+              <Label className="text-[10px] text-kyro-muted">{label}</Label>
+              <Input type="number" step="0.01" min="0" value={val || ''} onChange={e => set(parseFloat(e.target.value) || 0)} className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-3 text-center text-xs">
-          <div><div className="text-gray-400 text-[10px]">Total</div><div className="font-semibold text-gray-200">S/ {total.toFixed(2)}</div></div>
-          <div><div className="text-gray-400 text-[10px]">Recibido</div><div className="font-semibold text-gray-200">S/ {recibido.toFixed(2)}</div></div>
-          <div><div className="text-gray-400 text-[10px]">Vuelto</div><div className="font-semibold" style={{ color: vuelto < 0 ? '#f87171' : '#4ade80' }}>S/ {vuelto.toFixed(2)}</div></div>
+          <div><div className="text-kyro-muted text-[10px]">Total</div><div className="font-semibold text-kyro-body">S/ {total.toFixed(2)}</div></div>
+          <div><div className="text-kyro-muted text-[10px]">Recibido</div><div className="font-semibold text-kyro-body">S/ {recibido.toFixed(2)}</div></div>
+          <div><div className="text-kyro-muted text-[10px]">Vuelto</div><div className="font-semibold" style={{ color: vuelto < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-success)' }}>S/ {vuelto.toFixed(2)}</div></div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-3">
-          <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Cliente" className="h-7 text-xs" />
-          <Input value={dni} onChange={e => setDni(e.target.value)} placeholder="DNI" className="h-7 text-xs" />
-          <Input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="Teléfono" className="h-7 text-xs" />
+          <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Cliente" className="kyro-input h-7 text-xs" />
+          <Input value={dni} onChange={e => setDni(e.target.value)} placeholder="DNI" className="kyro-input h-7 text-xs" />
+          <Input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="Teléfono" className="kyro-input h-7 text-xs" />
         </div>
 
-        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+        {error && <p className="text-kyro-danger text-xs mt-2">{error}</p>}
 
         <div className="flex gap-2 mt-4">
-          <Button type="button" onClick={guardar} disabled={guardando} className="flex-1">
+          <Button type="button" onClick={guardar} disabled={guardando} className="flex-1 bg-kyro-gold text-kyro-gold-ink border-kyro-gold hover:brightness-110">
             {guardando ? 'Generando...' : 'Guardar e Imprimir'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>

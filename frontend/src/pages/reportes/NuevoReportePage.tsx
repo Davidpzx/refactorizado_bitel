@@ -25,12 +25,12 @@ import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
-  postpago: '#60a5fa',
-  prepago:  '#22d3ee',
-  equipos:  '#fbbf24',
-  otros:    '#e4e4e7',
-  apoyo:    '#a78bfa',
-  total:    '#22d3ee',
+  postpago: 'var(--color-kyro-indigo)',
+  prepago:  'var(--color-kyro-info)',
+  equipos:  'var(--color-kyro-warning)',
+  otros:    'var(--color-kyro-body)',
+  apoyo:    'var(--color-kyro-indigo)',
+  total:    'var(--color-kyro-info)',
 } as const
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -140,26 +140,26 @@ function LineaRow({
   const e  = errors.ventas?.[index]
 
   return (
-    <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+    <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
       <div>
-        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Celular" maxLength={15} className="h-8 text-xs" />
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Celular" maxLength={15} className="kyro-input h-8 text-xs" />
       </div>
       <div>
-        <Select {...register(`ventas.${index}.plan_nombre`)} className="h-8 text-xs">
+        <Select {...register(`ventas.${index}.plan_nombre`)} className="kyro-input h-8 text-xs">
           <option value="">— Plan —</option>
           {planes.map((p, i) => (
             <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>
           ))}
         </Select>
-        {e?.plan_nombre && <p className="text-red-500 text-[10px]">{e.plan_nombre.message}</p>}
+        {e?.plan_nombre && <p className="text-kyro-danger text-[10px]">{e.plan_nombre.message}</p>}
       </div>
       <div>
-        <Select {...register(`ventas.${index}.tipo_alta`)} className="h-8 text-xs">
+        <Select {...register(`ventas.${index}.tipo_alta`)} className="kyro-input h-8 text-xs">
           {TIPOS_ALTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </Select>
       </div>
       <div>
-        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/" className="h-8 text-xs" />
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/" className="kyro-input h-8 text-xs" />
       </div>
       <div className="flex flex-col gap-0.5 text-[10px]">
         <label className="flex items-center gap-1 cursor-pointer">
@@ -179,14 +179,14 @@ function LineaRow({
           <input type="checkbox" {...register(`ventas.${index}.es_esim`)} className="w-3 h-3" /> eSIM
         </label>
       </div>
-      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
+      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
 
       {up && (
         <div className="col-span-full pl-0 pt-1">
-          <Label className="text-[10px] text-gray-500">Fee plan anterior (S/) — para calcular comisión de upgrade</Label>
+          <Label className="text-[10px] text-kyro-muted">Fee plan anterior (S/) — para calcular comisión de upgrade</Label>
           <Input type="number" step="0.01" min="0"
             {...register(`ventas.${index}.plan_anterior`, { valueAsNumber: true })}
-            className="h-7 text-xs w-40 mt-0.5" placeholder="0.00" />
+            className="kyro-input h-7 text-xs w-40 mt-0.5" placeholder="0.00" />
         </div>
       )}
 
@@ -209,27 +209,27 @@ function ApoyoRow({
 }) {
   const e = errors.ventas?.[index]
   return (
-    <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+    <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
       <div>
-        <Select {...register(`ventas.${index}.tienda_destino`)} className="h-8 text-xs">
+        <Select {...register(`ventas.${index}.tienda_destino`)} className="kyro-input h-8 text-xs">
           <option value="">— Tienda —</option>
           {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
-        {e?.tienda_destino && <p className="text-red-500 text-[10px]">{e.tienda_destino.message}</p>}
+        {e?.tienda_destino && <p className="text-kyro-danger text-[10px]">{e.tienda_destino.message}</p>}
       </div>
       <div>
-        <Select {...register(`ventas.${index}.plan_nombre`)} className="h-8 text-xs">
+        <Select {...register(`ventas.${index}.plan_nombre`)} className="kyro-input h-8 text-xs">
           <option value="">— Plan —</option>
           {planes.map((p, i) => <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>)}
         </Select>
       </div>
       <div>
-        <Input type="number" step="1" min="1" {...register(`ventas.${index}.cantidad`, { valueAsNumber: true })} placeholder="Cant" className="h-8 text-xs" />
+        <Input type="number" step="1" min="1" {...register(`ventas.${index}.cantidad`, { valueAsNumber: true })} placeholder="Cant" className="kyro-input h-8 text-xs" />
       </div>
       <div>
-        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/ c/u" className="h-8 text-xs" />
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/ c/u" className="kyro-input h-8 text-xs" />
       </div>
-      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
+      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
@@ -259,11 +259,11 @@ function EquipoRow({
   const reg = register(`ventas.${index}.producto_nombre`)
 
   return (
-    <div className="space-y-1 py-1.5 border-b border-gray-100 last:border-0">
+    <div className="space-y-1 py-1.5 border-b border-kyro-border last:border-0">
       <div className="grid grid-cols-[1fr_140px_110px_90px_auto] gap-1.5 items-end">
         <div>
           <Input {...reg} list="inv-equipos-datalist"
-            placeholder="Producto (nombre o búsqueda)" className="h-8 text-xs"
+            placeholder="Producto (nombre o búsqueda)" className="kyro-input h-8 text-xs"
             onChange={(ev) => {
               reg.onChange(ev)
               const m = items.find(it => it.producto_nombre === ev.target.value)
@@ -273,50 +273,50 @@ function EquipoRow({
                 if (!precioVenta) setValue(`ventas.${index}.precio_venta`, Number(m.precio_normal) || 0)
               }
             }} />
-          {e?.producto_nombre && <p className="text-red-500 text-[10px]">{e.producto_nombre.message}</p>}
+          {e?.producto_nombre && <p className="text-kyro-danger text-[10px]">{e.producto_nombre.message}</p>}
           {bajoMinimo && (
-            <p className="text-[10px] font-semibold" style={{ color: '#fbbf24' }}>
+            <p className="text-[10px] font-semibold text-kyro-warning">
               ⚠ Precio bajo el mínimo (S/ {precioMin.toFixed(2)})
             </p>
           )}
         </div>
         <div>
-          <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="h-8 text-xs" />
+          <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="kyro-input h-8 text-xs" />
         </div>
         <div>
-          <Select {...register(`ventas.${index}.tipo_pago`)} className="h-8 text-xs">
+          <Select {...register(`ventas.${index}.tipo_pago`)} className="kyro-input h-8 text-xs">
             <option value="CONTADO">Contado</option>
             <option value="CUOTAS">A cuotas</option>
           </Select>
         </div>
         <div>
-          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="Precio S/" className="h-8 text-xs" />
+          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="Precio S/" className="kyro-input h-8 text-xs" />
         </div>
-        <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none self-center">×</button>
+        <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
       </div>
 
       {tipoPago === 'CUOTAS' && (
         <div className="grid grid-cols-[170px_120px_120px] gap-1.5 pl-2">
           <div>
             <Label className="text-[10px]">Financiera</Label>
-            <Select {...register(`ventas.${index}.financiera`)} className="h-7 text-xs mt-0.5">
+            <Select {...register(`ventas.${index}.financiera`)} className="kyro-input h-7 text-xs mt-0.5">
               <option value="">Ninguna</option>
               {FINANCIERAS.map(f => <option key={f} value={f}>{f}</option>)}
             </Select>
           </div>
           <div>
             <Label className="text-[10px]">Por cobrar financiera (S/)</Label>
-            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.por_cobrar_financiera`, { valueAsNumber: true })} className="h-7 text-xs mt-0.5" />
+            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.por_cobrar_financiera`, { valueAsNumber: true })} className="kyro-input h-7 text-xs mt-0.5" />
           </div>
           <div>
             <Label className="text-[10px]">Costo snap (S/)</Label>
-            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })} className="h-7 text-xs mt-0.5" />
+            <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.costo_snap`, { valueAsNumber: true })} className="kyro-input h-7 text-xs mt-0.5" />
           </div>
         </div>
       )}
 
       <div className="pl-2">
-        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI cliente (opcional)" maxLength={15} className="h-7 text-xs w-48" />
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI cliente (opcional)" maxLength={15} className="kyro-input h-7 text-xs w-48" />
       </div>
 
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
@@ -337,15 +337,15 @@ function OtroRow({
 }) {
   const e = errors.ventas?.[index]
   return (
-    <div className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-gray-100 last:border-0">
+    <div className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
       <div>
-        <Input {...register(`ventas.${index}.subtipo`)} placeholder="Descripción / Motivo" className="h-8 text-xs" />
+        <Input {...register(`ventas.${index}.subtipo`)} placeholder="Descripción / Motivo" className="kyro-input h-8 text-xs" />
       </div>
       <div>
-        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} placeholder="S/" className="h-8 text-xs" />
-        {e?.monto_total && <p className="text-red-500 text-[10px]">{e.monto_total.message}</p>}
+        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} placeholder="S/" className="kyro-input h-8 text-xs" />
+        {e?.monto_total && <p className="text-kyro-danger text-[10px]">{e.monto_total.message}</p>}
       </div>
-      <button type="button" onClick={onRemove} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none">×</button>
+      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none">×</button>
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
   )
@@ -586,7 +586,7 @@ export function NuevoReportePage() {
           <div className="flex items-center gap-2">
             {esTienda && <ChipStockBadge />}
             {esTienda && borradorDisponible && (
-              <Button variant="outline" type="button" className="text-amber-600 border-amber-400"
+              <Button variant="outline" type="button" className="text-kyro-warning border-kyro-warning/40 hover:bg-kyro-warning/10"
                 onClick={() => restaurarBorrador(borradorDisponible)}>
                 Cargar Borrador
               </Button>
@@ -596,40 +596,40 @@ export function NuevoReportePage() {
                 Guardar Borrador
               </Button>
             )}
-            {borradorMsg && <span className="text-xs text-zinc-500">{borradorMsg}</span>}
+            {borradorMsg && <span className="text-xs text-kyro-muted">{borradorMsg}</span>}
             <Button variant="outline" onClick={() => navigate('/reportes')}>Cancelar</Button>
           </div>
         }
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 [&_.premium-surface]:!bg-kyro-panel [&_.premium-surface]:!border-kyro-border [&_.premium-surface]:!shadow-kyro-card">
 
         {esTienda && <BipayConsole />}
 
         {/* ── Cabecera ── */}
-        <GlassPanel className="p-4">
+        <GlassPanel className="kyro-card p-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <Label htmlFor="fecha" className="text-xs font-medium text-gray-600">Fecha *</Label>
-              <Input id="fecha" type="date" {...register('fecha')} className="mt-1 h-8 text-sm" />
-              {errors.fecha && <p className="text-red-500 text-[10px] mt-0.5">{errors.fecha.message}</p>}
+              <Label htmlFor="fecha" className="text-xs font-medium text-kyro-body">Fecha *</Label>
+              <Input id="fecha" type="date" {...register('fecha')} className="kyro-input mt-1 h-8 text-sm" />
+              {errors.fecha && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.fecha.message}</p>}
             </div>
             <div>
-              <Label htmlFor="tienda_id" className="text-xs font-medium text-gray-600">Tienda *</Label>
-              <Select id="tienda_id" {...register('tienda_id')} className="mt-1 h-8 text-sm">
+              <Label htmlFor="tienda_id" className="text-xs font-medium text-kyro-body">Tienda *</Label>
+              <Select id="tienda_id" {...register('tienda_id')} className="kyro-input mt-1 h-8 text-sm">
                 <option value="">— Selecciona —</option>
                 {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
               </Select>
-              {errors.tienda_id && <p className="text-red-500 text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
+              {errors.tienda_id && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
             </div>
             <div>
-              <Label htmlFor="nombre_cubre" className="text-xs font-medium text-gray-600">Cubre tienda (si aplica)</Label>
-              <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Nombre" className="mt-1 h-8 text-sm" />
+              <Label htmlFor="nombre_cubre" className="text-xs font-medium text-kyro-body">Cubre tienda (si aplica)</Label>
+              <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Nombre" className="kyro-input mt-1 h-8 text-sm" />
             </div>
             <div className="flex items-end">
-              <div className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1.5 w-full">
-                <span className="text-gray-400">Agente:</span>{' '}
-                <span className="font-medium text-gray-700">{usuario?.nombre ?? '—'}</span>
+              <div className="text-xs text-kyro-muted bg-kyro-elevated rounded-kyro px-2 py-1.5 w-full border border-kyro-border">
+                <span className="text-kyro-subtle">Agente:</span>{' '}
+                <span className="font-medium text-kyro-body">{usuario?.nombre ?? '—'}</span>
                 <input type="hidden" {...register('agente_id', { valueAsNumber: true })} />
               </div>
             </div>
@@ -649,12 +649,12 @@ export function NuevoReportePage() {
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' })}
             >
               {postpagoRows.length > 0 && (
-                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
                   <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
               {postpagoRows.length === 0
-                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : postpagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
                       errors={errors} tipo="POSTPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
@@ -668,12 +668,12 @@ export function NuevoReportePage() {
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'PREPAGO', tipo_alta: 'LN' })}
             >
               {prepagoRows.length > 0 && (
-                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
                   <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
               {prepagoRows.length === 0
-                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : prepagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
                       errors={errors} tipo="PREPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
@@ -694,7 +694,7 @@ export function NuevoReportePage() {
                 ))}
               </datalist>
               {equipoRows.length === 0
-                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
                     <EquipoRow key={v.id} index={v.idx} register={register} control={control}
                       errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} />
@@ -702,7 +702,7 @@ export function NuevoReportePage() {
               {equipoRows.length > 0 && (
                 <button type="button"
                   onClick={() => append({ ...VENTA_DEFAULT, tipo_venta: 'ACCESORIO' })}
-                  className="text-xs font-medium mt-1" style={{ color: ACCENT.apoyo }}>
+                  className="text-xs font-medium mt-1 text-kyro-indigo hover:text-kyro-gold">
                   + Agregar Accesorio
                 </button>
               )}
@@ -715,7 +715,7 @@ export function NuevoReportePage() {
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'OTROS_FLUJO' })}
             >
               {otrosRows.length === 0
-                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin registros.</p>
+                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : otrosRows.map(v => (
                     <OtroRow key={v.id} index={v.idx} register={register} errors={errors} onRemove={() => remove(v.idx)} />
                   ))}
@@ -728,12 +728,12 @@ export function NuevoReportePage() {
               onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'APOYO', tipo_alta: 'LN' })}
             >
               {apoyoRows.length > 0 && (
-                <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-gray-400 font-medium border-b border-dashed border-gray-100">
+                <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
                   <span>Tienda</span><span>Plan</span><span>Cant</span><span>Cobrado c/u</span><span />
                 </div>
               )}
               {apoyoRows.length === 0
-                ? <p className="text-[11px] text-gray-400 py-2 text-center italic">Sin ventas de apoyo.</p>
+                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin ventas de apoyo.</p>
                 : apoyoRows.map(v => (
                     <ApoyoRow key={v.id} index={v.idx} register={register} errors={errors}
                       planes={planesData} onRemove={() => remove(v.idx)} />
@@ -741,8 +741,8 @@ export function NuevoReportePage() {
             </SectionPanel>
 
             {/* ── Consolidado de ventas (Total Sistema) ── */}
-            <GlassPanel className="p-3" style={{ background: 'rgba(6,182,212,0.07)' }}>
-              <p className="text-xs uppercase tracking-widest mb-2 font-medium" style={{ color: ACCENT.total }}>Total Sistema Consolidado</p>
+            <GlassPanel className="kyro-card p-3 bg-kyro-info/10 border-l-4 border-l-kpi-total">
+              <p className="text-xs uppercase tracking-widest mb-2 font-medium text-kyro-info">Total Sistema Consolidado</p>
               <div className="grid grid-cols-5 gap-2 text-center text-xs mb-3">
                 {[
                   { label: 'Postpago', val: totalPostpago, n: postpagoRows.length },
@@ -751,14 +751,14 @@ export function NuevoReportePage() {
                   { label: 'Otros',    val: otrosFijos,    n: otrosRows.length },
                   { label: 'Apoyo',    val: totalApoyo,    n: apoyoRows.length },
                 ].map(({ label, val, n }) => (
-                  <div key={label} className="rounded px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <div className="text-[10px] text-gray-400">{label}{n > 0 && ` (${n})`}</div>
-                    <div className="font-semibold text-gray-200">S/ {val.toFixed(2)}</div>
+                  <div key={label} className="rounded-kyro px-2 py-1 bg-kyro-elevated border border-kyro-border">
+                    <div className="text-[10px] text-kyro-muted">{label}{n > 0 && ` (${n})`}</div>
+                    <div className="font-semibold text-kyro-body">S/ {val.toFixed(2)}</div>
                   </div>
                 ))}
               </div>
               <div className="text-center">
-                <span className="text-gray-400 text-xs">TOTAL DEL DÍA</span>
+                <span className="text-kyro-muted text-xs">TOTAL DEL DÍA</span>
                 <div><MoneyTotal value={totalSistema} color={ACCENT.total} size="2rem" /></div>
               </div>
             </GlassPanel>
@@ -768,38 +768,38 @@ export function NuevoReportePage() {
           {/* ═══════════ COLUMNA DERECHA: Caja y Dinero ═══════════ */}
           <div className="space-y-3 lg:sticky lg:top-4">
 
-            <GlassPanel className="p-3">
-              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Caja Inicial (Sencillo)</Label>
+            <GlassPanel className="kyro-card p-3 border-l-4 border-l-kpi-esperado">
+              <Label className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Caja Inicial (Sencillo)</Label>
               <Input id="caja_inicial" type="number" step="0.01" min="0"
                 {...register('caja_inicial', { valueAsNumber: true })}
-                className="mt-1.5 h-9 text-sm font-medium" placeholder="S/ 0.00" />
+                className="kyro-input mt-1.5 h-9 text-sm font-medium" placeholder="S/ 0.00" />
             </GlassPanel>
 
-            <GlassPanel className="p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Dinero No Físico</p>
+            <GlassPanel className="kyro-card p-3 space-y-2">
+              <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Dinero No Físico</p>
               {([
                 ['yape',          'Yape / Plin'],
                 ['bipay',         'Bipay'],
                 ['transferencia', 'Transferencia'],
               ] as const).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
-                  <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
+                  <Label className="text-xs text-kyro-body w-28 shrink-0">{label}</Label>
                   <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
-                    className="h-7 text-xs text-right" placeholder="0.00" />
+                    className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
                 </div>
               ))}
-              <div className="flex items-center gap-2 border-t pt-2">
-                <Label className="text-xs text-red-600 w-28 shrink-0 font-medium">Retiro Bipay</Label>
+              <div className="flex items-center gap-2 border-t border-kyro-border pt-2">
+                <Label className="text-xs text-kyro-danger w-28 shrink-0 font-medium">Retiro Bipay</Label>
                 <Input type="number" step="0.01" min="0" {...register('retiro_bipay', { valueAsNumber: true })}
-                  className="h-7 text-xs text-right border-red-200 focus:border-red-400" placeholder="0.00" />
+                  className="kyro-input h-7 text-xs text-right border-kyro-danger/40 focus:border-kyro-danger" placeholder="0.00" />
               </div>
-              <div className="text-right text-xs text-gray-500 pt-1">
-                Total no físico: <span className="font-semibold text-gray-300">S/ {totalNoFisico.toFixed(2)}</span>
+              <div className="text-right text-xs text-kyro-muted pt-1">
+                Total no físico: <span className="font-semibold text-kyro-body">S/ {totalNoFisico.toFixed(2)}</span>
               </div>
             </GlassPanel>
 
-            <GlassPanel className="p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Ingresos Fijos</p>
+            <GlassPanel className="kyro-card p-3 space-y-2">
+              <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Ingresos Fijos</p>
               {([
                 ['recarga_bipay', 'Recarga Bipay'],
                 ['pago_servicio', 'Pago de Servicio'],
@@ -807,46 +807,46 @@ export function NuevoReportePage() {
                 ['tickets_tusamy','Tickets Tusamy'],
               ] as const).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
-                  <Label className="text-xs text-gray-600 w-28 shrink-0">{label}</Label>
+                  <Label className="text-xs text-kyro-body w-28 shrink-0">{label}</Label>
                   <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
-                    className="h-7 text-xs text-right" placeholder="0.00" />
+                    className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
                   {esTienda && (
                     <button type="button" title="Generar ticket de ingreso" onClick={() => setTicketDesc(label)}
-                      className="shrink-0 text-cyan-500 hover:text-cyan-300 text-sm leading-none px-1">🧾</button>
+                      className="shrink-0 text-kyro-info hover:text-kyro-gold text-sm leading-none px-1">🧾</button>
                   )}
                 </div>
               ))}
             </GlassPanel>
 
-            <GlassPanel className="p-3">
+            <GlassPanel className="kyro-card p-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Salidas de Efectivo</p>
+                <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Salidas de Efectivo</p>
                 <button type="button" onClick={agregarSalida}
-                  className="text-xs text-red-500 border border-red-300 rounded px-2 py-0.5 hover:bg-red-50 font-medium">
+                  className="text-xs text-kyro-danger border border-kyro-danger/40 rounded-kyro px-2 py-0.5 hover:bg-kyro-danger/10 font-medium">
                   + Agregar Salida
                 </button>
               </div>
               {salidaItems.length === 0
-                ? <p className="text-[11px] text-gray-400 italic text-center py-1">Sin salidas registradas</p>
+                ? <p className="text-[11px] text-kyro-muted italic text-center py-1">Sin salidas registradas</p>
                 : (
                   <div className="space-y-1.5">
                     {salidaItems.map(s => (
                       <div key={s.id} className="grid grid-cols-[90px_70px_1fr_auto] gap-1 items-center">
                         <select value={s.tipo} onChange={e => actualizarSalida(s.id, 'tipo', e.target.value)}
-                          className="h-7 text-xs rounded border border-gray-300 px-1">
+                          className="kyro-input h-7 text-xs px-1">
                           {TIPOS_SALIDA.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                         <input type="number" step="0.01" min="0" value={s.monto || ''}
                           onChange={e => actualizarSalida(s.id, 'monto', parseFloat(e.target.value) || 0)}
-                          placeholder="S/" className="h-7 text-xs rounded border border-gray-300 px-2 text-right" />
+                          placeholder="S/" className="kyro-input h-7 text-xs px-2 text-right" />
                         <input type="text" value={s.motivo}
                           onChange={e => actualizarSalida(s.id, 'motivo', e.target.value)}
-                          placeholder="Motivo" className="h-7 text-xs rounded border border-gray-300 px-2" />
+                          placeholder="Motivo" className="kyro-input h-7 text-xs px-2" />
                         <button type="button" onClick={() => eliminarSalida(s.id)}
-                          className="text-red-400 hover:text-red-600 font-bold text-sm leading-none">×</button>
+                          className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-sm leading-none">×</button>
                       </div>
                     ))}
-                    <div className="text-right text-xs font-semibold text-red-500 pt-1">
+                    <div className="text-right text-xs font-semibold text-kyro-danger pt-1">
                       Total salidas: S/ {total_salidas.toFixed(2)}
                     </div>
                   </div>
@@ -855,36 +855,36 @@ export function NuevoReportePage() {
             </GlassPanel>
 
             {/* ── Cuadre Final ── */}
-            <GlassPanel className="p-3" style={{ border: '1px solid rgba(34,197,94,0.4)' }}>
-              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#22c55e' }}>Cuadre Final</p>
+            <GlassPanel className="kyro-card p-3 border-kyro-success/40 border-l-4 border-l-kpi-declarado">
+              <p className="text-xs font-bold uppercase tracking-wide mb-3 text-kyro-success">Cuadre Final</p>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Total en cajón:</span>
-                  <span className="font-semibold text-gray-300">S/ {totalEnCajon.toFixed(2)}</span>
+                  <span className="text-xs text-kyro-muted">Total en cajón:</span>
+                  <span className="font-semibold text-kyro-body">S/ {totalEnCajon.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Efectivo esperado:</span>
-                  <span className="font-semibold text-gray-200">S/ {efectivoEsperado.toFixed(2)}</span>
+                  <span className="text-xs text-kyro-muted">Efectivo esperado:</span>
+                  <span className="font-semibold text-kyro-text">S/ {efectivoEsperado.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs font-medium text-gray-300">Mi Efectivo (entrego):</Label>
+                  <Label className="text-xs font-medium text-kyro-body">Mi Efectivo (entrego):</Label>
                   <Input type="number" step="0.01" min="0" {...register('efectivo_entregado', { valueAsNumber: true })}
-                    className="h-8 w-32 text-sm text-right font-semibold" placeholder="0.00" />
+                    className="kyro-input h-8 w-32 text-sm text-right font-semibold" placeholder="0.00" />
                 </div>
 
-                <div className="flex justify-between items-center pt-1 border-t" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
-                  <span className="text-xs font-bold text-gray-300">Diferencia:</span>
+                <div className="flex justify-between items-center pt-1 border-t border-kyro-success/20">
+                  <span className="text-xs font-bold text-kyro-body">Diferencia:</span>
                   <span className="font-mono font-bold text-base" style={{
-                    color: Math.abs(diferencia) < 0.01 ? '#e4e4e7' : diferencia < 0 ? '#f87171' : '#fbbf24',
+                    color: Math.abs(diferencia) < 0.01 ? 'var(--color-kyro-body)' : diferencia < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-warning)',
                   }}>
                     S/ {diferencia.toFixed(2)}{requiereAprobacion && ' ⚠'}
                   </span>
                 </div>
 
                 {requiereAprobacion && (
-                  <p className="text-[10px] text-amber-400 rounded px-2 py-1" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                  <p className="text-[10px] text-kyro-warning rounded-kyro px-2 py-1 bg-kyro-warning/10 border border-kyro-warning/30">
                     Diferencia mayor a S/10 — el reporte quedará en espera de aprobación.
                   </p>
                 )}
@@ -892,20 +892,20 @@ export function NuevoReportePage() {
 
               {/* Destino del efectivo — toggles glow (paridad legacy) */}
               <div className="mt-3">
-                <p className="text-xs font-medium text-gray-300 mb-1.5">Destino del efectivo:</p>
+                <p className="text-xs font-medium text-kyro-body mb-1.5">Destino del efectivo:</p>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    { value: 'ENTREGADO', label: 'Lo Entregué', accent: '#22c55e' },
-                    { value: 'EN_CAJA',   label: 'En Tienda',   accent: '#fbbf24' },
+                    { value: 'ENTREGADO', label: 'Lo Entregué', accent: 'var(--color-kyro-success)' },
+                    { value: 'EN_CAJA',   label: 'En Tienda',   accent: 'var(--color-kyro-warning)' },
                   ] as const).map(opt => {
                     const active = destino === opt.value
                     return (
                       <label key={opt.value}
                         className="flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold rounded-md py-2 transition-all"
                         style={active
-                          ? { background: opt.accent, color: '#0a0a0a', border: `2px solid ${opt.accent}`,
-                              boxShadow: `0 0 20px ${opt.accent}80`, transform: 'scale(1.02)' }
-                          : { background: 'transparent', color: '#a1a1aa', border: `2px solid ${opt.accent}`, opacity: 0.45 }}>
+                          ? { background: opt.accent, color: 'var(--color-kyro-gold-ink)', border: `2px solid ${opt.accent}`,
+                              boxShadow: `0 0 20px color-mix(in srgb, ${opt.accent} 50%, transparent)`, transform: 'scale(1.02)' }
+                          : { background: 'transparent', color: 'var(--color-kyro-muted)', border: `2px solid ${opt.accent}`, opacity: 0.45 }}>
                         <input type="radio" value={opt.value} {...register('destino_efectivo')} className="hidden" />
                         {opt.label}
                       </label>
@@ -917,24 +917,24 @@ export function NuevoReportePage() {
               {/* Observaciones condicionales del destino */}
               {destino === 'ENTREGADO' && (
                 <div className="mt-2">
-                  <Label className="text-xs text-gray-400">A quién / referencia de depósito *</Label>
-                  <Input {...register('observaciones')} placeholder="Nombre o número de operación" className="mt-1 h-8 text-xs" />
+                  <Label className="text-xs text-kyro-muted">A quién / referencia de depósito *</Label>
+                  <Input {...register('observaciones')} placeholder="Nombre o número de operación" className="kyro-input mt-1 h-8 text-xs" />
                 </div>
               )}
               {destino === 'EN_CAJA' && (
                 <div className="mt-2">
-                  <Label className="text-xs text-gray-400">Observación de caja (opcional)</Label>
+                  <Label className="text-xs text-kyro-muted">Observación de caja (opcional)</Label>
                   <textarea {...register('observaciones')} rows={2}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                    className="kyro-input mt-1 w-full px-3 py-1.5 text-xs focus:ring-kyro-warning/40 resize-none"
                     placeholder="Detalle de por qué el efectivo queda en tienda" />
                 </div>
               )}
             </GlassPanel>
 
-            <GlassPanel className="p-3">
-              <Label className="text-xs font-semibold text-gray-700">Observaciones del Día</Label>
+            <GlassPanel className="kyro-card p-3">
+              <Label className="text-xs font-semibold text-kyro-text">Observaciones del Día</Label>
               <textarea {...register('obs_dia')} rows={2}
-                className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                className="kyro-input mt-1.5 w-full px-3 py-1.5 text-xs resize-none"
                 placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)" />
             </GlassPanel>
 
@@ -942,21 +942,21 @@ export function NuevoReportePage() {
         </div>
 
         {crear.isError && (
-          <p className="text-red-500 text-sm border border-red-200 bg-red-50 rounded px-3 py-2">
+          <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2">
             {(crear.error as { response?: { data?: { error?: string } } })?.response?.data?.error
               ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
           </p>
         )}
 
         {stockInsuficiente && (
-          <p className="text-red-500 text-sm border border-red-300 bg-red-50 rounded px-3 py-2 font-semibold">
+          <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2 font-semibold">
             STOCK INSUFICIENTE — estás reportando {chipsConsumidos} chips pero solo hay {chipsDisponibles} en stock.
           </p>
         )}
 
         <div className="flex gap-3 pb-8">
           <Button type="submit" disabled={crear.isPending || stockInsuficiente}
-            className="flex-1 h-11 text-base font-semibold bg-cyan-600 hover:bg-cyan-700 text-white">
+            className="flex-1 h-11 text-base font-semibold bg-kyro-gold hover:brightness-110 text-kyro-gold-ink border-kyro-gold">
             {stockInsuficiente ? 'STOCK INSUFICIENTE' : crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate('/reportes')} disabled={crear.isPending}>
