@@ -254,12 +254,13 @@ class ControlCenterController extends Controller
 
     private function financierasPendientes(): array
     {
-        if (! Schema::hasTable('reporte_categorias')) {
+        // D1/F1: esquema normalizado. Solo equipos a cuotas quedan en PENDIENTE.
+        if (! Schema::hasTable('ventas')) {
             return $this->emptyIndicator(false);
         }
 
         return [
-            'count' => DB::table('reporte_categorias')
+            'count' => DB::table('ventas')
                 ->where('comision_estado', 'PENDIENTE')
                 ->count(),
         ];

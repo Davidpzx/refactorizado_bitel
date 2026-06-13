@@ -7,10 +7,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PanelFinancierasController extends Controller
 {
-    // ── GET /financieras — Listado de ventas con financieras ──────────────────
+    // ── GET /financieras — Ventas de equipos a cuotas (esquema NORMALIZADO) ─────
+    // D1: lee ventas/venta_equipos (no la tabla huérfana reporte_categorias).
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -23,72 +25,52 @@ class PanelFinancierasController extends Controller
         $filtroEstado     = $request->input('estado', 'PENDIENTE');
         $filtroMes        = $request->input('mes', date('Y-m'));
 
-        [$anio, $mes] = explode('-', $filtroMes . '-01');
-        $fechaIni = "{$anio}-{$mes}-01";
+        $fechaIni = $filtroMes . '-01';
         $fechaFin = date('Y-m-t', strtotime($fechaIni));
 
-        $query = DB::table('reporte_categorias as rc')
-            ->join('reportes as r', 'r.id', '=', 'rc.reporte_id')
-            ->leftJoin('tiendas as ti', DB::raw('ti.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('r.tienda_id COLLATE utf8mb4_unicode_ci'))
-            ->leftJoin('usuarios as u_conf', 'u_conf.id', '=', 'rc.desembolso_confirmado_por')
-            ->where('rc.tipo', 'equipos_accesorios')
-            ->where(function ($q) {
-                $q->whereNotNull('rc.financiera')
-                  ->where('rc.financiera', '!=', '')
-                  ->orWhereRaw("UPPER(JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '$.tipo_pago'))) = 'CUOTAS'");
-            })
+        $query = DB::table('ventas as v')
+            ->join('venta_equipos as ve', 've.venta_id', '=', 'v.id')
+            ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+            ->leftJoin('tiendas as ti', 'ti.codigo', '=', 'r.tienda_id')
+            ->leftJoin('agentes as ag', 'ag.id', '=', 'v.vendedor_id')
+            ->where('v.tipo_venta', 'EQUIPO')
+            ->where('ve.tipo_pago', 'CUOTAS')
             ->whereBetween('r.fecha', [$fechaIni, $fechaFin])
             ->select(
-                'rc.id',
-                'rc.financiera',
-                'rc.comision_estado',
-                'rc.desembolso_confirmado_en',
-                'rc.monto as efectivo_inicial_cobrado',
-                'rc.detalle',
+                'v.id',
+                'v.comision_estado',
+                'v.comision_generada',
+                've.financiera',
+                've.por_cobrar_financiera',
+                've.producto_nombre_snap',
                 'r.fecha',
                 'r.tienda_id',
                 'ti.nombre as tienda_nombre',
-                'u_conf.nombre as confirmado_por_nombre'
+                'ag.nombres as vendedor_nombre'
             )
-            ->orderByRaw("rc.comision_estado ASC")
+            ->orderByRaw('v.comision_estado ASC')
             ->orderByDesc('r.fecha');
 
         if ($filtroEstado !== 'TODAS') {
-            $query->where('rc.comision_estado', $filtroEstado);
+            $query->where('v.comision_estado', $filtroEstado);
         } else {
-            $query->whereIn('rc.comision_estado', ['PENDIENTE', 'APROBADA']);
+            $query->whereIn('v.comision_estado', ['PENDIENTE', 'APROBADA']);
         }
-
-        if ($filtroFinanciera) $query->where('rc.financiera', $filtroFinanciera);
-        if ($filtroTienda)     $query->where('r.tienda_id', $filtroTienda);
+        if ($filtroFinanciera !== '') {
+            $query->where('ve.financiera', $filtroFinanciera);
+        }
+        if ($filtroTienda !== '') {
+            $query->where('r.tienda_id', $filtroTienda);
+        }
 
         $ventas = $query->get();
 
-        // Resolver nombres de vendedores desde detalle JSON
-        $vendedorIds = [];
-        foreach ($ventas as $v) {
-            $d   = json_decode($v->detalle, true) ?? [];
-            $vid = (int)($d['vendedor_id'] ?? 0);
-            if ($vid > 0) $vendedorIds[$vid] = true;
-        }
-        $nombresVendedores = [];
-        if (!empty($vendedorIds)) {
-            $nombresVendedores = DB::table('agentes')
-                ->whereIn('id', array_keys($vendedorIds))
-                ->pluck('nombres', 'id')
-                ->toArray();
-        }
-
-        // Calcular totales y enriquecer datos
         $totalPendiente  = 0.0;
         $totalConfirmado = 0.0;
         $countPendiente  = 0;
 
-        $ventasEnriquecidas = $ventas->map(function ($v) use ($nombresVendedores, &$totalPendiente, &$totalConfirmado, &$countPendiente) {
-            $detalle  = json_decode($v->detalle, true) ?? [];
-            $vendId   = (int)($detalle['vendedor_id'] ?? 0);
-            $porCobrar = (float)($detalle['por_cobrar_financiera'] ?? 0);
-
+        $data = $ventas->map(function ($v) use (&$totalPendiente, &$totalConfirmado, &$countPendiente) {
+            $porCobrar = (float) $v->por_cobrar_financiera;
             if ($v->comision_estado === 'PENDIENTE') {
                 $totalPendiente += $porCobrar;
                 $countPendiente++;
@@ -96,16 +78,24 @@ class PanelFinancierasController extends Controller
                 $totalConfirmado += $porCobrar;
             }
 
-            return array_merge((array)$v, [
-                'detalle'        => $detalle,
-                'vendedor_nombre' => $nombresVendedores[$vendId] ?? null,
-                'por_cobrar'     => $porCobrar,
-            ]);
+            return [
+                'id'                => $v->id,
+                'fecha'             => $v->fecha,
+                'tienda_id'         => $v->tienda_id,
+                'tienda_nombre'     => $v->tienda_nombre,
+                'financiera'        => $v->financiera,
+                'vendedor_nombre'   => $v->vendedor_nombre,
+                'comision_estado'   => $v->comision_estado,
+                'comision_generada' => (float) $v->comision_generada,
+                'por_cobrar'        => $porCobrar,
+                // Compat con el front (item.detalle?.producto_nombre).
+                'detalle'           => ['producto_nombre' => $v->producto_nombre_snap],
+            ];
         });
 
-        // Opciones de filtros
-        $financierasLista = DB::table('reporte_categorias')
+        $financierasLista = DB::table('venta_equipos')
             ->whereNotNull('financiera')
+            ->where('financiera', '!=', '')
             ->distinct()
             ->orderBy('financiera')
             ->pluck('financiera');
@@ -116,11 +106,11 @@ class PanelFinancierasController extends Controller
             ->get();
 
         return response()->json([
-            'data'             => $ventasEnriquecidas->values(),
-            'totales'          => [
-                'pendiente'   => round($totalPendiente, 2),
-                'confirmado'  => round($totalConfirmado, 2),
-                'total'       => round($totalPendiente + $totalConfirmado, 2),
+            'data'    => $data->values(),
+            'totales' => [
+                'pendiente'       => round($totalPendiente, 2),
+                'confirmado'      => round($totalConfirmado, 2),
+                'total'           => round($totalPendiente + $totalConfirmado, 2),
                 'count_pendiente' => $countPendiente,
             ],
             'filtros_disponibles' => [
@@ -138,20 +128,30 @@ class PanelFinancierasController extends Controller
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
-        $updated = DB::table('reporte_categorias')
-            ->where('id', $id)
-            ->where('comision_estado', 'PENDIENTE')
-            ->update([
-                'comision_estado'           => 'APROBADA',
-                'desembolso_confirmado_en'  => now(),
-                'desembolso_confirmado_por' => $user->id,
-            ]);
-
-        if (!$updated) {
+        $venta = DB::table('ventas')->where('id', $id)->where('comision_estado', 'PENDIENTE')->first();
+        if (! $venta) {
             return response()->json(['success' => false, 'message' => 'Registro no encontrado o ya confirmado.'], 404);
         }
 
-        return response()->json(['success' => true, 'message' => 'Desembolso confirmado correctamente.']);
+        // D2 — Liberar la comisión del agente al confirmar el desembolso
+        // (paridad legacy: EQUIPO_ESTANDAR de config_comisiones, default S/5).
+        $comisionEquipo = 5.00;
+        if (Schema::hasTable('config_comisiones')) {
+            $valor = DB::table('config_comisiones')->where('clave', 'EQUIPO_ESTANDAR')->value('valor');
+            if ($valor !== null) {
+                $comisionEquipo = (float) $valor;
+            }
+        }
+
+        DB::table('ventas')->where('id', $id)->update([
+            'comision_estado'   => 'APROBADA',
+            'comision_generada' => $comisionEquipo,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Desembolso confirmado. Comisión del agente liberada: S/ ' . number_format($comisionEquipo, 2),
+        ]);
     }
 
     // ── POST /financieras/{id}/revertir-desembolso ────────────────────────────
@@ -162,16 +162,15 @@ class PanelFinancierasController extends Controller
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
-        $updated = DB::table('reporte_categorias')
+        $updated = DB::table('ventas')
             ->where('id', $id)
             ->where('comision_estado', 'APROBADA')
             ->update([
-                'comision_estado'           => 'PENDIENTE',
-                'desembolso_confirmado_en'  => null,
-                'desembolso_confirmado_por' => null,
+                'comision_estado'   => 'PENDIENTE',
+                'comision_generada' => 0,
             ]);
 
-        if (!$updated) {
+        if (! $updated) {
             return response()->json(['success' => false, 'message' => 'Registro no encontrado o no está en estado aprobado.'], 404);
         }
 

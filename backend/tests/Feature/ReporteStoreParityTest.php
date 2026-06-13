@@ -76,6 +76,45 @@ class ReporteStoreParityTest extends TestCase
         $this->assertDatabaseCount('reportes', 1);
     }
 
+    public function test_equipo_cuotas_pendiente_y_desembolso_libera_comision(): void
+    {
+        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+        $admin    = Usuario::factory()->admin()->create();
+
+        // Equipo a CUOTAS sin inventario_tienda_id (salta la guardia de stock B1).
+        $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha'              => now()->toDateString(),
+                'efectivo_entregado' => 300,
+                'ventas' => [[
+                    'tipo_venta' => 'EQUIPO', 'monto_total' => 300, 'efectivo_inicial' => 300,
+                    'producto_nombre' => 'iPhone 15', 'tipo_pago' => 'CUOTAS', 'financiera' => 'KREDITO',
+                    'por_cobrar_financiera' => 1200, 'precio_venta' => 1500, 'costo_snap' => 1000,
+                ]],
+            ]))->assertCreated();
+
+        $venta = DB::table('ventas')->where('vendedor_id', $vendedor->id)->where('tipo_venta', 'EQUIPO')->first();
+        $this->assertSame('PENDIENTE', $venta->comision_estado);     // diferida hasta el desembolso
+        $this->assertSame(0.0, (float) $venta->comision_generada);
+
+        // D1 — el panel de financieras (esquema normalizado) lo lista como pendiente.
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/financieras?mes=' . now()->format('Y-m'))
+            ->assertOk()
+            ->assertJsonPath('totales.count_pendiente', 1)
+            ->assertJsonPath('data.0.detalle.producto_nombre', 'iPhone 15');
+
+        // D2 — confirmar desembolso → APROBADA + comisión del agente liberada (S/5).
+        $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/v1/financieras/{$venta->id}/confirmar-desembolso")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $after = DB::table('ventas')->where('id', $venta->id)->first();
+        $this->assertSame('APROBADA', $after->comision_estado);
+        $this->assertSame(5.0, (float) $after->comision_generada);
+    }
+
     private function payload(Usuario $usuario, array $overrides = []): array
     {
         return array_replace([

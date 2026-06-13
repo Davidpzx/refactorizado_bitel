@@ -191,7 +191,11 @@ class ReporteController extends Controller
                     'monto_total'      => $vd['monto_total'],
                     'efectivo_inicial' => $vd['efectivo_inicial'] ?? $vd['monto_total'],
                     'comision_generada' => $comisionTotal,
-                    'comision_estado'  => 'ACTIVA',
+                    // Equipos a cuotas: comisión diferida (PENDIENTE) hasta confirmar el desembolso de la financiera.
+                    'comision_estado'  => ($vd['tipo_venta'] === 'EQUIPO'
+                        && strtoupper((string) ($vd['tipo_pago'] ?? 'CONTADO')) === 'CUOTAS')
+                            ? 'PENDIENTE'
+                            : 'ACTIVA',
                     'es_remate'        => (bool) ($vd['es_remate'] ?? false),
                     'es_extranjero'    => (bool) ($vd['es_extranjero'] ?? false),
                 ]);
