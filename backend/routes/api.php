@@ -176,6 +176,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
     Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
+    Route::post('bipay/transferir',    [BipayController::class, 'transferir']);
+    Route::post('bipay/ajustar',       [BipayController::class, 'ajustar']);
     Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
     Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
     Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);

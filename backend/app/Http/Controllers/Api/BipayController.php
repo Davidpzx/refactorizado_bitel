@@ -144,6 +144,138 @@ class BipayController extends Controller
         }
     }
 
+    // ── POST /bipay/transferir — Transferencia entre cuentas (admin, D3) ─────────
+    public function transferir(Request $request): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        if (! empty($this->tablasFaltantes())) {
+            return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
+        }
+
+        $data = $request->validate([
+            'cuenta_origen_id'  => ['required', 'integer', 'different:cuenta_destino_id'],
+            'cuenta_destino_id' => ['required', 'integer'],
+            'monto'             => ['required', 'numeric', 'min:0.01'],
+            'observacion'       => ['nullable', 'string', 'max:200'],
+        ]);
+
+        $res = DB::transaction(function () use ($data) {
+            $origen  = DB::table('cuentas_bipay')->where('id', $data['cuenta_origen_id'])->lockForUpdate()->first();
+            $destino = DB::table('cuentas_bipay')->where('id', $data['cuenta_destino_id'])->lockForUpdate()->first();
+            if (! $origen || ! $destino) {
+                return ['error' => 'Cuenta de origen o destino no encontrada.', 'status' => 404];
+            }
+            $monto = (float) $data['monto'];
+            if ((float) $origen->saldo_actual < $monto) {
+                return ['error' => 'Saldo insuficiente en la cuenta de origen.', 'status' => 422];
+            }
+
+            // Resta del origen: primero de bipay, el resto de anypay (ninguno negativo).
+            $oBipay = (float) $origen->saldo_bipay;
+            $oAnypay = (float) $origen->saldo_anypay;
+            $deBipay = min($oBipay, $monto);
+            $nuevoOBipay = $oBipay - $deBipay;
+            $nuevoOAnypay = $oAnypay - ($monto - $deBipay);
+
+            DB::table('cuentas_bipay')->where('id', $origen->id)->update([
+                'saldo_bipay'  => $nuevoOBipay,
+                'saldo_anypay' => $nuevoOAnypay,
+                'saldo_actual' => $nuevoOBipay + $nuevoOAnypay,
+            ]);
+
+            $nuevoDBipay = (float) $destino->saldo_bipay + $monto;
+            DB::table('cuentas_bipay')->where('id', $destino->id)->update([
+                'saldo_bipay'  => $nuevoDBipay,
+                'saldo_actual' => $nuevoDBipay + (float) $destino->saldo_anypay,
+            ]);
+
+            DB::table('transacciones_bipay')->insert([
+                'cuenta_origen_id'  => $origen->id,
+                'cuenta_destino_id' => $destino->id,
+                'tipo_operacion'    => 'TRANSFERENCIA',
+                'plataforma'        => 'AMBOS',
+                'monto'             => $monto,
+                'saldo_origen_pre'  => $oBipay,
+                'saldo_anypay_pre'  => $oAnypay,
+                'observacion'       => $data['observacion'] ?? null,
+                'creado_por'        => auth()->id(),
+                'created_at'        => now(),
+            ]);
+
+            return ['ok' => true, 'origen' => $origen->alias, 'destino' => $destino->alias, 'monto' => $monto];
+        });
+
+        if (isset($res['error'])) {
+            return response()->json(['success' => false, 'message' => $res['error']], $res['status']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Transferencia de S/ ' . number_format($res['monto'], 2) . " de {$res['origen']} a {$res['destino']}.",
+        ]);
+    }
+
+    // ── POST /bipay/ajustar — Ajuste manual de saldo con motivo (admin, D3) ──────
+    public function ajustar(Request $request): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        if (! empty($this->tablasFaltantes())) {
+            return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
+        }
+
+        $data = $request->validate([
+            'cuenta_id'    => ['required', 'integer'],
+            'saldo_bipay'  => ['required', 'numeric', 'min:0'],
+            'saldo_anypay' => ['required', 'numeric', 'min:0'],
+            'motivo'       => ['required', 'string', 'min:5', 'max:200'],
+        ]);
+
+        $res = DB::transaction(function () use ($data) {
+            $cuenta = DB::table('cuentas_bipay')->where('id', $data['cuenta_id'])->lockForUpdate()->first();
+            if (! $cuenta) {
+                return ['error' => 'Cuenta no encontrada.', 'status' => 404];
+            }
+            $nuevoBipay = (float) $data['saldo_bipay'];
+            $nuevoAnypay = (float) $data['saldo_anypay'];
+            $nuevoTotal = $nuevoBipay + $nuevoAnypay;
+            $diferencia = round($nuevoTotal - (float) $cuenta->saldo_actual, 2);
+
+            DB::table('cuentas_bipay')->where('id', $cuenta->id)->update([
+                'saldo_bipay'  => $nuevoBipay,
+                'saldo_anypay' => $nuevoAnypay,
+                'saldo_actual' => $nuevoTotal,
+            ]);
+
+            DB::table('transacciones_bipay')->insert([
+                'cuenta_origen_id' => $cuenta->id,
+                'tipo_operacion'   => 'AJUSTE',
+                'plataforma'       => 'AMBOS',
+                'monto'            => $diferencia,
+                'saldo_origen_pre' => (float) $cuenta->saldo_bipay,
+                'saldo_anypay_pre' => (float) $cuenta->saldo_anypay,
+                'observacion'      => $data['motivo'],
+                'creado_por'       => auth()->id(),
+                'created_at'       => now(),
+            ]);
+
+            return ['ok' => true, 'diferencia' => $diferencia];
+        });
+
+        if (isset($res['error'])) {
+            return response()->json(['success' => false, 'message' => $res['error']], $res['status']);
+        }
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'Saldo ajustado correctamente.',
+            'diferencia' => $res['diferencia'],
+        ]);
+    }
+
     public function estadoCajero(Request $request): JsonResponse
     {
         $contexto = $this->contextoCajero($request);
