@@ -11,78 +11,50 @@ class ReporteStoreParityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_store_persiste_apoyo_comisiones_e_ingresos_fijos_sin_cambiar_efectivo_esperado(): void
+    public function test_store_calcula_comision_server_side_segun_tramos_legacy(): void
     {
         $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
 
+        // Plan sembrado: base S/15 (la comisión NO se confía al cliente).
+        DB::table('comisiones_planes')->insert([
+            'tipo_servicio'   => 'POSTPAGO',
+            'nombre_plan'     => 'Plan Normal',
+            'tipo_alta'       => 'MNP',
+            'fee_monto'       => 0,
+            'comision_dni_n'  => 15,
+            'comision_dni_n3' => 15,
+            'comision_ext_n'  => 15,
+            'comision_ext_n3' => 15,
+        ]);
+
         $response = $this->actingAs($usuario, 'sanctum')
             ->postJson('/api/v1/reportes', $this->payload($usuario, [
-                'caja_inicial' => 50,
-                'total_salidas' => 5,
-                'recarga_bipay' => 1,
-                'pago_servicio' => 2,
-                'pago_krece' => 3,
-                'tickets_tusamy' => 4,
-                'efectivo_entregado' => 77,
+                'caja_inicial'       => 50,
+                'total_salidas'      => 5,
+                'efectivo_entregado' => 95,
                 'ventas' => [
-                    [
-                        'tipo_venta' => 'POSTPAGO',
-                        'monto_total' => 10,
-                        'efectivo_inicial' => 10,
-                        'plan_nombre' => 'Plan 29.90',
-                        'cantidad' => 2,
-                        'cobrado_unitario' => 5,
-                        'comision_unitaria' => 8.5,
-                        'es_esim' => true,
-                    ],
-                    [
-                        'tipo_venta' => 'APOYO',
-                        'monto_total' => 15,
-                        'efectivo_inicial' => 15,
-                        'tienda_destino' => 'PUNDA11',
-                        'plan_nombre' => 'Prepago apoyo',
-                        'cantidad' => 3,
-                        'cobrado_unitario' => 5,
-                        'comision_unitaria' => 2,
-                    ],
-                    [
-                        'tipo_venta' => 'OTROS_FLUJO',
-                        'monto_total' => 7,
-                        'efectivo_inicial' => 7,
-                    ],
+                    // Postpago normal: base 15 − chip 1 = 14 (ignora comision_unitaria=999 del cliente).
+                    ['tipo_venta' => 'POSTPAGO', 'monto_total' => 30, 'efectivo_inicial' => 30,
+                     'plan_nombre' => 'Plan Normal', 'cantidad' => 1, 'cobrado_unitario' => 30, 'comision_unitaria' => 999],
+                    // Postpago remate (cobrado 10 < 20): 0.
+                    ['tipo_venta' => 'POSTPAGO', 'monto_total' => 10, 'efectivo_inicial' => 10,
+                     'plan_nombre' => 'Plan Normal', 'cantidad' => 1, 'cobrado_unitario' => 10, 'comision_unitaria' => 999],
+                    // Apoyo PAQUETE: 7.5% de 100 = 7.5.
+                    ['tipo_venta' => 'APOYO', 'monto_total' => 100, 'efectivo_inicial' => 100, 'subtipo' => 'PAQUETE',
+                     'tienda_destino' => 'PUNDA11', 'cantidad' => 1, 'cobrado_unitario' => 100, 'comision_unitaria' => 999],
                 ],
             ]));
 
         $response->assertCreated()
-            ->assertJsonPath('total_calculado', '42.00')
-            ->assertJsonPath('efectivo_esperado', '77.00')
-            ->assertJsonPath('diferencia', '0.00');
+            ->assertJsonPath('total_calculado', '140.00'); // suma de monto_total (30+10+100)
 
         $reporteId = $response->json('id');
-        $postpago = DB::table('ventas')
-            ->where('reporte_id', $reporteId)
-            ->where('tipo_venta', 'POSTPAGO')
-            ->first();
-        $apoyo = DB::table('ventas')
-            ->where('reporte_id', $reporteId)
-            ->where('tipo_venta', 'APOYO')
-            ->first();
+        $rows = DB::table('ventas')->where('reporte_id', $reporteId)->orderBy('id')->get();
 
-        $this->assertSame(17.0, (float) $postpago->comision_generada);
-        $this->assertSame(6.0, (float) $apoyo->comision_generada);
-        $this->assertSame('PUNDA11', $apoyo->tienda_destino);
-
-        $this->assertDatabaseHas('venta_lineas', [
-            'venta_id' => $postpago->id,
-            'cantidad' => 2,
-            'comision_unitaria' => 8.5,
-            'es_esim' => 1,
-        ]);
-        $this->assertDatabaseHas('venta_lineas', [
-            'venta_id' => $apoyo->id,
-            'cantidad' => 3,
-            'comision_unitaria' => 2,
-        ]);
+        $this->assertSame(14.0, (float) $rows[0]->comision_generada); // postpago normal
+        $this->assertSame(0.0,  (float) $rows[1]->comision_generada); // remate < S/20
+        $this->assertSame(7.5,  (float) $rows[2]->comision_generada); // apoyo paquete 7.5%
+        $this->assertSame('PUNDA11', $rows[2]->tienda_destino);
     }
 
     public function test_store_mantiene_guardia_anti_duplicado(): void

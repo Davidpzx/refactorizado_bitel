@@ -10,6 +10,7 @@ use App\Models\ReporteBorrador;
 use App\Models\Venta;
 use App\Models\VentaEquipo;
 use App\Models\VentaLinea;
+use App\Services\ComisionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -108,6 +109,7 @@ class ReporteController extends Controller
         try {
             $ventas_data        = $validated['ventas'] ?? [];
             $total_calculado    = collect($ventas_data)->sum('monto_total');
+            $comisionService    = new ComisionService();
             $total_salidas      = (float) ($validated['total_salidas'] ?? 0);
             $yape               = (float) ($validated['yape'] ?? 0);
             $bipay              = (float) ($validated['bipay'] ?? 0);
@@ -163,6 +165,9 @@ class ReporteController extends Controller
                     $cliente_id = $cliente->id;
                 }
 
+                // B2 — Comisión SERVER-AUTHORITATIVE (tramos del legacy; no se confía en el cliente).
+                $comisionTotal = $comisionService->calcularComisionVenta($vd);
+
                 $venta = Venta::create([
                     'reporte_id'       => $reporte->id,
                     'vendedor_id'      => $validated['agente_id'],
@@ -175,12 +180,7 @@ class ReporteController extends Controller
                         : null,
                     'monto_total'      => $vd['monto_total'],
                     'efectivo_inicial' => $vd['efectivo_inicial'] ?? $vd['monto_total'],
-                    'comision_generada' => in_array($vd['tipo_venta'], ['POSTPAGO', 'PREPAGO', 'APOYO'], true)
-                        ? round(
-                            (float) ($vd['comision_unitaria'] ?? 0) * max(1, (int) ($vd['cantidad'] ?? 1)),
-                            2
-                        )
-                        : 0,
+                    'comision_generada' => $comisionTotal,
                     'comision_estado'  => 'ACTIVA',
                     'es_remate'        => (bool) ($vd['es_remate'] ?? false),
                     'es_extranjero'    => (bool) ($vd['es_extranjero'] ?? false),
@@ -242,7 +242,7 @@ class ReporteController extends Controller
                         'tipo_alta'         => $vd['tipo_alta'] ?? 'LN',
                         'cantidad'          => $vd['cantidad'] ?? 1,
                         'cobrado_unitario'  => $vd['cobrado_unitario'] ?? $vd['monto_total'],
-                        'comision_unitaria' => $vd['comision_unitaria'] ?? 0,
+                        'comision_unitaria' => round($comisionTotal / max(1, (int) ($vd['cantidad'] ?? 1)), 2),
                         'es_esim'           => (bool) ($vd['es_esim'] ?? false),
                     ]);
                 }
