@@ -4,8 +4,7 @@ export function Card({ className = '', ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={[
-        'relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-26px_rgba(15,23,42,0.45)] backdrop-blur-xl',
-        'dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]',
+        'premium-surface',
         className,
       ].join(' ')}
       {...props}

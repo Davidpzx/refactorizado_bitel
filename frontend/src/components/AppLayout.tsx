@@ -414,7 +414,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="app-canvas flex-1 overflow-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

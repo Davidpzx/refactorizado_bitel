@@ -33,25 +33,31 @@ export function LoginPage() {
   })()
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-sm p-8">
+    <div className="public-premium-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
+      <div className="public-premium-card w-full max-w-sm rounded-3xl p-7 sm:p-8">
         {/* Logo / título */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mb-4">
+        <div className="mb-8 text-center">
+          <div className="relative mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-300/40 bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_16px_35px_-16px_rgba(79,70,229,0.9)]">
+            <span className="absolute inset-0 rounded-2xl bg-white/10" />
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">SIS-KYRO</h1>
-          <p className="text-sm text-gray-500 mt-1">Sistema ERP Bitel</p>
+          <h1
+            className="text-2xl font-bold tracking-[0.14em] text-gray-900 dark:text-zinc-50"
+            style={{ fontFamily: "'Orbitron', sans-serif" }}
+          >
+            SIS-KYRO
+          </h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">Acceso seguro al sistema ERP Bitel</p>
         </div>
 
         <form onSubmit={handleSubmit((d) => login(d))} className="space-y-5">
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
               Correo electrónico
             </label>
             <input
@@ -59,7 +65,7 @@ export function LoginPage() {
               type="email"
               autoComplete="email"
               placeholder="usuario@ejemplo.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              className="h-11 w-full rounded-xl border border-gray-300/90 bg-white/75 px-3.5 text-sm text-gray-800 shadow-sm transition-all placeholder:text-gray-400 hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:placeholder:text-zinc-600"
               disabled={isLoggingIn}
               {...register('email')}
             />
@@ -70,7 +76,7 @@ export function LoginPage() {
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
               Contraseña
             </label>
             <input
@@ -78,7 +84,7 @@ export function LoginPage() {
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              className="h-11 w-full rounded-xl border border-gray-300/90 bg-white/75 px-3.5 text-sm text-gray-800 shadow-sm transition-all placeholder:text-gray-400 hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:placeholder:text-zinc-600"
               disabled={isLoggingIn}
               {...register('password')}
             />
@@ -89,8 +95,8 @@ export function LoginPage() {
 
           {/* Error API */}
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <p className="text-sm text-red-600">{errorMessage}</p>
+            <div className="rounded-xl border border-red-200/80 bg-red-50/80 px-3.5 py-2.5 dark:border-red-400/20 dark:bg-red-500/10">
+              <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
             </div>
           )}
 
@@ -98,7 +104,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isLoggingIn}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="h-11 w-full rounded-xl border border-indigo-700 bg-gradient-to-b from-indigo-500 to-indigo-700 px-4 text-sm font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,70,229,0.9)] transition-all hover:-translate-y-px hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:translate-y-0 disabled:opacity-50"
           >
             {isLoggingIn ? (
               <span className="flex items-center justify-center gap-2">

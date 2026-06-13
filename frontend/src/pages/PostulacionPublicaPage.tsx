@@ -130,7 +130,7 @@ function PostulacionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
       {errorDup && (
         <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
           Ya existe una postulación registrada con este DNI.
@@ -269,7 +269,7 @@ function PostulacionForm() {
         ) : (
           <div className="space-y-2">
             {cargaFamiliar.map((row, i) => (
-              <div key={i} className="grid grid-cols-3 gap-2 items-center">
+              <div key={i} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-3">
                 <input
                   type="text"
                   placeholder="Nombre"
@@ -317,7 +317,7 @@ function PostulacionForm() {
         ) : (
           <div className="space-y-2">
             {formacion.map((row, i) => (
-              <div key={i} className="grid grid-cols-4 gap-2 items-center">
+              <div key={i} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="text" placeholder="Institución" value={row.institucion} onChange={(e) => updateFormacion(i, 'institucion', e.target.value)} className={inputCls} />
                 <input type="text" placeholder="Título / carrera" value={row.titulo} onChange={(e) => updateFormacion(i, 'titulo', e.target.value)} className={inputCls} />
                 <input type="text" placeholder="Año inicio" value={row.anio_inicio} onChange={(e) => updateFormacion(i, 'anio_inicio', e.target.value)} className={inputCls} />
@@ -344,7 +344,7 @@ function PostulacionForm() {
         ) : (
           <div className="space-y-2">
             {experiencia.map((row, i) => (
-              <div key={i} className="grid grid-cols-4 gap-2 items-center">
+              <div key={i} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="text" placeholder="Empresa" value={row.empresa} onChange={(e) => updateExperiencia(i, 'empresa', e.target.value)} className={inputCls} />
                 <input type="text" placeholder="Cargo" value={row.cargo} onChange={(e) => updateExperiencia(i, 'cargo', e.target.value)} className={inputCls} />
                 <input type="text" placeholder="Período (ej. 2022-2024)" value={row.periodo} onChange={(e) => updateExperiencia(i, 'periodo', e.target.value)} className={inputCls} />
@@ -365,7 +365,7 @@ function PostulacionForm() {
             { n: 2, nombre: c2Nombre, parentesco: c2Parentesco, telefono: c2Telefono, setNombre: setC2Nombre, setParentesco: setC2Parentesco, setTelefono: setC2Telefono },
             { n: 3, nombre: c3Nombre, parentesco: c3Parentesco, telefono: c3Telefono, setNombre: setC3Nombre, setParentesco: setC3Parentesco, setTelefono: setC3Telefono },
           ].map(({ n, nombre, parentesco, telefono: tel, setNombre, setParentesco, setTelefono: setTel }) => (
-            <div key={n} className="grid grid-cols-3 gap-3 items-center">
+            <div key={n} className="grid grid-cols-1 items-center gap-3 sm:grid-cols-3">
               <Field label={`Contacto ${n} — Nombre`}>
                 <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className={inputCls} />
               </Field>
@@ -384,7 +384,7 @@ function PostulacionForm() {
         <button
           type="submit"
           disabled={enviar.isPending}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm transition-colors"
+          className="rounded-xl border border-indigo-700 bg-gradient-to-b from-indigo-500 to-indigo-700 px-8 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,70,229,0.9)] transition-all hover:-translate-y-px hover:brightness-110 disabled:translate-y-0 disabled:opacity-50"
         >
           {enviar.isPending ? 'Enviando...' : 'Enviar postulación'}
         </button>
@@ -393,7 +393,7 @@ function PostulacionForm() {
   )
 }
 
-const inputCls = 'w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
+const inputCls = 'w-full rounded-lg border border-gray-300/80 bg-white/75 px-3 py-2 text-sm text-gray-800 shadow-sm transition-all placeholder:text-gray-400 hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:placeholder:text-zinc-600'
 
 function Section({
   title,
@@ -405,15 +405,15 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-1 flex-1 mr-4">
+    <section className="rounded-2xl border border-gray-200/75 bg-white/45 p-4 shadow-[0_12px_30px_-26px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.07] dark:bg-white/[0.025] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="flex-1 border-b border-gray-200/80 pb-2 text-xs font-bold uppercase tracking-[0.14em] text-gray-700 dark:border-white/[0.07] dark:text-zinc-200">
           {title}
         </h2>
         {action}
       </div>
       {children}
-    </div>
+    </section>
   )
 }
 
@@ -428,7 +428,7 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-zinc-400">{label}</label>
       {children}
     </div>
   )
@@ -437,18 +437,19 @@ function Field({
 export function PostulacionPublicaPage() {
   return (
     <QueryClientProvider client={qc}>
-      <div className="min-h-screen bg-gray-50 py-8 px-4">
-        <div className="max-w-3xl mx-auto">
+      <div className="public-premium-shell min-h-screen px-4 py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
           <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-amber-400 shadow-[0_0_18px_rgba(99,102,241,0.35)]" />
             <h1
-              className="text-2xl font-bold tracking-widest uppercase text-gray-900"
+              className="text-2xl font-bold uppercase tracking-[0.16em] text-gray-900 dark:text-zinc-50"
               style={{ fontFamily: "'Orbitron', sans-serif" }}
             >
               SIS-KYRO
             </h1>
             <p className="mt-2 text-gray-500 text-sm">Formulario de postulación</p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <div className="public-premium-card rounded-3xl p-5 sm:p-8">
             <PostulacionForm />
           </div>
         </div>
