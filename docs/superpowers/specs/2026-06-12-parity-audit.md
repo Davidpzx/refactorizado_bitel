@@ -66,8 +66,8 @@ Por cada pantalla:
 
 | ID | Tipo | Sev | Brecha | Dónde corregir |
 |----|------|-----|--------|----------------|
-| A1 | FUNCIONAL | MEDIA | **Anti-spoofing "salto imposible"** ausente. Legacy calcula velocidad entre marcaciones; si >200 km/h marca `requiere_revision=1`. El refactor no lo implementa. | Codex → `AsistenciaController@mark` |
-| A2 | FUNCIONAL | MEDIA | **Recuperación de `deuda_dias`** ausente. Legacy reduce días de deuda del agente si trabaja en día de descanso o acumula horas extra ≥1.5 jornada. `calcularDeudaYExtra` calcula min_extra/deuda pero no toca `deuda_dias`. | Codex → `AsistenciaController` |
+| A1 | FUNCIONAL | MEDIA | ✅ **RESUELTO.** `detectarSaltoImposible`: velocidad entre la entrada y la marcación actual; si >200 km/h → `requiere_revision=1`. Suite verde. | Claude ✅ |
+| A2 | FUNCIONAL | MEDIA | ✅ **RESUELTO.** `recuperarDeudaDias` en salida: si `deuda_dias>0` y trabajó en día de descanso o ≥1.5 jornadas, descuenta `floor(horas/jornada)` días (jornada 9 c/refri, 6 s/refri). Paridad legacy 447-470. Suite verde. | Claude ✅ |
 | A3 | FUNCIONAL | BAJA | **60s tolerancia-revocable QR inerte desde el front.** El backend la soporta, pero `TerminalAsistenciaPage` no captura ni envía `hora_intento_gps`/`hora_apertura_camera` en la ruta QR, así que el momento siempre es `NOW()` (se pierde el beneficio). | Claude → `TerminalAsistenciaPage` |
 | A4 | VISUAL/FUNC | MEDIA | **QR es input manual de texto, no escáner de cámara.** Legacy `modalQR` escanea el QR con la cámara (jsQR). El refactor solo permite pegar/escribir el token. Degrada UX y obliga a transcribir. | Claude → `EscanerQR` (añadir lectura de cámara) |
 | A5 | VISUAL | BAJA | **Token de emergencia** solo accesible vía fallback. Legacy lo expone también como enlace "Usar Token" en la pantalla principal (campo 6 díg colapsable). | Claude → `TerminalAsistenciaPage` |
