@@ -94,6 +94,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
     Route::post('reportes/{reporte}/aprobar-edicion',        [ReporteController::class, 'aprobarEdicion']);
+    Route::put('reportes/{reporte}/reprocesar',             [ReporteController::class, 'reprocesar']);
     Route::get('reportes/{reporte}/historial',              [ReporteController::class, 'historial']);
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
 

@@ -115,6 +115,46 @@ class ReporteStoreParityTest extends TestCase
         $this->assertSame(5.0, (float) $after->comision_generada);
     }
 
+    public function test_reprocesar_revierte_stock_y_recrea_ventas(): void
+    {
+        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+
+        $invId = DB::table('inventario_tiendas')->insertGetId([
+            'tienda_id' => 'PUNDA50', 'tipo' => 'EQUIPO', 'producto_nombre' => 'iPhone 15',
+            'cantidad' => 1, 'estado' => 'DISPONIBLE',
+            'precio_costo' => 1000, 'precio_minimo' => 1200, 'precio_normal' => 1500,
+            'fecha_registro' => now(),
+        ]);
+
+        // Store: vende el equipo (stock 1 → 0).
+        $resp = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 1500,
+                'ventas' => [[
+                    'tipo_venta' => 'EQUIPO', 'monto_total' => 1500, 'efectivo_inicial' => 1500,
+                    'producto_nombre' => 'iPhone 15', 'tipo_pago' => 'CONTADO',
+                    'inventario_tienda_id' => $invId, 'precio_venta' => 1500, 'costo_snap' => 1000,
+                ]],
+            ]))->assertCreated();
+        $reporteId = $resp->json('id');
+
+        $this->assertSame(0, (int) DB::table('inventario_tiendas')->where('id', $invId)->value('cantidad'));
+        $this->assertSame(1, DB::table('ventas')->where('reporte_id', $reporteId)->count());
+
+        // Autorizar edición y reprocesar SIN el equipo → el stock debe volver a 1.
+        DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'APROBADO']);
+
+        $this->actingAs($vendedor, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 0, 'ventas' => [],
+            ]))->assertOk();
+
+        $this->assertSame(1, (int) DB::table('inventario_tiendas')->where('id', $invId)->value('cantidad'));
+        $this->assertSame('DISPONIBLE', DB::table('inventario_tiendas')->where('id', $invId)->value('estado'));
+        $this->assertSame(0, DB::table('ventas')->where('reporte_id', $reporteId)->count());
+        $this->assertSame('CERRADO', DB::table('reportes')->where('id', $reporteId)->value('estado_edicion'));
+    }
+
     private function payload(Usuario $usuario, array $overrides = []): array
     {
         return array_replace([
