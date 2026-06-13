@@ -4,6 +4,8 @@ import { RefreshCw, Send, Trash2, FileCheck, AlertCircle, Clock, CheckCircle2 } 
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Select } from '../../components/ui/select'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import type { PaginatedResponse } from '../../types/pagination'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -98,18 +100,14 @@ export function ComprobantesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Comprobantes Electrónicos</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestión de boletas y facturas enviadas a SUNAT</p>
-        </div>
+      <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT" accent="#10b981">
         <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ['comprobantes'] })}>
           <RefreshCw size={14} className="mr-2" /> Actualizar
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <ListToolbar description="Segmenta los comprobantes por estado de envío y tipo">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600 shrink-0">Estado:</label>
@@ -139,13 +137,13 @@ export function ComprobantesPage() {
           </div>
           <span className="text-sm text-gray-500 ml-auto">{total} comprobante{total !== 1 ? 's' : ''}</span>
         </div>
-      </div>
+      </ListToolbar>
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="premium-surface">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
+          <table className="premium-table w-full text-sm">
+            <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Número</th>
                 <th className="px-4 py-3 text-left">Tipo</th>

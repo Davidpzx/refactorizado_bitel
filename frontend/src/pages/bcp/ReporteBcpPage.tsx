@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { CreditCard, AlertTriangle, CheckCircle } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -75,9 +77,11 @@ export function ReporteBcpPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-        <CreditCard size={20} className="text-blue-600" /> Módulo BCP
-      </h1>
+      <PageHeader title="Módulo BCP" subtitle="Control de operaciones, saldos e incidencias por tienda" accent="#2563eb">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200/70 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300">
+          <CreditCard size={17} />
+        </span>
+      </PageHeader>
 
       {data?.warning && (
         <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
@@ -87,7 +91,7 @@ export function ReporteBcpPage() {
 
       {/* Agente: formulario de envío */}
       {!esAdmin && !data?.warning && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-xl">
+        <div className="premium-surface max-w-xl p-6">
           <h2 className="font-semibold text-gray-800 mb-4 text-sm">Enviar Reporte BCP</h2>
           {success && (
             <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm mb-4">
@@ -175,7 +179,7 @@ export function ReporteBcpPage() {
       {esAdmin && (
         <>
           {/* Filtros */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <ListToolbar description="Consulta reportes dentro del rango seleccionado">
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -193,7 +197,7 @@ export function ReporteBcpPage() {
               </div>
               <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
             </div>
-          </div>
+          </ListToolbar>
 
           {/* KPIs */}
           {data?.kpis && (
@@ -204,7 +208,7 @@ export function ReporteBcpPage() {
                 { label: 'Total Operaciones', value: String(data.kpis.total_operaciones) },
                 { label: 'Registros',         value: String(data.kpis.total_registros) },
               ].map(k => (
-                <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div key={k.label} className="premium-kpi p-4">
                   <p className="text-xs text-gray-500 mb-1">{k.label}</p>
                   <p className="text-xl font-bold text-gray-900">{k.value}</p>
                 </div>
@@ -229,16 +233,16 @@ export function ReporteBcpPage() {
           )}
 
           {/* Tabla */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="premium-surface">
             <div className="p-4 border-b border-gray-200">
               <h2 className="font-semibold text-gray-800 text-sm">
                 {isLoading ? 'Cargando...' : `${data?.reportes?.length ?? 0} registros`}
               </h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="premium-table w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
+                  <tr>
                     {['Fecha', 'Tienda', 'Agente', 'Turno', 'Operaciones', 'Efectivo', 'Tarjeta', 'Incidencias'].map(h => (
                       <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
                     ))}

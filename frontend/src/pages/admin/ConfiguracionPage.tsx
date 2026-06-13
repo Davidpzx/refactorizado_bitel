@@ -72,8 +72,7 @@ function FormSection({
 }) {
   return (
     <section
-      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm
-        dark:border-[rgba(255,255,255,0.08)] dark:bg-[#18181b] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.55)]"
+      className="premium-surface p-5"
     >
       <div
         aria-hidden

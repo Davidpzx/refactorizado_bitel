@@ -589,7 +589,7 @@ export function ReporteDetallePage() {
       </div>
 
       {/* ── Cabecera del reporte ── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+      <div className="premium-surface mb-6">
         {/* Banda de estado */}
         <div
           className={`h-1.5 w-full ${
@@ -631,15 +631,15 @@ export function ReporteDetallePage() {
 
           {/* Métricas rápidas */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+            <div className="premium-kpi px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Tienda</p>
               <p className="text-sm font-bold text-gray-900">{reporte.tienda_id}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+            <div className="premium-kpi px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Agente</p>
               <p className="text-sm font-bold text-gray-900">#{reporte.agente_id}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg px-3 py-2.5">
+            <div className="premium-kpi px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Total ventas</p>
               <p className="text-sm font-bold text-gray-900 tabular-nums">{sol(totalVentas)}</p>
               {ventas.length > 0 && (

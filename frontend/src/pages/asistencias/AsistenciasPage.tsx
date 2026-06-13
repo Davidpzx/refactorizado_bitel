@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { Download, AlertTriangle, Clock, UserCheck, UserX, AlertCircle } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -104,17 +106,14 @@ export function AsistenciasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <Clock size={20} className="text-blue-600" /> Panel de Asistencias
-        </h1>
+      <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes" accent="#2563eb">
         <Button variant="outline" size="sm" onClick={exportar}>
           <Download size={14} /> Exportar CSV
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <ListToolbar description="Acota el periodo y el agente que deseas revisar">
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -145,7 +144,7 @@ export function AsistenciasPage() {
             setFilters(reset); setApplied(reset); setPage(1)
           }}>Hoy</Button>
         </div>
-      </div>
+      </ListToolbar>
 
       {/* KPI Cards */}
       {kpis && (
@@ -156,7 +155,7 @@ export function AsistenciasPage() {
             { label: 'Tardanzas',     value: kpis.tardanzas,          Icon: AlertCircle, color: 'text-amber-700',  border: 'border-amber-200' },
             { label: 'Pend. Revisión',value: kpis.pendientes_revision, Icon: Clock,      color: 'text-blue-700',   border: 'border-blue-200' },
           ].map(k => (
-            <div key={k.label} className={`bg-white rounded-xl border p-4 ${k.border}`}>
+            <div key={k.label} className={`premium-kpi p-4 ${k.border}`}>
               <div className="flex items-center gap-1 mb-1">
                 <k.Icon size={13} className={k.color} />
                 <p className="text-xs text-gray-500">{k.label}</p>
@@ -168,7 +167,7 @@ export function AsistenciasPage() {
       )}
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="premium-surface">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 text-sm">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros`}
@@ -176,9 +175,9 @@ export function AsistenciasPage() {
           <span className="text-xs text-gray-400">Pág. {meta?.current_page ?? 1}/{meta?.last_page ?? 1}</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="premium-table w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr>
                 {['Fecha', 'Día', 'Agente', 'Tienda', 'Ingreso', 'Salida', 'Método', 'Estado', 'Acciones'].map(h => (
                   <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
                 ))}

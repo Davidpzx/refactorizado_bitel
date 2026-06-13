@@ -126,6 +126,92 @@ html.dark textarea:focus-visible {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.premium-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.premium-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.7), rgba(255, 194, 0, 0.5) 42%, transparent 78%);
+}
+
+.premium-kpi {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.premium-kpi:hover {
+  transform: translateY(-2px);
+  border-color: rgba(129, 140, 248, 0.55);
+  box-shadow: 0 18px 36px -26px rgba(79, 70, 229, 0.45);
+}
+.premium-kpi::after {
+  content: '';
+  position: absolute;
+  width: 5rem;
+  height: 5rem;
+  right: -2.5rem;
+  top: -2.5rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.08);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.premium-table thead {
+  background: rgba(248, 250, 252, 0.82);
+}
+.premium-table th {
+  border-bottom: 1px solid rgba(203, 213, 225, 0.72);
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.premium-table tbody tr {
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.premium-table tbody tr:hover {
+  background: rgba(238, 242, 255, 0.42);
+}
+
+html.dark .premium-surface,
+html.dark .premium-kpi {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(24, 24, 27, 0.68);
+  box-shadow: 0 22px 50px -30px rgba(0, 0, 0, 0.95);
+}
+html.dark .premium-kpi:hover {
+  border-color: rgba(129, 140, 248, 0.25);
+}
+html.dark .premium-table thead {
+  background: rgba(255, 255, 255, 0.035);
+}
+html.dark .premium-table th {
+  border-color: rgba(255, 255, 255, 0.07);
+  color: #a1a1aa;
+}
+html.dark .premium-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    DARK MODE — Overrides globales para clases Tailwind existentes.
    Al estar fuera de @layer, ganan sobre las utilities de Tailwind.

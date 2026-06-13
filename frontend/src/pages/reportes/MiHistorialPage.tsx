@@ -5,6 +5,8 @@ import { api } from '../../services/api'
 import type { PaginatedResponse } from '../../types/pagination'
 import type { Reporte } from '../../types/reporte'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, Edit, PenLine } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -33,8 +35,8 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="premium-surface relative w-full max-w-md space-y-4 p-6">
         <h3 className="font-semibold text-gray-900">Solicitar Edición de Reporte #{String(reporteId).padStart(4, '0')}</h3>
         <p className="text-sm text-gray-500">Explica brevemente el motivo por el que necesitas editar este reporte.</p>
         <textarea
@@ -98,22 +100,22 @@ export function MiHistorialPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Mi Historial Personal</h1>
+      <PageHeader title="Mi Historial Personal" subtitle="Consulta tus cierres, diferencias y solicitudes de edición" accent="#6366f1" />
 
       {/* KPIs personales de la página actual */}
       {!isLoading && reportes.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="premium-kpi p-4">
             <p className="text-xs text-gray-500 mb-1">Total vendido (página)</p>
             <p className="text-lg font-bold text-blue-700">{fmt(totalVendido)}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="premium-kpi p-4">
             <p className="text-xs text-gray-500 mb-1">Diferencia acumulada</p>
             <p className={`text-lg font-bold ${totalDiferencia < 0 ? 'text-red-600' : totalDiferencia > 0 ? 'text-yellow-600' : 'text-gray-600'}`}>
               {totalDiferencia > 0 ? '+' : ''}{fmt(totalDiferencia)}
             </p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="premium-kpi p-4">
             <p className="text-xs text-gray-500 mb-1">Reportes con descuadre</p>
             <p className={`text-lg font-bold ${reportesConDif > 0 ? 'text-red-600' : 'text-green-700'}`}>
               {reportesConDif} de {reportes.length}
@@ -123,7 +125,7 @@ export function MiHistorialPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-end gap-3">
+      <ListToolbar description="Busca reportes por periodo y estado">
         <div>
           <label className="block text-xs text-gray-500 mb-1">Desde</label>
           <input type="date" value={filters.fecha_desde}
@@ -145,10 +147,10 @@ export function MiHistorialPage() {
         </div>
         <Button onClick={applyFilters}>Buscar</Button>
         <Button variant="outline" onClick={() => { const r = { fecha_desde: '', fecha_hasta: '', estado: '' }; setFilters(r); setApplied({ ...r, page: 1 }) }}>Limpiar</Button>
-      </div>
+      </ListToolbar>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="premium-surface">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 text-sm">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros`}
@@ -156,9 +158,9 @@ export function MiHistorialPage() {
           <span className="text-xs text-gray-400">Pág. {meta?.current_page ?? 1}/{meta?.last_page ?? 1}</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="premium-table w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr>
                 {['ID', 'Fecha', 'Total', 'F. Entregado', 'Diferencia', 'Estado', 'Acciones'].map(h => (
                   <th key={h} className={`px-4 py-3 text-xs font-semibold text-gray-500 ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}

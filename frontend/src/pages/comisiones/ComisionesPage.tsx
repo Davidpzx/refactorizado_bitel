@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
+import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -253,8 +255,8 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="premium-surface w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h3 className="font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
@@ -293,12 +295,8 @@ export function ComisionesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Comisiones de Planes</h1>
-          <p className="text-sm text-gray-500 mt-1">Configura las tarifas de comisión por plan de servicio</p>
-        </div>
-        <div className="flex gap-3">
+      <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio" accent="#8b5cf6">
+        <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
           </Button>
@@ -306,10 +304,10 @@ export function ComisionesPage() {
             <Plus size={15} className="mr-2" /> Nuevo plan
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filtro */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <ListToolbar description="Filtra el catálogo por familia de servicio">
         <div className="flex items-center gap-4">
           <Label htmlFor="filtro_tipo" className="shrink-0">Filtrar por tipo:</Label>
           <Select
@@ -327,13 +325,13 @@ export function ComisionesPage() {
           </Select>
           <span className="text-sm text-gray-500">{planes.length} planes</span>
         </div>
-      </div>
+      </ListToolbar>
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="premium-surface">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
+          <table className="premium-table w-full text-sm">
+            <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Tipo</th>
                 <th className="px-4 py-3 text-left">Nombre del plan</th>

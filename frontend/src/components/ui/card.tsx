@@ -3,14 +3,18 @@ import type { HTMLAttributes } from 'react'
 export function Card({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={['rounded-xl border border-gray-200 bg-white shadow-sm dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]', className].join(' ')}
+      className={[
+        'relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-26px_rgba(15,23,42,0.45)] backdrop-blur-xl',
+        'dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]',
+        className,
+      ].join(' ')}
       {...props}
     />
   )
 }
 
 export function CardHeader({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={['flex flex-col space-y-1.5 p-4 border-b border-gray-200', className].join(' ')} {...props} />
+  return <div className={['flex flex-col space-y-1.5 border-b border-gray-200/80 p-4 dark:border-white/[0.07]', className].join(' ')} {...props} />
 }
 
 export function CardContent({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {

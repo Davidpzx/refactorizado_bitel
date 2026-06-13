@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { reportesApi } from '../../services/reportes.api'
 import { Button } from '../../components/ui/button'
+import { PageHeader } from '../../components/PageHeader'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -120,6 +121,12 @@ export function EditarReportePage() {
         </span>
       </div>
 
+      <PageHeader
+        title={`Editar Reporte #${String(reporteId).padStart(4, '0')}`}
+        subtitle="Corrige únicamente los campos autorizados por administración"
+        accent="#6366f1"
+      />
+
       {/* Banner: edición aprobada */}
       <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start gap-3">
         <CheckCircle2 size={18} className="text-indigo-500 mt-0.5 shrink-0" />
@@ -134,7 +141,7 @@ export function EditarReportePage() {
       </div>
 
       {/* Datos actuales — resumen de referencia */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+      <div className="premium-surface space-y-4 p-5">
         <h2 className="text-sm font-semibold text-gray-900">Datos actuales del reporte</h2>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
@@ -161,7 +168,7 @@ export function EditarReportePage() {
       </div>
 
       {/* Formulario de edición */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
+      <div className="premium-surface space-y-5 p-5">
         <h2 className="text-sm font-semibold text-gray-900">Campos a corregir</h2>
 
         {/* Efectivo entregado */}
