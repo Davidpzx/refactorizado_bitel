@@ -43,8 +43,8 @@ interface DiagnosticoResponse {
 function TableSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h2 className="mb-2 px-1 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-gray-600 dark:text-zinc-300">{title}</h2>
-      <div className="premium-surface">
+      <h2 className="mb-2 px-1 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-kyro-body">{title}</h2>
+      <div className="kyro-card overflow-hidden">
         {children}
       </div>
     </div>
@@ -60,7 +60,7 @@ export function DiagnosticoPage() {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-sm text-gray-400 dark:text-zinc-500">Cargando diagnóstico...</p>
+        <p className="text-sm text-kyro-muted">Cargando diagnóstico...</p>
       </div>
     )
   }
@@ -69,20 +69,20 @@ export function DiagnosticoPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real" accent="#06b6d4">
+        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real">
           <div className="flex flex-wrap items-center gap-2">
             {data.traslados_pendientes > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-300/70 bg-yellow-50/80 px-3 py-1.5 text-xs font-semibold text-yellow-700 dark:border-yellow-400/25 dark:bg-yellow-500/10 dark:text-yellow-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-kyro-warning/30 bg-kyro-warning/10 px-3 py-1.5 text-xs font-semibold text-kyro-warning">
                 {data.traslados_pendientes} traslados pendientes
               </span>
             )}
             {data.chips_traslados_pendientes > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/70 bg-orange-50/80 px-3 py-1.5 text-xs font-semibold text-orange-700 dark:border-orange-400/25 dark:bg-orange-500/10 dark:text-orange-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-kyro-warning/30 bg-kyro-warning/10 px-3 py-1.5 text-xs font-semibold text-kyro-warning">
                 {data.chips_traslados_pendientes} chips en tránsito
               </span>
             )}
             {data.traslados_pendientes === 0 && data.chips_traslados_pendientes === 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-green-300/70 bg-green-50/80 px-3 py-1.5 text-xs font-semibold text-green-700 dark:border-green-400/25 dark:bg-green-500/10 dark:text-green-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-kyro-success/30 bg-kyro-success/10 px-3 py-1.5 text-xs font-semibold text-kyro-success">
                 Sin pendientes
               </span>
             )}
@@ -90,8 +90,8 @@ export function DiagnosticoPage() {
         </PageHeader>
 
         <TableSection title="Sesión actual">
-          <table className="premium-table w-full text-sm">
-            <thead>
+          <table className="w-full text-sm text-kyro-body">
+            <thead className="kyro-table-head">
               <tr>
                 <th className="px-4 py-2.5 text-left">user_id</th>
                 <th className="px-4 py-2.5 text-left">tienda_id</th>
@@ -100,8 +100,8 @@ export function DiagnosticoPage() {
             </thead>
             <tbody>
               <tr>
-                <td className="px-4 py-2.5 text-gray-700 dark:text-zinc-300">{data.sesion.user_id}</td>
-                <td className="px-4 py-2.5 text-gray-700 dark:text-zinc-300">{data.sesion.tienda_id}</td>
+                <td className="px-4 py-2.5 text-kyro-body">{data.sesion.user_id}</td>
+                <td className="px-4 py-2.5 text-kyro-body">{data.sesion.tienda_id}</td>
                 <td className="px-4 py-2.5">
                   <Badge variant={data.sesion.rol === 'admin' ? 'default' : 'outline'}>
                     {data.sesion.rol}
@@ -113,8 +113,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Tiendas">
-          <table className="premium-table w-full text-sm">
-            <thead>
+          <table className="w-full text-sm text-kyro-body">
+            <thead className="kyro-table-head">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">codigo</th>
@@ -123,13 +123,13 @@ export function DiagnosticoPage() {
                 <th className="px-4 py-2.5 text-left">activo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <tbody className="divide-y divide-kyro-border">
               {data.tiendas.map((t) => (
                 <tr key={t.id}>
-                  <td className="px-4 py-2.5 text-gray-400 dark:text-zinc-500">{t.id}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-zinc-300">{t.codigo}</td>
-                  <td className="px-4 py-2.5 text-gray-700 dark:text-zinc-300">{t.nombre}</td>
-                  <td className="px-4 py-2.5 text-gray-400 dark:text-zinc-500">{t.cuenta_bipay_id ?? '—'}</td>
+                  <td className="px-4 py-2.5 text-kyro-muted">{t.id}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-kyro-body">{t.codigo}</td>
+                  <td className="px-4 py-2.5 text-kyro-body">{t.nombre}</td>
+                  <td className="px-4 py-2.5 text-kyro-muted">{t.cuenta_bipay_id ?? '—'}</td>
                   <td className="px-4 py-2.5">
                     <Badge variant={t.activo ? 'success' : 'destructive'}>
                       {t.activo ? 'Sí' : 'No'}
@@ -142,8 +142,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Usuarios">
-          <table className="premium-table w-full text-sm">
-            <thead>
+          <table className="w-full text-sm text-kyro-body">
+            <thead className="kyro-table-head">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">nombre</th>
@@ -151,15 +151,15 @@ export function DiagnosticoPage() {
                 <th className="px-4 py-2.5 text-left">tienda_id</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <tbody className="divide-y divide-kyro-border">
               {data.usuarios.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-2.5 text-gray-400 dark:text-zinc-500">{u.id}</td>
-                  <td className="px-4 py-2.5 text-gray-700 dark:text-zinc-300">{u.nombre}</td>
+                  <td className="px-4 py-2.5 text-kyro-muted">{u.id}</td>
+                  <td className="px-4 py-2.5 text-kyro-body">{u.nombre}</td>
                   <td className="px-4 py-2.5">
                     <Badge variant={u.rol === 'admin' ? 'default' : 'outline'}>{u.rol}</Badge>
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-400 dark:text-zinc-500">{u.tienda_id}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-kyro-muted">{u.tienda_id}</td>
                 </tr>
               ))}
             </tbody>
@@ -167,8 +167,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Chips">
-          <table className="premium-table w-full text-sm">
-            <thead>
+          <table className="w-full text-sm text-kyro-body">
+            <thead className="kyro-table-head">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">tienda_codigo</th>
@@ -176,14 +176,14 @@ export function DiagnosticoPage() {
                 <th className="px-4 py-2.5 text-right">stock_actual</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <tbody className="divide-y divide-kyro-border">
               {data.chips.map((c) => (
                 <tr key={c.id}>
-                  <td className="px-4 py-2.5 text-gray-400 dark:text-zinc-500">{c.id}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-zinc-300">{c.tienda_codigo}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-zinc-300">{c.tienda_origen}</td>
+                  <td className="px-4 py-2.5 text-kyro-muted">{c.id}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-kyro-body">{c.tienda_codigo}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-kyro-body">{c.tienda_origen}</td>
                   <td className="px-4 py-2.5 text-right">
-                    <span className={c.stock_actual > 0 ? 'font-semibold text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-zinc-500'}>
+                    <span className={c.stock_actual > 0 ? 'font-semibold text-kyro-success' : 'text-kyro-muted'}>
                       {c.stock_actual}
                     </span>
                   </td>

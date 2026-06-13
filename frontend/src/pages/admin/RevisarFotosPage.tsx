@@ -37,32 +37,32 @@ export function RevisarFotosPage() {
       />
 
       {isLoading ? (
-        <Card className="p-6"><p className="text-sm text-zinc-500">Cargando…</p></Card>
+        <Card className="kyro-card p-6"><p className="text-sm text-kyro-muted">Cargando…</p></Card>
       ) : items.length === 0 ? (
-        <Card className="p-6"><p className="text-sm text-emerald-600 dark:text-emerald-400">✓ No hay fotos pendientes de revisión.</p></Card>
+        <Card className="kyro-card p-6"><p className="text-sm text-kyro-success">✓ No hay fotos pendientes de revisión.</p></Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((f: FotoPendienteItem) => {
             const tieneGps = f.lat_entrada != null && f.lng_entrada != null
             const busy = accion.isPending && accion.variables?.id === f.id
             return (
-              <Card key={f.id} className="overflow-hidden flex flex-col">
-                <button onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="relative aspect-square bg-zinc-900">
+              <Card key={f.id} className="kyro-card flex flex-col overflow-hidden">
+                <button onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="relative aspect-square bg-kyro-base">
                   <img src={srcFoto(f.foto_marcacion)} alt={f.nombres} className="w-full h-full object-cover" />
-                  <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-black">
+                  <span className="absolute left-2 top-2 rounded-full bg-kyro-gold px-2 py-0.5 text-[10px] font-bold text-kyro-gold-ink">
                     {f.metodo_marcacion ?? 'FOTO'}
                   </span>
                 </button>
                 <div className="p-3 flex-1 flex flex-col gap-1">
-                  <p className="font-bold text-sm">{f.nombres}</p>
-                  <p className="text-xs text-zinc-500">{f.tienda_base ?? '—'} · {f.fecha} {f.hora_ingreso ?? ''}</p>
+                  <p className="text-sm font-bold text-kyro-text">{f.nombres}</p>
+                  <p className="text-xs text-kyro-muted">{f.tienda_base ?? '—'} · {f.fecha} {f.hora_ingreso ?? ''}</p>
                   {tieneGps ? (
                     <a href={`https://www.google.com/maps?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noreferrer"
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                      className="text-xs text-kyro-info hover:underline">
                       📍 Ver en mapa{f.accuracy_entrada != null ? ` (±${Math.round(f.accuracy_entrada)}m)` : ''}
                     </a>
                   ) : (
-                    <span className="text-xs text-zinc-400">Sin coordenadas GPS</span>
+                    <span className="text-xs text-kyro-subtle">Sin coordenadas GPS</span>
                   )}
                   <div className="flex gap-2 mt-2">
                     <Button type="button" size="sm" disabled={busy} className="flex-1"
@@ -70,7 +70,7 @@ export function RevisarFotosPage() {
                       Aprobar
                     </Button>
                     <Button type="button" size="sm" variant="outline" disabled={busy}
-                      className="flex-1 text-red-600 border-red-300"
+                      className="flex-1 border-kyro-danger/30 text-kyro-danger"
                       onClick={() => accion.mutate({ id: f.id, accion: 'rechazar' })}>
                       Anular
                     </Button>
@@ -84,7 +84,7 @@ export function RevisarFotosPage() {
 
       {zoom && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
-          <img src={zoom} alt="Marcación" className="max-w-full max-h-full rounded-lg" />
+          <img src={zoom} alt="Marcación" className="max-h-full max-w-full rounded-kyro-lg border border-kyro-border" />
         </div>
       )}
     </div>

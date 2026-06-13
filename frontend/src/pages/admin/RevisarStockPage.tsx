@@ -75,15 +75,15 @@ export function RevisarStockPage() {
         }
       />
 
-      <Card className="p-0 overflow-x-auto">
+      <Card className="kyro-card overflow-x-auto p-0">
         {isLoading ? (
-          <p className="p-6 text-sm text-zinc-500">Cargando…</p>
+          <p className="p-6 text-sm text-kyro-muted">Cargando…</p>
         ) : items.length === 0 ? (
-          <p className="p-6 text-sm text-emerald-600 dark:text-emerald-400">✓ Todo el stock disponible tiene precios configurados.</p>
+          <p className="p-6 text-sm text-kyro-success">✓ Todo el stock disponible tiene precios configurados.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-700">
+            <thead className="kyro-table-head">
+              <tr className="text-left text-[11px] uppercase tracking-wider">
                 <th className="px-3 py-2">Tienda</th>
                 <th className="px-3 py-2">Producto</th>
                 <th className="px-3 py-2">IMEI/Serial</th>
@@ -95,13 +95,13 @@ export function RevisarStockPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                  <td className="px-3 py-2 font-semibold">{item.tienda_id}</td>
-                  <td className="px-3 py-2">
+                <tr key={item.id} className="border-b border-kyro-border text-kyro-body hover:bg-kyro-elevated">
+                  <td className="px-3 py-2 font-semibold text-kyro-text">{item.tienda_id}</td>
+                  <td className="px-3 py-2 text-kyro-body">
                     {item.producto_nombre}
-                    <span className="ml-1 text-[10px] text-zinc-400">{item.tipo}</span>
+                    <span className="ml-1 text-[10px] text-kyro-subtle">{item.tipo}</span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-zinc-500">{item.imei_serial ?? '—'}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-kyro-muted">{item.imei_serial ?? '—'}</td>
                   {(['precio_costo', 'precio_minimo', 'precio_normal'] as const).map((campo) => (
                     <td key={campo} className="px-2 py-1">
                       <Input type="number" step="0.01" min="0" placeholder="0.00"

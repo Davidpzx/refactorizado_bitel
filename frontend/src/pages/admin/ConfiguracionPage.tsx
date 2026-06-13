@@ -63,32 +63,18 @@ type FormData = z.infer<typeof schema>
 
 // ── Section primitivo (glass premium, theme-aware) ─────────────────────────────
 
-const GOLD = '#ffc200'
-
 function FormSection({
-  title, icon, accent = GOLD, children,
+  title, icon, children,
 }: {
-  title: string; icon: ReactNode; accent?: string; children: ReactNode
+  title: string; icon: ReactNode; children: ReactNode
 }) {
   return (
-    <section
-      className="premium-surface p-5"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(90deg, ${accent}aa, transparent 55%)` }}
-      />
+    <section className="kyro-card p-5">
       <div className="mb-4 flex items-center gap-2.5">
-        <span
-          className="flex h-8 w-8 items-center justify-center rounded-lg"
-          style={{ background: `${accent}1f`, color: accent }}
-        >
+        <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold">
           {icon}
         </span>
-        <h2
-          className="text-[0.78rem] font-bold uppercase tracking-[0.12em] text-gray-700 dark:text-zinc-200"
-        >
+        <h2 className="text-[0.78rem] font-bold uppercase tracking-[0.12em] text-kyro-text">
           {title}
         </h2>
       </div>
@@ -160,7 +146,7 @@ export function ConfiguracionPage() {
   const currentLogo = logoPreview ?? data?.logo_base64
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-zinc-500">Cargando configuración...</div>
+    return <div className="flex h-64 items-center justify-center text-kyro-muted">Cargando configuración...</div>
   }
 
   return (
@@ -169,43 +155,39 @@ export function ConfiguracionPage() {
       <div className="flex items-stretch gap-3">
         <span
           aria-hidden
-          className="w-1 shrink-0 self-stretch rounded-full"
-          style={{ background: `linear-gradient(180deg, ${GOLD}, ${GOLD}33)`, boxShadow: `0 0 12px -2px ${GOLD}88` }}
+          className="w-1 shrink-0 self-stretch rounded-full bg-kyro-gold"
         />
         <div className="flex items-center gap-3">
           <span
-            className="flex h-11 w-11 items-center justify-center rounded-xl"
-            style={{ background: `${GOLD}1f`, color: GOLD }}
+            className="flex h-11 w-11 items-center justify-center rounded-kyro-lg bg-kyro-gold/10 text-kyro-gold"
           >
             <Building2 size={22} />
           </span>
           <div>
             <h1
-              className="text-[1.35rem] font-bold leading-tight tracking-tight text-gray-900 dark:text-zinc-50"
-              style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: '0.02em' }}
+              className="font-orbitron text-[1.35rem] font-bold leading-tight tracking-[0.02em] text-kyro-text"
             >
               Configuración de la Empresa
             </h1>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">Datos de identificación fiscal y contacto</p>
+            <p className="text-sm text-kyro-muted">Datos de identificación fiscal y contacto</p>
           </div>
         </div>
       </div>
 
       {saved && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700
-          dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <div className="flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 px-4 py-3 text-sm text-kyro-success">
           <CheckCircle2 size={16} /> Configuración guardada correctamente.
         </div>
       )}
 
       <form onSubmit={handleSubmit(d => updateMutation.mutate(d))} className="space-y-5">
         {/* Identidad Legal */}
-        <FormSection title="Identidad Legal" icon={<Landmark size={16} />} accent={GOLD}>
+        <FormSection title="Identidad Legal" icon={<Landmark size={16} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="razon_social">Razón social *</Label>
               <Input id="razon_social" {...register('razon_social')} placeholder="EMPRESA SAC" className="mt-1" />
-              {errors.razon_social && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.razon_social.message}</p>}
+              {errors.razon_social && <p className="mt-1 text-xs text-kyro-danger">{errors.razon_social.message}</p>}
             </div>
             <div>
               <Label htmlFor="nombre_comercial">Nombre comercial</Label>
@@ -214,7 +196,7 @@ export function ConfiguracionPage() {
             <div>
               <Label htmlFor="ruc">RUC *</Label>
               <Input id="ruc" {...register('ruc')} placeholder="20123456789" maxLength={11} className="mt-1 font-mono tabular-nums" />
-              {errors.ruc && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.ruc.message}</p>}
+              {errors.ruc && <p className="mt-1 text-xs text-kyro-danger">{errors.ruc.message}</p>}
             </div>
             <div>
               <Label htmlFor="sistema_nombre">Nombre del sistema</Label>
@@ -224,7 +206,7 @@ export function ConfiguracionPage() {
         </FormSection>
 
         {/* Representante Legal */}
-        <FormSection title="Representante Legal" icon={<UserCog size={16} />} accent="#60a5fa">
+        <FormSection title="Representante Legal" icon={<UserCog size={16} />}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="gerente_general">Gerente general</Label>
@@ -238,7 +220,7 @@ export function ConfiguracionPage() {
         </FormSection>
 
         {/* Datos de Contacto */}
-        <FormSection title="Datos de Contacto" icon={<Phone size={16} />} accent="#34d399">
+        <FormSection title="Datos de Contacto" icon={<Phone size={16} />}>
           <div className="space-y-4">
             <div>
               <Label htmlFor="direccion_principal">Dirección principal</Label>
@@ -252,7 +234,7 @@ export function ConfiguracionPage() {
               <div>
                 <Label htmlFor="correo_contacto">Correo</Label>
                 <Input id="correo_contacto" type="email" {...register('correo_contacto')} placeholder="info@empresa.pe" className="mt-1" />
-                {errors.correo_contacto && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.correo_contacto.message}</p>}
+                {errors.correo_contacto && <p className="mt-1 text-xs text-kyro-danger">{errors.correo_contacto.message}</p>}
               </div>
             </div>
           </div>
@@ -260,7 +242,7 @@ export function ConfiguracionPage() {
 
         <div className="flex items-center justify-end gap-3">
           {updateMutation.error && (
-            <p className="text-sm text-red-500 dark:text-red-400">
+            <p className="text-sm text-kyro-danger">
               {(updateMutation.error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al guardar.'}
             </p>
           )}
@@ -272,17 +254,16 @@ export function ConfiguracionPage() {
       </form>
 
       {/* Logo de la Empresa */}
-      <FormSection title="Logo de la Empresa" icon={<ImageIcon size={16} />} accent="#a78bfa">
+      <FormSection title="Logo de la Empresa" icon={<ImageIcon size={16} />}>
         {currentLogo ? (
           <div className="flex flex-col items-start gap-6 sm:flex-row">
             <img
               src={currentLogo}
               alt="Logo empresa"
-              className="h-24 w-auto rounded-lg border border-gray-200 bg-white object-contain p-2
-                dark:border-[rgba(255,255,255,0.08)]"
+              className="h-24 w-auto rounded-kyro border border-kyro-border bg-kyro-elevated object-contain p-2"
             />
             <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-zinc-400">Logo actual. Puedes reemplazarlo subiendo una nueva imagen.</p>
+              <p className="text-sm text-kyro-body">Logo actual. Puedes reemplazarlo subiendo una nueva imagen.</p>
               <div className="flex flex-wrap gap-3">
                 <Button
                   type="button"
@@ -299,7 +280,7 @@ export function ConfiguracionPage() {
                   size="sm"
                   onClick={() => deleteLogoMutation.mutate()}
                   disabled={deleteLogoMutation.isPending}
-                  className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-400/20 dark:text-red-400 dark:hover:bg-red-500/10"
+                  className="border-kyro-danger/30 text-kyro-danger hover:bg-kyro-danger/10"
                 >
                   <Trash2 size={13} className="mr-2" /> Eliminar logo
                 </Button>
@@ -307,8 +288,7 @@ export function ConfiguracionPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 py-10 text-gray-400
-            dark:border-[rgba(255,255,255,0.12)] dark:text-zinc-500">
+          <div className="flex flex-col items-center justify-center gap-3 rounded-kyro border-2 border-dashed border-kyro-border py-10 text-kyro-muted">
             <Upload size={32} />
             <p className="text-sm">Sin logo configurado</p>
             <Button
@@ -329,7 +309,7 @@ export function ConfiguracionPage() {
           onChange={handleFileChange}
           className="hidden"
         />
-        <p className="mt-4 text-xs text-gray-400 dark:text-zinc-500">PNG, JPG o WebP — máximo 2 MB. Se convierte a base64 para inclusión en documentos PDF.</p>
+        <p className="mt-4 text-xs text-kyro-muted">PNG, JPG o WebP — máximo 2 MB. Se convierte a base64 para inclusión en documentos PDF.</p>
       </FormSection>
     </div>
   )

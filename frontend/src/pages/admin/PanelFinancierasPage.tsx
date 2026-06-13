@@ -100,27 +100,27 @@ export function PanelFinancierasPage() {
       />
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card>
+        <Card className="kyro-card border-l-4 border-l-kpi-esperado">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Pendiente de cobro</p>
-            <p className="text-2xl font-bold text-yellow-600 mt-1">
+            <p className="text-xs uppercase tracking-wider text-kyro-muted">Pendiente de cobro</p>
+            <p className="mt-1 text-2xl font-bold text-kyro-warning">
               S/ {totales ? Number(totales.pendiente).toFixed(2) : '—'}
             </p>
-            <p className="text-xs text-gray-400 mt-1">{totales?.count_pendiente ?? 0} registros</p>
+            <p className="mt-1 text-xs text-kyro-subtle">{totales?.count_pendiente ?? 0} registros</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="kyro-card border-l-4 border-l-kpi-declarado">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Confirmado este mes</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">
+            <p className="text-xs uppercase tracking-wider text-kyro-muted">Confirmado este mes</p>
+            <p className="mt-1 text-2xl font-bold text-kyro-success">
               S/ {totales ? Number(totales.confirmado).toFixed(2) : '—'}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="kyro-card border-l-4 border-l-kpi-total">
           <CardContent className="pt-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Total facturado</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
+            <p className="text-xs uppercase tracking-wider text-kyro-muted">Total facturado</p>
+            <p className="mt-1 text-2xl font-bold text-kyro-text">
               S/ {totales ? Number(totales.total).toFixed(2) : '—'}
             </p>
           </CardContent>
@@ -169,46 +169,41 @@ export function PanelFinancierasPage() {
       </ListToolbar>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48 text-sm text-gray-400">
+        <div className="flex h-48 items-center justify-center text-sm text-kyro-muted">
           Cargando...
         </div>
       ) : (
-        <div className="relative overflow-x-auto rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70">
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 z-20 h-px"
-            style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.6), rgba(99,102,241,0.35), transparent 70%)' }}
-          />
+        <div className="kyro-card overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
-            <thead className="[&_th]:border-b [&_th]:border-gray-200 [&_th]:bg-gray-50/90 [&_th]:text-[0.68rem] [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-gray-500 dark:[&_th]:border-white/[0.07] dark:[&_th]:bg-white/[0.035] dark:[&_th]:text-zinc-400">
+            <thead className="kyro-table-head">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Fecha</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Tienda</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Financiera</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Vendedor</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">Equipo</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-700">Estado</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-700">Por cobrar</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-700">Acciones</th>
+                <th className="px-4 py-3 text-left font-semibold">Fecha</th>
+                <th className="px-4 py-3 text-left font-semibold">Tienda</th>
+                <th className="px-4 py-3 text-left font-semibold">Financiera</th>
+                <th className="px-4 py-3 text-left font-semibold">Vendedor</th>
+                <th className="px-4 py-3 text-left font-semibold">Equipo</th>
+                <th className="px-4 py-3 text-center font-semibold">Estado</th>
+                <th className="px-4 py-3 text-right font-semibold">Por cobrar</th>
+                <th className="px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-kyro-muted">
                     Sin registros para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className="transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035] [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045]">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                  <tr key={item.id} className="transition-colors hover:bg-kyro-elevated [&>td]:border-b [&>td]:border-kyro-border">
+                    <td className="whitespace-nowrap px-4 py-3 text-kyro-body">
                       {item.fecha?.slice(0, 10) ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-900">{item.tienda_nombre}</td>
-                    <td className="px-4 py-3 text-gray-700">{item.financiera}</td>
-                    <td className="px-4 py-3 text-gray-700">{item.vendedor_nombre}</td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-kyro-text">{item.tienda_nombre}</td>
+                    <td className="px-4 py-3 text-kyro-body">{item.financiera}</td>
+                    <td className="px-4 py-3 text-kyro-body">{item.vendedor_nombre}</td>
+                    <td className="px-4 py-3 text-kyro-body">
                       {item.detalle?.producto_nombre ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -216,7 +211,7 @@ export function PanelFinancierasPage() {
                         {item.comision_estado}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    <td className="px-4 py-3 text-right font-semibold text-kyro-text">
                       S/ {Number(item.por_cobrar).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right">

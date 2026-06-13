@@ -95,13 +95,13 @@ function DetallePostulacion({
   }
 
   if (isLoading) {
-    return <div className="text-sm text-gray-400 py-4 text-center">Cargando...</div>
+    return <div className="py-4 text-center text-sm text-kyro-muted">Cargando...</div>
   }
 
   return (
     <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
       <section>
-        <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Datos personales</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Datos personales</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           <LabelVal label="DNI"              val={p.dni} />
           <LabelVal label="Nombres"          val={p.nombres} />
@@ -116,7 +116,7 @@ function DetallePostulacion({
       </section>
 
       <section>
-        <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Sistema de pensión</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Sistema de pensión</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           <LabelVal label="Sistema"    val={p.sistema_pension} />
           <LabelVal label="AFP"        val={p.nombre_afp} />
@@ -125,7 +125,7 @@ function DetallePostulacion({
       </section>
 
       <section>
-        <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Salud y antecedentes</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Salud y antecedentes</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           <LabelVal label="Grupo sanguíneo" val={p.grupo_sanguineo} />
           <LabelVal label="Alergias"        val={p.alergias} />
@@ -137,10 +137,10 @@ function DetallePostulacion({
 
       {p.carga_familiar && p.carga_familiar.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Carga familiar</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Carga familiar</h3>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400">
+              <tr className="kyro-table-head text-left text-xs">
                 <th className="pb-1">Nombre</th>
                 <th className="pb-1">Parentesco</th>
                 <th className="pb-1">Teléfono</th>
@@ -148,7 +148,7 @@ function DetallePostulacion({
             </thead>
             <tbody>
               {p.carga_familiar.map((c, i) => (
-                <tr key={i} className="border-t border-gray-100">
+                <tr key={i} className="border-t border-kyro-border text-kyro-body">
                   <td className="py-1">{c.nombre}</td>
                   <td className="py-1">{c.parentesco}</td>
                   <td className="py-1">{c.telefono}</td>
@@ -161,10 +161,10 @@ function DetallePostulacion({
 
       {p.formacion_academica && p.formacion_academica.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Formación académica</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Formación académica</h3>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400">
+              <tr className="kyro-table-head text-left text-xs">
                 <th className="pb-1">Institución</th>
                 <th className="pb-1">Título</th>
                 <th className="pb-1">Inicio</th>
@@ -173,7 +173,7 @@ function DetallePostulacion({
             </thead>
             <tbody>
               {p.formacion_academica.map((f, i) => (
-                <tr key={i} className="border-t border-gray-100">
+                <tr key={i} className="border-t border-kyro-border text-kyro-body">
                   <td className="py-1">{f.institucion}</td>
                   <td className="py-1">{f.titulo}</td>
                   <td className="py-1">{f.anio_inicio}</td>
@@ -187,10 +187,10 @@ function DetallePostulacion({
 
       {p.experiencia_laboral && p.experiencia_laboral.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Experiencia laboral</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Experiencia laboral</h3>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400">
+              <tr className="kyro-table-head text-left text-xs">
                 <th className="pb-1">Empresa</th>
                 <th className="pb-1">Cargo</th>
                 <th className="pb-1">Período</th>
@@ -199,7 +199,7 @@ function DetallePostulacion({
             </thead>
             <tbody>
               {p.experiencia_laboral.map((e, i) => (
-                <tr key={i} className="border-t border-gray-100">
+                <tr key={i} className="border-t border-kyro-border text-kyro-body">
                   <td className="py-1">{e.empresa}</td>
                   <td className="py-1">{e.cargo}</td>
                   <td className="py-1">{e.periodo}</td>
@@ -212,7 +212,7 @@ function DetallePostulacion({
       )}
 
       <section>
-        <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Contactos de emergencia</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Contactos de emergencia</h3>
         <div className="space-y-1 text-sm">
           {[1, 2, 3].map((n) => {
             const nombre     = p[`contacto_nombre_${n}` as keyof Postulacion] as string | null
@@ -221,21 +221,21 @@ function DetallePostulacion({
             if (!nombre) return null
             return (
               <div key={n} className="flex gap-4">
-                <span className="text-gray-400 w-4">{n}.</span>
-                <span>{nombre}</span>
-                <span className="text-gray-400">{parentesco}</span>
-                <span>{telefono}</span>
+                <span className="w-4 text-kyro-muted">{n}.</span>
+                <span className="text-kyro-text">{nombre}</span>
+                <span className="text-kyro-muted">{parentesco}</span>
+                <span className="text-kyro-body">{telefono}</span>
               </div>
             )
           })}
         </div>
       </section>
 
-      <section className="border-t border-gray-100 pt-4">
-        <h3 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-3">Gestión admin</h3>
+      <section className="border-t border-kyro-border pt-4">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Gestión admin</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Estado</label>
+            <label className="mb-1 block text-xs text-kyro-muted">Estado</label>
             <Select
               value={estado}
               onChange={(e) => setEstado(e.target.value as EstadoPostulacion)}
@@ -248,12 +248,12 @@ function DetallePostulacion({
             </Select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Notas admin</label>
+            <label className="mb-1 block text-xs text-kyro-muted">Notas admin</label>
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="kyro-input w-full resize-none"
               placeholder="Observaciones internas..."
             />
           </div>
@@ -272,8 +272,8 @@ function DetallePostulacion({
 function LabelVal({ label, val }: { label: string; val: string | null | undefined }) {
   return (
     <div>
-      <span className="text-gray-400">{label}: </span>
-      <span className="text-gray-800">{val ?? '—'}</span>
+      <span className="text-kyro-muted">{label}: </span>
+      <span className="text-kyro-text">{val ?? '—'}</span>
     </div>
   )
 }
