@@ -13,8 +13,8 @@ const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' 
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
 
 function diferenciaClass(val: number) {
-  if (val === 0) return 'bg-gray-100 text-gray-600'
-  return val < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+  if (val === 0) return 'bg-kpi-neutral/15 text-kyro-muted'
+  return val < 0 ? 'bg-kyro-danger/15 text-kyro-danger' : 'bg-kyro-warning/15 text-kyro-warning'
 }
 
 const ESTADOS = ['', 'borrador', 'enviado', 'editado', 'aprobado']
@@ -112,7 +112,7 @@ export function HistorialPage() {
               type="date"
               value={filters.fecha_desde}
               onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
-              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+              className="kyro-input h-9 w-40"
             />
           </div>
           <div>
@@ -121,7 +121,7 @@ export function HistorialPage() {
               type="date"
               value={filters.fecha_hasta}
               onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
-              className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+              className="kyro-input h-9 w-40"
             />
           </div>
           {usuario?.rol === 'admin' && (
@@ -133,7 +133,7 @@ export function HistorialPage() {
                   placeholder="Todas"
                   value={filters.tienda}
                   onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))}
-                  className="h-9 w-32 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+                  className="kyro-input h-9 w-32"
                 />
               </div>
               <div>
@@ -143,7 +143,7 @@ export function HistorialPage() {
                   placeholder="Todos"
                   value={filters.agente_id}
                   onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))}
-                  className="h-9 w-28 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+                  className="kyro-input h-9 w-28"
                 />
               </div>
             </>
@@ -153,7 +153,7 @@ export function HistorialPage() {
             <select
               value={filters.estado}
               onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-              className="h-9 w-36 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-zinc-950/65 dark:text-zinc-100"
+              className="kyro-input h-9 w-36"
             >
               {ESTADOS.map((e) => (
                 <option key={e} value={e}>
@@ -166,10 +166,9 @@ export function HistorialPage() {
           <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
-      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/45 to-transparent" />
-        <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
-          <h2 className="font-semibold text-gray-900 text-sm">
+      <div className="kyro-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-kyro-border p-4">
+          <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros encontrados`}
           </h2>
           <span className="text-xs text-gray-400">
@@ -179,11 +178,11 @@ export function HistorialPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/80 dark:border-white/[0.07] dark:bg-zinc-800/50">
+              <tr className="kyro-table-head">
                 {['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Estado', ''].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-gray-500 ${['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 ${['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
                   >
                     {h}
                   </th>
@@ -212,21 +211,21 @@ export function HistorialPage() {
                   ? 'border-b border-yellow-300 bg-yellow-50 animate-pulse'
                   : dif < 0
                   ? 'border-b border-red-100 bg-red-50/40'
-                  : 'border-b border-gray-100 transition-colors hover:bg-amber-50/40 dark:border-white/[0.05] dark:hover:bg-amber-400/[0.04]'
+                  : 'border-b border-kyro-border transition-colors hover:bg-kyro-gold/5'
 
                 return (
                   <tr key={r.id} className={rowCls}>
-                    <td className="px-4 py-3 font-mono text-gray-600 text-xs">#{String(r.id).padStart(4, '0')}</td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 font-mono text-xs text-kyro-muted">#{String(r.id).padStart(4, '0')}</td>
+                    <td className="px-4 py-3 text-kyro-body">
                       {new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800">{(r as any).agente_nombre ?? '—'}</div>
-                      <div className="text-xs text-gray-400">{r.tienda_id}</div>
+                      <div className="font-medium text-kyro-text">{(r as any).agente_nombre ?? '—'}</div>
+                      <div className="text-xs text-kyro-subtle">{r.tienda_id}</div>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800">{fmt(r.total_calculado)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-700">{fmt(r.efectivo_esperado)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800">{fmt(r.efectivo_entregado)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.total_calculado)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-kyro-body">{fmt(r.efectivo_esperado)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${diferenciaClass(dif)}`}>
                         {dif > 0 ? '+' : ''}{fmt(dif)}
@@ -252,7 +251,7 @@ export function HistorialPage() {
 
         {/* Pagination */}
         {!isLoading && meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200/80 p-4 dark:border-white/[0.07]">
+          <div className="flex items-center justify-between border-t border-kyro-border p-4">
             <Button
               variant="outline"
               size="sm"
@@ -284,13 +283,13 @@ function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?
     return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 font-medium">Ed. solicitada</span>
   }
   const map: Record<string, string> = {
-    borrador: 'bg-gray-100 text-gray-600',
-    enviado:  'bg-blue-100 text-blue-700',
-    editado:  'bg-orange-100 text-orange-700',
-    aprobado: 'bg-green-100 text-green-700',
+    borrador: 'bg-kpi-neutral/15 text-kyro-muted',
+    enviado:  'bg-kyro-info/15 text-kyro-info',
+    editado:  'bg-kyro-warning/15 text-kyro-warning',
+    aprobado: 'bg-kyro-success/15 text-kyro-success',
   }
   return (
-    <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${map[estado] ?? 'bg-gray-100 text-gray-500'}`}>
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${map[estado] ?? 'bg-kpi-neutral/15 text-kyro-muted'}`}>
       {estado}
     </span>
   )

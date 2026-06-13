@@ -69,7 +69,7 @@ export function ReporteBcpPage() {
 
   if (data?.warning && !esAdmin) {
     return (
-      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+      <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
         <AlertTriangle size={18} /> {data.warning}
       </div>
     )
@@ -77,29 +77,29 @@ export function ReporteBcpPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Módulo BCP" subtitle="Control de operaciones, saldos e incidencias por tienda" accent="#2563eb">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200/70 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300">
+      <PageHeader title="Módulo BCP" subtitle="Control de operaciones, saldos e incidencias por tienda">
+        <span className="flex h-9 w-9 items-center justify-center rounded-kyro border border-kyro-indigo/30 bg-kyro-indigo/10 text-kyro-indigo shadow-sm">
           <CreditCard size={17} />
         </span>
       </PageHeader>
 
       {data?.warning && (
-        <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+        <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
           <AlertTriangle size={18} /> {data.warning}
         </div>
       )}
 
       {/* Agente: formulario de envío */}
       {!esAdmin && !data?.warning && (
-        <div className="premium-surface max-w-xl p-6">
-          <h2 className="font-semibold text-gray-800 mb-4 text-sm">Enviar Reporte BCP</h2>
+        <div className="kyro-card max-w-xl p-6">
+          <h2 className="mb-4 text-sm font-semibold text-kyro-text">Enviar Reporte BCP</h2>
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm mb-4">
+            <div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success">
               <CheckCircle size={16} /> {success}
             </div>
           )}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">
+            <div className="mb-4 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger">
               {error}
             </div>
           )}
@@ -108,13 +108,13 @@ export function ReporteBcpPage() {
               <label className="block text-xs text-gray-500 mb-1">Fecha</label>
               <input type="date" value={form.fecha}
                 onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="kyro-input"
               />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Turno</label>
               <select value={form.turno_hora} onChange={e => setForm(f => ({ ...f, turno_hora: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="kyro-input">
                 {TURNOS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
@@ -122,14 +122,14 @@ export function ReporteBcpPage() {
               <label className="block text-xs text-gray-500 mb-1">Nombre del Agente BCP</label>
               <input type="text" placeholder="Nombre en sistema BCP" value={form.nombre_agente_bcp}
                 onChange={e => setForm(f => ({ ...f, nombre_agente_bcp: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="kyro-input"
               />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Cantidad de Operaciones</label>
               <input type="number" min="0" value={form.cantidad_operaciones}
                 onChange={e => setForm(f => ({ ...f, cantidad_operaciones: e.target.value }))}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="kyro-input"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -137,14 +137,14 @@ export function ReporteBcpPage() {
                 <label className="block text-xs text-gray-500 mb-1">Queda Efectivo (S/)</label>
                 <input type="number" min="0" step="0.01" value={form.queda_efectivo}
                   onChange={e => setForm(f => ({ ...f, queda_efectivo: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="kyro-input"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Queda Tarjeta (S/)</label>
                 <input type="number" min="0" step="0.01" value={form.queda_tarjeta}
                   onChange={e => setForm(f => ({ ...f, queda_tarjeta: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="kyro-input"
                 />
               </div>
             </div>
@@ -153,7 +153,7 @@ export function ReporteBcpPage() {
               <textarea rows={2} value={form.incidencias_sistema}
                 onChange={e => setForm(f => ({ ...f, incidencias_sistema: e.target.value }))}
                 placeholder="Opcional..."
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="kyro-input resize-none"
               />
             </div>
             <Button
@@ -185,14 +185,14 @@ export function ReporteBcpPage() {
                 <label className="block text-xs text-gray-500 mb-1">Desde</label>
                 <input type="date" value={filters.fecha_desde}
                   onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="kyro-input w-auto"
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Hasta</label>
                 <input type="date" value={filters.fecha_hasta}
                   onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="kyro-input w-auto"
                 />
               </div>
               <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
@@ -203,14 +203,14 @@ export function ReporteBcpPage() {
           {data?.kpis && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Total Efectivo',    value: pen.format(data.kpis.total_efectivo) },
-                { label: 'Total Tarjeta',     value: pen.format(data.kpis.total_tarjeta) },
-                { label: 'Total Operaciones', value: String(data.kpis.total_operaciones) },
-                { label: 'Registros',         value: String(data.kpis.total_registros) },
+                { label: 'Total Efectivo',    value: pen.format(data.kpis.total_efectivo), border: 'border-l-kpi-transfer' },
+                { label: 'Total Tarjeta',     value: pen.format(data.kpis.total_tarjeta), border: 'border-l-kpi-total' },
+                { label: 'Total Operaciones', value: String(data.kpis.total_operaciones), border: 'border-l-kpi-total' },
+                { label: 'Registros',         value: String(data.kpis.total_registros), border: 'border-l-kpi-neutral' },
               ].map(k => (
-                <div key={k.label} className="premium-kpi p-4">
-                  <p className="text-xs text-gray-500 mb-1">{k.label}</p>
-                  <p className="text-xl font-bold text-gray-900">{k.value}</p>
+                <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
+                  <p className="mb-1 text-xs text-kyro-muted">{k.label}</p>
+                  <p className="text-xl font-bold text-kyro-text">{k.value}</p>
                 </div>
               ))}
             </div>
@@ -218,13 +218,13 @@ export function ReporteBcpPage() {
 
           {/* Alertas */}
           {(data?.alertas ?? []).length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <h3 className="font-semibold text-amber-800 text-sm mb-2 flex items-center gap-1.5">
+            <div className="rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4">
+              <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-kyro-warning">
                 <AlertTriangle size={15} /> Tiendas con menos de 200 operaciones hoy
               </h3>
               <div className="flex flex-wrap gap-2">
                 {data!.alertas.map(a => (
-                  <span key={a.sucursal_id} className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                  <span key={a.sucursal_id} className="rounded-full bg-kyro-warning/15 px-2 py-1 text-xs font-medium text-kyro-warning">
                     {a.nombre_tienda ?? `Tienda #${a.sucursal_id}`}: {a.total_ops} ops
                   </span>
                 ))}
@@ -233,18 +233,18 @@ export function ReporteBcpPage() {
           )}
 
           {/* Tabla */}
-          <div className="premium-surface">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-800 text-sm">
+          <div className="kyro-card overflow-hidden">
+            <div className="border-b border-kyro-border p-4">
+              <h2 className="text-sm font-semibold text-kyro-text">
                 {isLoading ? 'Cargando...' : `${data?.reportes?.length ?? 0} registros`}
               </h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="premium-table w-full text-sm">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr>
+                  <tr className="kyro-table-head">
                     {['Fecha', 'Tienda', 'Agente', 'Turno', 'Operaciones', 'Efectivo', 'Tarjeta', 'Incidencias'].map(h => (
-                      <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 text-left">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -254,17 +254,17 @@ export function ReporteBcpPage() {
                     <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Sin registros para el período</td></tr>
                   )}
                   {(data?.reportes ?? []).map(r => (
-                    <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50/60 ${r.cantidad_operaciones < 200 ? 'bg-amber-50/30' : ''}`}>
+                    <tr key={r.id} className={`border-b border-kyro-border hover:bg-kyro-elevated/60 ${r.cantidad_operaciones < 200 ? 'bg-kyro-warning/5' : ''}`}>
                       <td className="px-4 py-3">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-600">{r.nombre_tienda ?? '—'}</td>
                       <td className="px-4 py-3">{r.agente_nombre_bcp ?? r.nombre_agente ?? '—'}</td>
                       <td className="px-4 py-3 text-xs">{r.turno}</td>
-                      <td className={`px-4 py-3 font-bold ${r.cantidad_operaciones < 200 ? 'text-amber-600' : 'text-gray-800'}`}>
+                      <td className={`px-4 py-3 font-bold ${r.cantidad_operaciones < 200 ? 'text-kyro-warning' : 'text-kyro-text'}`}>
                         {r.cantidad_operaciones}
                       </td>
-                      <td className="px-4 py-3 font-mono text-gray-700">{pen.format(r.queda_efectivo)}</td>
-                      <td className="px-4 py-3 font-mono text-gray-700">{pen.format(r.queda_tarjeta)}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">{r.incidencias_sistema ?? '—'}</td>
+                      <td className="px-4 py-3 font-mono text-kyro-body">{pen.format(r.queda_efectivo)}</td>
+                      <td className="px-4 py-3 font-mono text-kyro-body">{pen.format(r.queda_tarjeta)}</td>
+                      <td className="max-w-xs truncate px-4 py-3 text-xs text-kyro-muted">{r.incidencias_sistema ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>

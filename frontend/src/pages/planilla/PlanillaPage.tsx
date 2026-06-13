@@ -5,7 +5,6 @@ import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } f
 import { PageHeader } from '../../components/PageHeader'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
@@ -23,12 +22,12 @@ const mesActual = format(startOfMonth(new Date()), 'yyyy-MM')
 
 // ── KPI Card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, valor, color }: { label: string; valor: string; color: string }) {
+function KpiCard({ label, valor, color, border }: { label: string; valor: string; color: string; border: string }) {
   return (
-    <Card className="group relative min-w-[120px] overflow-hidden border-gray-200/80 bg-white/80 px-4 py-3.5 text-center shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300/70 dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
-      <p className="text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{label}</p>
+    <div className={`kyro-card min-w-[120px] border-l-4 px-4 py-3.5 text-center transition-all duration-200 hover:-translate-y-0.5 ${border}`}>
+      <p className="text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.08em] text-kyro-muted">{label}</p>
       <p className={`mt-1.5 text-sm font-bold tracking-tight ${color}`}>{valor}</p>
-    </Card>
+    </div>
   )
 }
 
@@ -66,17 +65,17 @@ function CeldaEditable({
   }, [val, valor, campo, fila.agente_id, mes, esComision, onSave])
 
   const borderColor =
-    estado === 'ok' ? 'border-green-500' :
-    estado === 'error' ? 'border-red-500' :
-    esComision && fila.override_comisiones ? 'border-green-700/40' : 'border-cyan-700/30'
+    estado === 'ok' ? 'border-kyro-success' :
+    estado === 'error' ? 'border-kyro-danger' :
+    esComision && fila.override_comisiones ? 'border-kyro-success/40 text-kyro-success' :
+    esComision ? 'border-kyro-info/30 text-kyro-info' : 'border-kyro-danger/40 text-kyro-danger'
 
   return (
     <input
       type="number"
       step="0.01"
       min="0"
-      className={`w-16 rounded-md border bg-white/75 px-1.5 py-1 text-right font-mono text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400/30 dark:bg-black/20 ${borderColor}`}
-      style={{ color: esComision ? (fila.override_comisiones ? '#16a34a' : '#0891b2') : '#dc2626' }}
+      className={`w-16 rounded-kyro border bg-kyro-base px-1.5 py-1 text-right font-mono text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-kyro-indigo/30 ${borderColor}`}
       value={val}
       onChange={handleChange}
       onBlur={handleBlur}
@@ -231,8 +230,8 @@ function BoletaDialog({
             />
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-gray-200/80 pt-3 dark:border-white/[0.07]">
-          <span className="text-sm font-semibold text-gray-700 dark:text-zinc-300">
+        <div className="flex items-center justify-between border-t border-kyro-border pt-3">
+          <span className="text-sm font-semibold text-kyro-body">
             Total neto: <span className="text-emerald-600 dark:text-emerald-400">S/ {totalNeto.toFixed(2)}</span>
           </span>
           <div className="flex gap-2">
@@ -272,8 +271,8 @@ function FilaTabla({
 
   return (
     <>
-      <tr className="border-b border-gray-100 text-xs transition-colors hover:bg-indigo-50/45 dark:border-white/[0.05] dark:hover:bg-indigo-400/[0.035]">
-        <td className="px-3 py-2 font-medium text-gray-700 dark:text-zinc-300">{fila.nombres}</td>
+      <tr className="border-b border-kyro-border text-xs transition-colors hover:bg-kyro-indigo/5">
+        <td className="px-3 py-2 font-medium text-kyro-body">{fila.nombres}</td>
         <td className="px-1 py-2 text-center font-mono text-gray-400 dark:text-zinc-500">{fila.tienda_base}</td>
         <td className="py-1 px-1 text-center">{estadoBadge}</td>
         <td className="px-1 py-2 text-right font-mono text-sky-600 dark:text-sky-400">{fmt(fila.sueldo_base)}</td>
@@ -306,29 +305,38 @@ function FilaTabla({
         <td className="px-1 py-2 text-right font-mono text-sm font-bold text-cyan-600 dark:text-cyan-400">{fmt(fila.total_pagar)}</td>
         <td className="py-1 px-1 text-center">
           <div className="flex gap-1 justify-center items-center">
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setExpandida(v => !v)}
-              className="rounded-md px-1.5 py-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-500 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
+              className="h-7 w-7 text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text"
               title="Ver detalle"
             >
               {expandida ? '▲' : '▼'}
-            </button>
+            </Button>
             {fila.override_comisiones && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => onReset(fila.agente_id, mes)}
-                className="rounded-md px-1.5 py-1 text-xs text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:text-amber-400 dark:hover:bg-amber-400/[0.08] dark:hover:text-amber-300"
+                className="h-7 w-7 text-kyro-warning hover:bg-kyro-warning/10"
                 title="Restaurar comisiones automáticas"
               >
                 ↺
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setBoletaOpen(true)}
-              className="rounded-md px-1.5 py-1 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-400/[0.08] dark:hover:text-indigo-300"
+              className="h-7 w-7 text-kyro-indigo hover:bg-kyro-indigo/10"
               title="Generar Boleta PDF"
             >
               <FileText size={13} />
-            </button>
+            </Button>
           </div>
         </td>
       </tr>
@@ -428,7 +436,7 @@ export function PlanillaPage() {
             type="month"
             value={mes}
             onChange={e => setMes(e.target.value)}
-            className="w-36 bg-white/80 shadow-sm backdrop-blur-xl dark:bg-zinc-900/65"
+            className="kyro-input w-36"
           />
           <Button type="button" variant="outline" onClick={exportarExcel} disabled={exportando}>
             <FileText size={14} className="mr-1" /> {exportando ? 'Generando…' : 'Exportar Excel'}
@@ -439,30 +447,30 @@ export function PlanillaPage() {
       {/* KPIs */}
       {t && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-          <KpiCard label="Agentes" valor={String(data.agentes.length)} color="text-gray-900 dark:text-zinc-100" />
-          <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-amber-600 dark:text-amber-400" />
-          <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-cyan-600 dark:text-cyan-400" />
-          <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-cyan-600 dark:text-cyan-400" />
-          <KpiCard label="Com. Online" valor={fmtSol(t.com_online)} color="text-cyan-600 dark:text-cyan-400" />
-          <KpiCard label="Descuentos" valor={fmtSol(t.total_descuentos)} color="text-red-600 dark:text-red-400" />
-          <KpiCard label="Adelantos" valor={fmtSol(t.adelantos)} color="text-amber-600 dark:text-amber-300" />
-          <KpiCard label="TOTAL A PAGAR" valor={fmtSol(t.total_pagar)} color="text-base text-emerald-600 dark:text-emerald-400" />
+          <KpiCard label="Agentes" valor={String(data.agentes.length)} color="text-kyro-text" border="border-l-kpi-neutral" />
+          <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-kyro-gold" border="border-l-kpi-total" />
+          <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-kyro-info" border="border-l-kpi-ganancia" />
+          <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-kyro-info" border="border-l-kpi-ganancia" />
+          <KpiCard label="Com. Online" valor={fmtSol(t.com_online)} color="text-kyro-info" border="border-l-kpi-ganancia" />
+          <KpiCard label="Descuentos" valor={fmtSol(t.total_descuentos)} color="text-kyro-danger" border="border-l-kyro-danger" />
+          <KpiCard label="Adelantos" valor={fmtSol(t.adelantos)} color="text-kyro-warning" border="border-l-kyro-warning" />
+          <KpiCard label="TOTAL A PAGAR" valor={fmtSol(t.total_pagar)} color="text-base text-kyro-success" border="border-l-kpi-ganancia" />
         </div>
       )}
 
       {isLoading && (
-        <div className="rounded-2xl border border-gray-200/80 bg-white/70 py-16 text-center text-sm text-gray-400 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/60 dark:text-zinc-500">Calculando planilla...</div>
+        <div className="kyro-card py-16 text-center text-sm text-kyro-muted">Calculando planilla...</div>
       )}
       {isError && (
-        <div className="rounded-2xl border border-red-200/80 bg-red-50/70 py-16 text-center text-sm text-red-600 shadow-sm backdrop-blur-xl dark:border-red-400/20 dark:bg-red-500/[0.07] dark:text-red-400">Error al cargar la planilla.</div>
+        <div className="rounded-kyro-lg border border-kyro-danger/30 bg-kyro-danger/10 py-16 text-center text-sm text-kyro-danger shadow-kyro-card">Error al cargar la planilla.</div>
       )}
 
       {data && (
-        <Card className="relative overflow-hidden border-gray-200/80 bg-white/80 p-0 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_22px_50px_-30px_rgba(0,0,0,0.95)]">
+        <div className="kyro-card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs" style={{ minWidth: '1600px' }}>
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/90 text-[0.65rem] uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">
+                <tr className="kyro-table-head">
                   <th className="py-2 px-2 text-left">Agente</th>
                   <th className="py-2 px-1 text-center">Tienda</th>
                   <th className="py-2 px-1 text-center">Estado</th>
@@ -510,11 +518,11 @@ export function PlanillaPage() {
               )}
             </table>
           </div>
-        </Card>
+        </div>
       )}
 
       {data && data.agentes.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-gray-300/80 bg-white/45 py-16 text-center text-gray-400 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.02] dark:text-zinc-500">
+        <div className="rounded-kyro-lg border border-dashed border-kyro-border bg-kyro-panel py-16 text-center text-kyro-muted shadow-kyro-card">
           No hay agentes activos para el mes seleccionado.
         </div>
       )}

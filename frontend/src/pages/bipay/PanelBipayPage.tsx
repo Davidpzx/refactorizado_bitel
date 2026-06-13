@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
-import { GlassPanel } from '../../components/ui/GlassPanel'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
+import { PageHeader } from '../../components/PageHeader'
 import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
-const BIPAY = '#60a5fa'
-const ANYPAY = '#a78bfa'
-const GOLD = '#ffc200'
+const BIPAY = 'var(--color-kpi-bipay)'
+const ANYPAY = 'var(--color-kpi-yape)'
+const GOLD = 'var(--color-kyro-gold)'
 
 interface Cuenta {
   id: number
@@ -102,8 +102,7 @@ export function PanelBipayPage() {
 
   if (warning) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800
-        dark:border-yellow-400/20 dark:bg-yellow-500/10 dark:text-yellow-300">
+      <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
         <AlertTriangle size={18} /> {warning}
       </div>
     )
@@ -117,85 +116,65 @@ export function PanelBipayPage() {
     { id: 'ajustar',       label: 'Ajustar Saldo',  Icon: SlidersHorizontal },
   ] as const
 
-  const inputCls =
-    'w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm transition-colors ' +
-    'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ' +
-    'dark:border-[#3f3f46] dark:bg-[#0d0d0f] dark:text-zinc-100'
+  const inputCls = 'kyro-input'
 
   return (
     <div className="space-y-6">
       {/* Header ─────────────────────────────────────────────────────────────── */}
-      <div className="flex items-stretch gap-3">
-        <span
-          aria-hidden
-          className="w-1 shrink-0 self-stretch rounded-full"
-          style={{ background: `linear-gradient(180deg, ${BIPAY}, ${ANYPAY}33)`, boxShadow: `0 0 12px -2px ${BIPAY}88` }}
-        />
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: `${BIPAY}1f`, color: BIPAY }}>
-            <Wallet size={22} />
-          </span>
-          <div>
-            <h1
-              className="text-[1.35rem] font-bold leading-tight tracking-tight text-gray-900 dark:text-zinc-50"
-              style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: '0.02em' }}
-            >
-              Panel Bipay / Anypay
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">Saldos consolidados, transacciones y recargas</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader title="Panel Bipay / Anypay" subtitle="Saldos consolidados, transacciones y recargas">
+        <span className="flex h-10 w-10 items-center justify-center rounded-kyro bg-kpi-bipay/15 text-kpi-bipay">
+          <Wallet size={20} />
+        </span>
+      </PageHeader>
 
       {/* KPIs ────────────────────────────────────────────────────────────────── */}
       {saldoData?.kpis && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { label: 'Total Bipay',  value: saldoData.kpis.total_bipay,  color: BIPAY,  Icon: CreditCard },
-            { label: 'Total Anypay', value: saldoData.kpis.total_anypay, color: ANYPAY, Icon: Layers },
-            { label: 'Saldo Global', value: saldoData.kpis.total_saldo,  color: GOLD,   Icon: Wallet },
+            { label: 'Total Bipay',  value: saldoData.kpis.total_bipay,  color: BIPAY,  border: 'border-l-kpi-bipay', Icon: CreditCard },
+            { label: 'Total Anypay', value: saldoData.kpis.total_anypay, color: ANYPAY, border: 'border-l-kpi-yape', Icon: Layers },
+            { label: 'Saldo Global', value: saldoData.kpis.total_saldo,  color: GOLD,   border: 'border-l-kpi-total', Icon: Wallet },
           ].map(k => (
-            <GlassPanel key={k.label} accentTop={k.color} className="p-4">
+            <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
               <div className="flex items-center justify-between">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-gray-500 dark:text-zinc-400">{k.label}</p>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-kyro-muted">{k.label}</p>
                 <k.Icon size={16} style={{ color: k.color }} />
               </div>
               <div className="mt-2">
                 <MoneyTotal value={k.value} color={k.color} size="1.55rem" />
               </div>
-            </GlassPanel>
+            </div>
           ))}
         </div>
       )}
 
       {/* Tabs ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex w-fit gap-1 rounded-lg border border-gray-200 bg-gray-100 p-1 dark:border-[rgba(255,255,255,0.06)] dark:bg-[#18181b]">
+      <div className="kyro-card flex w-fit gap-1 p-1">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <Button key={t.id} variant="ghost" size="sm" onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t.id
-                ? 'bg-white text-gray-900 shadow-sm dark:bg-[#27272a] dark:text-zinc-100'
-                : 'text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+                ? 'bg-kyro-elevated text-kyro-text shadow-sm'
+                : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text'
             }`}
-            style={tab === t.id ? { boxShadow: `inset 0 -2px 0 ${BIPAY}` } : undefined}
           >
             <t.Icon size={13} /> {t.label}
-          </button>
+          </Button>
         ))}
       </div>
 
       {/* TAB: Saldo por cuenta ─────────────────────────────────────────────────── */}
       {tab === 'saldo' && (
-        <GlassPanel accentTop={BIPAY} className="overflow-hidden">
-          <div className="border-b border-gray-200 px-4 py-3 dark:border-[rgba(255,255,255,0.06)]">
-            <h2 className="text-sm font-bold" style={{ color: BIPAY }}>Cuentas Bipay / Anypay</h2>
+        <div className="kyro-card overflow-hidden">
+          <div className="border-b border-kyro-border px-4 py-3">
+            <h2 className="text-sm font-bold text-kpi-bipay">Cuentas Bipay / Anypay</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-[rgba(39,39,42,0.5)]">
+                <tr className="kyro-table-head">
                   {['Alias', 'N° Cuenta', 'Tipo', 'Saldo Bipay', 'Saldo Anypay', 'Saldo Total'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.07em] text-gray-500 dark:text-zinc-400">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -205,19 +184,19 @@ export function PanelBipayPage() {
                   <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin cuentas registradas</td></tr>
                 )}
                 {(saldoData?.cuentas ?? []).map(c => (
-                  <tr key={c.id} className="border-t border-gray-100 transition-colors hover:bg-blue-50/40 dark:border-[rgba(255,255,255,0.045)] dark:hover:bg-[rgba(96,165,250,0.05)]">
-                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-zinc-100">{c.alias}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-zinc-400">{c.numero_cuenta}</td>
-                    <td className="px-4 py-3 text-xs uppercase text-gray-500 dark:text-zinc-400">{c.tipo}</td>
+                  <tr key={c.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-bipay/5">
+                    <td className="px-4 py-3 font-medium text-kyro-text">{c.alias}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-kyro-muted">{c.numero_cuenta}</td>
+                    <td className="px-4 py-3 text-xs uppercase text-kyro-muted">{c.tipo}</td>
                     <td className="px-4 py-3 font-mono tabular-nums" style={{ color: BIPAY }}>{pen.format(c.saldo_bipay)}</td>
                     <td className="px-4 py-3 font-mono tabular-nums" style={{ color: ANYPAY }}>{pen.format(c.saldo_anypay)}</td>
-                    <td className={`px-4 py-3 font-mono font-bold tabular-nums ${c.saldo_actual < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-zinc-50'}`}>{pen.format(c.saldo_actual)}</td>
+                    <td className={`px-4 py-3 font-mono font-bold tabular-nums ${c.saldo_actual < 0 ? 'text-kyro-danger' : 'text-kyro-text'}`}>{pen.format(c.saldo_actual)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </GlassPanel>
+        </div>
       )}
 
       {/* TAB: Transacciones ────────────────────────────────────────────────────── */}
@@ -241,13 +220,13 @@ export function PanelBipayPage() {
             <Button onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
           </ListToolbar>
 
-          <GlassPanel accentTop={ANYPAY} className="overflow-hidden">
+          <div className="kyro-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 dark:bg-[rgba(39,39,42,0.5)]">
+                  <tr className="kyro-table-head">
                     {['Fecha', 'Tipo', 'Plataforma', 'Origen', 'Destino', 'Monto', 'Observación'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.07em] text-gray-500 dark:text-zinc-400">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -257,7 +236,7 @@ export function PanelBipayPage() {
                     <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin transacciones en el período</td></tr>
                   )}
                   {(txData?.data ?? []).map((tx: any) => (
-                    <tr key={tx.id} className="border-t border-gray-100 transition-colors hover:bg-violet-50/40 dark:border-[rgba(255,255,255,0.045)] dark:hover:bg-[rgba(167,139,250,0.05)]">
+                    <tr key={tx.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-yape/5">
                       <td className="px-4 py-3 text-xs tabular-nums text-gray-600 dark:text-zinc-400">{new Date(tx.created_at).toLocaleDateString('es-PE')}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tx.tipo_operacion === 'RECARGA' ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400'}`}>
@@ -267,30 +246,30 @@ export function PanelBipayPage() {
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-zinc-400">{tx.plataforma ?? '—'}</td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-zinc-400">{tx.origen_alias ?? '—'}</td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-zinc-400">{tx.destino_alias ?? '—'}</td>
-                      <td className="px-4 py-3 font-mono font-bold tabular-nums text-gray-900 dark:text-zinc-50">{pen.format(tx.monto)}</td>
+                      <td className="px-4 py-3 font-mono font-bold tabular-nums text-kyro-text">{pen.format(tx.monto)}</td>
                       <td className="max-w-xs truncate px-4 py-3 text-xs text-gray-500 dark:text-zinc-400">{tx.observacion ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </GlassPanel>
+          </div>
         </div>
       )}
 
       {/* TAB: Nueva Recarga ────────────────────────────────────────────────────── */}
       {tab === 'recarga' && (
-        <GlassPanel accentTop="#34d399" className="max-w-md p-6">
-          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-zinc-100">
-            <RefreshCw size={15} style={{ color: '#34d399' }} /> Registrar Recarga de Saldo
+        <div className="kyro-card max-w-md border-t-2 border-t-kpi-transfer p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
+            <RefreshCw size={15} className="text-kpi-transfer" /> Registrar Recarga de Saldo
           </h2>
           {recargaMsg && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success">
               <CheckCircle2 size={15} /> {recargaMsg}
             </div>
           )}
           {recargaErr && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400">
+            <div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger">
               <XCircle size={15} /> {recargaErr}
             </div>
           )}
@@ -341,17 +320,17 @@ export function PanelBipayPage() {
               {recarga.isPending ? 'Registrando…' : 'Registrar Recarga'}
             </Button>
           </div>
-        </GlassPanel>
+        </div>
       )}
 
       {/* TAB: Transferir ───────────────────────────────────────────────────────── */}
       {tab === 'transferir' && (
-        <GlassPanel accentTop={BIPAY} className="max-w-md p-6">
-          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-zinc-100">
+        <div className="kyro-card max-w-md border-t-2 border-t-kpi-bipay p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
             <Send size={15} style={{ color: BIPAY }} /> Transferir Saldo entre Cuentas
           </h2>
-          {transMsg && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"><CheckCircle2 size={15} /> {transMsg}</div>)}
-          {transErr && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400"><XCircle size={15} /> {transErr}</div>)}
+          {transMsg && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success"><CheckCircle2 size={15} /> {transMsg}</div>)}
+          {transErr && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger"><XCircle size={15} /> {transErr}</div>)}
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta origen</label>
@@ -380,17 +359,17 @@ export function PanelBipayPage() {
               {transferir.isPending ? 'Transfiriendo…' : 'Transferir'}
             </Button>
           </div>
-        </GlassPanel>
+        </div>
       )}
 
       {/* TAB: Ajustar Saldo ────────────────────────────────────────────────────── */}
       {tab === 'ajustar' && (
-        <GlassPanel accentTop={GOLD} className="max-w-md p-6">
-          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-zinc-100">
+        <div className="kyro-card max-w-md border-t-2 border-t-kyro-gold p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
             <SlidersHorizontal size={15} style={{ color: GOLD }} /> Ajuste Manual de Saldo
           </h2>
-          {ajusteMsg && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300"><CheckCircle2 size={15} /> {ajusteMsg}</div>)}
-          {ajusteErr && (<div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-400"><XCircle size={15} /> {ajusteErr}</div>)}
+          {ajusteMsg && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success"><CheckCircle2 size={15} /> {ajusteMsg}</div>)}
+          {ajusteErr && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger"><XCircle size={15} /> {ajusteErr}</div>)}
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta</label>
@@ -418,7 +397,7 @@ export function PanelBipayPage() {
               {ajustar.isPending ? 'Ajustando…' : 'Aplicar Ajuste'}
             </Button>
           </div>
-        </GlassPanel>
+        </div>
       )}
     </div>
   )
