@@ -178,7 +178,18 @@ Por cada pantalla:
 
 ---
 
-# 🎯 RESUMEN EJECUTIVO DE REMEDIACIÓN (auditoría 7/7 clusters)
+# ✅ ESTADO FINAL DE REMEDIACIÓN (2026-06-13)
+
+**Completado + testeado + pusheado (77 tests verde, builds verde):**
+B1 stock · B2 comisión server-side · B3 esperado · B4 edición (reproceso+ligera) · B5 anti-dup · B6 campana costos normalizado · B9 APOYO · B10 ext · D1 financieras normalizado · D2 desembolso libera comisión · D3 Bipay transferir/ajustar (backend+UI) · F1 badge · E1 comisión online (defensivo) · E3 aprobación postulante · C2 kardex es_cuota normalizado · A1 anti-spoofing · A2 deuda_dias · A3 timing QR · A4 escáner QR cámara · A5 token. **Split de modelo de datos: CERRADO.** UX glass premium global.
+
+**Único pendiente — gated al esquema/datos del VPS:**
+- **E1 (afinar):** confirmar `config_comisiones` + `reportes_bcp.agente_id` (implementado defensivo, cae a fallback si faltan).
+- **E2:** export "ficha técnica" multi-hoja — la tabla `agentes` del refactor es lean; los datos RRHH viven en `postulantes_temp` (estructura JSON a confirmar en VPS).
+
+---
+
+# 🎯 RESUMEN EJECUTIVO DE REMEDIACIÓN (auditoría 7/7 clusters — histórico)
 
 **Conclusión:** El refactor tiene paridad **funcional ALTA (~88%)** y faltan pocas reglas de negocio, no módulos enteros. El backend de Asistencias, Traslados, Bipay, BCP, Planilla y el Control Center son **fieles 1:1**. El riesgo se concentra en el **cuadre** y en un **split de modelo de datos**.
 
