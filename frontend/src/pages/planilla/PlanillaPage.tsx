@@ -25,9 +25,9 @@ const mesActual = format(startOfMonth(new Date()), 'yyyy-MM')
 
 function KpiCard({ label, valor, color }: { label: string; valor: string; color: string }) {
   return (
-    <Card className="px-4 py-3 text-center min-w-[120px]">
-      <p className="text-xs text-muted-foreground leading-tight">{label}</p>
-      <p className={`font-bold text-sm mt-1 ${color}`}>{valor}</p>
+    <Card className="group relative min-w-[120px] overflow-hidden border-gray-200/80 bg-white/80 px-4 py-3.5 text-center shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300/70 dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)]">
+      <p className="text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{label}</p>
+      <p className={`mt-1.5 text-sm font-bold tracking-tight ${color}`}>{valor}</p>
     </Card>
   )
 }
@@ -75,8 +75,8 @@ function CeldaEditable({
       type="number"
       step="0.01"
       min="0"
-      className={`w-16 text-right text-xs rounded border px-1 py-0.5 bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-400 ${borderColor}`}
-      style={{ color: esComision ? (fila.override_comisiones ? '#4ade80' : '#22d3ee') : '#f87171' }}
+      className={`w-16 rounded-md border bg-white/75 px-1.5 py-1 text-right font-mono text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400/30 dark:bg-black/20 ${borderColor}`}
+      style={{ color: esComision ? (fila.override_comisiones ? '#16a34a' : '#0891b2') : '#dc2626' }}
       value={val}
       onChange={handleChange}
       onBlur={handleBlur}
@@ -231,9 +231,9 @@ function BoletaDialog({
             />
           </div>
         </div>
-        <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">
-            Total neto: <span className="text-green-600">S/ {totalNeto.toFixed(2)}</span>
+        <div className="flex items-center justify-between border-t border-gray-200/80 pt-3 dark:border-white/[0.07]">
+          <span className="text-sm font-semibold text-gray-700 dark:text-zinc-300">
+            Total neto: <span className="text-emerald-600 dark:text-emerald-400">S/ {totalNeto.toFixed(2)}</span>
           </span>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
@@ -272,15 +272,15 @@ function FilaTabla({
 
   return (
     <>
-      <tr className="border-b border-white/5 hover:bg-white/[0.02] text-xs">
-        <td className="py-1 px-2 text-muted-foreground">{fila.nombres}</td>
-        <td className="py-1 px-1 text-center text-muted-foreground/60">{fila.tienda_base}</td>
+      <tr className="border-b border-gray-100 text-xs transition-colors hover:bg-indigo-50/45 dark:border-white/[0.05] dark:hover:bg-indigo-400/[0.035]">
+        <td className="px-3 py-2 font-medium text-gray-700 dark:text-zinc-300">{fila.nombres}</td>
+        <td className="px-1 py-2 text-center font-mono text-gray-400 dark:text-zinc-500">{fila.tienda_base}</td>
         <td className="py-1 px-1 text-center">{estadoBadge}</td>
-        <td className="py-1 px-1 text-right font-mono text-sky-400">{fmt(fila.sueldo_base)}</td>
+        <td className="px-1 py-2 text-right font-mono text-sky-600 dark:text-sky-400">{fmt(fila.sueldo_base)}</td>
         <td className="py-1 px-1 text-center">
           <CeldaEditable valor={fila.dias_trabajados} campo="dias_trabajados" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-mono text-blue-400">{fmt(fila.sueldo_dias_lab)}</td>
+        <td className="px-1 py-2 text-right font-mono text-blue-600 dark:text-blue-400">{fmt(fila.sueldo_dias_lab)}</td>
         <td className="py-1 px-1 text-right font-mono">
           <CeldaEditable valor={fila.comision_jefe} campo="comision_jefe" fila={fila} mes={mes} onSave={onSave} />
         </td>
@@ -293,22 +293,22 @@ function FilaTabla({
         <td className="py-1 px-1 text-right font-mono">
           <CeldaEditable valor={fila.comision_online} campo="comision_online" fila={fila} mes={mes} esComision onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-bold text-amber-400 font-mono">{fmt(fila.total_remuneracion)}</td>
+        <td className="px-1 py-2 text-right font-mono font-bold text-amber-600 dark:text-amber-400">{fmt(fila.total_remuneracion)}</td>
         <td className="py-1 px-1 text-right font-mono">
           <CeldaEditable valor={fila.retencion_uniforme} campo="retencion_uniforme" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-mono text-red-400">{fmt(fila.faltas_permisos)}</td>
-        <td className="py-1 px-1 text-right font-mono text-red-400">{fmt(fila.tardanzas)}</td>
+        <td className="px-1 py-2 text-right font-mono text-red-600 dark:text-red-400">{fmt(fila.faltas_permisos)}</td>
+        <td className="px-1 py-2 text-right font-mono text-red-600 dark:text-red-400">{fmt(fila.tardanzas)}</td>
         <td className="py-1 px-1 text-right font-mono">
           <CeldaEditable valor={fila.faltante_efectivo} campo="faltante_efectivo" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-bold text-red-400 font-mono">{fmt(fila.total_descuentos)}</td>
-        <td className="py-1 px-1 text-right font-bold text-cyan-400 font-mono text-sm">{fmt(fila.total_pagar)}</td>
+        <td className="px-1 py-2 text-right font-mono font-bold text-red-600 dark:text-red-400">{fmt(fila.total_descuentos)}</td>
+        <td className="px-1 py-2 text-right font-mono text-sm font-bold text-cyan-600 dark:text-cyan-400">{fmt(fila.total_pagar)}</td>
         <td className="py-1 px-1 text-center">
           <div className="flex gap-1 justify-center items-center">
             <button
               onClick={() => setExpandida(v => !v)}
-              className="text-muted-foreground hover:text-white px-1"
+              className="rounded-md px-1.5 py-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-500 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
               title="Ver detalle"
             >
               {expandida ? '▲' : '▼'}
@@ -316,7 +316,7 @@ function FilaTabla({
             {fila.override_comisiones && (
               <button
                 onClick={() => onReset(fila.agente_id, mes)}
-                className="text-amber-400 hover:text-amber-300 px-1 text-xs"
+                className="rounded-md px-1.5 py-1 text-xs text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:text-amber-400 dark:hover:bg-amber-400/[0.08] dark:hover:text-amber-300"
                 title="Restaurar comisiones automáticas"
               >
                 ↺
@@ -324,7 +324,7 @@ function FilaTabla({
             )}
             <button
               onClick={() => setBoletaOpen(true)}
-              className="text-indigo-400 hover:text-indigo-300 px-1"
+              className="rounded-md px-1.5 py-1 text-indigo-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-400/[0.08] dark:hover:text-indigo-300"
               title="Generar Boleta PDF"
             >
               <FileText size={13} />
@@ -341,30 +341,30 @@ function FilaTabla({
         />
       )}
       {expandida && (
-        <tr className="bg-white/[0.015] border-b border-white/5">
-          <td colSpan={18} className="px-4 py-2">
-            <div className="flex gap-6 text-xs text-muted-foreground">
+        <tr className="border-b border-indigo-100/70 bg-indigo-50/40 dark:border-white/[0.05] dark:bg-indigo-400/[0.025]">
+          <td colSpan={18} className="px-5 py-3">
+            <div className="flex gap-6 text-xs text-gray-500 dark:text-zinc-400">
               <div>
-                <span className="text-cyan-400/70 mr-1">Auto Equipos:</span>
+                <span className="mr-1 text-cyan-600 dark:text-cyan-400/80">Auto Equipos:</span>
                 <span className="font-mono">{fmtSol(fila.auto_equipo)}</span>
               </div>
               <div>
-                <span className="text-cyan-400/70 mr-1">Auto Planes:</span>
+                <span className="mr-1 text-cyan-600 dark:text-cyan-400/80">Auto Planes:</span>
                 <span className="font-mono">{fmtSol(fila.auto_planes)}</span>
               </div>
               <div>
-                <span className="text-cyan-400/70 mr-1">Auto Online:</span>
+                <span className="mr-1 text-cyan-600 dark:text-cyan-400/80">Auto Online:</span>
                 <span className="font-mono">{fmtSol(fila.auto_online)}</span>
               </div>
               <div>
-                <span className="text-amber-400/70 mr-1">Adelantos:</span>
+                <span className="mr-1 text-amber-600 dark:text-amber-400/80">Adelantos:</span>
                 <span className="font-mono">{fmtSol(fila.adelanto_incluido)}</span>
               </div>
               {fila.override_comisiones && (
                 <Badge variant="warning" className="self-center">Comisiones manuales</Badge>
               )}
               {fila.notas && (
-                <div className="ml-4 italic text-muted-foreground/60">{fila.notas}</div>
+                <div className="ml-4 italic text-gray-400 dark:text-zinc-500">{fila.notas}</div>
               )}
             </div>
           </td>
@@ -418,7 +418,7 @@ export function PlanillaPage() {
   const t = data?.totales
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Planilla CD08"
         subtitle={`Cálculo mensual de remuneraciones y comisiones`}
@@ -428,7 +428,7 @@ export function PlanillaPage() {
             type="month"
             value={mes}
             onChange={e => setMes(e.target.value)}
-            className="w-36"
+            className="w-36 bg-white/80 shadow-sm backdrop-blur-xl dark:bg-zinc-900/65"
           />
           <Button type="button" variant="outline" onClick={exportarExcel} disabled={exportando}>
             <FileText size={14} className="mr-1" /> {exportando ? 'Generando…' : 'Exportar Excel'}
@@ -438,48 +438,48 @@ export function PlanillaPage() {
 
       {/* KPIs */}
       {t && (
-        <div className="flex flex-wrap gap-2">
-          <KpiCard label="Agentes" valor={String(data.agentes.length)} color="text-white" />
-          <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-amber-400" />
-          <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-cyan-400" />
-          <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-cyan-400" />
-          <KpiCard label="Com. Online" valor={fmtSol(t.com_online)} color="text-cyan-400" />
-          <KpiCard label="Descuentos" valor={fmtSol(t.total_descuentos)} color="text-red-400" />
-          <KpiCard label="Adelantos" valor={fmtSol(t.adelantos)} color="text-amber-300" />
-          <KpiCard label="TOTAL A PAGAR" valor={fmtSol(t.total_pagar)} color="text-green-400 text-base" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+          <KpiCard label="Agentes" valor={String(data.agentes.length)} color="text-gray-900 dark:text-zinc-100" />
+          <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-amber-600 dark:text-amber-400" />
+          <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-cyan-600 dark:text-cyan-400" />
+          <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-cyan-600 dark:text-cyan-400" />
+          <KpiCard label="Com. Online" valor={fmtSol(t.com_online)} color="text-cyan-600 dark:text-cyan-400" />
+          <KpiCard label="Descuentos" valor={fmtSol(t.total_descuentos)} color="text-red-600 dark:text-red-400" />
+          <KpiCard label="Adelantos" valor={fmtSol(t.adelantos)} color="text-amber-600 dark:text-amber-300" />
+          <KpiCard label="TOTAL A PAGAR" valor={fmtSol(t.total_pagar)} color="text-base text-emerald-600 dark:text-emerald-400" />
         </div>
       )}
 
       {isLoading && (
-        <div className="text-center py-16 text-muted-foreground">Calculando planilla...</div>
+        <div className="rounded-2xl border border-gray-200/80 bg-white/70 py-16 text-center text-sm text-gray-400 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/60 dark:text-zinc-500">Calculando planilla...</div>
       )}
       {isError && (
-        <div className="text-center py-16 text-red-400">Error al cargar la planilla.</div>
+        <div className="rounded-2xl border border-red-200/80 bg-red-50/70 py-16 text-center text-sm text-red-600 shadow-sm backdrop-blur-xl dark:border-red-400/20 dark:bg-red-500/[0.07] dark:text-red-400">Error al cargar la planilla.</div>
       )}
 
       {data && (
-        <Card className="p-0 overflow-hidden">
+        <Card className="relative overflow-hidden border-gray-200/80 bg-white/80 p-0 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_22px_50px_-30px_rgba(0,0,0,0.95)]">
           <div className="overflow-x-auto">
             <table className="w-full text-xs" style={{ minWidth: '1600px' }}>
               <thead>
-                <tr className="border-b border-white/10 text-muted-foreground/70 text-[0.65rem] uppercase tracking-wide">
+                <tr className="border-b border-gray-200 bg-gray-50/90 text-[0.65rem] uppercase tracking-[0.08em] text-gray-500 backdrop-blur dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400">
                   <th className="py-2 px-2 text-left">Agente</th>
                   <th className="py-2 px-1 text-center">Tienda</th>
                   <th className="py-2 px-1 text-center">Estado</th>
-                  <th className="py-2 px-1 text-right text-sky-400">S. Base</th>
+                  <th className="px-1 py-2 text-right text-sky-600 dark:text-sky-400">S. Base</th>
                   <th className="py-2 px-1 text-center">Días</th>
-                  <th className="py-2 px-1 text-right text-blue-400">S × Días</th>
-                  <th className="py-2 px-1 text-right text-green-400">Com. Jefe</th>
-                  <th className="py-2 px-1 text-right text-cyan-400">Com. Equipo</th>
-                  <th className="py-2 px-1 text-right text-cyan-400">Com. Planes</th>
-                  <th className="py-2 px-1 text-right text-cyan-400">Com. Online</th>
-                  <th className="py-2 px-1 text-right text-amber-400">Total Remun.</th>
-                  <th className="py-2 px-1 text-right text-red-400">Ret. Uni.</th>
-                  <th className="py-2 px-1 text-right text-red-400">Faltas</th>
-                  <th className="py-2 px-1 text-right text-red-400">Tardanzas</th>
-                  <th className="py-2 px-1 text-right text-red-400">Faltante</th>
-                  <th className="py-2 px-1 text-right text-red-500">Total Desc.</th>
-                  <th className="py-2 px-1 text-right text-cyan-300">A Pagar</th>
+                  <th className="px-1 py-2 text-right text-blue-600 dark:text-blue-400">S × Días</th>
+                  <th className="px-1 py-2 text-right text-emerald-600 dark:text-emerald-400">Com. Jefe</th>
+                  <th className="px-1 py-2 text-right text-cyan-600 dark:text-cyan-400">Com. Equipo</th>
+                  <th className="px-1 py-2 text-right text-cyan-600 dark:text-cyan-400">Com. Planes</th>
+                  <th className="px-1 py-2 text-right text-cyan-600 dark:text-cyan-400">Com. Online</th>
+                  <th className="px-1 py-2 text-right text-amber-600 dark:text-amber-400">Total Remun.</th>
+                  <th className="px-1 py-2 text-right text-red-600 dark:text-red-400">Ret. Uni.</th>
+                  <th className="px-1 py-2 text-right text-red-600 dark:text-red-400">Faltas</th>
+                  <th className="px-1 py-2 text-right text-red-600 dark:text-red-400">Tardanzas</th>
+                  <th className="px-1 py-2 text-right text-red-600 dark:text-red-400">Faltante</th>
+                  <th className="px-1 py-2 text-right text-red-600 dark:text-red-500">Total Desc.</th>
+                  <th className="px-1 py-2 text-right text-cyan-600 dark:text-cyan-300">A Pagar</th>
                   <th className="py-2 px-1 w-10"></th>
                 </tr>
               </thead>
@@ -496,14 +496,14 @@ export function PlanillaPage() {
               </tbody>
               {t && (
                 <tfoot>
-                  <tr className="border-t-2 border-white/10 bg-white/[0.02] font-bold text-xs">
-                    <td colSpan={5} className="py-2 px-2 text-muted-foreground">TOTALES</td>
-                    <td className="py-2 px-1 text-right font-mono text-blue-400">{fmt(t.sueldo_dias_lab)}</td>
+                  <tr className="border-t-2 border-indigo-200/80 bg-indigo-50/60 text-xs font-bold dark:border-indigo-400/20 dark:bg-indigo-400/[0.05]">
+                    <td colSpan={5} className="px-3 py-3 text-gray-600 dark:text-zinc-300">TOTALES</td>
+                    <td className="px-1 py-3 text-right font-mono text-blue-600 dark:text-blue-400">{fmt(t.sueldo_dias_lab)}</td>
                     <td colSpan={4}></td>
-                    <td className="py-2 px-1 text-right font-mono text-amber-400">{fmt(t.total_remuneracion)}</td>
+                    <td className="px-1 py-3 text-right font-mono text-amber-600 dark:text-amber-400">{fmt(t.total_remuneracion)}</td>
                     <td colSpan={4}></td>
-                    <td className="py-2 px-1 text-right font-mono text-red-400">{fmt(t.total_descuentos)}</td>
-                    <td className="py-2 px-1 text-right font-mono text-cyan-400 text-sm">{fmt(t.total_pagar)}</td>
+                    <td className="px-1 py-3 text-right font-mono text-red-600 dark:text-red-400">{fmt(t.total_descuentos)}</td>
+                    <td className="px-1 py-3 text-right font-mono text-sm text-cyan-600 dark:text-cyan-400">{fmt(t.total_pagar)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -514,7 +514,7 @@ export function PlanillaPage() {
       )}
 
       {data && data.agentes.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-gray-300/80 bg-white/45 py-16 text-center text-gray-400 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.02] dark:text-zinc-500">
           No hay agentes activos para el mes seleccionado.
         </div>
       )}
