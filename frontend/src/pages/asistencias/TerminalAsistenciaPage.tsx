@@ -235,6 +235,8 @@ export function TerminalAsistenciaPage() {
   const [turnoCompleto, setTurnoCompleto] = useState(false)
 
   const huellaRef = useRef<string>('')
+  const horaIntentoRef = useRef<number>(0)      // A3: instante del intento GPS (ms)
+  const aperturaCamaraRef = useRef<number>(0)   // A3: instante de apertura de cámara/QR (ms)
 
   useEffect(() => {
     api.get('/v1/postulaciones/tiendas')
@@ -298,6 +300,7 @@ export function TerminalAsistenciaPage() {
         tienda_id: tiendaSel || undefined,
         omitir_refrigerio: omitirRefrigerio,
         turno_extendido: turnoCompleto,
+        hora_intento_gps: horaIntentoRef.current || undefined, // A3: 60s tolerancia revocable del QR
         ...payload,
       })
       const data = res.data
@@ -318,6 +321,7 @@ export function TerminalAsistenciaPage() {
 
   function marcarGPS() {
     if (!navigator.geolocation) { setMensaje('GPS no disponible. Usa una alternativa.'); setPaso('fallback'); return }
+    horaIntentoRef.current = Date.now() // A3
     setPaso('gps')
     navigator.geolocation.getCurrentPosition(
       (pos) => marcar('gps', { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
@@ -404,6 +408,7 @@ export function TerminalAsistenciaPage() {
               {loading ? 'Procesando...' : `MARCAR ${TIPO_LABEL[tipo].toUpperCase()}`}
             </button>
             <button onClick={() => setPaso('fallback')} className="text-xs text-zinc-500 hover:text-amber-400">¿Problemas con el GPS? Usar otra forma</button>
+            <button onClick={() => setPaso('token')} className="text-xs text-amber-400/80 hover:text-amber-300">Usar token de emergencia</button>
             <button onClick={reset} className="text-xs text-zinc-600 hover:text-zinc-400">← Cancelar</button>
           </div>
         )}
@@ -420,7 +425,7 @@ export function TerminalAsistenciaPage() {
         {paso === 'fallback' && (
           <div className="flex flex-col items-center gap-3">
             <p className="text-center text-amber-400 text-sm mb-1">{mensaje || 'Elige una forma alternativa de marcar'}</p>
-            <button onClick={() => setPaso('qr')} className="w-full flex items-center gap-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl px-5 py-4 transition-all active:scale-95">
+            <button onClick={() => { aperturaCamaraRef.current = Date.now(); setPaso('qr') }} className="w-full flex items-center gap-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl px-5 py-4 transition-all active:scale-95">
               <span className="text-2xl">🔳</span>
               <div className="text-left"><p className="font-bold">Código QR de la tienda</p><p className="text-xs text-zinc-400">Escanea el QR del local (2 min)</p></div>
             </button>
@@ -439,7 +444,7 @@ export function TerminalAsistenciaPage() {
         {/* ── QR ── */}
         {paso === 'qr' && (
           <div className="flex flex-col items-center gap-4">
-            <EscanerQR onToken={(token) => marcar('qr', { qr_token: token })} />
+            <EscanerQR onToken={(token) => marcar('qr', { qr_token: token, hora_apertura_camera: aperturaCamaraRef.current || undefined })} />
             <button onClick={() => setPaso('fallback')} className="text-xs text-zinc-500 hover:text-zinc-300">← Volver</button>
           </div>
         )}
