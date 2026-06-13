@@ -103,6 +103,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Otros recursos ────────────────────────────────────────────────────────
     // Custom agentes routes BEFORE apiResource to avoid {agente} wildcard conflict
     Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes']);
+    Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica']);
     Route::apiResource('agentes',     AgenteController::class);
     Route::apiResource('clientes',    ClienteController::class);
     // Custom inventario routes MUST come before apiResource to avoid {inventario} wildcard conflict
