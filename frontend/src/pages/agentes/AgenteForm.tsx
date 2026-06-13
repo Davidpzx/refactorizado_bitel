@@ -49,14 +49,14 @@ function FormSection({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-gray-200/80 bg-gray-50/45 p-4 dark:border-white/[0.07] dark:bg-white/[0.025]">
-      <div className="mb-4 flex items-center gap-2.5 border-b border-gray-200/70 pb-3 dark:border-white/[0.06]">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-200/70 bg-indigo-50 text-indigo-600 dark:border-indigo-400/15 dark:bg-indigo-500/10 dark:text-indigo-300">
+    <section className="kyro-card p-4">
+      <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
+        <span className="flex h-8 w-8 items-center justify-center rounded-kyro border border-kyro-indigo bg-kyro-elevated text-kyro-gold">
           {icon}
         </span>
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-zinc-100">{title}</h3>
-          <p className="text-xs text-gray-400 dark:text-zinc-500">{description}</p>
+          <h3 className="text-sm font-semibold text-kyro-text">{title}</h3>
+          <p className="text-xs text-kyro-muted">{description}</p>
         </div>
       </div>
       {children}
@@ -65,7 +65,7 @@ function FormSection({
 }
 
 function FieldError({ children }: { children?: ReactNode }) {
-  return children ? <p className="mt-1 text-xs text-red-500">{children}</p> : null
+  return children ? <p className="mt-1 text-xs text-kyro-danger">{children}</p> : null
 }
 
 export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
@@ -163,12 +163,12 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
                 </Button>
               </div>
               <FieldError>{errors.dni?.message}</FieldError>
-              {dniError && <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{dniError}</p>}
+              {dniError && <p className="mt-1 text-xs text-kyro-warning">{dniError}</p>}
             </div>
           ) : (
             <div>
               <Label htmlFor="dni">DNI</Label>
-              <Input id="dni" {...register('dni')} readOnly className="mt-1 cursor-not-allowed bg-gray-100 font-mono dark:bg-white/[0.04]" />
+              <Input id="dni" {...register('dni')} readOnly className="mt-1 cursor-not-allowed bg-kyro-base font-mono" />
             </div>
           )}
           <div>
@@ -265,25 +265,25 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
               PIN de seguridad {esEdicion ? '(vacío = sin cambio)' : '*'}
             </Label>
             <div className="relative mt-1">
-              <KeyRound size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <KeyRound size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-subtle" />
               <Input id="pin_seguridad" type="password" {...register('pin_seguridad')} placeholder={esEdicion ? '••••' : 'Mínimo 4 caracteres'} maxLength={8} className="pl-9" />
             </div>
             <FieldError>{errors.pin_seguridad?.message}</FieldError>
           </div>
-          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white/70 px-3 py-2.5 text-sm text-gray-700 dark:border-white/[0.08] dark:bg-black/10 dark:text-zinc-300 sm:col-span-2">
-            <input id="es_gerencia" type="checkbox" {...register('es_gerencia')} className="h-4 w-4 rounded border-gray-300 accent-indigo-600" />
+          <label className="flex cursor-pointer items-center gap-3 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
+            <input id="es_gerencia" type="checkbox" {...register('es_gerencia')} className="h-4 w-4 rounded border-kyro-border accent-kyro-gold" />
             Personal de gerencia
           </label>
         </div>
       </FormSection>
 
       {mutError && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-400/15 dark:bg-red-500/10 dark:text-red-300">
+        <p className="rounded-kyro border border-kyro-danger bg-kyro-danger/10 px-3 py-2 text-sm text-kyro-danger">
           {mutError.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
         </p>
       )}
 
-      <div className="flex flex-col-reverse gap-3 border-t border-gray-200/80 pt-4 dark:border-white/[0.07] sm:flex-row sm:justify-end">
+      <div className="flex flex-col-reverse gap-3 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
           Cancelar
         </Button>

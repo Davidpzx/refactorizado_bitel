@@ -33,7 +33,7 @@ function getColumns(
       accessorKey: 'sueldo_base',
       header: 'Sueldo',
       cell: ({ row }) => (
-        <span className="font-mono text-xs font-semibold tabular-nums text-gray-700 dark:text-zinc-200">
+        <span className="font-mono text-xs font-semibold tabular-nums text-kyro-body">
           S/ {parseFloat(row.original.sueldo_base).toFixed(2)}
         </span>
       ),
@@ -51,7 +51,7 @@ function getColumns(
       accessorKey: 'fecha_ingreso',
       header: 'Ingreso',
       cell: ({ row }) => (
-        <span className="text-xs tabular-nums text-gray-500 dark:text-zinc-400">
+        <span className="text-xs tabular-nums text-kyro-muted">
           {new Date(`${row.original.fecha_ingreso}T00:00:00`).toLocaleDateString('es-PE')}
         </span>
       ),
@@ -63,7 +63,7 @@ function getColumns(
         <div className="flex items-center gap-2">
           <Link
             to={`/agentes/${row.original.id}`}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 transition-all hover:-translate-y-px hover:bg-gray-50 dark:border-white/12 dark:bg-zinc-900/50 dark:text-zinc-200 dark:hover:border-white/25 dark:hover:bg-white/[0.06]"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 text-xs font-medium text-kyro-body transition-colors hover:border-kyro-gold hover:text-kyro-gold"
           >
             <Eye size={13} /> Ver
           </Link>
@@ -131,7 +131,7 @@ export function AgentesPage() {
 
       <ListToolbar description="Busca por documento o nombre del agente.">
         <div className="relative w-full sm:max-w-xs">
-          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-subtle" />
           <Input
             placeholder="Buscar por DNI o nombre..."
             value={search}
@@ -160,15 +160,15 @@ export function AgentesPage() {
         title={editando ? 'Editar agente' : 'Nuevo agente'}
         maxWidth="xl"
       >
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 dark:border-indigo-400/10 dark:bg-indigo-500/[0.06]">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+        <div className="kyro-card mb-5 flex items-center gap-3 px-4 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-kyro bg-kyro-indigo text-kyro-text">
             <UserRound size={17} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-zinc-100">
+            <p className="text-sm font-semibold text-kyro-text">
               {editando ? editando.nombres : 'Datos del nuevo agente'}
             </p>
-            <p className="text-xs text-gray-500 dark:text-zinc-400">
+            <p className="text-xs text-kyro-muted">
               Completa la información personal, laboral y de acceso.
             </p>
           </div>

@@ -45,10 +45,10 @@ const comprobantesApi = {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const ESTADO_CONFIG: Record<string, { label: string; class: string; Icon: React.ComponentType<{ size?: number }> }> = {
-  PENDIENTE:    { label: 'Pendiente',    class: 'bg-yellow-100 text-yellow-800', Icon: Clock },
-  ACEPTADO:     { label: 'Aceptado',     class: 'bg-green-100 text-green-800',  Icon: CheckCircle2 },
-  ACEPTADO_OBS: { label: 'Aceptado c/obs', class: 'bg-blue-100 text-blue-800', Icon: FileCheck },
-  ERROR:        { label: 'Error',        class: 'bg-red-100 text-red-800',      Icon: AlertCircle },
+  PENDIENTE:    { label: 'Pendiente',      class: 'bg-kyro-warning/10 text-kyro-warning', Icon: Clock },
+  ACEPTADO:     { label: 'Aceptado',       class: 'bg-kyro-success/10 text-kyro-success', Icon: CheckCircle2 },
+  ACEPTADO_OBS: { label: 'Aceptado c/obs', class: 'bg-kyro-info/10 text-kyro-info', Icon: FileCheck },
+  ERROR:        { label: 'Error',          class: 'bg-kyro-danger/10 text-kyro-danger', Icon: AlertCircle },
 }
 
 function EstadoBadge({ estado }: { estado: string }) {
@@ -100,7 +100,7 @@ export function ComprobantesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT" accent="#10b981">
+      <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT">
         <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ['comprobantes'] })}>
           <RefreshCw size={14} className="mr-2" /> Actualizar
         </Button>
@@ -110,7 +110,7 @@ export function ComprobantesPage() {
       <ListToolbar description="Segmenta los comprobantes por estado de envío y tipo">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 shrink-0">Estado:</label>
+            <label className="shrink-0 text-sm text-kyro-muted">Estado:</label>
             <Select
               value={filtroEstado}
               onChange={e => { setFiltroEstado(e.target.value); setPage(1) }}
@@ -124,7 +124,7 @@ export function ComprobantesPage() {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 shrink-0">Tipo:</label>
+            <label className="shrink-0 text-sm text-kyro-muted">Tipo:</label>
             <Select
               value={filtroTipo}
               onChange={e => { setFiltroTipo(e.target.value); setPage(1) }}
@@ -135,89 +135,93 @@ export function ComprobantesPage() {
               <option value="01">Factura</option>
             </Select>
           </div>
-          <span className="text-sm text-gray-500 ml-auto">{total} comprobante{total !== 1 ? 's' : ''}</span>
+          <span className="ml-auto text-sm text-kyro-muted">{total} comprobante{total !== 1 ? 's' : ''}</span>
         </div>
       </ListToolbar>
 
       {/* Tabla */}
-      <div className="premium-surface">
+      <div className="kyro-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="premium-table w-full text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left">Número</th>
-                <th className="px-4 py-3 text-left">Tipo</th>
-                <th className="px-4 py-3 text-left">Cliente</th>
-                <th className="px-4 py-3 text-right">Monto</th>
-                <th className="px-4 py-3 text-center">Estado SUNAT</th>
-                <th className="px-4 py-3 text-center">Intentos</th>
-                <th className="px-4 py-3 text-left">Mensaje</th>
-                <th className="px-4 py-3 text-left">Creado</th>
-                <th className="px-4 py-3 text-center">Acciones</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Número</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Tipo</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Cliente</th>
+                <th className="kyro-table-head px-4 py-3 text-right">Monto</th>
+                <th className="kyro-table-head px-4 py-3 text-center">Estado SUNAT</th>
+                <th className="kyro-table-head px-4 py-3 text-center">Intentos</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Mensaje</th>
+                <th className="kyro-table-head px-4 py-3 text-left">Creado</th>
+                <th className="kyro-table-head px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-kyro-border">
               {isLoading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-kyro-muted">Cargando...</td></tr>
               ) : comprobantes.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No hay comprobantes.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-kyro-muted">No hay comprobantes.</td></tr>
               ) : comprobantes.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900">{c.nombre_completo}</td>
-                  <td className="px-4 py-3 text-gray-600">{TIPO_LABEL[c.tipo_comprobante] ?? c.tipo_comprobante}</td>
+                <tr key={c.id} className="transition-colors hover:bg-kyro-elevated">
+                  <td className="px-4 py-3 font-mono font-medium text-kyro-text">{c.nombre_completo}</td>
+                  <td className="px-4 py-3 text-kyro-body">{TIPO_LABEL[c.tipo_comprobante] ?? c.tipo_comprobante}</td>
                   <td className="px-4 py-3">
                     {c.venta?.cliente ? (
                       <div>
-                        <div className="font-medium text-gray-800">{c.venta.cliente.nombre}</div>
-                        <div className="text-xs text-gray-400">{c.venta.cliente.dni_ruc}</div>
+                        <div className="font-medium text-kyro-body">{c.venta.cliente.nombre}</div>
+                        <div className="text-xs text-kyro-subtle">{c.venta.cliente.dni_ruc}</div>
                       </div>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-kyro-subtle">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-medium">{pen(c.venta?.monto_total)}</td>
                   <td className="px-4 py-3 text-center"><EstadoBadge estado={c.estado_sunat} /></td>
-                  <td className="px-4 py-3 text-center text-gray-600">{c.intentos}</td>
+                  <td className="px-4 py-3 text-center text-kyro-body">{c.intentos}</td>
                   <td className="px-4 py-3 max-w-[200px]">
                     {c.mensaje_sunat ? (
-                      <span className="text-xs text-gray-500 truncate block" title={c.mensaje_sunat}>
+                      <span className="block truncate text-xs text-kyro-muted" title={c.mensaje_sunat}>
                         {c.mensaje_sunat}
                       </span>
-                    ) : <span className="text-gray-300">—</span>}
+                    ) : <span className="text-kyro-subtle">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
+                  <td className="px-4 py-3 text-xs text-kyro-muted">
                     {c.creado_en ? new Date(c.creado_en).toLocaleDateString('es-PE') : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
                       {c.estado_sunat !== 'ACEPTADO' && (
-                        <button
+                        <Button
                           onClick={() => reenviarMutation.mutate(c.id)}
                           disabled={reenviarMutation.isPending}
                           title="Reenviar a SUNAT"
-                          className="p-1.5 rounded-md text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-kyro-muted hover:bg-kyro-info/10 hover:text-kyro-info"
                         >
                           <Send size={13} />
-                        </button>
+                        </Button>
                       )}
                       {c.estado_sunat !== 'ACEPTADO' && (
-                        <button
+                        <Button
                           onClick={() => {
                             if (window.confirm(`¿Eliminar ${c.nombre_completo}?`)) deleteMutation.mutate(c.id)
                           }}
                           disabled={deleteMutation.isPending}
                           title="Eliminar"
-                          className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-kyro-muted hover:bg-kyro-danger/10 hover:text-kyro-danger"
                         >
                           <Trash2 size={13} />
-                        </button>
+                        </Button>
                       )}
                       {c.xml_path && (
                         <a
                           href={c.xml_path}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 rounded-md text-gray-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-kyro text-kyro-muted transition-colors hover:bg-kyro-success/10 hover:text-kyro-success"
                           title="Ver XML"
                         >
                           <FileCheck size={13} />
@@ -233,7 +237,7 @@ export function ComprobantesPage() {
 
         {/* Paginación */}
         {totalPags > 1 && (
-          <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between border-t border-kyro-border bg-kyro-elevated px-4 py-3 text-sm text-kyro-muted">
             <span>Página {page} de {totalPags}</span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>

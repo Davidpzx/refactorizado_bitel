@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
+import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
 import { Dialog } from '../../components/ui/dialog'
@@ -15,11 +16,11 @@ import type { Lead, LeadFormData } from '../../types/crm'
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const ESTADOS: { value: Lead['estado']; label: string; color: string; bg: string }[] = [
-  { value: 'NUEVO',      label: 'Nuevo',      color: 'text-sky-600 dark:text-sky-400',       bg: 'border-sky-200/80 bg-sky-50/55 dark:border-sky-400/20 dark:bg-sky-400/[0.055]' },
-  { value: 'CONTACTADO', label: 'Contactado', color: 'text-amber-600 dark:text-amber-400',   bg: 'border-amber-200/80 bg-amber-50/55 dark:border-amber-400/20 dark:bg-amber-400/[0.055]' },
-  { value: 'INTERESADO', label: 'Interesado', color: 'text-violet-600 dark:text-violet-400', bg: 'border-violet-200/80 bg-violet-50/55 dark:border-violet-400/20 dark:bg-violet-400/[0.055]' },
-  { value: 'CONVERTIDO', label: 'Convertido', color: 'text-emerald-600 dark:text-emerald-400', bg: 'border-emerald-200/80 bg-emerald-50/55 dark:border-emerald-400/20 dark:bg-emerald-400/[0.055]' },
-  { value: 'PERDIDO',    label: 'Perdido',    color: 'text-red-600 dark:text-red-400',       bg: 'border-red-200/80 bg-red-50/55 dark:border-red-400/20 dark:bg-red-400/[0.055]' },
+  { value: 'NUEVO',      label: 'Nuevo',      color: 'text-kyro-info',    bg: 'border-kyro-info bg-kyro-panel' },
+  { value: 'CONTACTADO', label: 'Contactado', color: 'text-kyro-warning', bg: 'border-kyro-warning bg-kyro-panel' },
+  { value: 'INTERESADO', label: 'Interesado', color: 'text-kyro-gold',    bg: 'border-kyro-indigo bg-kyro-panel' },
+  { value: 'CONVERTIDO', label: 'Convertido', color: 'text-kyro-success', bg: 'border-kyro-success bg-kyro-panel' },
+  { value: 'PERDIDO',    label: 'Perdido',    color: 'text-kyro-danger',  bg: 'border-kyro-danger bg-kyro-panel' },
 ]
 
 const FUENTES: Lead['fuente'][] = ['PRESENCIAL', 'WHATSAPP', 'REFERIDO', 'LLAMADA']
@@ -88,45 +89,45 @@ function LeadForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-1">
-      <h3 className="text-sm font-semibold tracking-tight text-gray-900 dark:text-zinc-100">{esEdicion ? 'Editar lead' : 'Nuevo lead'}</h3>
+      <h3 className="text-sm font-semibold tracking-tight text-kyro-text">{esEdicion ? 'Editar lead' : 'Nuevo lead'}</h3>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">ID Agente</Label>
           <Input type="number" {...register('agente_id', { valueAsNumber: true })} placeholder="ID del agente" className="mt-1" />
-          {errors.agente_id && <p className="text-red-400 text-xs mt-1">{errors.agente_id.message}</p>}
+          {errors.agente_id && <p className="mt-1 text-xs text-kyro-danger">{errors.agente_id.message}</p>}
         </div>
         <div>
           <Label className="text-xs">Tienda</Label>
-          <select
+          <Select
             {...register('tienda_id')}
-            className="mt-1 h-9 w-full rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+            className="mt-1"
           >
             <option value="">Seleccionar</option>
             {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          {errors.tienda_id && <p className="text-red-400 text-xs mt-1">{errors.tienda_id.message}</p>}
+          </Select>
+          {errors.tienda_id && <p className="mt-1 text-xs text-kyro-danger">{errors.tienda_id.message}</p>}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">Estado</Label>
-          <select
+          <Select
             {...register('estado')}
-            className="mt-1 h-9 w-full rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+            className="mt-1"
           >
             {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-          </select>
+          </Select>
         </div>
         <div>
           <Label className="text-xs">Fuente</Label>
-          <select
+          <Select
             {...register('fuente')}
-            className="mt-1 h-9 w-full rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+            className="mt-1"
           >
             {FUENTES.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -135,13 +136,13 @@ function LeadForm({
         <textarea
           {...register('notas')}
           rows={3}
-          className="mt-1 w-full resize-none rounded-lg border border-gray-300/90 bg-white/90 px-3 py-2 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
+          className="kyro-input mt-1 w-full resize-none px-3 py-2 text-sm"
           placeholder="Observaciones del lead..."
         />
       </div>
 
       {(crear.isError || actualizar.isError) && (
-        <p className="rounded-lg border border-red-200/80 bg-red-50/70 px-3 py-2 text-xs text-red-600 dark:border-red-400/20 dark:bg-red-500/[0.08] dark:text-red-400">Error al guardar. Intente nuevamente.</p>
+        <p className="rounded-kyro border border-kyro-danger bg-kyro-danger/10 px-3 py-2 text-xs text-kyro-danger">Error al guardar. Intente nuevamente.</p>
       )}
 
       <div className="flex gap-2 justify-end">
@@ -170,41 +171,41 @@ function LeadCard({
   const estados = ESTADOS.map(e => e.value).filter(e => e !== lead.estado)
 
   return (
-    <div className="group space-y-3 rounded-xl border border-white/70 bg-white/75 p-3.5 text-xs shadow-[0_10px_25px_-20px_rgba(15,23,42,0.5)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300/70 hover:shadow-[0_16px_30px_-20px_rgba(79,70,229,0.35)] dark:border-white/[0.08] dark:bg-zinc-900/70 dark:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.95)] dark:hover:border-indigo-400/25">
+    <div className="kyro-card group space-y-3 p-3.5 text-xs transition-colors hover:border-kyro-gold">
       {lead.cliente ? (
         <div>
-          <p className="text-sm font-semibold tracking-tight text-gray-900 dark:text-zinc-100">{lead.cliente.nombre}</p>
-          <p className="font-mono text-[0.68rem] text-gray-400 dark:text-zinc-500">{lead.cliente.dni_ruc}</p>
+          <p className="text-sm font-semibold tracking-tight text-kyro-text">{lead.cliente.nombre}</p>
+          <p className="font-mono text-[0.68rem] text-kyro-subtle">{lead.cliente.dni_ruc}</p>
           {lead.cliente.telefono && (
             <a
               href={`https://wa.me/51${lead.cliente.telefono}`}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-emerald-600 transition-colors hover:text-emerald-500 hover:underline dark:text-emerald-400"
+              className="font-medium text-kyro-success transition-colors hover:underline"
             >
               {lead.cliente.telefono}
             </a>
           )}
         </div>
       ) : (
-        <p className="italic text-gray-400 dark:text-zinc-500">Sin cliente asignado</p>
+        <p className="italic text-kyro-muted">Sin cliente asignado</p>
       )}
 
-      <div className="flex flex-wrap gap-2 text-gray-400 dark:text-zinc-500">
-        <span>Tienda: <span className="font-medium text-gray-700 dark:text-zinc-300">{lead.tienda_id}</span></span>
-        <span>Fuente: <span className="font-medium text-gray-700 dark:text-zinc-300">{lead.fuente}</span></span>
+      <div className="flex flex-wrap gap-2 text-kyro-subtle">
+        <span>Tienda: <span className="font-medium text-kyro-body">{lead.tienda_id}</span></span>
+        <span>Fuente: <span className="font-medium text-kyro-body">{lead.fuente}</span></span>
       </div>
 
       {lead.notas && (
-        <p className="line-clamp-2 rounded-lg bg-slate-50/80 px-2.5 py-2 italic leading-relaxed text-gray-500 dark:bg-white/[0.035] dark:text-zinc-400">{lead.notas}</p>
+        <p className="line-clamp-2 rounded-kyro bg-kyro-elevated px-2.5 py-2 italic leading-relaxed text-kyro-muted">{lead.notas}</p>
       )}
 
-      <div className="flex gap-1.5 border-t border-gray-100/90 pt-2.5 dark:border-white/[0.06]">
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-400/[0.08]" onClick={() => onEditar(lead)}>
+      <div className="flex gap-1.5 border-t border-kyro-border pt-2.5">
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-kyro-gold hover:bg-kyro-gold/10" onClick={() => onEditar(lead)}>
           Editar
         </Button>
-        <select
-          className="h-7 flex-1 rounded-lg border border-gray-200/90 bg-white/75 px-2 text-xs text-gray-600 shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-300"
+        <Select
+          className="h-7 flex-1 px-2 text-xs"
           value=""
           onChange={e => {
             if (e.target.value) onCambiarEstado(lead.id, e.target.value as Lead['estado'])
@@ -214,11 +215,11 @@ function LeadCard({
           {estados.map(e => (
             <option key={e} value={e}>{ESTADOS.find(x => x.value === e)?.label}</option>
           ))}
-        </select>
+        </Select>
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/[0.08] dark:hover:text-red-300"
+          className="h-7 px-2 text-xs text-kyro-danger hover:bg-kyro-danger/10"
           onClick={() => { if (confirm('¿Eliminar lead?')) onEliminar(lead.id) }}
         >
           ×
@@ -244,10 +245,10 @@ function KanbanColumna({
   onEliminar: (id: number) => void
 }) {
   return (
-    <div className={`flex min-h-[200px] flex-col gap-2.5 rounded-2xl border p-3.5 shadow-[0_14px_35px_-28px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:shadow-[0_18px_40px_-28px_rgba(0,0,0,0.95)] ${config.bg}`} style={{ minWidth: '220px' }}>
-      <div className="mb-1 flex items-center justify-between border-b border-black/[0.05] pb-2.5 dark:border-white/[0.06]">
+    <div className={`flex min-h-[200px] min-w-[220px] flex-col gap-2.5 rounded-kyro-lg border p-3.5 shadow-kyro-card ${config.bg}`}>
+      <div className="mb-1 flex items-center justify-between border-b border-kyro-border pb-2.5">
         <span className={`text-[0.7rem] font-bold uppercase tracking-[0.1em] ${config.color}`}>{config.label}</span>
-        <Badge variant="outline" className="min-w-6 justify-center border-white/70 bg-white/60 text-xs shadow-sm dark:border-white/10 dark:bg-white/[0.04]">{leads.length}</Badge>
+        <Badge variant="outline" className="min-w-6 justify-center border-kyro-border bg-kyro-elevated text-xs">{leads.length}</Badge>
       </div>
       {leads.map(lead => (
         <LeadCard
@@ -259,7 +260,7 @@ function KanbanColumna({
         />
       ))}
       {leads.length === 0 && (
-        <p className="mt-6 rounded-xl border border-dashed border-gray-300/70 py-6 text-center text-xs text-gray-400 dark:border-white/10 dark:text-zinc-600">Sin leads</p>
+        <p className="mt-6 rounded-kyro border border-dashed border-kyro-border py-6 text-center text-xs text-kyro-subtle">Sin leads</p>
       )}
     </div>
   )
@@ -313,14 +314,14 @@ export function CrmPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="CRM — Pipeline de Leads" subtitle="Gestión de clientes potenciales">
-        <select
+        <Select
           value={filtroTienda}
           onChange={e => setFiltroTienda(e.target.value)}
-          className="h-9 rounded-lg border border-gray-300/90 bg-white/80 px-3 text-sm text-gray-700 shadow-sm backdrop-blur-xl transition-all dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-200"
+          className="h-9"
         >
           <option value="">Todas las tiendas</option>
           {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </Select>
         <Button size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
       </PageHeader>
 
@@ -330,26 +331,26 @@ export function CrmPage() {
           {pipeline.pipeline.map(p => {
             const cfg = ESTADOS.find(e => e.value === p.estado)!
             return (
-              <Card key={p.estado} className="relative overflow-hidden border-gray-200/80 bg-white/80 px-4 py-3 text-center shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:border-white/[0.08] dark:bg-zinc-900/65">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">{cfg.label}</p>
+              <Card key={p.estado} className="kyro-card relative overflow-hidden border-l-4 border-l-kpi-total px-4 py-3 text-center">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">{cfg.label}</p>
                 <p className={`mt-1 text-xl font-bold tracking-tight ${cfg.color}`}>{p.total}</p>
               </Card>
             )
           })}
-          <Card className="relative overflow-hidden border-emerald-200/80 bg-emerald-50/55 px-4 py-3 text-center shadow-[0_12px_30px_-22px_rgba(16,185,129,0.4)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:border-emerald-400/20 dark:bg-emerald-400/[0.055]">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">Tasa conversión</p>
-            <p className="mt-1 text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{pipeline.tasa_conversion}%</p>
+          <Card className="kyro-card relative overflow-hidden border-l-4 border-l-kyro-success px-4 py-3 text-center">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tasa conversión</p>
+            <p className="mt-1 text-xl font-bold tracking-tight text-kyro-success">{pipeline.tasa_conversion}%</p>
           </Card>
         </div>
       )}
 
       {isLoading && (
-        <div className="rounded-2xl border border-gray-200/80 bg-white/70 py-16 text-center text-sm text-gray-400 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/60 dark:text-zinc-500">Cargando leads...</div>
+        <div className="kyro-card py-16 text-center text-sm text-kyro-muted">Cargando leads...</div>
       )}
 
       {/* Tablero Kanban */}
       {!isLoading && (
-        <div className="flex gap-4 overflow-x-auto rounded-2xl border border-gray-200/70 bg-white/35 p-3 pb-5 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-black/10" style={{ minHeight: '400px' }}>
+        <div className="kyro-glass flex min-h-[400px] gap-4 overflow-x-auto rounded-kyro-xl p-3 pb-5">
           {ESTADOS.map(config => (
             <KanbanColumna
               key={config.value}

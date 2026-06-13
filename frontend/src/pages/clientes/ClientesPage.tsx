@@ -34,7 +34,7 @@ function getColumns(
     {
       accessorKey: 'nombre',
       header: 'Nombre',
-      cell: ({ row }) => <span className="font-medium text-gray-800 dark:text-zinc-200">{row.original.nombre}</span>,
+      cell: ({ row }) => <span className="font-medium text-kyro-body">{row.original.nombre}</span>,
     },
     {
       accessorKey: 'tipo_documento',
@@ -126,7 +126,7 @@ export function ClientesPage() {
 
       <ListToolbar description="Busca por documento o nombre del cliente.">
         <div className="relative w-full sm:max-w-xs">
-          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-subtle" />
           <Input
             placeholder="Buscar por DNI/RUC o nombre..."
             value={search}
@@ -155,15 +155,15 @@ export function ClientesPage() {
         title={editando ? 'Editar cliente' : 'Nuevo cliente'}
         maxWidth="md"
       >
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 dark:border-indigo-400/10 dark:bg-indigo-500/[0.06]">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+        <div className="kyro-card mb-5 flex items-center gap-3 px-4 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-kyro bg-kyro-indigo text-kyro-text">
             <UsersRound size={17} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-zinc-100">
+            <p className="text-sm font-semibold text-kyro-text">
               {editando ? editando.nombre : 'Datos del nuevo cliente'}
             </p>
-            <p className="text-xs text-gray-500 dark:text-zinc-400">
+            <p className="text-xs text-kyro-muted">
               Registra la identidad y los canales de contacto.
             </p>
           </div>

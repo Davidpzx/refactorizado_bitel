@@ -56,26 +56,26 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
   })
 
   return (
-    <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-        <Calendar size={15} className="text-indigo-500" /> Fechas laborales
+    <section className="kyro-card relative overflow-hidden p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
+        <Calendar size={15} className="text-kyro-gold" /> Fechas laborales
       </h3>
-      <p className="mb-4 text-xs text-gray-400 dark:text-zinc-500">Ingreso y vigencia del periodo de prueba.</p>
+      <p className="mb-4 text-xs text-kyro-muted">Ingreso y vigencia del periodo de prueba.</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Fecha ingreso</label>
+          <label className="mb-1 block text-xs text-kyro-muted">Fecha ingreso</label>
           <Input type="date" value={fechaIngreso} onChange={e => setFechaIngreso(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Inicio prueba</label>
+          <label className="mb-1 block text-xs text-kyro-muted">Inicio prueba</label>
           <Input type="date" value={fechaPruebaInicio} onChange={e => setFechaPruebaInicio(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Fin prueba</label>
+          <label className="mb-1 block text-xs text-kyro-muted">Fin prueba</label>
           <Input type="date" value={fechaPruebaFin} onChange={e => setFechaPruebaFin(e.target.value)} />
         </div>
       </div>
-      {msg && <p className={`mt-3 rounded-lg px-3 py-2 text-xs ${msg.startsWith('Error') ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300'}`}>{msg}</p>}
+      {msg && <p className={`mt-3 rounded-kyro px-3 py-2 text-xs ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>}
       <div className="mt-3 flex justify-end">
         <Button
           size="sm"
@@ -112,21 +112,21 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
   })
 
   return (
-    <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-        <ShieldCheck size={15} className="text-indigo-500" /> Token de seguridad
+    <section className="kyro-card relative overflow-hidden p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
+        <ShieldCheck size={15} className="text-kyro-gold" /> Token de seguridad
       </h3>
-      <p className="mb-4 text-xs text-gray-400 dark:text-zinc-500">Genera o revoca credenciales de acceso temporal.</p>
+      <p className="mb-4 text-xs text-kyro-muted">Genera o revoca credenciales de acceso temporal.</p>
 
       {resultado?.token && (
-        <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3 dark:border-indigo-400/15 dark:bg-indigo-500/10">
-          <p className="mb-1 text-xs text-indigo-600 dark:text-indigo-300">Token generado ({resultado.tipo}):</p>
-          <p className="break-all font-mono text-2xl font-bold tracking-widest text-indigo-800 dark:text-indigo-200">{resultado.token}</p>
-          <p className="mt-1 text-xs text-indigo-500 dark:text-indigo-400">Expira: {resultado.expiracion}</p>
+        <div className="mb-4 rounded-kyro border border-kyro-indigo bg-kyro-indigo/10 p-3">
+          <p className="mb-1 text-xs text-kyro-muted">Token generado ({resultado.tipo}):</p>
+          <p className="break-all font-mono text-2xl font-bold tracking-widest text-kyro-gold">{resultado.token}</p>
+          <p className="mt-1 text-xs text-kyro-subtle">Expira: {resultado.expiracion}</p>
         </div>
       )}
 
-      {msg && <p className="mb-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.04] dark:text-zinc-400">{msg}</p>}
+      {msg && <p className="mb-3 rounded-kyro bg-kyro-elevated px-3 py-2 text-xs text-kyro-muted">{msg}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={mut.isPending} onClick={() => mut.mutate('diario')}>
@@ -139,7 +139,7 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
           size="sm"
           variant="outline"
           disabled={mut.isPending}
-          className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-400/20 dark:text-red-300 dark:hover:bg-red-500/10"
+          className="border-kyro-danger text-kyro-danger hover:bg-kyro-danger/10"
           onClick={() => { setResultado(null); mut.mutate('revocar') }}
         >
           Revocar token
@@ -169,7 +169,7 @@ export function VerAgentePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">
+      <div className="flex h-64 items-center justify-center text-sm text-kyro-muted">
         <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
         Cargando perfil...
       </div>
@@ -179,7 +179,7 @@ export function VerAgentePage() {
   if (!agente) {
     return (
       <div className="space-y-4 py-12 text-center">
-        <p className="text-gray-500 dark:text-zinc-400">Agente no encontrado</p>
+        <p className="text-kyro-muted">Agente no encontrado</p>
         <Link to="/agentes"><Button variant="outline"><ArrowLeft size={14} /> Volver a Agentes</Button></Link>
       </div>
     )
@@ -196,20 +196,20 @@ export function VerAgentePage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-300">
+      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-kyro-muted transition-colors hover:text-kyro-gold">
         <ArrowLeft size={15} /> Volver a agentes
       </Link>
 
-      <section className="relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white/85 p-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/70 sm:p-6">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400 to-transparent" />
-        <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-indigo-500/[0.07] blur-3xl" />
+      <section className="kyro-card relative overflow-hidden p-5 sm:p-6">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-indigo via-kyro-gold to-transparent" />
+        <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-kyro-indigo/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start gap-5">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-2xl font-bold text-white shadow-lg shadow-indigo-500/20">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-kyro-lg bg-kyro-indigo text-2xl font-bold text-kyro-text shadow-kyro-card">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-50">{agente.nombres}</h1>
+              <h1 className="font-orbitron text-xl font-bold tracking-tight text-kyro-text">{agente.nombres}</h1>
               <Badge variant={agente.estado === 'ACTIVO' ? 'success' : agente.estado === 'INACTIVO' ? 'warning' : 'destructive'}>
                 {agente.estado}
               </Badge>
@@ -217,7 +217,7 @@ export function VerAgentePage() {
                 <Badge>Gerencia</Badge>
               )}
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-zinc-400">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-kyro-muted">
               {agente.dni && (
                 <span className="flex items-center gap-1"><User size={13} /> DNI: {agente.dni}</span>
               )}
@@ -237,35 +237,35 @@ export function VerAgentePage() {
               )}
             </div>
           </div>
-          <div className="ml-auto rounded-xl border border-gray-200/80 bg-gray-50/70 px-4 py-3 text-right dark:border-white/[0.07] dark:bg-white/[0.035]">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-gray-400">Sueldo base</p>
-            <p className="mt-1 font-mono text-lg font-bold tabular-nums text-gray-900 dark:text-zinc-100">{fmt(agente.sueldo_base)}</p>
+          <div className="ml-auto rounded-kyro border border-kyro-border bg-kyro-elevated px-4 py-3 text-right">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-kyro-subtle">Sueldo base</p>
+            <p className="mt-1 font-mono text-lg font-bold tabular-nums text-kyro-text">{fmt(agente.sueldo_base)}</p>
           </div>
         </div>
       </section>
 
       {stats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-gray-200/80 bg-white/85 p-4 dark:border-white/[0.08] dark:bg-zinc-900/70">
-            <div className="mb-2 flex items-center gap-2 text-gray-400 dark:text-zinc-500">
+          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
+            <div className="mb-2 flex items-center gap-2 text-kyro-muted">
               <FileText size={14} />
               <p className="text-xs">Total reportes</p>
             </div>
-            <p className="text-xl font-bold text-gray-900 dark:text-zinc-100">{stats.total_reportes}</p>
+            <p className="text-xl font-bold text-kyro-text">{stats.total_reportes}</p>
           </div>
-          <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-400/15 dark:bg-indigo-500/[0.06]">
-            <div className="mb-2 flex items-center gap-2 text-indigo-500 dark:text-indigo-300">
+          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
+            <div className="mb-2 flex items-center gap-2 text-kyro-gold">
               <DollarSign size={14} />
               <p className="text-xs">Total vendido</p>
             </div>
-            <p className="font-mono text-xl font-bold tabular-nums text-indigo-700 dark:text-indigo-200">{fmt(stats.total_vendido)}</p>
+            <p className="font-mono text-xl font-bold tabular-nums text-kyro-text">{fmt(stats.total_vendido)}</p>
           </div>
-          <div className={`rounded-xl border bg-white/85 p-4 dark:bg-zinc-900/70 ${dif < 0 ? 'border-red-200 dark:border-red-400/15' : dif > 0 ? 'border-amber-200 dark:border-amber-400/15' : 'border-gray-200 dark:border-white/[0.08]'}`}>
-            <div className="mb-2 flex items-center gap-2 text-gray-400 dark:text-zinc-500">
+          <div className={`kyro-card border-l-4 p-4 ${dif < 0 ? 'border-l-kyro-danger' : dif > 0 ? 'border-l-kyro-warning' : 'border-l-kpi-neutral'}`}>
+            <div className="mb-2 flex items-center gap-2 text-kyro-muted">
               <TrendingUp size={14} />
               <p className="text-xs">Diferencia acumulada</p>
             </div>
-            <p className={`font-mono text-xl font-bold tabular-nums ${dif < 0 ? 'text-red-600 dark:text-red-300' : dif > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-gray-600 dark:text-zinc-300'}`}>
+            <p className={`font-mono text-xl font-bold tabular-nums ${dif < 0 ? 'text-kyro-danger' : dif > 0 ? 'text-kyro-warning' : 'text-kyro-body'}`}>
               {dif > 0 ? '+' : ''}{fmt(dif)}
             </p>
           </div>
@@ -279,14 +279,14 @@ export function VerAgentePage() {
         </div>
       )}
 
-      <section className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/85 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-zinc-900/70">
-        <div aria-hidden className="absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-amber-400 via-indigo-500/40 to-transparent" />
-        <div className="flex flex-col gap-2 border-b border-gray-200/80 p-4 dark:border-white/[0.07] sm:flex-row sm:items-center sm:justify-between">
+      <section className="kyro-card relative overflow-hidden">
+        <div aria-hidden className="absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-kyro-gold via-kyro-indigo to-transparent" />
+        <div className="flex flex-col gap-2 border-b border-kyro-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Historial de reportes</h2>
-            <p className="mt-0.5 text-xs text-gray-400 dark:text-zinc-500">Movimientos y cierres asociados al agente.</p>
+            <h2 className="text-sm font-semibold text-kyro-text">Historial de reportes</h2>
+            <p className="mt-0.5 text-xs text-kyro-muted">Movimientos y cierres asociados al agente.</p>
           </div>
-          <span className="text-xs tabular-nums text-gray-400 dark:text-zinc-500">
+          <span className="text-xs tabular-nums text-kyro-muted">
             {meta?.total ?? 0} reportes · Pág. {meta?.current_page ?? 1}/{meta?.last_page ?? 1}
           </span>
         </div>
@@ -295,35 +295,35 @@ export function VerAgentePage() {
             <thead>
               <tr>
                 {['ID', 'Fecha', 'Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Estado', ''].map(h => (
-                  <th key={h} className={`border-b border-gray-200 bg-gray-50/90 px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:border-white/[0.07] dark:bg-white/[0.035] dark:text-zinc-400 ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                  <th key={h} className={`kyro-table-head px-4 py-3 ${['Total', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {reportes.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Sin reportes</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Sin reportes</td></tr>
               )}
               {reportes.map(r => {
                 const difR = Number(r.diferencia)
                 return (
-                  <tr key={r.id} className={`transition-colors [&>td]:border-b [&>td]:border-gray-100 dark:[&>td]:border-white/[0.045] ${difR < 0 ? 'bg-red-50/30 dark:bg-red-500/[0.025]' : 'hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.035]'}`}>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-zinc-400">#{String(r.id).padStart(4, '0')}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
-                    <td className="px-4 py-3"><span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700 dark:bg-white/[0.06] dark:text-zinc-300">{r.tienda_id}</span></td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.total_calculado)}</td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.efectivo_entregado)}</td>
+                  <tr key={r.id} className={`transition-colors [&>td]:border-b [&>td]:border-kyro-border ${difR < 0 ? 'bg-kyro-danger/5' : 'hover:bg-kyro-elevated'}`}>
+                    <td className="px-4 py-3 font-mono text-xs text-kyro-muted">#{String(r.id).padStart(4, '0')}</td>
+                    <td className="px-4 py-3 text-kyro-body">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
+                    <td className="px-4 py-3"><span className="rounded-kyro bg-kyro-elevated px-1.5 py-0.5 font-mono text-xs text-kyro-body">{r.tienda_id}</span></td>
+                    <td className="px-4 py-3 text-right font-mono text-kyro-body">{fmt(r.total_calculado)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-kyro-body">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${difR === 0 ? 'bg-gray-100 text-gray-600' : difR < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      <span className={`inline-block rounded-kyro px-2 py-0.5 text-xs font-bold ${difR === 0 ? 'bg-kyro-elevated text-kyro-muted' : difR < 0 ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-warning/10 text-kyro-warning'}`}>
                         {difR > 0 ? '+' : ''}{fmt(difR)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium ${{ borrador: 'bg-gray-100 text-gray-600', enviado: 'bg-blue-100 text-blue-700', editado: 'bg-orange-100 text-orange-700', aprobado: 'bg-green-100 text-green-700' }[r.estado] ?? 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${{ borrador: 'bg-kyro-elevated text-kyro-muted', enviado: 'bg-kyro-info/10 text-kyro-info', editado: 'bg-kyro-warning/10 text-kyro-warning', aprobado: 'bg-kyro-success/10 text-kyro-success' }[r.estado] ?? 'bg-kyro-elevated text-kyro-muted'}`}>
                         {r.estado}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link to={`/reportes/${r.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">Ver</Link>
+                      <Link to={`/reportes/${r.id}`} className="text-xs font-medium text-kyro-gold hover:text-kyro-text">Ver</Link>
                     </td>
                   </tr>
                 )
@@ -332,11 +332,11 @@ export function VerAgentePage() {
           </table>
         </div>
         {meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200/80 bg-gray-50/50 p-3.5 dark:border-white/[0.07] dark:bg-black/10">
+          <div className="flex items-center justify-between border-t border-kyro-border bg-kyro-elevated p-3.5">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
               <ChevronLeft size={14} /> Anterior
             </Button>
-            <span className="text-xs text-gray-500">{meta.from}–{meta.to} de {meta.total}</span>
+            <span className="text-xs text-kyro-muted">{meta.from}–{meta.to} de {meta.total}</span>
             <Button variant="outline" size="sm" disabled={page >= meta.last_page} onClick={() => setPage(p => p + 1)}>
               Siguiente <ChevronRight size={14} />
             </Button>

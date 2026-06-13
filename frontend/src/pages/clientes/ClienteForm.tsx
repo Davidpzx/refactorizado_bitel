@@ -98,19 +98,20 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
               disabled={esEdicion}
             />
             {!esEdicion && tipoDocumento === 'DNI' && (
-              <button
+              <Button
                 type="button"
                 onClick={buscarDni}
                 disabled={dniLoading}
                 title="Buscar en RENIEC"
-                className="px-3 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors disabled:opacity-50"
+                variant="outline"
+                size="icon"
               >
                 {dniLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-              </button>
+              </Button>
             )}
           </div>
-          {errors.dni_ruc && <p className="text-red-500 text-xs mt-1">{errors.dni_ruc.message}</p>}
-          {dniError && <p className="text-amber-600 text-xs mt-1">{dniError}</p>}
+          {errors.dni_ruc && <p className="mt-1 text-xs text-kyro-danger">{errors.dni_ruc.message}</p>}
+          {dniError && <p className="mt-1 text-xs text-kyro-warning">{dniError}</p>}
         </div>
         <div>
           <Label htmlFor="tipo_documento">Tipo de documento</Label>
@@ -126,7 +127,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
       <div>
         <Label htmlFor="nombre">Nombre completo / Razón social *</Label>
         <Input id="nombre" {...register('nombre')} placeholder="Juan Pérez" className="mt-1" />
-        {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre.message}</p>}
+        {errors.nombre && <p className="mt-1 text-xs text-kyro-danger">{errors.nombre.message}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -137,12 +138,12 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
         <div>
           <Label htmlFor="correo">Correo electrónico</Label>
           <Input id="correo" type="email" {...register('correo')} placeholder="cliente@email.com" className="mt-1" />
-          {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo.message}</p>}
+          {errors.correo && <p className="mt-1 text-xs text-kyro-danger">{errors.correo.message}</p>}
         </div>
       </div>
 
       {errorMsg && (
-        <p className="text-red-500 text-sm">
+        <p className="rounded-kyro border border-kyro-danger bg-kyro-danger/10 px-3 py-2 text-sm text-kyro-danger">
           {errorMsg.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
         </p>
       )}
