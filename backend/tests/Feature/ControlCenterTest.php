@@ -360,9 +360,12 @@ class ControlCenterTest extends TestCase
 
     private function insertarDatosOpcionales(): void
     {
-        DB::table('reporte_categorias')->insert([
-            ['comision_estado' => 'PENDIENTE'],
-            ['comision_estado' => 'APROBADA'],
+        // F1: el badge de financieras ahora cuenta ventas.comision_estado (esquema normalizado).
+        DB::table('ventas')->insert([
+            ['reporte_id' => 1, 'vendedor_id' => 1, 'tipo_venta' => 'EQUIPO', 'monto_total' => 100,
+             'efectivo_inicial' => 100, 'comision_generada' => 0, 'comision_estado' => 'PENDIENTE', 'creado_en' => now()],
+            ['reporte_id' => 1, 'vendedor_id' => 1, 'tipo_venta' => 'EQUIPO', 'monto_total' => 100,
+             'efectivo_inicial' => 100, 'comision_generada' => 5, 'comision_estado' => 'APROBADA', 'creado_en' => now()],
         ]);
 
         DB::table('reportes_bcp')->insert([

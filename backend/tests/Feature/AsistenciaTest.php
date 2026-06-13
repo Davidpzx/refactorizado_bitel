@@ -216,8 +216,9 @@ class AsistenciaTest extends TestCase
             'metodo_marcacion' => 'FOTO',
             'requiere_revision' => 1,
         ]);
+        // normalizarFoto comprime a JPEG (<150KB) como el legacy (zero-retention); acepta cualquier imagen.
         $this->assertStringStartsWith(
-            'data:image/png;base64,',
+            'data:image/',
             (string) DB::table('asistencias')->value('foto_marcacion')
         );
     }

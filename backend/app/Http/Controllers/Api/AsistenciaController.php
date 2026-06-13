@@ -428,6 +428,13 @@ class AsistenciaController extends Controller
                         $campos['minutos_deuda'] = $minutosDeuda;
                         $campos['minutos_extra'] = $minutosExtra;
                         $campos['estado_extra'] = 'PENDIENTE';
+                        $this->recuperarDeudaDias($agente, $asistencia, $momento); // A2
+                    }
+
+                    // A1 — Anti-spoofing: salto imposible (>200 km/h desde la entrada) ⇒ a revisión.
+                    if (Schema::hasColumn('asistencias', 'requiere_revision')
+                        && $this->detectarSaltoImposible($asistencia, $contexto, $momento)) {
+                        $campos['requiere_revision'] = 1;
                     }
 
                     $campos['updated_at'] = $momento;
@@ -751,6 +758,56 @@ class AsistenciaController extends Controller
         }
 
         return [$minutosDeuda, $minutosExtra >= 60 ? $minutosExtra : 0];
+    }
+
+    // A1 — Anti-spoofing "salto imposible" (paridad legacy registrar_marcacion.php):
+    // velocidad entre el punto de entrada y la marcación actual; si supera 200 km/h, a revisión.
+    private function detectarSaltoImposible(?object $asistencia, array $contexto, Carbon $momento): bool
+    {
+        if (! $asistencia || ! isset($contexto['lat'], $contexto['lng'])) {
+            return false;
+        }
+        $latPrev = $this->valor($asistencia, 'lat_entrada');
+        $lngPrev = $this->valor($asistencia, 'lng_entrada');
+        $horaPrev = $this->valor($asistencia, 'hora_ingreso');
+        if ($latPrev === null || $lngPrev === null || empty($horaPrev)) {
+            return false;
+        }
+
+        $metros = $this->haversine((float) $latPrev, (float) $lngPrev, (float) $contexto['lat'], (float) $contexto['lng']);
+        $prev = Carbon::parse($momento->toDateString().' '.$horaPrev, $momento->timezone);
+        $segundos = max(1, $prev->diffInSeconds($momento));
+
+        return (($metros / 1000) / ($segundos / 3600)) > 200;
+    }
+
+    // A2 — Recuperación inteligente del banco de deudas (paridad legacy procesar_asistencia.php 447-470):
+    // al marcar salida, si el agente tiene deuda_dias y trabajó en su día de descanso
+    // o acumuló ≥1.5 jornadas, se le descuentan días de la deuda.
+    private function recuperarDeudaDias(object $agente, object $asistencia, Carbon $momento): void
+    {
+        $deuda = (int) $this->valor($agente, 'deuda_dias', 0);
+        if ($deuda <= 0 || empty($asistencia->hora_ingreso)) {
+            return;
+        }
+
+        $ingreso = Carbon::parse($momento->toDateString().' '.$asistencia->hora_ingreso, $momento->timezone);
+        $horasEfectivas = max(0, $ingreso->diffInMinutes($momento) / 60);
+
+        if (! empty($asistencia->inicio_refrigerio) && ! empty($asistencia->fin_refrigerio)) {
+            $ri = Carbon::parse($momento->toDateString().' '.$asistencia->inicio_refrigerio, $momento->timezone);
+            $rf = Carbon::parse($momento->toDateString().' '.$asistencia->fin_refrigerio, $momento->timezone);
+            $horasEfectivas -= max(0, $ri->diffInMinutes($rf) / 60);
+        }
+
+        $jornadaNormal = $this->agenteTieneRefrigerio($agente) ? 9 : 6;
+        $diasRecuperados = min((int) floor($horasEfectivas / $jornadaNormal), $deuda);
+        $trabajoHorasExtra = $horasEfectivas >= ($jornadaNormal * 1.5);
+
+        if (($this->esDiaDescanso($agente, $momento) || $trabajoHorasExtra) && $diasRecuperados > 0) {
+            DB::table('agentes')->where('id', $agente->id)
+                ->update(['deuda_dias' => DB::raw("GREATEST(deuda_dias - {$diasRecuperados}, 0)")]);
+        }
     }
 
     private function validarIntervaloMinimo(string $tipo, ?object $asistencia, Carbon $momento, string $fecha): ?string
