@@ -129,12 +129,13 @@ Por cada pantalla:
 
 | ID | Tipo | Sev | Brecha | Dónde corregir |
 |----|------|-----|--------|----------------|
-| D1 | FUNCIONAL | **ALTA** | **`PanelFinancierasController` lee `reporte_categorias`** (tabla JSON legacy, `rc.tipo='equipos_accesorios'`, `detalle->vendedor_id/por_cobrar_financiera`) que el nuevo `store()` **NUNCA puebla** (usa `venta_equipos`). → Las ventas de equipos a cuotas del sistema nuevo **NO aparecen** en el panel de financieras; el flujo de desembolso opera sobre datos inexistentes. | Codex/Claude → reescribir queries a esquema normalizado |
-| D2 | FUNCIONAL | MEDIA | **`confirmarDesembolso` no libera/calcula la comisión** del agente. Legacy: al confirmar, libera comisión (default `EQUIPO_ESTANDAR` S/5, o rangos en planilla) al `detalle`. El refactor solo cambia `comision_estado→APROBADA`. → La comisión de equipos a cuotas nunca se activa para el agente. | Codex (junto a B2) |
+| D1 | FUNCIONAL | **ALTA** | ✅ **RESUELTO.** `PanelFinancieras` reescrito a `ventas`+`venta_equipos` (tipo_pago=CUOTAS, comision_estado), preservando la forma de respuesta del front (`detalle.producto_nombre`). `store()` marca equipos a cuotas como `comision_estado=PENDIENTE`. Test e2e verde. _(histórico)_ — leía `reporte_categorias` (tabla JSON legacy, `rc.tipo='equipos_accesorios'`, `detalle->vendedor_id/por_cobrar_financiera`) que el nuevo `store()` **NUNCA puebla** (usa `venta_equipos`). → Las ventas de equipos a cuotas del sistema nuevo **NO aparecen** en el panel de financieras; el flujo de desembolso opera sobre datos inexistentes. | Codex/Claude → reescribir queries a esquema normalizado |
+| D2 | FUNCIONAL | MEDIA | ✅ **RESUELTO.** `confirmarDesembolso` libera la comisión del agente (`EQUIPO_ESTANDAR` config, default S/5) y pasa `ventas.comision_estado→APROBADA`; `revertirDesembolso` vuelve a PENDIENTE+0. Test verde. _(histórico)_ — no liberaba comisión del agente. Legacy: al confirmar, libera comisión (default `EQUIPO_ESTANDAR` S/5, o rangos en planilla) al `detalle`. El refactor solo cambia `comision_estado→APROBADA`. → La comisión de equipos a cuotas nunca se activa para el agente. | Codex (junto a B2) |
 | D3 | FUNCIONAL | BAJA | **Bipay admin** sin endpoints de **transferencia entre cuentas** ni **ajuste manual** (legacy los tenía; recarga sí existe). | Codex |
 | D4 | COSMÉTICO | BAJA | `comisiones`, `bcp` marcadas pendientes de look glass premium. | Claude (UX) |
 
-> ### ⚠️ HALLAZGO SISTÉMICO — Split de modelo de datos (`reporte_categorias` vs normalizado)
+> ### ⚠️ HALLAZGO SISTÉMICO — Split de modelo de datos (`reporte_categorias` vs normalizado) — PARCIALMENTE RESUELTO
+> ✅ Resuelto: `PanelFinancieras` (D1) + badge financieras (F1). ⏳ Pendiente: `fijarCosto` (B6) y reconstrucción de venta del kardex (C2) aún leen `reporte_categorias`.
 > El sistema nuevo tiene DOS modelos de datos coexistiendo incoherentemente para las ventas:
 > - **`ReporteController@store`** escribe **normalizado** (`ventas`/`venta_equipos`/`venta_lineas`).
 > - **`PanelFinancierasController` (D1)**, **`ReporteController@fijarCosto` (B6)** y la **reconstrucción de venta del kardex (C2)** LEEN de **`reporte_categorias`** (JSON legacy).
