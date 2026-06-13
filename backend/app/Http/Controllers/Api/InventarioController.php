@@ -266,6 +266,11 @@ class InventarioController extends Controller
                      ORDER BY rc3.id DESC LIMIT 1)
                 ) AS precio,
                 COALESCE(
+                    -- C2: el dato nuevo (esquema normalizado) tiene prioridad sobre el legacy.
+                    (SELECT CASE WHEN UPPER(ve.tipo_pago) = 'CUOTAS' THEN 1 ELSE 0 END
+                     FROM venta_equipos ve
+                     WHERE ve.inventario_tienda_id = it.id
+                     ORDER BY ve.id DESC LIMIT 1),
                     (SELECT CASE
                         WHEN UPPER(JSON_UNQUOTE(JSON_EXTRACT(rc4.detalle, '\$.tipo_pago'))) = 'CUOTAS' THEN 1
                         ELSE 0 END
