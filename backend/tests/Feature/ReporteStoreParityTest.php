@@ -46,7 +46,10 @@ class ReporteStoreParityTest extends TestCase
             ]));
 
         $response->assertCreated()
-            ->assertJsonPath('total_calculado', '140.00'); // suma de monto_total (30+10+100)
+            ->assertJsonPath('total_calculado', '140.00')   // suma de monto_total (30+10+100)
+            // B3: esperado = total_sistema(140) − no_fisico(0) − salidas(5) = 135 (NO suma caja_inicial 50)
+            ->assertJsonPath('efectivo_esperado', '135.00')
+            ->assertJsonPath('diferencia', '-40.00');       // entregado 95 − esperado 135
 
         $reporteId = $response->json('id');
         $rows = DB::table('ventas')->where('reporte_id', $reporteId)->orderBy('id')->get();

@@ -118,9 +118,19 @@ class ReporteController extends Controller
             $efectivo_entregado = (float) $validated['efectivo_entregado'];
             $caja_inicial       = (float) $validated['caja_inicial'];
 
-            $suma_efectivo_ventas = collect($ventas_data)->sum(fn($v) => $v['efectivo_inicial'] ?? $v['monto_total']);
-            $efectivo_esperado    = $suma_efectivo_ventas + $caja_inicial - $total_salidas;
-            $diferencia           = $efectivo_entregado - $efectivo_esperado;
+            // B3 — Fórmula del cuadre 1:1 con el legacy y lib/cuadre.ts:
+            //   total_sistema     = Σ ventas + ingresos fijos (recargas/servicios/krece/tickets)
+            //   total_no_fisico   = yape + bipay + transferencia + retiro_bipay
+            //   efectivo_esperado = total_sistema − total_no_fisico − total_salidas  (NO incluye caja_inicial)
+            $retiro_bipay      = (float) ($validated['retiro_bipay'] ?? 0);
+            $total_sistema     = (float) collect($ventas_data)->sum('monto_total')
+                + (float) ($validated['recarga_bipay'] ?? 0)
+                + (float) ($validated['pago_servicio'] ?? 0)
+                + (float) ($validated['pago_krece'] ?? 0)
+                + (float) ($validated['tickets_tusamy'] ?? 0);
+            $total_no_fisico   = $yape + $bipay + $transferencia + $retiro_bipay;
+            $efectivo_esperado = round($total_sistema - $total_no_fisico - $total_salidas, 2);
+            $diferencia        = round($efectivo_entregado - $efectivo_esperado, 2);
 
             $reporte = Reporte::create([
                 'agente_id'           => $validated['agente_id'],
