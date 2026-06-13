@@ -93,7 +93,7 @@ function CrearChipDialog({
                 </option>
               ))}
             </Select>
-            {errors.chip_id && <p className="text-red-500 text-xs mt-1">{errors.chip_id.message}</p>}
+            {errors.chip_id && <p className="text-kyro-danger text-xs mt-1">{errors.chip_id.message}</p>}
           </div>
           <div>
             <Label htmlFor="cantidad">Cantidad *</Label>
@@ -104,7 +104,7 @@ function CrearChipDialog({
               {...register('cantidad', { valueAsNumber: true })}
               className="mt-1"
             />
-            {errors.cantidad && <p className="text-red-500 text-xs mt-1">{errors.cantidad.message}</p>}
+            {errors.cantidad && <p className="text-kyro-danger text-xs mt-1">{errors.cantidad.message}</p>}
           </div>
         </div>
 
@@ -117,7 +117,7 @@ function CrearChipDialog({
                 <option key={t} value={t}>{t}</option>
               ))}
             </Select>
-            {errors.tienda_origen && <p className="text-red-500 text-xs mt-1">{errors.tienda_origen.message}</p>}
+            {errors.tienda_origen && <p className="text-kyro-danger text-xs mt-1">{errors.tienda_origen.message}</p>}
           </div>
           <div>
             <Label htmlFor="tienda_destino">Tienda destino *</Label>
@@ -127,7 +127,7 @@ function CrearChipDialog({
                 <option key={t} value={t}>{t}</option>
               ))}
             </Select>
-            {errors.tienda_destino && <p className="text-red-500 text-xs mt-1">{errors.tienda_destino.message}</p>}
+            {errors.tienda_destino && <p className="text-kyro-danger text-xs mt-1">{errors.tienda_destino.message}</p>}
           </div>
         </div>
 
@@ -137,7 +137,7 @@ function CrearChipDialog({
             id="notas"
             {...register('notas')}
             rows={2}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="kyro-input mt-1 w-full"
           />
         </div>
 
@@ -145,7 +145,7 @@ function CrearChipDialog({
           <div>
             <Label htmlFor="auth_dni">DNI autorización *</Label>
             <Input id="auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
-            {errors.auth_dni && <p className="text-red-500 text-xs mt-1">{errors.auth_dni.message}</p>}
+            {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
           <div>
             <Label htmlFor="auth_agente_id">ID Agente autoriza</Label>
@@ -160,7 +160,7 @@ function CrearChipDialog({
         </div>
 
         {mutError && (
-          <p className="text-red-500 text-sm">
+          <p className="text-kyro-danger text-sm">
             {mutError.response?.data?.message ?? 'Error al crear traslado.'}
           </p>
         )}
@@ -209,7 +209,7 @@ function ConfirmarChipDialog({
             id="cc_observacion"
             {...register('observacion')}
             rows={2}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="kyro-input mt-1 w-full"
           />
         </div>
 
@@ -217,7 +217,7 @@ function ConfirmarChipDialog({
           <div>
             <Label htmlFor="cc_auth_dni">DNI *</Label>
             <Input id="cc_auth_dni" {...register('auth_dni')} className="mt-1" />
-            {errors.auth_dni && <p className="text-red-500 text-xs mt-1">{errors.auth_dni.message}</p>}
+            {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
           <div>
             <Label htmlFor="cc_agente">ID Agente</Label>
@@ -232,7 +232,7 @@ function ConfirmarChipDialog({
         </div>
 
         {mutError && (
-          <p className="text-red-500 text-sm">
+          <p className="text-kyro-danger text-sm">
             {mutError.response?.data?.message ?? 'Error al confirmar.'}
           </p>
         )}
@@ -312,7 +312,7 @@ function getTrasladoColumns(
                   size="sm"
                   onClick={() => onGestionar(t.id, 'aprobar')}
                   disabled={gestionando}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-kyro-success text-kyro-text hover:brightness-110"
                 >
                   Aprobar
                 </Button>
@@ -332,7 +332,7 @@ function getTrasladoColumns(
                 variant="outline"
                 onClick={() => onGestionar(t.id, 'cancelar')}
                 disabled={gestionando}
-                className="text-gray-500"
+                className="text-kyro-muted"
               >
                 Cancelar
               </Button>
@@ -389,7 +389,7 @@ export function TrasladoChipsPage() {
       />
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-kyro-body mb-3 uppercase tracking-wider">
           Stock de Chips por Tienda
         </h2>
         <DataTable
@@ -405,7 +405,7 @@ export function TrasladoChipsPage() {
 
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-kyro-body uppercase tracking-wider">
             Traslados Pendientes
           </h2>
           <Select

@@ -59,7 +59,7 @@ function getColumns(
       cell: ({ row }) => {
         const diff = parseFloat(row.original.diferencia)
         return (
-          <span className={diff !== 0 ? 'text-red-500 font-medium' : 'text-green-600'}>
+          <span className={diff !== 0 ? 'text-kyro-danger font-medium' : 'text-kyro-success'}>
             S/ {diff.toFixed(2)}
           </span>
         )
@@ -172,7 +172,7 @@ export function ReportesPage() {
             onChange={(e) => { setFechaDesde(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
             className="w-36"
           />
-          <span className="text-gray-400 text-sm">–</span>
+          <span className="text-kyro-subtle text-sm">–</span>
           <Input
             type="date"
             value={fechaHasta}

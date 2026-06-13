@@ -77,11 +77,11 @@ const pen = (v: number | null | undefined) =>
   v != null ? `S/ ${Number(v).toFixed(2)}` : '—'
 
 const TYPE_COLORS: Record<string, string> = {
-  POSTPAGO:  'bg-blue-100 text-blue-800',
-  PREPAGO:   'bg-green-100 text-green-800',
-  EQUIPO:    'bg-purple-100 text-purple-800',
-  ACCESORIO: 'bg-orange-100 text-orange-800',
-  OTROS:     'bg-gray-100 text-gray-700',
+  POSTPAGO:  'bg-kyro-info/15 text-kyro-info',
+  PREPAGO:   'bg-kyro-success/15 text-kyro-success',
+  EQUIPO:    'bg-kyro-indigo/20 text-kyro-body',
+  ACCESORIO: 'bg-kyro-warning/15 text-kyro-warning',
+  OTROS:     'bg-kyro-elevated text-kyro-muted',
 }
 
 // ── Plan Form modal ───────────────────────────────────────────────────────────
@@ -132,12 +132,12 @@ function PlanForm({ plan, onSuccess, onCancel }: { plan?: ComisionPlan; onSucces
             <option value="ACCESORIO">ACCESORIO</option>
             <option value="OTROS">OTROS</option>
           </Select>
-          {errors.tipo_servicio && <p className="text-red-500 text-xs mt-1">{errors.tipo_servicio.message}</p>}
+          {errors.tipo_servicio && <p className="text-kyro-danger text-xs mt-1">{errors.tipo_servicio.message}</p>}
         </div>
         <div>
           <Label htmlFor="nombre_plan">Nombre del plan *</Label>
           <Input id="nombre_plan" {...register('nombre_plan')} placeholder="Plan Libre 25GB" className="mt-1" />
-          {errors.nombre_plan && <p className="text-red-500 text-xs mt-1">{errors.nombre_plan.message}</p>}
+          {errors.nombre_plan && <p className="text-kyro-danger text-xs mt-1">{errors.nombre_plan.message}</p>}
         </div>
       </div>
 
@@ -159,7 +159,7 @@ function PlanForm({ plan, onSuccess, onCancel }: { plan?: ComisionPlan; onSucces
         {numInput('comision_ext_n3', 'Comisión EXT N3 (S/)', 'comision_ext_n3')}
       </div>
 
-      {err && <p className="text-red-500 text-sm">{err.response?.data?.message ?? 'Error al guardar.'}</p>}
+      {err && <p className="text-kyro-danger text-sm">{err.response?.data?.message ?? 'Error al guardar.'}</p>}
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={isPending} className="flex-1">
@@ -195,9 +195,9 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-sm text-gray-600 mb-4">
-          Recalcula <code className="bg-gray-100 px-1 rounded">comision_unitaria</code> en <code className="bg-gray-100 px-1 rounded">venta_lineas</code> y
-          <code className="bg-gray-100 px-1 rounded mx-1">comision_generada</code> en <code className="bg-gray-100 px-1 rounded">ventas</code> usando las tarifas actuales.
+        <p className="text-sm text-kyro-body mb-4">
+          Recalcula <code className="bg-kyro-elevated px-1 rounded">comision_unitaria</code> en <code className="bg-kyro-elevated px-1 rounded">venta_lineas</code> y
+          <code className="bg-kyro-elevated px-1 rounded mx-1">comision_generada</code> en <code className="bg-kyro-elevated px-1 rounded">ventas</code> usando las tarifas actuales.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -205,12 +205,12 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
             <div>
               <Label htmlFor="rec_desde">Fecha desde *</Label>
               <Input id="rec_desde" type="date" {...register('fecha_desde')} className="mt-1" />
-              {errors.fecha_desde && <p className="text-red-500 text-xs mt-1">{errors.fecha_desde.message}</p>}
+              {errors.fecha_desde && <p className="text-kyro-danger text-xs mt-1">{errors.fecha_desde.message}</p>}
             </div>
             <div>
               <Label htmlFor="rec_hasta">Fecha hasta *</Label>
               <Input id="rec_hasta" type="date" {...register('fecha_hasta')} className="mt-1" />
-              {errors.fecha_hasta && <p className="text-red-500 text-xs mt-1">{errors.fecha_hasta.message}</p>}
+              {errors.fecha_hasta && <p className="text-kyro-danger text-xs mt-1">{errors.fecha_hasta.message}</p>}
             </div>
           </div>
 
@@ -226,19 +226,19 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {resultado && (
-        <div className={`rounded-lg p-4 border ${resultado.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+        <div className={`rounded-kyro p-4 border ${resultado.success ? 'bg-kyro-success/10 border-kyro-success' : 'bg-kyro-danger/10 border-kyro-danger'}`}>
           <div className="flex items-center gap-2 mb-2">
             {resultado.success
-              ? <CheckCircle2 size={18} className="text-green-600" />
-              : <AlertCircle size={18} className="text-red-600" />}
+              ? <CheckCircle2 size={18} className="text-kyro-success" />
+              : <AlertCircle size={18} className="text-kyro-danger" />}
             <span className="font-medium text-sm">{resultado.success ? 'Recálculo completado' : 'Error en recálculo'}</span>
           </div>
-          <p className="text-sm text-gray-700">{resultado.message ?? resultado.error}</p>
+          <p className="text-sm text-kyro-body">{resultado.message ?? resultado.error}</p>
           {resultado.success && (
             <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">Ventas actualizadas:</span> <span className="font-semibold">{resultado.ventas_actualizadas}</span></div>
-              <div><span className="text-gray-500">Líneas actualizadas:</span> <span className="font-semibold">{resultado.lineas_actualizadas}</span></div>
-              <div className="col-span-2"><span className="text-gray-500">Período:</span> <span className="font-semibold">{resultado.periodo}</span></div>
+              <div><span className="text-kyro-muted">Ventas actualizadas:</span> <span className="font-semibold">{resultado.ventas_actualizadas}</span></div>
+              <div><span className="text-kyro-muted">Líneas actualizadas:</span> <span className="font-semibold">{resultado.lineas_actualizadas}</span></div>
+              <div className="col-span-2"><span className="text-kyro-muted">Período:</span> <span className="font-semibold">{resultado.periodo}</span></div>
             </div>
           )}
         </div>
@@ -256,10 +256,10 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="premium-surface w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+      <div className="kyro-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-kyro-border">
+          <h3 className="font-semibold text-kyro-text">{title}</h3>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-kyro-subtle hover:text-kyro-text text-xl leading-none">&times;</Button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -295,7 +295,7 @@ export function ComisionesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio" accent="#8b5cf6">
+      <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio">
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
@@ -323,15 +323,15 @@ export function ComisionesPage() {
             <option value="ACCESORIO">ACCESORIO</option>
             <option value="OTROS">OTROS</option>
           </Select>
-          <span className="text-sm text-gray-500">{planes.length} planes</span>
+          <span className="text-sm text-kyro-muted">{planes.length} planes</span>
         </div>
       </ListToolbar>
 
       {/* Tabla */}
-      <div className="premium-surface">
+      <div className="kyro-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="premium-table w-full text-sm">
-            <thead>
+          <table className="w-full text-sm">
+            <thead className="kyro-table-head">
               <tr>
                 <th className="px-4 py-3 text-left">Tipo</th>
                 <th className="px-4 py-3 text-left">Nombre del plan</th>
@@ -344,42 +344,46 @@ export function ComisionesPage() {
                 <th className="px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-kyro-border">
               {isLoading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-kyro-subtle">Cargando...</td></tr>
               ) : planes.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No hay planes configurados.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-kyro-subtle">No hay planes configurados.</td></tr>
               ) : planes.map(p => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={p.id} className="hover:bg-kyro-elevated/60 transition-colors">
                   <td className="px-4 py-3">
-                    <span className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[p.tipo_servicio] ?? 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[p.tipo_servicio] ?? 'bg-kyro-elevated text-kyro-muted'}`}>
                       {p.tipo_servicio}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{p.nombre_plan}</td>
-                  <td className="px-4 py-3 text-gray-500">{p.tipo_alta ?? '—'}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{pen(p.fee_monto)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-blue-700">{pen(p.comision_dni_n)}</td>
-                  <td className="px-4 py-3 text-right text-blue-600">{pen(p.comision_dni_n3)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-purple-700">{pen(p.comision_ext_n)}</td>
-                  <td className="px-4 py-3 text-right text-purple-600">{pen(p.comision_ext_n3)}</td>
+                  <td className="px-4 py-3 font-medium text-kyro-text">{p.nombre_plan}</td>
+                  <td className="px-4 py-3 text-kyro-muted">{p.tipo_alta ?? '—'}</td>
+                  <td className="px-4 py-3 text-right text-kyro-body">{pen(p.fee_monto)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-kyro-gold">{pen(p.comision_dni_n)}</td>
+                  <td className="px-4 py-3 text-right text-kyro-gold">{pen(p.comision_dni_n3)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-kyro-info">{pen(p.comision_ext_n)}</td>
+                  <td className="px-4 py-3 text-right text-kyro-info">{pen(p.comision_ext_n3)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleEdit(p)}
-                        className="p-1.5 rounded-md text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        className="h-8 w-8 text-kyro-subtle hover:bg-kyro-info/10 hover:text-kyro-info"
                         title="Editar"
                       >
                         <Pencil size={14} />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleDelete(p)}
                         disabled={eliminar.isPending}
-                        className="p-1.5 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="h-8 w-8 text-kyro-subtle hover:bg-kyro-danger/10 hover:text-kyro-danger"
                         title="Eliminar"
                       >
                         <Trash2 size={14} />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

@@ -64,12 +64,12 @@ function FilaRecibo({
 }) {
   return (
     <>
-      {separador && <div className="border-t border-gray-100 my-1.5" />}
-      <div className={`flex justify-between items-center py-1 ${indent ? 'pl-3 border-l-2 border-gray-100' : ''}`}>
-        <span className={`text-sm ${negrito ? 'font-semibold text-gray-800' : 'text-gray-500'}`}>
+      {separador && <div className="border-t border-kyro-border my-1.5" />}
+      <div className={`flex justify-between items-center py-1 ${indent ? 'pl-3 border-l-2 border-kyro-border' : ''}`}>
+        <span className={`text-sm ${negrito ? 'font-semibold text-kyro-text' : 'text-kyro-muted'}`}>
           {label}
         </span>
-        <span className={`text-sm font-mono tabular-nums ${negrito ? 'font-bold' : ''} ${colorValor || 'text-gray-800'}`}>
+        <span className={`text-sm font-mono tabular-nums ${negrito ? 'font-bold' : ''} ${colorValor || 'text-kyro-text'}`}>
           {valor}
         </span>
       </div>
@@ -79,11 +79,11 @@ function FilaRecibo({
 
 function PillTag({ children, color = 'gray' }: { children: React.ReactNode; color?: 'gray' | 'blue' | 'amber' | 'green' | 'red' }) {
   const colors = {
-    gray:  'bg-gray-100 text-gray-600',
-    blue:  'bg-blue-50 text-blue-700',
-    amber: 'bg-amber-50 text-amber-700',
-    green: 'bg-green-50 text-green-700',
-    red:   'bg-red-50 text-red-700',
+    gray:  'bg-kyro-elevated text-kyro-muted',
+    blue:  'bg-kyro-info/15 text-kyro-info',
+    amber: 'bg-kyro-warning/15 text-kyro-warning',
+    green: 'bg-kyro-success/15 text-kyro-success',
+    red:   'bg-kyro-danger/15 text-kyro-danger',
   }
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${colors[color]}`}>
@@ -99,10 +99,10 @@ function FilaLinea({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
   const comision = n(l?.comision_unitaria)
 
   return (
-    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-gray-50' : ''} hover:bg-slate-50/60 transition-colors`}>
+    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-kyro-border' : ''} hover:bg-kyro-elevated/60 transition-colors`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 leading-tight">
+          <p className="text-sm font-medium text-kyro-text leading-tight">
             {l?.plan_nombre_snap ?? '—'}
           </p>
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -126,9 +126,9 @@ function FilaLinea({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-sm font-semibold text-gray-900 tabular-nums">{sol(venta.monto_total)}</p>
+          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(venta.monto_total)}</p>
           {comision > 0 && (
-            <p className="text-[11px] text-green-600 font-medium mt-0.5">
+            <p className="text-[11px] text-kyro-success font-medium mt-0.5">
               comisión {sol(l?.comision_unitaria)}
             </p>
           )}
@@ -146,10 +146,10 @@ function FilaEquipo({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
   const porCobrar = n(e?.por_cobrar_financiera)
 
   return (
-    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-gray-50' : ''} hover:bg-slate-50/60 transition-colors`}>
+    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-kyro-border' : ''} hover:bg-kyro-elevated/60 transition-colors`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 leading-tight">
+          <p className="text-sm font-medium text-kyro-text leading-tight">
             {e?.producto_nombre_snap ?? venta.subtipo ?? '—'}
           </p>
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -174,14 +174,14 @@ function FilaEquipo({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-sm font-semibold text-gray-900 tabular-nums">{sol(venta.monto_total)}</p>
+          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(venta.monto_total)}</p>
           {ganancia > 0 && (
-            <p className="text-[11px] text-green-600 font-medium mt-0.5">
+            <p className="text-[11px] text-kyro-success font-medium mt-0.5">
               ganancia {sol(e?.ganancia_snap)}
             </p>
           )}
           {porCobrar > 0 && (
-            <p className="text-[11px] text-blue-500 mt-0.5">
+            <p className="text-[11px] text-kyro-info mt-0.5">
               financiera {sol(e?.por_cobrar_financiera)}
             </p>
           )}
@@ -195,19 +195,19 @@ function FilaEquipo({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
 
 function FilaOtro({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
   return (
-    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-gray-50' : ''} hover:bg-slate-50/60 transition-colors`}>
+    <div className={`px-4 py-3 ${idx > 0 ? 'border-t border-kyro-border' : ''} hover:bg-kyro-elevated/60 transition-colors`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900">
+          <p className="text-sm font-medium text-kyro-text">
             {venta.subtipo ?? 'OTROS FLUJO'}
           </p>
           {venta.cliente && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-kyro-muted mt-0.5">
               {venta.cliente.tipo_documento} {venta.cliente.dni_ruc} · {venta.cliente.nombre}
             </p>
           )}
         </div>
-        <p className="text-sm font-semibold text-gray-900 tabular-nums shrink-0">{sol(venta.monto_total)}</p>
+        <p className="text-sm font-semibold text-kyro-text tabular-nums shrink-0">{sol(venta.monto_total)}</p>
       </div>
     </div>
   )
@@ -231,17 +231,17 @@ function SeccionVentas({
   const total = ventas.reduce((acc, v) => acc + n(v.monto_total), 0)
 
   return (
-    <Card>
+    <Card className="kyro-card">
       <CardHeader className="py-2.5 px-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
             {titulo}
           </CardTitle>
           <div className="flex items-center gap-2">
             {ventas.length > 0 && (
               <>
-                <span className="text-xs text-gray-400">{ventas.length} registro{ventas.length !== 1 ? 's' : ''}</span>
-                <span className="text-sm font-bold text-gray-800 tabular-nums">{sol(total)}</span>
+                <span className="text-xs text-kyro-subtle">{ventas.length} registro{ventas.length !== 1 ? 's' : ''}</span>
+                <span className="text-sm font-bold text-kyro-text tabular-nums">{sol(total)}</span>
               </>
             )}
           </div>
@@ -249,14 +249,14 @@ function SeccionVentas({
       </CardHeader>
       <CardContent className="p-0">
         {ventas.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-gray-400 italic">{vacias}</p>
+          <p className="px-4 py-4 text-sm text-kyro-subtle italic">{vacias}</p>
         ) : (
           <div>{ventas.map((v, i) => renderFila(v, i))}</div>
         )}
         {ventas.length > 0 && totalLabel && (
-          <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <span className="text-xs text-gray-500 font-medium">{totalLabel}</span>
-            <span className="text-sm font-bold text-gray-900 tabular-nums">{sol(total)}</span>
+          <div className="px-4 py-2 border-t border-kyro-border bg-kyro-elevated/50 flex justify-between items-center">
+            <span className="text-xs text-kyro-muted font-medium">{totalLabel}</span>
+            <span className="text-sm font-bold text-kyro-text tabular-nums">{sol(total)}</span>
           </div>
         )}
       </CardContent>
@@ -284,29 +284,29 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
   const hayAdicional = totalAdicional > 0
 
   return (
-    <Card>
+    <Card className="kyro-card">
       <CardHeader className="py-2.5 px-4">
-        <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+        <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
           Dinero Digital y Retiros
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 py-3">
         {!hayDigital && !hayAdicional ? (
-          <p className="text-sm text-gray-400 italic">Sin movimientos digitales.</p>
+          <p className="text-sm text-kyro-subtle italic">Sin movimientos digitales.</p>
         ) : (
           <div className="space-y-0.5">
             {/* Medios de pago digital */}
             {yape > 0 && (
-              <FilaRecibo label="Yape" valor={sol(yape)} colorValor="text-purple-700" indent />
+              <FilaRecibo label="Yape" valor={sol(yape)} colorValor="text-kyro-gold" indent />
             )}
             {bipay > 0 && (
-              <FilaRecibo label="Bipay" valor={sol(bipay)} colorValor="text-blue-700" indent />
+              <FilaRecibo label="Bipay" valor={sol(bipay)} colorValor="text-kyro-info" indent />
             )}
             {transf > 0 && (
-              <FilaRecibo label="Transferencia" valor={sol(transf)} colorValor="text-indigo-700" indent />
+              <FilaRecibo label="Transferencia" valor={sol(transf)} colorValor="text-kyro-info" indent />
             )}
             {retBipay > 0 && (
-              <FilaRecibo label="Retiro Bipay" valor={`− ${sol(retBipay)}`} colorValor="text-red-600" indent />
+              <FilaRecibo label="Retiro Bipay" valor={`− ${sol(retBipay)}`} colorValor="text-kyro-danger" indent />
             )}
 
             {hayDigital && (
@@ -322,7 +322,7 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
             {hayAdicional && (
               <>
                 <div className="pt-2 pb-1">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
+                  <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold">
                     Ingresos adicionales
                   </p>
                 </div>
@@ -362,12 +362,12 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
   const esLeve    = !esOk && absDiff <= 10
   const esGrave   = absDiff > 10
 
-  const diffColor = esOk ? 'text-green-600' : esLeve ? 'text-amber-600' : 'text-red-600'
+  const diffColor = esOk ? 'text-kyro-success' : esLeve ? 'text-kyro-warning' : 'text-kyro-danger'
   const diffBg    = esOk
-    ? 'bg-green-50 border-green-200'
+    ? 'bg-kyro-success/10 border-kyro-success'
     : esLeve
-    ? 'bg-amber-50 border-amber-200'
-    : 'bg-red-50 border-red-200'
+    ? 'bg-kyro-warning/10 border-kyro-warning'
+    : 'bg-kyro-danger/10 border-kyro-danger'
   const diffLabel = esOk
     ? '✓ Cuadre exacto'
     : esLeve
@@ -379,9 +379,9 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
     : '—'
 
   return (
-    <Card>
+    <Card className="kyro-card">
       <CardHeader className="py-2.5 px-4">
-        <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+        <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
           Cuadre Final de Efectivo
         </CardTitle>
       </CardHeader>
@@ -414,21 +414,21 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
             )}
           </div>
           {esGrave && reporte.requiere_aprobacion && (
-            <p className="text-xs text-red-500 mt-1">Requiere aprobación del supervisor</p>
+            <p className="text-xs text-kyro-danger mt-1">Requiere aprobación del supervisor</p>
           )}
         </div>
 
         {/* Destino del efectivo */}
-        <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-          <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+        <div className="mt-3 pt-3 border-t border-kyro-border flex justify-between items-center">
+          <span className="text-xs text-kyro-muted font-medium uppercase tracking-wide">
             Destino del efectivo
           </span>
-          <span className="text-xs font-semibold text-gray-700">{destino}</span>
+          <span className="text-xs font-semibold text-kyro-body">{destino}</span>
         </div>
 
         {/* Total salidas como referencia */}
         {n(reporte.total_salidas) > 0 && (
-          <p className="text-[11px] text-gray-400 mt-1 text-right">
+          <p className="text-[11px] text-kyro-subtle mt-1 text-right">
             Salidas registradas: {sol(reporte.total_salidas)}
           </p>
         )}
@@ -440,14 +440,14 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
 // ─── Historial de Auditoría ───────────────────────────────────────────────────
 
 const ACCION_CONFIG: Record<HistorialReporteEntry['accion'], { label: string; color: string; dot: string }> = {
-  crear:               { label: 'Reporte creado',          color: 'text-green-700',   dot: 'bg-green-500' },
-  solicito_edicion:    { label: 'Edición solicitada',      color: 'text-amber-700',   dot: 'bg-amber-500' },
-  edicion_aprobada:    { label: 'Edición aprobada',        color: 'text-blue-700',    dot: 'bg-blue-500' },
-  edicion_rechazada:   { label: 'Edición rechazada',       color: 'text-red-700',     dot: 'bg-red-500' },
-  edicion_reporte:     { label: 'Reporte editado',         color: 'text-purple-700',  dot: 'bg-purple-500' },
-  edicion_critica:     { label: 'Edición crítica',         color: 'text-red-700',     dot: 'bg-red-600' },
-  edicion_restaurada:  { label: 'Reporte restaurado',      color: 'text-teal-700',    dot: 'bg-teal-500' },
-  destino_modificado:  { label: 'Destino modificado',      color: 'text-indigo-700',  dot: 'bg-indigo-500' },
+  crear:               { label: 'Reporte creado',          color: 'text-kyro-success', dot: 'bg-kyro-success' },
+  solicito_edicion:    { label: 'Edición solicitada',      color: 'text-kyro-warning', dot: 'bg-kyro-warning' },
+  edicion_aprobada:    { label: 'Edición aprobada',        color: 'text-kyro-info',    dot: 'bg-kyro-info' },
+  edicion_rechazada:   { label: 'Edición rechazada',       color: 'text-kyro-danger',  dot: 'bg-kyro-danger' },
+  edicion_reporte:     { label: 'Reporte editado',         color: 'text-kyro-gold',    dot: 'bg-kyro-gold' },
+  edicion_critica:     { label: 'Edición crítica',         color: 'text-kyro-danger',  dot: 'bg-kyro-danger' },
+  edicion_restaurada:  { label: 'Reporte restaurado',      color: 'text-kyro-success', dot: 'bg-kyro-success' },
+  destino_modificado:  { label: 'Destino modificado',      color: 'text-kyro-info',    dot: 'bg-kyro-info' },
 }
 
 function HistorialTimeline({ reporteId }: { reporteId: number }) {
@@ -462,10 +462,10 @@ function HistorialTimeline({ reporteId }: { reporteId: number }) {
       <div className="space-y-3">
         {[1, 2].map(i => (
           <div key={i} className="flex gap-3 animate-pulse">
-            <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1.5 shrink-0" />
+            <div className="w-2.5 h-2.5 rounded-full bg-kyro-elevated mt-1.5 shrink-0" />
             <div className="flex-1 space-y-1.5">
-              <div className="h-3.5 bg-gray-200 rounded w-1/3" />
-              <div className="h-3 bg-gray-100 rounded w-2/3" />
+              <div className="h-3.5 bg-kyro-elevated rounded w-1/3" />
+              <div className="h-3 bg-kyro-card rounded w-2/3" />
             </div>
           </div>
         ))}
@@ -474,13 +474,13 @@ function HistorialTimeline({ reporteId }: { reporteId: number }) {
   }
 
   if (!historial.length) {
-    return <p className="text-xs text-gray-400 italic py-2">Sin eventos registrados.</p>
+    return <p className="text-xs text-kyro-subtle italic py-2">Sin eventos registrados.</p>
   }
 
   return (
-    <ol className="relative border-l border-gray-200 ml-1.5 space-y-4">
+    <ol className="relative border-l border-kyro-border ml-1.5 space-y-4">
       {historial.map((entry) => {
-        const cfg = ACCION_CONFIG[entry.accion] ?? { label: entry.accion, color: 'text-gray-700', dot: 'bg-gray-400' }
+        const cfg = ACCION_CONFIG[entry.accion] ?? { label: entry.accion, color: 'text-kyro-body', dot: 'bg-kyro-muted' }
         const fecha = new Date(entry.created_at)
         const fechaStr = `${fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })} ${fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
 
@@ -489,13 +489,13 @@ function HistorialTimeline({ reporteId }: { reporteId: number }) {
             <span className={`absolute -left-1.5 w-3 h-3 rounded-full border-2 border-white ${cfg.dot}`} />
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
               <span className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</span>
-              <span className="text-[10px] text-gray-400 shrink-0">{fechaStr}</span>
+              <span className="text-[10px] text-kyro-subtle shrink-0">{fechaStr}</span>
             </div>
             {entry.usuario?.nombre && (
-              <p className="text-xs text-gray-500 mt-0.5">por {entry.usuario.nombre}</p>
+              <p className="text-xs text-kyro-muted mt-0.5">por {entry.usuario.nombre}</p>
             )}
             {entry.detalle && (
-              <p className="text-xs text-gray-600 mt-1 bg-gray-50 rounded px-2 py-1 leading-relaxed">
+              <p className="text-xs text-kyro-body mt-1 bg-kyro-elevated rounded px-2 py-1 leading-relaxed">
                 {entry.detalle}
               </p>
             )}
@@ -509,7 +509,7 @@ function HistorialTimeline({ reporteId }: { reporteId: number }) {
 // ─── Skeleton de carga ────────────────────────────────────────────────────────
 
 function SkeletonBloque({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
-  return <div className={`${h} ${w} bg-gray-200 rounded animate-pulse`} />
+  return <div className={`${h} ${w} bg-kyro-elevated rounded animate-pulse`} />
 }
 
 function SkeletonDetalle() {
@@ -552,7 +552,7 @@ export function ReporteDetallePage() {
   if (isError || !reporte) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <p className="text-gray-500">No se pudo cargar el reporte o no existe.</p>
+        <p className="text-kyro-muted">No se pudo cargar el reporte o no existe.</p>
         <Button variant="outline" onClick={() => navigate('/reportes')}>
           ← Volver a reportes
         </Button>
@@ -576,30 +576,31 @@ export function ReporteDetallePage() {
 
       {/* ── Navegación ── */}
       <div className="flex items-center justify-between mb-5">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => navigate('/reportes')}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          className="text-kyro-muted hover:text-kyro-text"
         >
           <span>←</span>
           <span>Reportes</span>
-        </button>
-        <p className="text-xs text-gray-400">
+        </Button>
+        <p className="text-xs text-kyro-subtle">
           Reporte #{reporte.id} · creado {reporte.created_at?.slice(0, 10)}
         </p>
       </div>
 
       {/* ── Cabecera del reporte ── */}
-      <div className="premium-surface mb-6">
+      <div className="kyro-card mb-6 overflow-hidden">
         {/* Banda de estado */}
         <div
           className={`h-1.5 w-full ${
             reporte.estado === 'aprobado'
-              ? 'bg-green-400'
+              ? 'bg-kyro-success'
               : reporte.estado === 'enviado'
-              ? 'bg-blue-400'
+              ? 'bg-kyro-info'
               : reporte.estado === 'editado'
-              ? 'bg-amber-400'
-              : 'bg-gray-300'
+              ? 'bg-kyro-warning'
+              : 'bg-kyro-muted'
           }`}
         />
 
@@ -607,12 +608,12 @@ export function ReporteDetallePage() {
           {/* Fila superior: título + badges */}
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+              <h1 className="text-lg font-orbitron font-bold text-kyro-text leading-tight">
                 {reporte.tienda_id} — {fmtFecha(reporte.fecha)}
               </h1>
               {reporte.nombre_cubre && (
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Cubre: <span className="font-medium text-gray-700">{reporte.nombre_cubre}</span>
+                <p className="text-sm text-kyro-muted mt-0.5">
+                  Cubre: <span className="font-medium text-kyro-body">{reporte.nombre_cubre}</span>
                 </p>
               )}
             </div>
@@ -631,31 +632,31 @@ export function ReporteDetallePage() {
 
           {/* Métricas rápidas */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="premium-kpi px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Tienda</p>
-              <p className="text-sm font-bold text-gray-900">{reporte.tienda_id}</p>
+            <div className="kyro-card border-l-4 border-l-kpi-neutral px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Tienda</p>
+              <p className="text-sm font-bold text-kyro-text">{reporte.tienda_id}</p>
             </div>
-            <div className="premium-kpi px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Agente</p>
-              <p className="text-sm font-bold text-gray-900">#{reporte.agente_id}</p>
+            <div className="kyro-card border-l-4 border-l-kpi-neutral px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Agente</p>
+              <p className="text-sm font-bold text-kyro-text">#{reporte.agente_id}</p>
             </div>
-            <div className="premium-kpi px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Total ventas</p>
-              <p className="text-sm font-bold text-gray-900 tabular-nums">{sol(totalVentas)}</p>
+            <div className="kyro-card border-l-4 border-l-kpi-total px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Total ventas</p>
+              <p className="text-sm font-bold text-kyro-text tabular-nums">{sol(totalVentas)}</p>
               {ventas.length > 0 && (
-                <p className="text-[10px] text-gray-400 mt-0.5">{ventas.length} transacciones</p>
+                <p className="text-[10px] text-kyro-subtle mt-0.5">{ventas.length} transacciones</p>
               )}
             </div>
-            <div className={`rounded-lg px-3 py-2.5 ${
-              diffOk ? 'bg-green-50' : diffGrave ? 'bg-red-50' : 'bg-amber-50'
+            <div className={`kyro-card border-l-4 px-3 py-2.5 ${
+              diffOk ? 'border-l-kyro-success' : diffGrave ? 'border-l-kyro-danger' : 'border-l-kyro-warning'
             }`}>
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-0.5">Diferencia</p>
+              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Diferencia</p>
               <p className={`text-sm font-bold tabular-nums ${
-                diffOk ? 'text-green-700' : diffGrave ? 'text-red-700' : 'text-amber-700'
+                diffOk ? 'text-kyro-success' : diffGrave ? 'text-kyro-danger' : 'text-kyro-warning'
               }`}>
                 {diffOk ? '✓ Cuadrado' : sol(reporte.diferencia)}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-[10px] text-kyro-subtle mt-0.5">
                 Efectivo: {sol(reporte.efectivo_entregado)}
               </p>
             </div>
@@ -721,12 +722,12 @@ export function ReporteDetallePage() {
           {reporte.obs_dia && (
             <Card>
               <CardHeader className="py-2.5 px-4">
-                <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
                   Notas del día
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-1">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-kyro-body whitespace-pre-wrap leading-relaxed">
                   {reporte.obs_dia}
                 </p>
               </CardContent>
@@ -735,12 +736,12 @@ export function ReporteDetallePage() {
           {reporte.observaciones && (
             <Card>
               <CardHeader className="py-2.5 px-4">
-                <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
                   Observaciones de cuadre
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-1">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-kyro-body whitespace-pre-wrap leading-relaxed">
                   {reporte.observaciones}
                 </p>
               </CardContent>
@@ -749,12 +750,12 @@ export function ReporteDetallePage() {
           {reporte.motivo_edicion && (
             <Card>
               <CardHeader className="py-2.5 px-4">
-                <CardTitle className="text-xs font-bold uppercase tracking-widest text-amber-600">
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-warning">
                   Motivo de edición
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-1">
-                <p className="text-sm text-amber-700 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-kyro-warning whitespace-pre-wrap leading-relaxed">
                   {reporte.motivo_edicion}
                 </p>
               </CardContent>
@@ -765,17 +766,17 @@ export function ReporteDetallePage() {
 
       {/* ── Aprobación ── */}
       {reporte.estado === 'aprobado' && reporte.fecha_aprobacion && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-green-600">
+        <div className="mt-4 flex items-center gap-2 text-xs text-kyro-success">
           <span className="font-semibold">✓ Aprobado</span>
-          <span className="text-gray-400">·</span>
+          <span className="text-kyro-subtle">·</span>
           <span>{reporte.fecha_aprobacion.slice(0, 10)}</span>
         </div>
       )}
 
       {/* ── Historial de Auditoría ── */}
-      <Card className="mt-6">
-        <CardHeader className="py-3 px-4 border-b border-gray-100">
-          <CardTitle className="text-xs font-bold uppercase tracking-widest text-gray-500">
+      <Card className="kyro-card mt-6">
+        <CardHeader className="py-3 px-4 border-b border-kyro-border">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
             Historial de auditoría
           </CardTitle>
         </CardHeader>

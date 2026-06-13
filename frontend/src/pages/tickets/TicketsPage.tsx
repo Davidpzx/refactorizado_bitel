@@ -28,12 +28,12 @@ const TIENDAS = [
 const FORMA_PAGO_OPCIONES = ['EFECTIVO', 'YAPE', 'BIPAY', 'PLIN', 'TRANSFERENCIA', 'MIXTO']
 
 const FORMA_PAGO_COLORS: Record<string, string> = {
-  EFECTIVO:      'bg-green-100 text-green-800',
-  YAPE:          'bg-purple-100 text-purple-800',
-  BIPAY:         'bg-cyan-100 text-cyan-800',
-  PLIN:          'bg-orange-100 text-orange-800',
-  TRANSFERENCIA: 'bg-blue-100 text-blue-800',
-  MIXTO:         'bg-gray-100 text-gray-800',
+  EFECTIVO:      'bg-kyro-success/15 text-kyro-success',
+  YAPE:          'bg-kyro-indigo/20 text-kyro-text',
+  BIPAY:         'bg-kyro-info/15 text-kyro-info',
+  PLIN:          'bg-kyro-warning/15 text-kyro-warning',
+  TRANSFERENCIA: 'bg-kyro-info/15 text-kyro-info',
+  MIXTO:         'bg-kyro-elevated text-kyro-body',
 }
 
 function padTicket(id: number) {
@@ -61,14 +61,14 @@ function formaPagoDetalle(t: Ticket) {
 
 function FormaPagoBadge({ ticket }: { ticket: Ticket }) {
   const tipo = detectFormaPago(ticket)
-  const color = FORMA_PAGO_COLORS[tipo] ?? 'bg-gray-100 text-gray-800'
+  const color = FORMA_PAGO_COLORS[tipo] ?? 'bg-kyro-elevated text-kyro-body'
   const detalle = formaPagoDetalle(ticket)
   return (
     <div className="flex flex-col gap-0.5">
       {tipo !== '—' && (
         <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${color}`}>{tipo}</span>
       )}
-      <span className="text-xs text-gray-500">{detalle}</span>
+      <span className="text-xs text-kyro-muted">{detalle}</span>
     </div>
   )
 }
@@ -94,7 +94,7 @@ function getColumns(
         <div>
           <div>{row.original.nombre_cliente ?? '—'}</div>
           {row.original.dni_cliente && (
-            <div className="text-xs text-gray-400">DNI: {row.original.dni_cliente}</div>
+            <div className="text-xs text-kyro-subtle">DNI: {row.original.dni_cliente}</div>
           )}
         </div>
       ),
@@ -144,7 +144,7 @@ function getColumns(
               size="sm"
               variant="ghost"
               title="Anular ticket"
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="text-kyro-danger hover:text-kyro-danger hover:bg-kyro-danger/10"
               onClick={() => onAnular(row.original)}
             >
               <Trash2 size={14} />
@@ -202,7 +202,7 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Tienda *</label>
+          <label className="block text-xs text-kyro-muted mb-1">Tienda *</label>
           <Select value={tienda_id} onChange={(e) => setTiendaId(e.target.value)} required>
             <option value="">Seleccionar tienda</option>
             {TIENDAS.map((t) => (
@@ -211,73 +211,73 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Vendedor *</label>
+          <label className="block text-xs text-kyro-muted mb-1">Vendedor *</label>
           <Input value={vendedor} onChange={(e) => setVendedor(e.target.value)} required placeholder="Nombre del vendedor" />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">Descripción *</label>
+        <label className="block text-xs text-kyro-muted mb-1">Descripción *</label>
         <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required placeholder="Descripción del ticket" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Monto (S/) *</label>
+          <label className="block text-xs text-kyro-muted mb-1">Monto (S/) *</label>
           <Input type="number" step="0.01" min="0" value={monto} onChange={(e) => setMonto(e.target.value)} required placeholder="0.00" />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Cantidad *</label>
+          <label className="block text-xs text-kyro-muted mb-1">Cantidad *</label>
           <Input type="number" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} required />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Nombre cliente</label>
+          <label className="block text-xs text-kyro-muted mb-1">Nombre cliente</label>
           <Input value={nombre_cliente} onChange={(e) => setNombreCliente(e.target.value)} placeholder="Opcional" />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">DNI cliente</label>
+          <label className="block text-xs text-kyro-muted mb-1">DNI cliente</label>
           <Input value={dni_cliente} onChange={(e) => setDniCliente(e.target.value)} placeholder="Opcional" maxLength={8} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Teléfono</label>
+          <label className="block text-xs text-kyro-muted mb-1">Teléfono</label>
           <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Opcional" />
         </div>
       </div>
 
       <div>
-        <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Forma de pago</h4>
+        <h4 className="text-xs font-semibold uppercase text-kyro-subtle tracking-wider mb-2">Forma de pago</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Efectivo (S/)</label>
+            <label className="block text-xs text-kyro-muted mb-1">Efectivo (S/)</label>
             <Input type="number" step="0.01" min="0" value={efectivo} onChange={(e) => setEfectivo(e.target.value)} placeholder="0.00" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Yape (S/)</label>
+            <label className="block text-xs text-kyro-muted mb-1">Yape (S/)</label>
             <Input type="number" step="0.01" min="0" value={yape} onChange={(e) => setYape(e.target.value)} placeholder="0.00" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Bipay (S/)</label>
+            <label className="block text-xs text-kyro-muted mb-1">Bipay (S/)</label>
             <Input type="number" step="0.01" min="0" value={bipay} onChange={(e) => setBipay(e.target.value)} placeholder="0.00" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Plin (S/)</label>
+            <label className="block text-xs text-kyro-muted mb-1">Plin (S/)</label>
             <Input type="number" step="0.01" min="0" value={plin} onChange={(e) => setPlin(e.target.value)} placeholder="0.00" />
           </div>
         </div>
         {totalPago > 0 && (
           <div className="mt-3 flex items-center gap-6 text-sm">
-            <span className="text-gray-500">Total recibido: <strong>S/ {totalPago.toFixed(2)}</strong></span>
-            <span className={vuelto >= 0 ? 'text-green-600' : 'text-red-500'}>
+            <span className="text-kyro-muted">Total recibido: <strong className="text-kyro-text">S/ {totalPago.toFixed(2)}</strong></span>
+            <span className={vuelto >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}>
               Vuelto: <strong>S/ {vuelto.toFixed(2)}</strong>
             </span>
           </div>
         )}
       </div>
 
-      <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+      <div className="flex justify-end gap-2 pt-2 border-t border-kyro-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" disabled={crear.isPending}>
           {crear.isPending ? 'Guardando...' : 'Crear ticket'}
@@ -314,33 +314,33 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Nombre cliente</label>
+          <label className="block text-xs text-kyro-muted mb-1">Nombre cliente</label>
           <Input value={nombre_cliente} onChange={(e) => setNombreCliente(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Teléfono</label>
+          <label className="block text-xs text-kyro-muted mb-1">Teléfono</label>
           <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Efectivo (S/)</label>
+          <label className="block text-xs text-kyro-muted mb-1">Efectivo (S/)</label>
           <Input type="number" step="0.01" min="0" value={efectivo} onChange={(e) => setEfectivo(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Yape (S/)</label>
+          <label className="block text-xs text-kyro-muted mb-1">Yape (S/)</label>
           <Input type="number" step="0.01" min="0" value={yape} onChange={(e) => setYape(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Bipay (S/)</label>
+          <label className="block text-xs text-kyro-muted mb-1">Bipay (S/)</label>
           <Input type="number" step="0.01" min="0" value={bipay} onChange={(e) => setBipay(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Plin (S/)</label>
+          <label className="block text-xs text-kyro-muted mb-1">Plin (S/)</label>
           <Input type="number" step="0.01" min="0" value={plin} onChange={(e) => setPlin(e.target.value)} />
         </div>
       </div>
-      <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+      <div className="flex justify-end gap-2 pt-2 border-t border-kyro-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" disabled={actualizar.isPending}>
           {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
@@ -410,11 +410,11 @@ export function TicketsPage() {
 
       <ListToolbar description="Combina fechas, tienda, cliente y forma de pago.">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Desde</label>
+          <label className="text-xs text-kyro-muted">Desde</label>
           <Input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Hasta</label>
+          <label className="text-xs text-kyro-muted">Hasta</label>
           <Input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
         </div>
         <Select value={tienda_id} onChange={(e) => { setTiendaId(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-44">
