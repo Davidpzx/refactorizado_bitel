@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ReporteController extends Controller
 {
@@ -61,14 +62,18 @@ class ReporteController extends Controller
             'obs_dia'                        => 'nullable|string',
             'destino_efectivo'               => 'nullable|string|max:50',
             'ventas'                         => 'nullable|array',
-            'ventas.*.tipo_venta'            => 'required_with:ventas|in:EQUIPO,ACCESORIO,POSTPAGO,PREPAGO,OTROS_FLUJO',
+            'ventas.*.tipo_venta'            => 'required_with:ventas|in:EQUIPO,ACCESORIO,POSTPAGO,PREPAGO,OTROS_FLUJO,APOYO',
             'ventas.*.subtipo'               => 'nullable|string|max:50',
             'ventas.*.monto_total'           => 'required_with:ventas|numeric|min:0',
             'ventas.*.efectivo_inicial'      => 'nullable|numeric|min:0',
             'ventas.*.cross_selling'         => 'nullable|boolean',
-            'ventas.*.tienda_destino'        => 'nullable|string|max:10',
+            'ventas.*.tienda_destino'        => 'nullable|string|max:10|required_if:ventas.*.tipo_venta,APOYO',
             'ventas.*.es_remate'             => 'nullable|boolean',
             'ventas.*.es_extranjero'         => 'nullable|boolean',
+            'ventas.*.es_migracion'          => 'nullable|boolean',
+            'ventas.*.es_upgrade'            => 'nullable|boolean',
+            'ventas.*.es_esim'               => 'nullable|boolean',
+            'ventas.*.plan_anterior'         => 'nullable|numeric|min:0',
             'ventas.*.cliente_dni'           => 'nullable|string|max:11',
             'ventas.*.inventario_tienda_id'  => 'nullable|integer',
             'ventas.*.producto_nombre'       => 'nullable|string|max:150',
@@ -84,6 +89,20 @@ class ReporteController extends Controller
             'ventas.*.cobrado_unitario'      => 'nullable|numeric|min:0',
             'ventas.*.comision_unitaria'     => 'nullable|numeric|min:0',
         ]);
+
+        // B5 — Guardia anti-duplicados (paridad legacy procesar_reporte.php):
+        // impide más de un reporte por (agente, tienda, fecha) aunque el front falle o sea evadido.
+        $duplicado = Reporte::query()
+            ->where('agente_id', $validated['agente_id'])
+            ->where('tienda_id', $validated['tienda_id'])
+            ->whereDate('fecha', $validated['fecha'])
+            ->exists();
+        if ($duplicado) {
+            return response()->json([
+                'error' => 'Ya existe un reporte para este agente, tienda y fecha.',
+                'code'  => 'DUPLICATE_REPORT',
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
@@ -151,10 +170,17 @@ class ReporteController extends Controller
                     'tipo_venta'       => $vd['tipo_venta'],
                     'subtipo'          => $vd['subtipo'] ?? null,
                     'cross_selling'    => (bool) ($vd['cross_selling'] ?? false),
-                    'tienda_destino'   => ($vd['cross_selling'] ?? false) ? ($vd['tienda_destino'] ?? null) : null,
+                    'tienda_destino'   => (($vd['cross_selling'] ?? false) || $vd['tipo_venta'] === 'APOYO')
+                        ? ($vd['tienda_destino'] ?? null)
+                        : null,
                     'monto_total'      => $vd['monto_total'],
                     'efectivo_inicial' => $vd['efectivo_inicial'] ?? $vd['monto_total'],
-                    'comision_generada'=> 0,
+                    'comision_generada' => in_array($vd['tipo_venta'], ['POSTPAGO', 'PREPAGO', 'APOYO'], true)
+                        ? round(
+                            (float) ($vd['comision_unitaria'] ?? 0) * max(1, (int) ($vd['cantidad'] ?? 1)),
+                            2
+                        )
+                        : 0,
                     'comision_estado'  => 'ACTIVA',
                     'es_remate'        => (bool) ($vd['es_remate'] ?? false),
                     'es_extranjero'    => (bool) ($vd['es_extranjero'] ?? false),
@@ -175,9 +201,41 @@ class ReporteController extends Controller
                             ? ((float)$vd['precio_venta'] - (float)$vd['costo_snap']) : null,
                         'por_cobrar_financiera' => $vd['por_cobrar_financiera'] ?? 0,
                     ]);
+
+                    // B1 — Descuento de stock transaccional con guardia (paridad legacy):
+                    // decrementa inventario_tiendas y aborta si el ítem ya fue vendido/trasladado
+                    // o no pertenece a la tienda (rowCount !== 1 ⇒ throw ⇒ rollBack).
+                    $invId = (int) ($vd['inventario_tienda_id'] ?? 0);
+                    if ($invId > 0) {
+                        $update = ['cantidad' => DB::raw('GREATEST(cantidad - 1, 0)')];
+                        if (Schema::hasColumn('inventario_tiendas', 'estado')) {
+                            $update['estado'] = DB::raw("CASE WHEN cantidad - 1 <= 0 THEN 'VENDIDO' ELSE estado END");
+                        }
+                        if (Schema::hasColumn('inventario_tiendas', 'fecha_venta')) {
+                            $update['fecha_venta'] = now();
+                        }
+                        if (Schema::hasColumn('inventario_tiendas', 'vendido_por_id')) {
+                            $update['vendido_por_id'] = $validated['agente_id'];
+                        }
+                        if (Schema::hasColumn('inventario_tiendas', 'reporte_venta_id')) {
+                            $update['reporte_venta_id'] = $reporte->id;
+                        }
+
+                        $afectadas = DB::table('inventario_tiendas')
+                            ->where('id', $invId)
+                            ->where('tienda_id', $validated['tienda_id'])
+                            ->where('cantidad', '>', 0)
+                            ->update($update);
+
+                        if ($afectadas !== 1) {
+                            throw new \RuntimeException(
+                                "El producto \"{$vd['producto_nombre']}\" ya fue vendido, trasladado o no pertenece a esta tienda."
+                            );
+                        }
+                    }
                 }
 
-                if (in_array($vd['tipo_venta'], ['POSTPAGO', 'PREPAGO']) && !empty($vd['plan_nombre'])) {
+                if (in_array($vd['tipo_venta'], ['POSTPAGO', 'PREPAGO', 'APOYO'], true) && !empty($vd['plan_nombre'])) {
                     VentaLinea::create([
                         'venta_id'          => $venta->id,
                         'plan_nombre_snap'  => $vd['plan_nombre'],
@@ -185,7 +243,7 @@ class ReporteController extends Controller
                         'cantidad'          => $vd['cantidad'] ?? 1,
                         'cobrado_unitario'  => $vd['cobrado_unitario'] ?? $vd['monto_total'],
                         'comision_unitaria' => $vd['comision_unitaria'] ?? 0,
-                        'es_esim'           => false,
+                        'es_esim'           => (bool) ($vd['es_esim'] ?? false),
                     ]);
                 }
             }
@@ -212,6 +270,10 @@ class ReporteController extends Controller
             $reporte->load('ventas');
             return response()->json($reporte, 201);
 
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+            // Violación de regla de negocio (p.ej. guardia de stock) → 422, no 500.
+            return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json(['error' => 'Error al guardar: ' . $e->getMessage()], 500);
