@@ -207,7 +207,31 @@ class ReporteController extends Controller
             'efectivo_entregado' => 'sometimes|numeric|min:0',
             'destino_efectivo'   => 'sometimes|string|max:50',
             'estado'             => 'sometimes|in:borrador,enviado',
+            'motivo_edicion'     => 'sometimes|nullable|string|max:500',
         ]);
+
+        // Al corregir el efectivo entregado, recalcular diferencia/total_dia (el esperado no cambia
+        // porque las ventas no se tocan en la edición ligera).
+        if (array_key_exists('efectivo_entregado', $validated)) {
+            $entregado = (float) $validated['efectivo_entregado'];
+            $esperado  = (float) $reporte->efectivo_esperado;
+            $validated['total_dia']           = $entregado;
+            $validated['diferencia']          = round($entregado - $esperado, 2);
+            $validated['requiere_aprobacion'] = abs($validated['diferencia']) > 10;
+        }
+
+        // Si la corrección venía de una edición autorizada, registrarla y cerrarla.
+        if ($reporte->estado_edicion === 'APROBADO') {
+            $validated['estado_edicion'] = 'CERRADO';
+            HistorialReporte::create([
+                'reporte_id' => $reporte->id,
+                'usuario_id' => $request->user()?->id,
+                'accion'     => 'edicion_aplicada',
+                'detalle'    => $request->input('motivo_edicion') ?: 'Corrección de campos autorizados.',
+            ]);
+        }
+
+        unset($validated['motivo_edicion']);
 
         $reporte->update($validated);
         return response()->json($reporte->fresh());

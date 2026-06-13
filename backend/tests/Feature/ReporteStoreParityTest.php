@@ -155,6 +155,26 @@ class ReporteStoreParityTest extends TestCase
         $this->assertSame('CERRADO', DB::table('reportes')->where('id', $reporteId)->value('estado_edicion'));
     }
 
+    public function test_edicion_ligera_recalcula_diferencia_y_cierra_edicion(): void
+    {
+        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+
+        $resp = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'caja_inicial' => 0, 'efectivo_entregado' => 100,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 100, 'efectivo_inicial' => 100]],
+            ]))->assertCreated();
+        $rid = $resp->json('id'); // esperado = 100 − 0 − 0 = 100
+
+        DB::table('reportes')->where('id', $rid)->update(['estado_edicion' => 'APROBADO', 'estado' => 'enviado']);
+
+        $this->actingAs($vendedor, 'sanctum')
+            ->putJson("/api/v1/reportes/{$rid}", ['efectivo_entregado' => 80, 'motivo_edicion' => 'corrige'])
+            ->assertOk()
+            ->assertJsonPath('diferencia', '-20.00')      // 80 − 100
+            ->assertJsonPath('estado_edicion', 'CERRADO');
+    }
+
     private function payload(Usuario $usuario, array $overrides = []): array
     {
         return array_replace([
