@@ -189,6 +189,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Postulaciones (admin) ─────────────────────────────────────────────────
     Route::get('postulaciones',          [PostulanteController::class, 'index']);
     Route::get('postulaciones/{id}',     [PostulanteController::class, 'show']);
+    Route::post('postulaciones/{id}/aprobar', [PostulanteController::class, 'aprobar']);
     Route::patch('postulaciones/{id}',   [PostulanteController::class, 'update']);
     Route::delete('postulaciones/{id}',  [PostulanteController::class, 'destroy']);
 

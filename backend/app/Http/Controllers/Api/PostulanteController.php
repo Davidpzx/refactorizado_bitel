@@ -7,6 +7,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class PostulanteController extends Controller
 {
@@ -158,6 +160,83 @@ class PostulanteController extends Controller
         return response()->json(['success' => true, 'message' => 'Postulante actualizado.']);
     }
 
+    // ── POST /api/v1/postulaciones/{id}/aprobar (admin) ──────────────────────
+    public function aprobar(Request $request, int $id): JsonResponse
+    {
+        $user = Auth::user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+
+        $validated = $request->validate([
+            'pin_seguridad' => ['nullable', 'string', 'digits:4'],
+            'tienda_base'   => ['nullable', 'string', 'max:20'],
+            'sueldo_base'   => ['nullable', 'numeric', 'min:0'],
+            'fecha_ingreso' => ['nullable', 'date'],
+            'hora_ingreso'  => ['nullable', 'date_format:H:i'],
+            'hora_salida'   => ['nullable', 'date_format:H:i'],
+            'dia_descanso'  => ['nullable', 'string', 'max:20'],
+            'dia_pago'      => ['nullable', 'integer', 'between:1,31'],
+            'es_gerencia'   => ['nullable', 'boolean'],
+        ]);
+
+        $resultado = DB::transaction(function () use ($id, $user, $validated) {
+            $postulante = DB::table('postulantes_temp')
+                ->where('id', $id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$postulante) {
+                return ['status' => 404, 'body' => ['message' => 'Postulante no encontrado.']];
+            }
+
+            if ($postulante->estado === 'APROBADO') {
+                return ['status' => 409, 'body' => [
+                    'success' => false,
+                    'message' => 'El postulante ya fue aprobado.',
+                ]];
+            }
+
+            if ($postulante->estado === 'RECHAZADO') {
+                return ['status' => 422, 'body' => [
+                    'success' => false,
+                    'message' => 'No se puede aprobar un postulante rechazado.',
+                ]];
+            }
+
+            if (DB::table('agentes')->where('dni', $postulante->dni)->exists()) {
+                return ['status' => 409, 'body' => [
+                    'success' => false,
+                    'message' => 'Ya existe un agente registrado con ese DNI.',
+                ]];
+            }
+
+            $columnasAgente = Schema::getColumnListing('agentes');
+            $datosAgente = $this->datosAgenteDesdePostulante(
+                $postulante,
+                $validated,
+                $columnasAgente
+            );
+
+            $agenteId = DB::table('agentes')->insertGetId($datosAgente);
+
+            DB::table('postulantes_temp')->where('id', $id)->update([
+                'estado'       => 'APROBADO',
+                'revisado_en'  => now(),
+                'revisado_por' => $user->id,
+                'updated_at'   => now(),
+            ]);
+
+            return ['status' => 201, 'body' => [
+                'success'   => true,
+                'message'   => 'Postulante aprobado y agente creado.',
+                'agente_id' => $agenteId,
+            ]];
+        });
+
+        return response()->json($resultado['body'], $resultado['status']);
+    }
+
     // ── DELETE /api/v1/postulaciones/{id} (admin) ──────────────────────────────
     public function destroy(int $id): JsonResponse
     {
@@ -185,5 +264,54 @@ class PostulanteController extends Controller
         if (is_array($val)) return json_encode($val, JSON_UNESCAPED_UNICODE);
         $decoded = json_decode((string)$val, true);
         return $decoded !== null ? $val : '[]';
+    }
+
+    private function datosAgenteDesdePostulante(
+        object $postulante,
+        array $validated,
+        array $columnasAgente
+    ): array {
+        $columnas = array_flip($columnasAgente);
+        $origen = get_object_vars($postulante);
+        $excluidas = [
+            'id', 'estado', 'notas_admin', 'revisado_en', 'revisado_por',
+            'created_at', 'updated_at', 'tienda_postulada',
+        ];
+
+        $datos = [];
+        foreach ($origen as $campo => $valor) {
+            if (isset($columnas[$campo]) && !in_array($campo, $excluidas, true)) {
+                $datos[$campo] = $valor;
+            }
+        }
+
+        $nombreCompleto = trim($postulante->nombres . ' ' . $postulante->apellidos);
+        $pin = $validated['pin_seguridad'] ?? substr((string) $postulante->dni, -4);
+
+        $mapeos = [
+            'dni'           => $postulante->dni,
+            'nombres'       => $nombreCompleto,
+            'tienda_base'   => $validated['tienda_base'] ?? $postulante->tienda_postulada,
+            'pin_seguridad' => Hash::make($pin),
+            'sueldo_base'   => $validated['sueldo_base'] ?? 0,
+            'fecha_ingreso' => $validated['fecha_ingreso'] ?? now()->toDateString(),
+            'hora_ingreso'  => $validated['hora_ingreso'] ?? null,
+            'hora_salida'   => $validated['hora_salida'] ?? null,
+            'dia_descanso'  => $validated['dia_descanso'] ?? null,
+            'dia_pago'      => $validated['dia_pago'] ?? null,
+            'es_gerencia'   => $validated['es_gerencia'] ?? false,
+            'estado'        => 'ACTIVO',
+            'creado_en'     => now(),
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ];
+
+        foreach ($mapeos as $campo => $valor) {
+            if (isset($columnas[$campo])) {
+                $datos[$campo] = $valor;
+            }
+        }
+
+        return $datos;
     }
 }
