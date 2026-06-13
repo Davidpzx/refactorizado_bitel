@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import jsQR from 'jsqr'
 import { api } from '../../services/api'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -174,26 +175,107 @@ function CapturaFoto({ onCaptura }: { onCaptura: (base64: string) => void }) {
 // ── Escáner QR con cuenta regresiva 2 min ───────────────────────────────────────
 
 function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
-  const [input, setInput] = useState('')
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rafRef = useRef<number>(0)
+  const streamRef = useRef<MediaStream | null>(null)
+  const firedRef = useRef(false)
   const [restante, setRestante] = useState(120)
+  const [camError, setCamError] = useState(false)
+  const [manual, setManual] = useState(false)
+  const [input, setInput] = useState('')
+
+  // Cuenta regresiva de 2 min.
   useEffect(() => {
     const t = setInterval(() => setRestante((r) => Math.max(0, r - 1)), 1000)
     return () => clearInterval(t)
   }, [])
+
+  // A4 — cámara trasera + lectura QR con jsQR (con fallback a ingreso manual).
+  useEffect(() => {
+    let cancelled = false
+    const stop = () => {
+      cancelAnimationFrame(rafRef.current)
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    const tick = () => {
+      const v = videoRef.current, c = canvasRef.current
+      if (v && c && v.readyState === v.HAVE_ENOUGH_DATA) {
+        c.width = v.videoWidth; c.height = v.videoHeight
+        const ctx = c.getContext('2d', { willReadFrequently: true })
+        if (ctx) {
+          ctx.drawImage(v, 0, 0, c.width, c.height)
+          const img = ctx.getImageData(0, 0, c.width, c.height)
+          const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })
+          if (code?.data && !firedRef.current) {
+            firedRef.current = true
+            stop()
+            onToken(code.data.trim())
+            return
+          }
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      .then((s) => {
+        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return }
+        streamRef.current = s
+        if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play().catch(() => {}) }
+        rafRef.current = requestAnimationFrame(tick)
+      })
+      .catch(() => { setCamError(true); setManual(true) })
+    return () => { cancelled = true; stop() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const mm = String(Math.floor(restante / 60)).padStart(2, '0')
   const ss = String(restante % 60).padStart(2, '0')
+  const expirado = restante === 0
+
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-      <p className="text-sm text-zinc-400 text-center">Apunta al QR del local o ingresa el código manualmente</p>
+      <style>{`@keyframes kyroScan{0%{transform:translateY(0)}100%{transform:translateY(192px)}}`}</style>
+      <p className="text-sm text-zinc-400 text-center">Apunta la cámara al QR del local</p>
+
+      {!manual && !camError && (
+        <div className="relative w-64 h-64 rounded-2xl overflow-hidden border border-zinc-700 bg-black">
+          <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+          <div className="absolute inset-0 pointer-events-none">
+            <span className="absolute left-7 top-7 w-7 h-7 border-l-[3px] border-t-[3px] border-red-500 rounded-tl-lg" />
+            <span className="absolute right-7 top-7 w-7 h-7 border-r-[3px] border-t-[3px] border-red-500 rounded-tr-lg" />
+            <span className="absolute left-7 bottom-7 w-7 h-7 border-l-[3px] border-b-[3px] border-red-500 rounded-bl-lg" />
+            <span className="absolute right-7 bottom-7 w-7 h-7 border-r-[3px] border-b-[3px] border-red-500 rounded-br-lg" />
+            <span className="absolute left-8 right-8 h-0.5 bg-red-500/80 shadow-[0_0_12px_2px_rgba(239,68,68,0.7)]"
+              style={{ top: '2rem', animation: 'kyroScan 2.2s ease-in-out infinite alternate' }} />
+          </div>
+          {expirado && (
+            <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-red-400 font-bold text-sm px-4 text-center">
+              QR expirado — vuelve a intentar
+            </div>
+          )}
+        </div>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
+
       <div className={`font-mono text-lg font-bold ${restante <= 20 ? 'text-red-400' : 'text-amber-400'}`}>{mm}:{ss}</div>
-      <input autoFocus value={input} onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) onToken(input.trim()) }}
-        placeholder="Pega o escribe el token QR"
-        className="w-full bg-zinc-700 text-white border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500" />
-      <button onClick={() => input.trim() && onToken(input.trim())} disabled={!input.trim() || restante === 0}
-        className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold px-8 py-3 rounded-2xl text-base active:scale-95 transition-all">
-        {restante === 0 ? 'QR expirado' : 'Verificar QR'}
-      </button>
+
+      {manual ? (
+        <>
+          {camError && <p className="text-xs text-amber-400 text-center">Cámara no disponible. Ingresa el código manualmente.</p>}
+          <input autoFocus value={input} onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) onToken(input.trim()) }}
+            placeholder="Pega o escribe el token QR"
+            className="w-full bg-zinc-700 text-white border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500" />
+          <button onClick={() => input.trim() && onToken(input.trim())} disabled={!input.trim() || expirado}
+            className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold px-8 py-3 rounded-2xl text-base active:scale-95 transition-all">
+            {expirado ? 'QR expirado' : 'Verificar QR'}
+          </button>
+        </>
+      ) : (
+        <button onClick={() => setManual(true)} className="text-xs text-zinc-500 hover:text-zinc-300">o ingresar el código manualmente</button>
+      )}
     </div>
   )
 }
