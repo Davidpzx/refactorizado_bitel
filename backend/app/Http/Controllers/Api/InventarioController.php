@@ -332,33 +332,43 @@ class InventarioController extends Controller
     {
         $user = Auth::user();
         if ($user->rol !== 'admin') {
-            return response()->json(['ok' => true, 'count' => 0, 'data' => []]);
+            return response()->json(['ok' => true, 'count' => 0, 'items' => [], 'data' => []]);
         }
 
-        $rows = DB::select("
-            SELECT rc.id AS rc_id,
-                   IFNULL(JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.producto')),
-                          JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.descripcion'))) AS producto,
-                   JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.identificador')) AS imei,
-                   JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.precio_total'))  AS precio_venta,
-                   r.tienda_id,
-                   r.fecha
-            FROM reporte_categorias rc
-            JOIN reportes r ON rc.reporte_id = r.id
-            WHERE rc.tipo = 'equipos_accesorios'
-              AND (
-                  JSON_EXTRACT(rc.detalle, '\$.costo_al_registrar') IS NULL
-                  OR JSON_EXTRACT(rc.detalle, '\$.costo_al_registrar') = 0
-                  OR JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.costo_al_registrar')) = '0'
-                  OR JSON_UNQUOTE(JSON_EXTRACT(rc.detalle, '\$.costo_al_registrar')) = ''
-                  OR JSON_EXTRACT(rc.detalle, '\$.ganancia') IS NULL
-              )
-            ORDER BY r.fecha DESC
-            LIMIT 50
-        ");
+        if (! Schema::hasTable('venta_equipos') || ! Schema::hasTable('ventas') || ! Schema::hasTable('reportes')) {
+            return response()->json(['ok' => true, 'count' => 0, 'items' => [], 'data' => []]);
+        }
 
-        $data = array_map(fn($r) => (array)$r, $rows);
-        return response()->json(['ok' => true, 'count' => count($data), 'data' => $data]);
+        $items = DB::table('venta_equipos as ve')
+            ->join('ventas as v', 'v.id', '=', 've.venta_id')
+            ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+            ->where(function ($query) {
+                $query->whereNull('ve.costo_snap')
+                    ->orWhere('ve.costo_snap', '<=', 0)
+                    ->orWhereNull('ve.ganancia_snap');
+            })
+            ->select([
+                've.id as rc_id',
+                've.producto_nombre_snap as producto',
+                've.imei_serial_snap as imei',
+                've.precio_venta',
+                'r.tienda_id as tienda',
+                'r.fecha',
+            ])
+            ->orderByDesc('r.fecha')
+            ->orderByDesc('ve.id')
+            ->limit(50)
+            ->get()
+            ->map(fn ($item) => (array) $item)
+            ->values()
+            ->all();
+
+        return response()->json([
+            'ok' => true,
+            'count' => count($items),
+            'items' => $items,
+            'data' => $items,
+        ]);
     }
 
     // ── GET /inventario/exportar-kardex — CSV del kardex ─────────────────────────

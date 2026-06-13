@@ -590,50 +590,44 @@ class ReporteController extends Controller
     }
 
     // ── POST /reporte-categorias/{id}/fijar-costo — Campana: fijar costo rápido
-    public function fijarCosto(Request $request, int $rcId): JsonResponse
+    public function fijarCosto(Request $request, int $ventaEquipoId): JsonResponse
     {
         $user = $request->user();
         if ($user->rol !== 'admin') {
             return response()->json(['success' => false, 'message' => 'Acceso denegado.'], 403);
         }
 
-        $precioCosto = round((float) $request->input('precio_costo', 0), 2);
-        $precioVenta = round((float) $request->input('precio_venta', 0), 2);
+        $validated = $request->validate([
+            'precio_costo' => 'required|numeric|gt:0',
+            'precio_venta' => 'nullable|numeric|min:0',
+        ]);
 
-        if ($rcId <= 0 || $precioCosto <= 0) {
+        if ($ventaEquipoId <= 0) {
             return response()->json(['success' => false, 'message' => 'Datos inválidos.'], 422);
         }
 
-        $row = \Illuminate\Support\Facades\DB::table('reporte_categorias')
-            ->where('id', $rcId)
-            ->where('tipo', 'equipos_accesorios')
-            ->first();
+        $ventaEquipo = VentaEquipo::find($ventaEquipoId);
 
-        if (!$row) {
+        if (! $ventaEquipo) {
             return response()->json(['success' => false, 'message' => 'Registro no encontrado.'], 404);
         }
 
-        $detalle = json_decode($row->detalle, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return response()->json(['success' => false, 'message' => 'JSON del detalle inválido.'], 500);
-        }
+        $precioCosto = round((float) $validated['precio_costo'], 2);
+        $precioVenta = array_key_exists('precio_venta', $validated) && $validated['precio_venta'] !== null
+            ? round((float) $validated['precio_venta'], 2)
+            : (float) $ventaEquipo->precio_venta;
+        $ganancia = round($precioVenta - $precioCosto, 2);
 
-        $pv = $precioVenta > 0
-            ? $precioVenta
-            : floatval($detalle['precio_normal_agente'] ?? $detalle['precio_total'] ?? 0);
-
-        $detalle['costo_al_registrar'] = $precioCosto;
-        $detalle['ganancia']           = $pv - $precioCosto;
-        $detalle['precio_costo']       = $precioCosto;
-
-        \Illuminate\Support\Facades\DB::table('reporte_categorias')
-            ->where('id', $rcId)
-            ->update(['detalle' => json_encode($detalle, JSON_UNESCAPED_UNICODE)]);
+        $ventaEquipo->update([
+            'precio_venta' => $precioVenta,
+            'costo_snap' => $precioCosto,
+            'ganancia_snap' => $ganancia,
+        ]);
 
         return response()->json([
             'success'  => true,
             'message'  => 'Costo actualizado correctamente.',
-            'ganancia' => $detalle['ganancia'],
+            'ganancia' => $ganancia,
             'costo'    => $precioCosto,
         ]);
     }
