@@ -23,15 +23,16 @@ const DESTINOS = ['TIENDA', 'BANCO', 'GERENCIA', 'AGENTE']
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function KpiCard({
-  title, value, colorClass = 'text-blue-600', highlight = false,
+  title, value, colorClass = 'text-blue-600', borderClass, highlight = false,
 }: {
   title: string
   value: number | string | null | undefined
   colorClass?: string
+  borderClass: string
   highlight?: boolean
 }) {
   return (
-    <div className={`group relative overflow-hidden rounded-xl border bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)] ${highlight ? 'border-emerald-300/80 dark:border-emerald-400/25' : 'border-gray-200/80 dark:border-white/[0.08]'}`}>
+    <div className={`group relative overflow-hidden bg-kyro-panel rounded-kyro-lg shadow-kyro-card p-3 border border-kyro-border border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
       <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${highlight ? 'bg-gradient-to-r from-emerald-400 via-emerald-300/40 to-transparent' : 'bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent'}`} />
       <div aria-hidden className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]" />
       <p className="relative text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{title}</p>
@@ -46,11 +47,11 @@ function KpiCard({
 function KpiCardDiferencia({ value }: { value: number | string | null | undefined }) {
   const num = Number(value ?? 0)
   const colorClass = num === 0 ? 'text-gray-600' : num < 0 ? 'text-red-600' : 'text-yellow-600'
-  const bgClass    = num === 0 ? 'border-gray-200' : num < 0 ? 'border-red-300' : 'border-yellow-300'
+  const borderClass = num === 0 ? 'border-l-kpi-neutral' : num < 0 ? 'border-l-kyro-danger' : 'border-l-kyro-warning'
   const Icon = num < 0 ? TrendingDown : TrendingUp
 
   return (
-    <div className={`group relative overflow-hidden rounded-xl border bg-white/80 p-4 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 dark:bg-zinc-900/65 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.95)] ${bgClass} dark:border-white/[0.08]`}>
+    <div className={`group relative overflow-hidden bg-kyro-panel rounded-kyro-lg shadow-kyro-card p-3 border border-kyro-border border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
       <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${num < 0 ? 'bg-gradient-to-r from-red-500/80 to-transparent' : 'bg-gradient-to-r from-amber-400/80 to-transparent'}`} />
       <p className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">Diferencia Física</p>
       <div className="mt-2 flex items-center gap-2">
@@ -230,22 +231,23 @@ export function DashboardPage() {
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}     colorClass="text-blue-700" />
-        <KpiCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}   colorClass="text-green-700" />
-        <KpiCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado}  colorClass="text-indigo-700" />
+        <KpiCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}     colorClass="text-blue-700" borderClass="border-l-kpi-total" />
+        <KpiCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}   colorClass="text-green-700" borderClass="border-l-kpi-esperado" />
+        <KpiCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado}  colorClass="text-indigo-700" borderClass="border-l-kpi-declarado" />
         <KpiCardDiferencia                              value={isLoading ? null : totales?.diferencia_fisica} />
       </div>
 
       {/* KPIs digitales */}
       <div className={`grid gap-4 ${usuario?.rol === 'admin' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}>
-        <KpiCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          colorClass="text-purple-700" />
-        <KpiCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         colorClass="text-orange-600" />
-        <KpiCard title="Total Transferencia" value={isLoading ? null : totales?.total_transferencia} colorClass="text-teal-600" />
+        <KpiCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          colorClass="text-purple-700" borderClass="border-l-kpi-yape" />
+        <KpiCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         colorClass="text-orange-600" borderClass="border-l-kpi-bipay" />
+        <KpiCard title="Total Transferencia" value={isLoading ? null : totales?.total_transferencia} colorClass="text-teal-600" borderClass="border-l-kpi-transfer" />
         {usuario?.rol === 'admin' && (
           <KpiCard
             title="Ganancia Total del Período"
             value={isLoading ? null : data?.ganancia_total}
             colorClass="text-emerald-700"
+            borderClass="border-l-kpi-ganancia"
             highlight
           />
         )}

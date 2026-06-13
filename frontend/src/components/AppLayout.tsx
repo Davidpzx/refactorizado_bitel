@@ -107,10 +107,6 @@ export function AppLayout() {
   const separatorMap = buildSeparatorMap()
 
   /* ── Theme-conditional styles ── */
-  const sidebarBg = isDark
-    ? { background: 'rgba(9,9,11,0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.06)' }
-    : { background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(0,0,0,0.07)', boxShadow: '2px 0 16px -4px rgba(0,0,0,0.07)' }
-
   const mobileBg = isDark
     ? { background: '#18181b', borderBottom: '1px solid rgba(255,255,255,0.06)' }
     : { background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }
@@ -118,16 +114,8 @@ export function AppLayout() {
   const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
   const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
 
-  const navActive = isDark
-    ? 'bg-zinc-800 text-zinc-100 border border-[rgba(255,255,255,0.08)] shadow-sm'
-    : 'bg-gray-100 text-gray-900 border border-gray-200 shadow-sm'
-  const navInactive = isDark
-    ? 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
-    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-
-  const sectionLabelCls = isDark ? 'text-zinc-600' : 'text-gray-400'
-  const dividerCls      = isDark ? 'border-[rgba(255,255,255,0.05)]' : 'border-gray-100'
-  const logoTextCls     = isDark ? 'text-white' : 'text-gray-900'
+  const navActive = 'bg-kyro-elevated text-white border-l-[3px] border-kyro-gold'
+  const navInactive = 'text-kyro-body hover:bg-kyro-elevated/50'
   const collapseBtnCls  = isDark
     ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
     : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
@@ -153,8 +141,7 @@ export function AppLayout() {
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2 min-w-0">
               <span
-                className={`text-base font-bold tracking-widest uppercase ${logoTextCls}`}
-                style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: '0.18em' }}
+                className="font-orbitron text-base font-bold tracking-widest uppercase text-kyro-gold"
               >
                 SIS-KYRO
               </span>
@@ -219,22 +206,19 @@ export function AppLayout() {
               <div key={to}>
                 {sectionLabel && !collapsed && idx !== 0 && (
                   <div className="pt-3 pb-1 px-3">
-                    <span className={`text-[10px] font-semibold uppercase tracking-widest ${sectionLabelCls}`}>
+                    <span className="block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide text-kyro-muted">
                       {sectionLabel}
                     </span>
                   </div>
-                )}
-                {sectionLabel && !collapsed && idx !== 0 && (
-                  <div className={`mx-3 mb-1 border-t ${dividerCls}`} />
                 )}
 
                 {soon ? (
                   <div
                     title={collapsed ? label : undefined}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-not-allowed select-none ${soonCls}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-kyro text-[0.9rem] cursor-not-allowed select-none ${soonCls}
                       ${collapsed ? 'justify-center' : ''}`}
                   >
-                    <Icon size={15} className="shrink-0" />
+                    <Icon size={18} className="shrink-0" />
                     {!collapsed && (
                       <>
                         <span className="text-xs font-medium truncate flex-1">{label}</span>
@@ -250,7 +234,7 @@ export function AppLayout() {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       [
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150',
+                        'flex items-center gap-3 px-3 py-2 rounded-kyro text-[0.9rem] font-medium transition-all duration-150',
                         collapsed ? 'justify-center' : '',
                         isActive ? navActive : navInactive,
                       ].join(' ')
@@ -258,13 +242,11 @@ export function AppLayout() {
                   >
                     {({ isActive }) => {
                       const badgeCount = badgeByRoute[to] ?? 0
-                      const iconColor = isActive
-                        ? isDark ? 'text-[#ffc200]' : 'text-amber-600'
-                        : ''
+                      const iconColor = isActive ? 'text-kyro-gold' : ''
                       return (
                         <>
                           <span className="relative shrink-0">
-                            <Icon size={15} className={iconColor} />
+                            <Icon size={18} className={iconColor} />
                             {badgeCount > 0 && collapsed && (
                               <span className="badge-pulse absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
                             )}
@@ -337,10 +319,9 @@ export function AppLayout() {
     >
       {/* Sidebar desktop ────────────────────────────────────────────────── */}
       <aside
-        style={sidebarBg}
         className={[
-          'hidden lg:flex flex-col shrink-0 transition-all duration-200',
-          collapsed ? 'w-16' : 'w-60',
+          'kyro-glass hidden lg:flex flex-col shrink-0 border border-kyro-border transition-all duration-200',
+          collapsed ? 'w-16' : 'w-[260px]',
         ].join(' ')}
       >
         <SidebarContent />
@@ -354,8 +335,7 @@ export function AppLayout() {
             onClick={() => setMobileOpen(false)}
           />
           <aside
-            style={{ ...sidebarBg, background: isDark ? 'rgba(9,9,11,0.97)' : 'rgba(255,255,255,0.97)' }}
-            className="relative w-64 flex flex-col z-10"
+            className="kyro-glass relative z-10 flex w-[260px] flex-col border border-kyro-border"
           >
             <SidebarContent />
           </aside>
@@ -376,8 +356,7 @@ export function AppLayout() {
             <Menu size={18} />
           </button>
           <span
-            className={`font-bold tracking-widest text-sm uppercase ${logoTextCls}`}
-            style={{ fontFamily: "'Orbitron', sans-serif" }}
+            className="font-orbitron text-sm font-bold uppercase tracking-widest text-kyro-gold"
           >
             SIS-KYRO
           </span>

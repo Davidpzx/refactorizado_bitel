@@ -22,6 +22,33 @@
   --color-kyro-muted:        #a1a1aa;
   --color-kyro-body:         #e4e4e7;
   --color-kyro-subtle:       #52525b;
+
+  /* — Semánticos (identidad legacy Bitel) — */
+  --color-kyro-success:      #22c55e;
+  --color-kyro-danger:       #ef4444;
+  --color-kyro-warning:      #f59e0b;
+  --color-kyro-info:         #06b6d4;
+  --color-kyro-gold-ink:     #1e293b;
+
+  /* — Paleta KPI por tipo (border-left del dashboard) — */
+  --color-kpi-total:         #0d6efd;
+  --color-kpi-esperado:      #0dcaf0;
+  --color-kpi-declarado:     #198754;
+  --color-kpi-neutral:       #6c757d;
+  --color-kpi-yape:          #a78bfa;
+  --color-kpi-bipay:         #38bdf8;
+  --color-kpi-transfer:      #34d399;
+  --color-kpi-ganancia:      #10b981;
+
+  /* — Radios legacy (namespaced, no pisan los defaults de Tailwind) — */
+  --radius-kyro-sm:          5px;
+  --radius-kyro:             8px;
+  --radius-kyro-lg:          12px;
+  --radius-kyro-xl:          16px;
+
+  /* — Sombras legacy — */
+  --shadow-kyro-card:        0 4px 20px -2px rgb(0 0 0 / 0.5);
+  --shadow-kyro-popover:     0 8px 24px rgb(0 0 0 / 0.8);
 }
 
 /* ── Reset & base ──────────────────────────────────────────────────────────── */
