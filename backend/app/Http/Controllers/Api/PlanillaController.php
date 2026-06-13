@@ -353,6 +353,49 @@ class PlanillaController extends Controller
      */
     private function calcularComisionesOnline(array $ids, string $inicio, string $fin): array
     {
+        // E1 — paridad legacy: comisión online = recargas × (ganancia_recargas%) + ops_BCP × COMISION_BCP.
+        // Requiere la tabla legacy `config_comisiones`. Si no existe, fallback seguro al método previo.
+        $schema = DB::getSchemaBuilder();
+        if (! $schema->hasTable('config_comisiones')) {
+            return $this->comisionesOnlineFallback($ids, $inicio, $fin);
+        }
+
+        $tasaRecargas = (float) (DB::table('config_comisiones')->where('tipo', 'ganancia_recargas')->value('monto') ?? 0) / 100;
+        $tasaBcp      = (float) (DB::table('config_comisiones')->where('tipo', 'COMISION_BCP')->value('monto') ?? 0);
+
+        // Recargas por agente: reportes.recarga_bipay del mes (campo de recargas del modelo normalizado).
+        $recargas = DB::table('reportes')
+            ->whereIn('agente_id', $ids)
+            ->whereBetween('fecha', [$inicio, $fin])
+            ->groupBy('agente_id')
+            ->selectRaw('agente_id, COALESCE(SUM(recarga_bipay), 0) as total')
+            ->pluck('total', 'agente_id');
+
+        // Operaciones BCP por agente (solo si reportes_bcp tiene agente_id en el esquema actual).
+        $bcp = collect();
+        if ($schema->hasTable('reportes_bcp') && $schema->hasColumn('reportes_bcp', 'agente_id')) {
+            $bcp = DB::table('reportes_bcp')
+                ->whereIn('agente_id', $ids)
+                ->whereBetween('fecha', [$inicio, $fin])
+                ->groupBy('agente_id')
+                ->selectRaw('agente_id, COALESCE(SUM(cantidad_operaciones), 0) as ops')
+                ->pluck('ops', 'agente_id');
+        }
+
+        $result = array_fill_keys($ids, 0.0);
+        foreach ($ids as $id) {
+            $result[$id] = round(
+                (float) ($recargas[$id] ?? 0) * $tasaRecargas + (float) ($bcp[$id] ?? 0) * $tasaBcp,
+                2
+            );
+        }
+
+        return $result;
+    }
+
+    /** Fallback (sin config_comisiones): suma de comisiones OTROS_FLUJO ya registradas. */
+    private function comisionesOnlineFallback(array $ids, string $inicio, string $fin): array
+    {
         $rows = DB::table('ventas')
             ->join('reportes', 'ventas.reporte_id', '=', 'reportes.id')
             ->whereIn('ventas.vendedor_id', $ids)
