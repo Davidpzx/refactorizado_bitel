@@ -67,11 +67,11 @@ class AgenteController extends Controller
             ->where('agente_id', $agente->id)
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('fecha', '<=', $f))
-            ->withCount('ventas')
             ->select([
                 'id', 'fecha', 'tienda_id', 'total_calculado',
-                'efectivo_entregado', 'diferencia', 'estado', 'ventas_count',
+                'efectivo_entregado', 'diferencia', 'estado',
             ])
+            ->withCount('ventas')
             ->orderByDesc('fecha')
             ->paginate($request->integer('per_page', 20));
 
