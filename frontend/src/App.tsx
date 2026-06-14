@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { AdminRoute } from './components/AdminRoute'
 import { AppLayout } from './components/AppLayout'
 
 import { LoginPage } from './pages/auth/LoginPage'
@@ -71,41 +72,46 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
+              {/* ── Rutas accesibles a todos los roles autenticados ── */}
               <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
-              <Route path="/historial" element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
-              <Route path="/mi-historial"   element={<Suspense fallback={<PageLoader />}><MiHistorialPage /></Suspense>} />
-              <Route path="/bitacora-stock" element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
-              <Route path="/agentes"        element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
-              <Route path="/agentes/:id"    element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
-              <Route path="/clientes" element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
-              <Route path="/inventario" element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
-              <Route path="/reportes" element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
-              <Route path="/reportes/nuevo" element={<Suspense fallback={<PageLoader />}><NuevoReportePage /></Suspense>} />
-              <Route path="/reportes/:id" element={<Suspense fallback={<PageLoader />}><ReporteDetallePage /></Suspense>} />
+              <Route path="/mi-historial"        element={<Suspense fallback={<PageLoader />}><MiHistorialPage /></Suspense>} />
+              <Route path="/reportes/nuevo"      element={<Suspense fallback={<PageLoader />}><NuevoReportePage /></Suspense>} />
+              <Route path="/reportes/:id"        element={<Suspense fallback={<PageLoader />}><ReporteDetallePage /></Suspense>} />
               <Route path="/reportes/:id/editar" element={<Suspense fallback={<PageLoader />}><EditarReportePage /></Suspense>} />
-              <Route path="/planilla" element={<Suspense fallback={<PageLoader />}><PlanillaPage /></Suspense>} />
-              <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
-              <Route path="/estadisticas"  element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
-              <Route path="/reporte-bcp"   element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
-              <Route path="/usuarios"      element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
-              <Route path="/tiendas"       element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
-              <Route path="/panel-bipay"   element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
-              <Route path="/asistencias"    element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
-              <Route path="/asistencias/qr" element={<Suspense fallback={<PageLoader />}><QrDisplayPage /></Suspense>} />
-              <Route path="/comisiones"    element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
-              <Route path="/configuracion" element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
-              <Route path="/comprobantes"  element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
-              <Route path="/traslados"     element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
-              <Route path="/traslados-chips"   element={<Suspense fallback={<PageLoader />}><TrasladoChipsPage /></Suspense>} />
-              <Route path="/inventario/matriz"  element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
-              <Route path="/inventario/kardex" element={<Suspense fallback={<PageLoader />}><KardexInventarioPage /></Suspense>} />
-              <Route path="/chips-gestion"     element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
-              <Route path="/financieras"        element={<Suspense fallback={<PageLoader />}><PanelFinancierasPage /></Suspense>} />
-              <Route path="/diagnostico"        element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
-              <Route path="/admin/postulaciones" element={<Suspense fallback={<PageLoader />}><PostulacionesPage /></Suspense>} />
-              <Route path="/revisar-stock"      element={<Suspense fallback={<PageLoader />}><RevisarStockPage /></Suspense>} />
-              <Route path="/revisar-fotos"      element={<Suspense fallback={<PageLoader />}><RevisarFotosPage /></Suspense>} />
-              <Route path="/tickets"            element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
+              <Route path="/clientes"            element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
+              <Route path="/inventario"          element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
+              <Route path="/traslados"           element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
+              <Route path="/traslados-chips"     element={<Suspense fallback={<PageLoader />}><TrasladoChipsPage /></Suspense>} />
+              <Route path="/inventario/matriz"   element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
+              <Route path="/chips-gestion"       element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
+              <Route path="/bitacora-stock"      element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
+              <Route path="/reporte-bcp"         element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
+              <Route path="/tickets"             element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
+
+              {/* ── Rutas solo admin ── */}
+              <Route element={<AdminRoute />}>
+                <Route path="/historial"           element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
+                <Route path="/reportes"            element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
+                <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
+                <Route path="/panel-bipay"         element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
+                <Route path="/agentes"             element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
+                <Route path="/agentes/:id"         element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
+                <Route path="/asistencias"         element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
+                <Route path="/asistencias/qr"      element={<Suspense fallback={<PageLoader />}><QrDisplayPage /></Suspense>} />
+                <Route path="/revisar-fotos"       element={<Suspense fallback={<PageLoader />}><RevisarFotosPage /></Suspense>} />
+                <Route path="/revisar-stock"       element={<Suspense fallback={<PageLoader />}><RevisarStockPage /></Suspense>} />
+                <Route path="/planilla"            element={<Suspense fallback={<PageLoader />}><PlanillaPage /></Suspense>} />
+                <Route path="/comisiones"          element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
+                <Route path="/inventario/kardex"   element={<Suspense fallback={<PageLoader />}><KardexInventarioPage /></Suspense>} />
+                <Route path="/financieras"         element={<Suspense fallback={<PageLoader />}><PanelFinancierasPage /></Suspense>} />
+                <Route path="/crm"                 element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
+                <Route path="/diagnostico"         element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
+                <Route path="/comprobantes"        element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
+                <Route path="/admin/postulaciones" element={<Suspense fallback={<PageLoader />}><PostulacionesPage /></Suspense>} />
+                <Route path="/usuarios"            element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
+                <Route path="/tiendas"             element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
+                <Route path="/configuracion"       element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
+              </Route>
             </Route>
           </Route>
 
