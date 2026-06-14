@@ -32,7 +32,7 @@ function KpiCard({
   highlight?: boolean
 }) {
   return (
-    <div className={`group relative overflow-hidden bg-kyro-panel rounded-kyro-lg shadow-kyro-card p-3 border border-kyro-border border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
+    <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
       <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${highlight ? 'bg-gradient-to-r from-emerald-400 via-emerald-300/40 to-transparent' : 'bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent'}`} />
       <div aria-hidden className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]" />
       <p className="relative text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{title}</p>
@@ -51,7 +51,7 @@ function KpiCardDiferencia({ value }: { value: number | string | null | undefine
   const Icon = num < 0 ? TrendingDown : TrendingUp
 
   return (
-    <div className={`group relative overflow-hidden bg-kyro-panel rounded-kyro-lg shadow-kyro-card p-3 border border-kyro-border border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
+    <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
       <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${num < 0 ? 'bg-gradient-to-r from-red-500/80 to-transparent' : 'bg-gradient-to-r from-amber-400/80 to-transparent'}`} />
       <p className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">Diferencia Física</p>
       <div className="mt-2 flex items-center gap-2">

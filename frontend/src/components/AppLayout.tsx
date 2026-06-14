@@ -114,8 +114,12 @@ export function AppLayout() {
   const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
   const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
 
-  const navActive = 'bg-kyro-elevated text-white border-l-[3px] border-kyro-gold'
-  const navInactive = 'text-kyro-body hover:bg-kyro-elevated/50'
+  const navActive = isDark
+    ? 'bg-kyro-elevated text-white border-l-[3px] border-kyro-gold'
+    : 'bg-[rgba(255,194,0,0.12)] text-gray-900 border-l-[3px] border-kyro-gold'
+  const navInactive = isDark
+    ? 'text-kyro-body hover:bg-kyro-elevated/50'
+    : 'text-gray-600 hover:bg-gray-100/70'
   const collapseBtnCls  = isDark
     ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
     : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
