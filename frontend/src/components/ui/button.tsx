@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-type Variant = 'default' | 'destructive' | 'outline' | 'ghost' | 'link'
+type Variant = 'default' | 'destructive' | 'outline' | 'ghost' | 'link' | 'gold'
 type Size = 'default' | 'sm' | 'lg' | 'icon'
 
 const variantClasses: Record<Variant, string> = {
@@ -9,6 +9,7 @@ const variantClasses: Record<Variant, string> = {
   outline:     'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-indigo-500 dark:border-white/12 dark:bg-zinc-900/50 dark:backdrop-blur-sm dark:text-zinc-200 dark:hover:bg-white/[0.06] dark:hover:border-white/25',
   ghost:       'text-gray-700 hover:bg-gray-100 focus:ring-gray-400 dark:text-zinc-300 dark:hover:bg-zinc-800',
   link:        'text-indigo-600 underline-offset-4 hover:underline focus:ring-indigo-500 dark:text-indigo-400',
+  gold:        'bg-[#ffc200] text-[#1a1a1a] border border-[#d4a000] shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:brightness-105 hover:-translate-y-px focus:ring-amber-500',
 }
 
 const sizeClasses: Record<Size, string> = {
