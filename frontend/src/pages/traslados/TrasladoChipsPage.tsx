@@ -366,7 +366,7 @@ export function TrasladoChipsPage() {
     gestionar.mutate({ id, data: { action } })
   }
 
-  const stockRows = stockData ?? []
+  const stockRows = Array.isArray(stockData) ? stockData : []
   const pagedStock = stockRows.slice(
     stockPagination.pageIndex * stockPagination.pageSize,
     (stockPagination.pageIndex + 1) * stockPagination.pageSize,

@@ -43,5 +43,7 @@ export const trasladosChipsApi = {
     api.post<TrasladoChip>(`/v1/traslados-chips/${id}/gestionar`, data).then((r) => r.data),
 
   stockChips: () =>
-    api.get<ChipStock[]>('/v1/inventario-chips').then((r) => r.data),
+    // El endpoint envuelve el arreglo en { data: [...] }; normalizar a arreglo.
+    api.get<{ data: ChipStock[] } | ChipStock[]>('/v1/inventario-chips')
+      .then((r) => (Array.isArray(r.data) ? r.data : r.data?.data ?? [])),
 }
