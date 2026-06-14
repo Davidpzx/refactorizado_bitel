@@ -73,9 +73,10 @@ class BipayController extends Controller
         $query = DB::table('transacciones_bipay as tb')
             ->leftJoin('cuentas_bipay as co', 'co.id', '=', 'tb.cuenta_origen_id')
             ->leftJoin('cuentas_bipay as cd', 'cd.id', '=', 'tb.cuenta_destino_id')
-            ->whereRaw('DATE(tb.created_at) BETWEEN ? AND ?', [$desde, $hasta])
+            ->whereRaw('DATE(tb.creado_en) BETWEEN ? AND ?', [$desde, $hasta])
             ->select([
                 'tb.*',
+                'tb.creado_en AS created_at',
                 'co.alias AS origen_alias',
                 'cd.alias AS destino_alias',
             ]);
@@ -85,7 +86,7 @@ class BipayController extends Controller
                 ->orWhere('tb.cuenta_destino_id', $cuentaId));
         }
 
-        $data = $query->orderByDesc('tb.created_at')->paginate($request->integer('per_page', 20));
+        $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
 
         return response()->json($data);
     }
@@ -133,7 +134,7 @@ class BipayController extends Controller
                 'saldo_anypay_pre' => $cuenta->saldo_anypay,
                 'observacion'      => $data['referencia'] ?? null,
                 'creado_por'       => auth()->id(),
-                'created_at'       => now(),
+                'creado_en'        => now(),
             ]);
 
             DB::commit();
@@ -201,7 +202,7 @@ class BipayController extends Controller
                 'saldo_anypay_pre'  => $oAnypay,
                 'observacion'       => $data['observacion'] ?? null,
                 'creado_por'        => auth()->id(),
-                'created_at'        => now(),
+                'creado_en'         => now(),
             ]);
 
             return ['ok' => true, 'origen' => $origen->alias, 'destino' => $destino->alias, 'monto' => $monto];
@@ -259,7 +260,7 @@ class BipayController extends Controller
                 'saldo_anypay_pre' => (float) $cuenta->saldo_anypay,
                 'observacion'      => $data['motivo'],
                 'creado_por'       => auth()->id(),
-                'created_at'       => now(),
+                'creado_en'        => now(),
             ]);
 
             return ['ok' => true, 'diferencia' => $diferencia];
