@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
+import { PageTabs } from '../../components/ui/PageTabs'
 import { Label } from '../../components/ui/label'
 import { InventarioForm } from './InventarioForm'
 import type { InventarioItem } from '../../types/inventario'
@@ -266,7 +267,19 @@ export function InventarioPage() {
 
       <CampanaCostosWidget />
 
-      <ListToolbar description="Busca y segmenta el stock por tienda, tipo y estado.">
+      <PageTabs
+        tabs={[
+          { id: '', label: 'Todos' },
+          { id: 'EQUIPO', label: 'Equipos' },
+          { id: 'ACCESORIO', label: 'Accesorios' },
+          { id: 'CHIP', label: 'Chips' },
+        ]}
+        active={tipo}
+        onChange={(id) => { setTipo(id); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
+        className="mb-4"
+      />
+
+      <ListToolbar description="Busca y segmenta el stock por tienda y estado.">
         <Input
           placeholder="Buscar por producto o IMEI..."
           value={search}
@@ -288,20 +301,6 @@ export function InventarioPage() {
           {TIENDAS.map((t) => (
             <option key={t.codigo} value={t.codigo}>{t.nombre}</option>
           ))}
-        </Select>
-
-        <Select
-          value={tipo}
-          onChange={(e) => {
-            setTipo(e.target.value)
-            setPagination((p) => ({ ...p, pageIndex: 0 }))
-          }}
-          className="w-36"
-        >
-          <option value="">Todos los tipos</option>
-          <option value="EQUIPO">Equipo</option>
-          <option value="ACCESORIO">Accesorio</option>
-          <option value="CHIP">Chip</option>
         </Select>
 
         <Select

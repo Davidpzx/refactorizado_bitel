@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
+import { PageTabs } from '../../components/ui/PageTabs'
 import type { Reporte } from '../../types/reporte'
 
 const TIENDAS = [
@@ -143,7 +144,20 @@ export function ReportesPage() {
         }
       />
 
-      <ListToolbar description="Acota el historial por tienda, estado o rango de fechas.">
+      <PageTabs
+        tabs={[
+          { id: '', label: 'Todos' },
+          { id: 'borrador', label: 'Borrador' },
+          { id: 'enviado', label: 'Enviado' },
+          { id: 'editado', label: 'Editado' },
+          { id: 'aprobado', label: 'Aprobado' },
+        ]}
+        active={estado}
+        onChange={(id) => { setEstado(id); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
+        className="mb-4"
+      />
+
+      <ListToolbar description="Acota el historial por tienda o rango de fechas.">
         <Select
           value={tienda}
           onChange={(e) => { setTienda(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
@@ -151,18 +165,6 @@ export function ReportesPage() {
         >
           <option value="">Todas las tiendas</option>
           {TIENDAS.map((t) => <option key={t} value={t}>{t}</option>)}
-        </Select>
-
-        <Select
-          value={estado}
-          onChange={(e) => { setEstado(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-          className="w-36"
-        >
-          <option value="">Todos los estados</option>
-          <option value="borrador">Borrador</option>
-          <option value="enviado">Enviado</option>
-          <option value="editado">Editado</option>
-          <option value="aprobado">Aprobado</option>
         </Select>
 
         <div className="flex items-center gap-1">

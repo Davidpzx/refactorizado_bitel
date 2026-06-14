@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { PageTabs } from '../../components/ui/PageTabs'
 import { Download, TrendingUp } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -192,15 +193,11 @@ export function EstadisticasPage() {
       )}
 
       {/* Tabs */}
-      <div className="kyro-card flex w-fit max-w-full gap-1 overflow-x-auto p-1.5">
-        {TABS.map(t => (
-          <Button key={t.id} variant="ghost" size="sm" onClick={() => setTab(t.id)}
-            className={`whitespace-nowrap ${tab === t.id ? 'bg-kyro-indigo text-kyro-text shadow-md' : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text'}`}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </div>
+      <PageTabs
+        tabs={TABS.map(t => ({ id: t.id, label: t.label }))}
+        active={tab}
+        onChange={(id) => setTab(id as typeof tab)}
+      />
 
       {isLoading && <div className="text-center py-10 text-gray-400 text-sm">Cargando estadísticas...</div>}
 
