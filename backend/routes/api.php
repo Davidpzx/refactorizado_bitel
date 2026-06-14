@@ -188,6 +188,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('tickets/{id}',         [TicketController::class, 'show']);
     Route::post('tickets',             [TicketController::class, 'store']);
     Route::patch('tickets/{id}',       [TicketController::class, 'update']);
+    Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
 
     // ── Postulaciones (admin) ─────────────────────────────────────────────────
     Route::get('postulaciones',          [PostulanteController::class, 'index']);
@@ -245,4 +246,5 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
     Route::post('asistencias/salvavidas',             [AsistenciaController::class, 'salvavidas']);
     Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar']);
+    Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar']);
 });

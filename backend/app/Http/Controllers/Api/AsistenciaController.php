@@ -1163,9 +1163,12 @@ class AsistenciaController extends Controller
             'fecha' => ['required', 'date'],
             'hora_ingreso' => ['nullable', 'string'],
             'hora_salida' => ['nullable', 'string'],
+            'inicio_refrigerio' => ['nullable', 'string'],
+            'fin_refrigerio' => ['nullable', 'string'],
             'tipo' => ['nullable', 'string', Rule::in(['ENTRADA', 'SALIDA'])],
             'metodo_marcacion' => ['nullable', Rule::in(['MANUAL', 'FOTO', 'QR', 'GPS'])],
             'observacion' => ['nullable', 'string', 'max:255'],
+            'motivo' => ['nullable', 'string', 'max:255'],
         ]);
 
         $existente = DB::table('asistencias')
@@ -1185,16 +1188,28 @@ class AsistenciaController extends Controller
             return response()->json(['message' => 'Ya tiene asistencia registrada.', 'id' => $existente->id]);
         }
 
-        $id = DB::table('asistencias')->insertGetId([
+        // Registro manual completo (paridad acciones_asistencia.php → crear_manual):
+        // admite día pasado con refrigerio y motivo. Columnas de refrigerio guardadas por drift legacy.
+        $insert = [
             'agente_id' => $data['agente_id'],
             'fecha' => $data['fecha'],
             'hora_ingreso' => $data['hora_ingreso'] ?? now()->toTimeString(),
             'metodo_marcacion' => $data['metodo_marcacion'] ?? 'MANUAL',
-            'observacion' => $data['observacion'] ?? null,
+            'observacion' => $data['observacion'] ?? ($data['motivo'] ?? null),
             'requiere_revision' => 0,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if (! empty($data['hora_salida'])) {
+            $insert['hora_salida'] = $data['hora_salida'];
+        }
+        foreach (['inicio_refrigerio', 'fin_refrigerio'] as $rc) {
+            if (! empty($data[$rc]) && Schema::hasColumn('asistencias', $rc)) {
+                $insert[$rc] = $data[$rc];
+            }
+        }
+
+        $id = DB::table('asistencias')->insertGetId($insert);
 
         return response()->json(['message' => 'Asistencia registrada.', 'id' => $id], 201);
     }
@@ -1367,6 +1382,19 @@ class AsistenciaController extends Controller
         if ($request->has('observacion_admin')) {
             $update['observacion_admin'] = substr(trim($request->input('observacion_admin', '')), 0, 500);
         }
+        // Acciones admin granulares (paridad acciones_asistencia.php). Guardadas por columna por drift legacy.
+        if ($request->has('estado_asistencia') && Schema::hasColumn('asistencias', 'estado_asistencia')) {
+            $update['estado_asistencia'] = substr(trim($request->input('estado_asistencia', '')), 0, 50) ?: null;
+        }
+        if ($request->has('horas_extras') && Schema::hasColumn('asistencias', 'horas_extras')) {
+            $update['horas_extras'] = max(0, (float) $request->input('horas_extras', 0));
+        }
+        if ($request->has('minutos_refrigerio_asignado') && Schema::hasColumn('asistencias', 'minutos_refrigerio_asignado')) {
+            $update['minutos_refrigerio_asignado'] = max(0, (int) $request->input('minutos_refrigerio_asignado', 0));
+        }
+        if ($request->has('minutos_tardanza') && Schema::hasColumn('asistencias', 'minutos_tardanza')) {
+            $update['minutos_tardanza'] = max(0, (int) $request->input('minutos_tardanza', 0));
+        }
 
         if (! empty($update)) {
             $update['updated_at'] = now();
@@ -1374,5 +1402,19 @@ class AsistenciaController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Asistencia actualizada correctamente.']);
+    }
+
+    // ── DELETE /asistencias/{id} — Eliminar registro (admin, paridad acciones_asistencia.php) ──
+    public function eliminar(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        $deleted = DB::table('asistencias')->where('id', $id)->delete();
+        if (! $deleted) {
+            return response()->json(['success' => false, 'message' => 'Asistencia no encontrada.'], 404);
+        }
+        return response()->json(['success' => true, 'message' => 'Registro de asistencia eliminado.']);
     }
 }

@@ -267,9 +267,20 @@ class ReporteController extends Controller
     {
         $validated = $request->validate([
             'destino_efectivo' => 'required|string|max:50',
+            'observacion'      => 'nullable|string|max:255',
         ]);
 
         $reporte->update(['destino_efectivo' => $validated['destino_efectivo']]);
+
+        // Auditoría (paridad gerencia/marcar_entregado.php): registrar el movimiento + obs.
+        HistorialReporte::create([
+            'reporte_id' => $reporte->id,
+            'usuario_id' => auth()->id(),
+            'accion'     => 'cambio_destino',
+            'detalle'    => 'Destino efectivo: ' . $validated['destino_efectivo']
+                . (! empty($validated['observacion']) ? ' | Obs: ' . $validated['observacion'] : ''),
+        ]);
+
         return response()->json($reporte->fresh());
     }
 

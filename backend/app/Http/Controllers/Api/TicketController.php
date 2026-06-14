@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TicketController extends Controller
 {
@@ -109,22 +110,58 @@ class TicketController extends Controller
         return response()->json($ticket);
     }
 
-    // ── PATCH /tickets/{id} — Actualizar datos del cliente tras imprimir ───────
+    // ── PATCH /tickets/{id} — Actualizar datos del cliente / anular ───────────
+    // Solo escribe los campos presentes en el request: un PATCH parcial (p.ej. anular
+    // enviando solo `estado`) ya no borra el nombre/pagos del ticket.
     public function update(Request $request, int $id): JsonResponse
     {
-        DB::table('tickets_emitidos')->where('id', $id)->update([
-            'nombre_cliente' => substr(trim($request->input('nombre_cliente', '')), 0, 150),
-            'forma_pago'     => substr(trim($request->input('forma_pago', '')), 0, 50),
-            'telefono'       => substr(trim($request->input('telefono', '')), 0, 20),
-            'efectivo'       => round((float) $request->input('efectivo', 0), 2),
-            'yape'           => round((float) $request->input('yape', 0), 2),
-            'bipay'          => round((float) $request->input('bipay', 0), 2),
-            'transferencia'  => round((float) $request->input('plin', $request->input('transferencia', 0)), 2),
-            'vuelto'         => round((float) $request->input('vuelto', 0), 2),
-            'updated_at'     => now(),
-        ]);
+        $textos = [
+            'nombre_cliente' => 150,
+            'forma_pago'     => 50,
+            'telefono'       => 20,
+        ];
+        $montos = ['efectivo', 'yape', 'bipay', 'vuelto'];
+
+        $update = [];
+        foreach ($textos as $campo => $max) {
+            if ($request->has($campo)) {
+                $update[$campo] = substr(trim((string) $request->input($campo)), 0, $max);
+            }
+        }
+        foreach ($montos as $campo) {
+            if ($request->has($campo)) {
+                $update[$campo] = round((float) $request->input($campo), 2);
+            }
+        }
+        if ($request->has('plin') || $request->has('transferencia')) {
+            $update['transferencia'] = round((float) $request->input('plin', $request->input('transferencia', 0)), 2);
+        }
+        // Anular (estado) — guardado por columna por drift legacy.
+        if ($request->has('estado') && Schema::hasColumn('tickets_emitidos', 'estado')) {
+            $update['estado'] = substr(trim((string) $request->input('estado')), 0, 30);
+        }
+
+        if (! empty($update)) {
+            $update['updated_at'] = now();
+            DB::table('tickets_emitidos')->where('id', $id)->update($update);
+        }
 
         return response()->json(['ok' => true]);
+    }
+
+    // ── DELETE /tickets/{id} — Eliminar ticket (admin, paridad api/eliminar_ticket.php) ──
+    public function destroy(int $id): JsonResponse
+    {
+        $user = Auth::user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+
+        $deleted = DB::table('tickets_emitidos')->where('id', $id)->delete();
+        if (! $deleted) {
+            return response()->json(['success' => false, 'message' => 'Ticket no encontrado.'], 404);
+        }
+        return response()->json(['success' => true, 'message' => 'Ticket eliminado.']);
     }
 
     // ── GET /tickets — Listar tickets (admin o filtro por tienda) ─────────────
