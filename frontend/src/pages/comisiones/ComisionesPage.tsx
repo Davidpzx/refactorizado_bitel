@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,6 +30,7 @@ interface RecalcularResult {
   success: boolean
   ventas_actualizadas: number
   lineas_actualizadas: number
+  operativas_actualizadas: number
   periodo: string
   message: string
   error?: string
@@ -238,6 +239,7 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
             <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
               <div><span className="text-kyro-muted">Ventas actualizadas:</span> <span className="font-semibold">{resultado.ventas_actualizadas}</span></div>
               <div><span className="text-kyro-muted">Líneas actualizadas:</span> <span className="font-semibold">{resultado.lineas_actualizadas}</span></div>
+              <div><span className="text-kyro-muted">Ganancias operativas:</span> <span className="font-semibold">{resultado.operativas_actualizadas}</span></div>
               <div className="col-span-2"><span className="text-kyro-muted">Período:</span> <span className="font-semibold">{resultado.periodo}</span></div>
             </div>
           )}
@@ -255,7 +257,14 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
 
 interface ConfigComisiones {
   tarifas: { ganancia_recargas: number; ganancia_bipay: number; ganancia_krece: number; ganancia_payjoy: number }
+  rangos_plan: RangoProductividad[]
+  rangos_equipo: RangoProductividad[]
+  rangos_servicio: Record<ServicioOperativo, RangoServicio[]>
 }
+
+interface RangoProductividad { desde: number; hasta: number; monto: number }
+interface RangoServicio { monto_min: number; monto_max: number | null; ganancia: number }
+type ServicioOperativo = 'bipay' | 'krece' | 'payjoy'
 
 function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
   const { data, isLoading } = useQuery({
@@ -267,7 +276,9 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
   const [msg, setMsg] = useState<string | null>(null)
   const [cargado, setCargado] = useState(false)
 
-  if (data && !cargado) {
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!data || cargado) return
     setForm({
       ganancia_recargas: String(data.tarifas.ganancia_recargas ?? 0),
       ganancia_bipay:    String(data.tarifas.ganancia_bipay ?? 0),
@@ -275,7 +286,8 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
       ganancia_payjoy:   String(data.tarifas.ganancia_payjoy ?? 0),
     })
     setCargado(true)
-  }
+  }, [cargado, data])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const guardar = useMutation({
     mutationFn: () => api.put('/v1/config-comisiones/tarifas', {
@@ -328,6 +340,122 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+function RangosOperativosModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({
+    queryKey: ['config-comisiones'],
+    queryFn: () => api.get<ConfigComisiones>('/v1/config-comisiones').then(r => r.data),
+  })
+  const [plan, setPlan] = useState<RangoProductividad[]>([])
+  const [equipo, setEquipo] = useState<RangoProductividad[]>([])
+  const [servicios, setServicios] = useState<Record<ServicioOperativo, RangoServicio[]>>({
+    bipay: [], krece: [], payjoy: [],
+  })
+  const [msg, setMsg] = useState('')
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!data) return
+    setPlan(data.rangos_plan)
+    setEquipo(data.rangos_equipo)
+    setServicios({
+      bipay: data.rangos_servicio.bipay ?? [],
+      krece: data.rangos_servicio.krece ?? [],
+      payjoy: data.rangos_servicio.payjoy ?? [],
+    })
+  }, [data])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const guardarProductividad = useMutation({
+    mutationFn: ({ tipo, rangos }: { tipo: 'PLAN' | 'EQUIPO'; rangos: RangoProductividad[] }) =>
+      api.put<{ msg: string }>('/v1/config-comisiones/rangos-productividad', { tipo, rangos }).then(r => r.data),
+    onSuccess: r => { setMsg(r.msg); qc.invalidateQueries({ queryKey: ['config-comisiones'] }) },
+  })
+  const guardarServicio = useMutation({
+    mutationFn: ({ tipo_servicio, rangos }: { tipo_servicio: ServicioOperativo; rangos: RangoServicio[] }) =>
+      api.put<{ msg: string }>('/v1/config-comisiones/rangos-servicio', { tipo_servicio, rangos }).then(r => r.data),
+    onSuccess: r => { setMsg(r.msg); qc.invalidateQueries({ queryKey: ['config-comisiones'] }) },
+  })
+
+  const productividad = (
+    titulo: string,
+    tipo: 'PLAN' | 'EQUIPO',
+    rangos: RangoProductividad[],
+    setRangos: React.Dispatch<React.SetStateAction<RangoProductividad[]>>,
+  ) => (
+    <section className="rounded-kyro border border-kyro-border p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-semibold text-kyro-text">{titulo}</h4>
+          <p className="text-xs text-kyro-muted">Rango por número de venta mensual del agente.</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setRangos(r => [...r, { desde: 1, hasta: 9999, monto: 0 }])}>
+          <Plus size={13} /> Agregar
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {rangos.map((r, i) => (
+          <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+            <Input type="number" min="1" value={r.desde} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, desde: Number(e.target.value) } : x))} placeholder="Desde" />
+            <Input type="number" min="1" value={r.hasta} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, hasta: Number(e.target.value) } : x))} placeholder="Hasta" />
+            <Input type="number" min="0" step="0.01" value={r.monto} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, monto: Number(e.target.value) } : x))} placeholder="S/" />
+            <Button size="icon" variant="ghost" onClick={() => setRangos(v => v.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+          </div>
+        ))}
+      </div>
+      <Button className="mt-3 w-full" disabled={guardarProductividad.isPending}
+        onClick={() => guardarProductividad.mutate({ tipo, rangos })}>
+        Guardar {tipo}
+      </Button>
+    </section>
+  )
+
+  const servicio = (tipo: ServicioOperativo) => {
+    const rangos = servicios[tipo]
+    const setRangos = (next: RangoServicio[]) => setServicios(s => ({ ...s, [tipo]: next }))
+    return (
+      <section key={tipo} className="rounded-kyro border border-kyro-border p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="text-sm font-semibold uppercase text-kyro-text">{tipo}</h4>
+          <Button size="sm" variant="outline" onClick={() => setRangos([...rangos, { monto_min: 0, monto_max: null, ganancia: 0 }])}>
+            <Plus size={13} /> Agregar
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {rangos.map((r, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+              <Input type="number" min="0" step="0.01" value={r.monto_min} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, monto_min: Number(e.target.value) } : x))} placeholder="Mínimo" />
+              <Input type="number" min="0" step="0.01" value={r.monto_max ?? ''} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, monto_max: e.target.value === '' ? null : Number(e.target.value) } : x))} placeholder="Sin límite" />
+              <Input type="number" min="0" step="0.01" value={r.ganancia} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, ganancia: Number(e.target.value) } : x))} placeholder="Ganancia" />
+              <Button size="icon" variant="ghost" onClick={() => setRangos(rangos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+            </div>
+          ))}
+        </div>
+        <Button className="mt-3 w-full" disabled={guardarServicio.isPending}
+          onClick={() => guardarServicio.mutate({ tipo_servicio: tipo, rangos })}>
+          Guardar {tipo.toUpperCase()}
+        </Button>
+      </section>
+    )
+  }
+
+  if (isLoading) return <p className="py-8 text-center text-sm text-kyro-muted">Cargando rangos...</p>
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        {productividad('Planes postpago', 'PLAN', plan, setPlan)}
+        {productividad('Equipos celulares', 'EQUIPO', equipo, setEquipo)}
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {(['bipay', 'krece', 'payjoy'] as ServicioOperativo[]).map(servicio)}
+      </div>
+      {msg && <p className="rounded-kyro bg-kyro-success/10 px-3 py-2 text-sm text-kyro-success">{msg}</p>}
+      <div className="flex justify-end"><Button variant="outline" onClick={onClose}>Cerrar</Button></div>
+    </div>
+  )
+}
+
 // ── Modal wrapper ─────────────────────────────────────────────────────────────
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
@@ -348,7 +476,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 export function ComisionesPage() {
   const [filtroTipo, setFiltroTipo] = useState('')
-  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | 'tarifas' | null>(null)
+  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | 'tarifas' | 'rangos' | null>(null)
   const [planEditando, setPlanEditando] = useState<ComisionPlan | null>(null)
 
   const qc = useQueryClient()
@@ -376,6 +504,9 @@ export function ComisionesPage() {
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => setModal('tarifas')}>
             <AlertCircle size={15} className="mr-2" /> Tarifas operativas
+          </Button>
+          <Button variant="outline" onClick={() => setModal('rangos')}>
+            <Pencil size={15} className="mr-2" /> Estrategia y rangos
           </Button>
           <Button variant="outline" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
@@ -492,6 +623,11 @@ export function ComisionesPage() {
       {modal === 'tarifas' && (
         <Modal title="Tarifas operativas (recargas / financieras)" onClose={closeModal}>
           <TarifasOperativasModal onClose={closeModal} />
+        </Modal>
+      )}
+      {modal === 'rangos' && (
+        <Modal title="Estrategia de comisiones y rangos operativos" onClose={closeModal}>
+          <RangosOperativosModal onClose={closeModal} />
         </Modal>
       )}
     </div>

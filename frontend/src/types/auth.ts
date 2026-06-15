@@ -4,6 +4,7 @@ export interface Usuario {
   email: string
   rol: string
   tienda_id: string
+  agente_id: number | null
   activo?: boolean
 }
 

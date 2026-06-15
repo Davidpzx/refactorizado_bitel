@@ -97,10 +97,14 @@ class ConfigComisionesController extends Controller
         $data = $request->validate([
             'tipo'           => ['required', 'in:PLAN,EQUIPO'],
             'rangos'         => ['present', 'array'],
-            'rangos.*.desde' => ['required', 'integer', 'min:0'],
-            'rangos.*.hasta' => ['required', 'integer', 'min:0'],
+            'rangos.*.desde' => ['required', 'integer', 'min:1'],
+            'rangos.*.hasta' => ['required', 'integer', 'min:1'],
             'rangos.*.monto' => ['required', 'numeric', 'min:0'],
         ]);
+
+        if ($error = $this->validarRangos($data['rangos'], 'desde', 'hasta')) {
+            return response()->json(['success' => false, 'msg' => $error], 422);
+        }
 
         DB::transaction(function () use ($data) {
             DB::table('config_comisiones')->where('tipo', $data['tipo'])->delete();
@@ -138,6 +142,9 @@ class ConfigComisionesController extends Controller
                 return response()->json(['success' => false, 'msg' => 'Rango #' . ($i + 1) . ': el máximo debe ser ≥ mínimo.'], 422);
             }
         }
+        if ($error = $this->validarRangos($data['rangos'], 'monto_min', 'monto_max')) {
+            return response()->json(['success' => false, 'msg' => $error], 422);
+        }
 
         DB::transaction(function () use ($data) {
             DB::table('comisiones_rangos')->where('tipo_servicio', $data['tipo_servicio'])->delete();
@@ -166,6 +173,29 @@ class ConfigComisionesController extends Controller
         if (! Schema::hasTable($tabla)) {
             return response()->json(['success' => false, 'msg' => "Tabla {$tabla} no disponible."], 503);
         }
+        return null;
+    }
+
+    private function validarRangos(array $rangos, string $campoMin, string $campoMax): ?string
+    {
+        usort($rangos, fn ($a, $b) => (float) $a[$campoMin] <=> (float) $b[$campoMin]);
+        $finAnterior = null;
+
+        foreach ($rangos as $i => $rango) {
+            $min = (float) $rango[$campoMin];
+            $max = $rango[$campoMax] ?? null;
+            if ($max !== null && (float) $max < $min) {
+                return 'Rango #'.($i + 1).': el máximo debe ser mayor o igual al mínimo.';
+            }
+            if ($finAnterior === null && $i > 0) {
+                return 'Un rango sin límite superior debe ser el último.';
+            }
+            if ($finAnterior !== null && $min <= $finAnterior) {
+                return 'Los rangos no pueden solaparse.';
+            }
+            $finAnterior = $max === null ? null : (float) $max;
+        }
+
         return null;
     }
 }

@@ -220,7 +220,7 @@ export function HistorialPage() {
                       {new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-kyro-text">{(r as any).agente_nombre ?? '—'}</div>
+                      <div className="font-medium text-kyro-text">{r.agente_nombre ?? '—'}</div>
                       <div className="text-xs text-kyro-subtle">{r.tienda_id}</div>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.total_calculado)}</td>

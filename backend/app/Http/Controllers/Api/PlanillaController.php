@@ -313,17 +313,32 @@ class PlanillaController extends Controller
      */
     private function calcularComisionesEquipo(array $ids, string $inicio, string $fin): array
     {
+        $rangos = $this->rangosProductividad('EQUIPO');
+        $fallback = $this->montoConfig('EQUIPO_ESTANDAR', 5.0);
+
         $rows = DB::table('ventas')
             ->join('reportes', 'ventas.reporte_id', '=', 'reportes.id')
             ->whereIn('ventas.vendedor_id', $ids)
             ->where('ventas.tipo_venta', 'EQUIPO')
             ->where('ventas.comision_estado', '!=', 'ANULADA')
             ->whereBetween('reportes.fecha', [$inicio, $fin])
-            ->groupBy('ventas.vendedor_id')
-            ->selectRaw('ventas.vendedor_id, SUM(CASE WHEN ventas.comision_generada > 0 THEN ventas.comision_generada ELSE 5.00 END) as total')
+            ->select('ventas.id', 'ventas.vendedor_id', 'ventas.comision_generada', 'reportes.fecha')
+            ->orderBy('reportes.fecha')
+            ->orderBy('ventas.id')
             ->get();
 
-        return $rows->pluck('total', 'vendedor_id')->map(fn($v) => floatval($v))->all();
+        $totales = array_fill_keys($ids, 0.0);
+        $contadores = array_fill_keys($ids, 0);
+        foreach ($rows as $row) {
+            $agenteId = (int) $row->vendedor_id;
+            $contadores[$agenteId]++;
+            $especial = (float) $row->comision_generada;
+            $totales[$agenteId] += $especial > 0
+                ? $especial
+                : $this->montoPorRango($rangos, $contadores[$agenteId], $fallback);
+        }
+
+        return $totales;
     }
 
     /**
@@ -332,19 +347,107 @@ class PlanillaController extends Controller
      */
     private function calcularComisionesPlanes(array $ids, string $inicio, string $fin): array
     {
+        $rangos = $this->rangosProductividad('PLAN');
+        if (empty($rangos)) {
+            $rows = DB::table('ventas')
+                ->join('reportes', 'ventas.reporte_id', '=', 'reportes.id')
+                ->whereIn('ventas.vendedor_id', $ids)
+                ->whereIn('ventas.tipo_venta', ['POSTPAGO', 'PREPAGO'])
+                ->where('ventas.es_remate', false)
+                ->where('ventas.comision_estado', '!=', 'ANULADA')
+                ->where(fn($q) => $q->whereNull('ventas.subtipo')->orWhere('ventas.subtipo', '!=', 'PAQUETE'))
+                ->whereBetween('reportes.fecha', [$inicio, $fin])
+                ->groupBy('ventas.vendedor_id')
+                ->selectRaw('ventas.vendedor_id, SUM(ventas.comision_generada) as total')
+                ->get();
+
+            return $rows->pluck('total', 'vendedor_id')->map(fn($v) => floatval($v))->all();
+        }
+
         $rows = DB::table('ventas')
             ->join('reportes', 'ventas.reporte_id', '=', 'reportes.id')
+            ->leftJoin('venta_lineas', 'venta_lineas.venta_id', '=', 'ventas.id')
             ->whereIn('ventas.vendedor_id', $ids)
             ->whereIn('ventas.tipo_venta', ['POSTPAGO', 'PREPAGO'])
-            ->where('ventas.es_remate', false)
             ->where('ventas.comision_estado', '!=', 'ANULADA')
             ->where(fn($q) => $q->whereNull('ventas.subtipo')->orWhere('ventas.subtipo', '!=', 'PAQUETE'))
             ->whereBetween('reportes.fecha', [$inicio, $fin])
-            ->groupBy('ventas.vendedor_id')
-            ->selectRaw('ventas.vendedor_id, SUM(ventas.comision_generada) as total')
+            ->select([
+                'ventas.id',
+                'ventas.vendedor_id',
+                'ventas.tipo_venta',
+                'ventas.es_remate',
+                'ventas.comision_generada',
+                'venta_lineas.tipo_alta',
+                'venta_lineas.cantidad',
+                'reportes.fecha',
+            ])
+            ->orderBy('reportes.fecha')
+            ->orderBy('ventas.id')
             ->get();
 
-        return $rows->pluck('total', 'vendedor_id')->map(fn($v) => floatval($v))->all();
+        $totales = array_fill_keys($ids, 0.0);
+        $contadores = array_fill_keys($ids, 0);
+        foreach ($rows as $row) {
+            $agenteId = (int) $row->vendedor_id;
+            if ($row->tipo_venta === 'PREPAGO') {
+                $totales[$agenteId] += (float) $row->comision_generada;
+                continue;
+            }
+            if (str_contains(strtoupper((string) $row->tipo_alta), 'UPGRADE')) {
+                continue;
+            }
+
+            $cantidad = max(1, (int) ($row->cantidad ?? 1));
+            for ($i = 0; $i < $cantidad; $i++) {
+                $contadores[$agenteId]++;
+                if (! (bool) $row->es_remate) {
+                    $totales[$agenteId] += $this->montoPorRango($rangos, $contadores[$agenteId], 0.0);
+                }
+            }
+        }
+
+        return $totales;
+    }
+
+    private function rangosProductividad(string $tipo): array
+    {
+        if (! DB::getSchemaBuilder()->hasTable('config_comisiones')) {
+            return [];
+        }
+
+        return DB::table('config_comisiones')
+            ->where('tipo', $tipo)
+            ->whereNotNull('rango_desde')
+            ->whereNotNull('rango_hasta')
+            ->orderBy('rango_desde')
+            ->get(['rango_desde', 'rango_hasta', 'monto'])
+            ->map(fn ($r) => [
+                'desde' => (int) $r->rango_desde,
+                'hasta' => (int) $r->rango_hasta,
+                'monto' => (float) $r->monto,
+            ])
+            ->all();
+    }
+
+    private function montoPorRango(array $rangos, int $posicion, float $fallback): float
+    {
+        foreach ($rangos as $rango) {
+            if ($posicion >= $rango['desde'] && $posicion <= $rango['hasta']) {
+                return $rango['monto'];
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function montoConfig(string $tipo, float $fallback): float
+    {
+        if (! DB::getSchemaBuilder()->hasTable('config_comisiones')) {
+            return $fallback;
+        }
+
+        return (float) (DB::table('config_comisiones')->where('tipo', $tipo)->value('monto') ?? $fallback);
     }
 
     /**

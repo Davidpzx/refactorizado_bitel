@@ -14,6 +14,7 @@ class UsuarioController extends Controller
     public function index(Request $request): JsonResponse
     {
         $usuarios = Usuario::query()
+            ->with('agente:id,nombres,dni')
             ->when($request->get('q'), fn($q, $s) => $q->where('nombre', 'like', "%{$s}%")
                 ->orWhere('email', 'like', "%{$s}%"))
             ->when($request->get('rol'), fn($q, $rol) => $q->where('rol', $rol))
@@ -37,6 +38,7 @@ class UsuarioController extends Controller
             'password'  => ['required', 'string', 'min:6'],
             'rol'       => ['required', Rule::in(['admin', 'tienda'])],
             'tienda_id' => ['nullable', 'string', 'max:20'],
+            'agente_id' => ['nullable', 'required_if:rol,tienda', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
         ]);
@@ -57,6 +59,7 @@ class UsuarioController extends Controller
             'password'  => ['nullable', 'string', 'min:6'],
             'rol'       => ['sometimes', Rule::in(['admin', 'tienda'])],
             'tienda_id' => ['nullable', 'string', 'max:20'],
+            'agente_id' => ['nullable', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
         ]);

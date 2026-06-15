@@ -18,6 +18,7 @@ const schema = z.object({
   producto_nombre:   z.string().min(1, 'El nombre del producto es obligatorio').max(150),
   tipo:              z.enum(['EQUIPO', 'ACCESORIO', 'CHIP']),
   imei_serial:       z.string().max(50).optional().or(z.literal('')),
+  imei_seriales_text:z.string().optional(),
   precio_costo:      z.number().min(0, 'El precio no puede ser negativo'),
   precio_minimo:     z.number().min(0, 'El precio no puede ser negativo'),
   precio_normal:     z.number().min(0, 'El precio no puede ser negativo'),
@@ -39,7 +40,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const crear      = useCrearInventario()
   const actualizar = useActualizarInventario()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: item
       ? {
@@ -63,12 +64,17 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
           precio_normal: 0,
         },
   })
+  const tipo = watch('tipo')
 
   const onSubmit = (data: FormData) => {
     const payload = {
       ...data,
       imei_serial: data.imei_serial || null,
+      imei_seriales: !esEdicion && data.tipo === 'EQUIPO'
+        ? (data.imei_seriales_text ?? '').split(/\r?\n|,/).map(v => v.trim()).filter(Boolean)
+        : undefined,
     }
+    delete (payload as Partial<FormData>).imei_seriales_text
 
     if (esEdicion && item) {
       actualizar.mutate({ id: item.id, data: payload }, { onSuccess })
@@ -117,14 +123,26 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="imei_serial">IMEI / Serie</Label>
-          <Input
-            id="imei_serial"
-            {...register('imei_serial')}
-            placeholder="358461082345678"
-            maxLength={50}
-            className="mt-1"
-          />
+          <Label htmlFor={tipo === 'EQUIPO' && !esEdicion ? 'imei_seriales_text' : 'imei_serial'}>
+            {tipo === 'EQUIPO' && !esEdicion ? 'IMEI / Series (uno por linea)' : 'IMEI / Serie'}
+          </Label>
+          {tipo === 'EQUIPO' && !esEdicion ? (
+            <textarea
+              id="imei_seriales_text"
+              {...register('imei_seriales_text')}
+              rows={4}
+              placeholder={'358461082345678\n358461082345679'}
+              className="kyro-input mt-1 w-full font-mono text-sm"
+            />
+          ) : (
+            <Input
+              id="imei_serial"
+              {...register('imei_serial')}
+              placeholder="358461082345678"
+              maxLength={50}
+              className="mt-1"
+            />
+          )}
           {errors.imei_serial && <p className="text-red-500 text-xs mt-1">{errors.imei_serial.message}</p>}
         </div>
         <div>

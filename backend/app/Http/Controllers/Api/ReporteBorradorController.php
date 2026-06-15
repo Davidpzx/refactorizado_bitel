@@ -4,22 +4,28 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReporteBorrador;
+use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReporteBorradorController extends Controller
 {
+    public function __construct(private readonly UserAgentResolver $userAgentResolver)
+    {
+    }
+
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
+        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
         $fecha = $this->fechaOperativa();
 
         $borrador = ReporteBorrador::query()
             ->where('tienda_id', $tiendaId)
             ->whereDate('fecha', $fecha)
-            ->orderByRaw('CASE WHEN agente_id = ? THEN 0 ELSE 1 END', [$user->id])
+            ->orderByRaw('CASE WHEN agente_id = ? THEN 0 ELSE 1 END', [$agenteId])
             ->orderByDesc('actualizado_en')
             ->first();
 
@@ -33,7 +39,7 @@ class ReporteBorradorController extends Controller
         $datos = $borrador->datos_json;
         $datos['_cloud_ts'] = $borrador->actualizado_en->getTimestampMs();
         $datos['_cloud_agente'] = $borrador->agente_id;
-        $datos['_mismo_usuario'] = $borrador->agente_id === $user->id;
+        $datos['_mismo_usuario'] = (int) $borrador->agente_id === (int) $agenteId;
 
         return response()->json([
             'success' => true,
@@ -50,6 +56,7 @@ class ReporteBorradorController extends Controller
 
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
+        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
         $fecha = $this->fechaOperativa();
         $payload = $request->isJson()
             ? $request->json()->all()
@@ -60,14 +67,14 @@ class ReporteBorradorController extends Controller
         $ahora = now();
 
         $existia = ReporteBorrador::query()
-            ->where('agente_id', $user->id)
+            ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
             ->whereDate('fecha', $fecha)
             ->exists();
 
         DB::table('reportes_borradores')->upsert(
             [[
-                'agente_id' => $user->id,
+                'agente_id' => $agenteId,
                 'tienda_id' => $tiendaId,
                 'fecha' => $fecha,
                 'datos_json' => $json,
@@ -79,7 +86,7 @@ class ReporteBorradorController extends Controller
         );
 
         $borrador = ReporteBorrador::query()
-            ->where('agente_id', $user->id)
+            ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
             ->whereDate('fecha', $fecha)
             ->firstOrFail();
@@ -95,9 +102,10 @@ class ReporteBorradorController extends Controller
     {
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
+        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
 
         ReporteBorrador::query()
-            ->where('agente_id', $user->id)
+            ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
             ->whereDate('fecha', $this->fechaOperativa())
             ->delete();

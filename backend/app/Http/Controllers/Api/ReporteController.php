@@ -7,10 +7,13 @@ use App\Models\Cliente;
 use App\Models\HistorialReporte;
 use App\Models\Reporte;
 use App\Models\ReporteBorrador;
+use App\Models\ReporteSalida;
 use App\Models\Venta;
 use App\Models\VentaEquipo;
 use App\Models\VentaLinea;
 use App\Services\ComisionService;
+use App\Services\ComisionOperativaService;
+use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +22,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ReporteController extends Controller
 {
+    public function __construct(private readonly UserAgentResolver $userAgentResolver)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $reportes = Reporte::query()
@@ -34,18 +41,33 @@ class ReporteController extends Controller
         return response()->json($reportes);
     }
 
-    public function show(Reporte $reporte): JsonResponse
+    public function show(Request $request, Reporte $reporte): JsonResponse
     {
-        $reporte->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente']);
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+        $reporte->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
         return response()->json($reporte);
+    }
+
+    public function vendedores(Request $request): JsonResponse
+    {
+        $tiendaId = trim((string) ($request->input('tienda_id') ?: $request->user()->tienda_id));
+
+        $vendedores = DB::table('agentes')
+            ->select(['id', 'dni', 'nombres', 'tienda_base'])
+            ->where('estado', 'ACTIVO')
+            ->orderByRaw('CASE WHEN tienda_base = ? THEN 0 ELSE 1 END', [$tiendaId])
+            ->orderBy('nombres')
+            ->get();
+
+        return response()->json($vendedores);
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'agente_id'                      => 'required|integer',
+            'agente_id'                      => 'nullable|integer',
             'tienda_id'                      => 'required|string|max:50',
-            'usuario_id'                     => 'required|integer',
+            'usuario_id'                     => 'nullable|integer',
             'fecha'                          => 'required|date',
             'caja_inicial'                   => 'required|numeric|min:0',
             'yape'                           => 'nullable|numeric|min:0',
@@ -54,15 +76,22 @@ class ReporteController extends Controller
             'recarga_bipay'                  => 'nullable|numeric|min:0',
             'pago_servicio'                  => 'nullable|numeric|min:0',
             'pago_krece'                     => 'nullable|numeric|min:0',
+            'pago_payjoy'                    => 'nullable|numeric|min:0',
             'tickets_tusamy'                 => 'nullable|numeric|min:0',
             'retiro_bipay'                   => 'nullable|numeric|min:0',
             'efectivo_entregado'             => 'required|numeric|min:0',
             'total_salidas'                  => 'nullable|numeric|min:0',
+            'salidas'                        => 'nullable|array',
+            'salidas.*.tipo'                 => 'required_with:salidas|in:adelanto,gasto,pasaje,otro',
+            'salidas.*.monto'                => 'required_with:salidas|numeric|gt:0',
+            'salidas.*.observacion'          => 'nullable|string|max:1000',
             'nombre_cubre'                   => 'nullable|string|max:100',
             'observaciones'                  => 'nullable|string',
             'obs_dia'                        => 'nullable|string',
             'destino_efectivo'               => 'nullable|string|max:50',
             'ventas'                         => 'nullable|array',
+            'ventas.*.venta_id'              => 'nullable|integer',
+            'ventas.*.vendedor_id'           => 'required|integer|exists:agentes,id',
             'ventas.*.tipo_venta'            => 'required_with:ventas|in:EQUIPO,ACCESORIO,POSTPAGO,PREPAGO,OTROS_FLUJO,APOYO',
             'ventas.*.subtipo'               => 'nullable|string|max:50',
             'ventas.*.monto_total'           => 'required_with:ventas|numeric|min:0',
@@ -91,11 +120,27 @@ class ReporteController extends Controller
             'ventas.*.comision_unitaria'     => 'nullable|numeric|min:0',
         ]);
 
+        $user = $request->user();
+        $esAdmin = $user->rol === 'admin';
+        $agenteId = $esAdmin
+            ? (int) ($validated['agente_id'] ?? 0)
+            : $this->userAgentResolver->resolveOrFail($user)->id;
+        $tiendaId = $esAdmin
+            ? (string) $validated['tienda_id']
+            : trim((string) $user->tienda_id);
+
+        if ($agenteId <= 0 || ! DB::table('agentes')->where('id', $agenteId)->exists()) {
+            return response()->json(['error' => 'El agente seleccionado no existe.'], 422);
+        }
+        if ($tiendaId === '') {
+            return response()->json(['error' => 'El usuario autenticado no tiene una tienda asignada.'], 422);
+        }
+
         // B5 — Guardia anti-duplicados (paridad legacy procesar_reporte.php):
         // impide más de un reporte por (agente, tienda, fecha) aunque el front falle o sea evadido.
         $duplicado = Reporte::query()
-            ->where('agente_id', $validated['agente_id'])
-            ->where('tienda_id', $validated['tienda_id'])
+            ->where('agente_id', $agenteId)
+            ->where('tienda_id', $tiendaId)
             ->whereDate('fecha', $validated['fecha'])
             ->exists();
         if ($duplicado) {
@@ -110,7 +155,10 @@ class ReporteController extends Controller
             $ventas_data        = $validated['ventas'] ?? [];
             $total_calculado    = collect($ventas_data)->sum('monto_total');
             $comisionService    = new ComisionService();
-            $total_salidas      = (float) ($validated['total_salidas'] ?? 0);
+            $salidasData        = $validated['salidas'] ?? [];
+            $total_salidas      = $request->has('salidas')
+                ? round((float) collect($salidasData)->sum('monto'), 2)
+                : (float) ($validated['total_salidas'] ?? 0);
             $yape               = (float) ($validated['yape'] ?? 0);
             $bipay              = (float) ($validated['bipay'] ?? 0);
             $transferencia      = (float) ($validated['transferencia'] ?? 0);
@@ -127,15 +175,15 @@ class ReporteController extends Controller
                 + (float) ($validated['recarga_bipay'] ?? 0)
                 + (float) ($validated['pago_servicio'] ?? 0)
                 + (float) ($validated['pago_krece'] ?? 0)
+                + (float) ($validated['pago_payjoy'] ?? 0)
                 + (float) ($validated['tickets_tusamy'] ?? 0);
             $total_no_fisico   = $yape + $bipay + $transferencia + $retiro_bipay;
             $efectivo_esperado = round($total_sistema - $total_no_fisico - $total_salidas, 2);
             $diferencia        = round($efectivo_entregado - $efectivo_esperado, 2);
-
             $reporte = Reporte::create([
-                'agente_id'           => $validated['agente_id'],
-                'tienda_id'           => $validated['tienda_id'],
-                'usuario_id'          => $validated['usuario_id'],
+                'agente_id'           => $agenteId,
+                'tienda_id'           => $tiendaId,
+                'usuario_id'          => $user->id,
                 'fecha'               => $validated['fecha'],
                 'total_dia'           => $efectivo_entregado,
                 'total_calculado'     => $total_calculado,
@@ -144,6 +192,7 @@ class ReporteController extends Controller
                 'recarga_bipay'       => $recarga_bipay,
                 'pago_servicio'       => (float) ($validated['pago_servicio'] ?? 0),
                 'pago_krece'          => (float) ($validated['pago_krece'] ?? 0),
+                'pago_payjoy'         => (float) ($validated['pago_payjoy'] ?? 0),
                 'tickets_tusamy'      => (float) ($validated['tickets_tusamy'] ?? 0),
                 'retiro_bipay'        => (float) ($validated['retiro_bipay'] ?? 0),
                 'transferencia'       => $transferencia,
@@ -161,15 +210,16 @@ class ReporteController extends Controller
                 'destino_efectivo'    => $validated['destino_efectivo'] ?? 'TIENDA',
             ]);
 
-            $this->procesarVentas($reporte, $ventas_data, (string) $validated['tienda_id'], (int) $validated['agente_id'], $comisionService);
+            $this->procesarVentas($reporte, $ventas_data, $tiendaId, $agenteId, $comisionService);
+            $this->guardarSalidas($reporte, $salidasData);
+            (new ComisionOperativaService())->recalcularReporte($reporte);
 
             DB::commit();
 
-            $user = $request->user();
             if ($user && $user->tienda_id) {
                 try {
                     ReporteBorrador::query()
-                        ->where('agente_id', $user->id)
+                        ->where('agente_id', $agenteId)
                         ->where('tienda_id', $user->tienda_id)
                         ->whereDate('fecha', now(config('reportes.timezone'))->toDateString())
                         ->delete();
@@ -182,7 +232,7 @@ class ReporteController extends Controller
                 }
             }
 
-            $reporte->load('ventas');
+            $reporte->load(['ventas', 'salidas']);
             return response()->json($reporte, 201);
 
         } catch (\RuntimeException $e) {
@@ -197,6 +247,11 @@ class ReporteController extends Controller
 
     public function update(Request $request, Reporte $reporte): JsonResponse
     {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+        if ($request->has('destino_efectivo') && $request->user()->rol !== 'admin') {
+            abort(403, 'Solo administración puede cambiar el destino del efectivo.');
+        }
+
         if ($reporte->estado === 'aprobado') {
             return response()->json(['error' => 'No se puede editar un reporte aprobado.'], 422);
         }
@@ -226,7 +281,7 @@ class ReporteController extends Controller
             HistorialReporte::create([
                 'reporte_id' => $reporte->id,
                 'usuario_id' => $request->user()?->id,
-                'accion'     => 'edicion_aplicada',
+                'accion'     => 'edicion_reporte',
                 'detalle'    => $request->input('motivo_edicion') ?: 'Corrección de campos autorizados.',
             ]);
         }
@@ -237,12 +292,19 @@ class ReporteController extends Controller
         return response()->json($reporte->fresh());
     }
 
-    public function destroy(Reporte $reporte): JsonResponse
+    public function destroy(Request $request, Reporte $reporte): JsonResponse
     {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+
         if ($reporte->estado === 'aprobado') {
             return response()->json(['error' => 'No se puede eliminar un reporte aprobado.'], 422);
         }
-        $reporte->delete();
+
+        DB::transaction(function () use ($reporte) {
+            $this->revertirVentas($reporte);
+            $reporte->delete();
+        });
+
         return response()->json(null, 204);
     }
 
@@ -265,6 +327,8 @@ class ReporteController extends Controller
 
     public function actualizarDestino(Request $request, Reporte $reporte): JsonResponse
     {
+        abort_unless($request->user()->rol === 'admin', 403);
+
         $validated = $request->validate([
             'destino_efectivo' => 'required|string|max:50',
             'observacion'      => 'nullable|string|max:255',
@@ -286,6 +350,8 @@ class ReporteController extends Controller
 
     public function solicitarEdicion(Request $request, Reporte $reporte): JsonResponse
     {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+
         $validated = $request->validate([
             'motivo_edicion' => 'required|string|max:500',
         ]);
@@ -315,6 +381,8 @@ class ReporteController extends Controller
 
     public function aprobarEdicion(Request $request, Reporte $reporte): JsonResponse
     {
+        abort_unless($request->user()->rol === 'admin', 403);
+
         if ($reporte->estado_edicion !== 'SOLICITADO') {
             return response()->json(['error' => 'No hay solicitud de edición pendiente.'], 422);
         }
@@ -334,8 +402,10 @@ class ReporteController extends Controller
         return response()->json($reporte->fresh());
     }
 
-    public function historial(Reporte $reporte): JsonResponse
+    public function historial(Request $request, Reporte $reporte): JsonResponse
     {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+
         $historial = $reporte->historialReportes()
             ->with('usuario:id,nombre')
             ->orderByDesc('created_at')
@@ -351,9 +421,18 @@ class ReporteController extends Controller
     private function procesarVentas(Reporte $reporte, array $ventasData, string $tiendaId, int $agenteId, ComisionService $comisionService): void
     {
         // ID interno (numérico) de la tienda para inventario_chips.tienda_id (paridad legacy procesar_reporte).
-        $idTiendaInterna = DB::table('tiendas')->where('codigo', $tiendaId)->value('id');
+        $idTiendaInterna = $this->idTiendaInterna($tiendaId);
 
         foreach ($ventasData as $vd) {
+            $vendedorId = (int) ($vd['vendedor_id'] ?? $agenteId);
+            $vendedorActivo = DB::table('agentes')
+                ->where('id', $vendedorId)
+                ->where('estado', 'ACTIVO')
+                ->exists();
+            if (! $vendedorActivo) {
+                throw new \RuntimeException('Debes seleccionar un vendedor activo para cada venta.');
+            }
+
             $cliente_id = null;
             if (! empty($vd['cliente_dni'])) {
                 $dni = $vd['cliente_dni'];
@@ -369,7 +448,7 @@ class ReporteController extends Controller
 
             $venta = Venta::create([
                 'reporte_id'        => $reporte->id,
-                'vendedor_id'       => $agenteId,
+                'vendedor_id'       => $vendedorId,
                 'cliente_id'        => $cliente_id,
                 'tipo_venta'        => $vd['tipo_venta'],
                 'subtipo'           => $vd['subtipo'] ?? null,
@@ -413,7 +492,7 @@ class ReporteController extends Controller
                         $update['fecha_venta'] = now();
                     }
                     if (Schema::hasColumn('inventario_tiendas', 'vendido_por_id')) {
-                        $update['vendido_por_id'] = $agenteId;
+                        $update['vendido_por_id'] = $vendedorId;
                     }
                     if (Schema::hasColumn('inventario_tiendas', 'reporte_venta_id')) {
                         $update['reporte_venta_id'] = $reporte->id;
@@ -441,7 +520,10 @@ class ReporteController extends Controller
                     'cantidad'          => $vd['cantidad'] ?? 1,
                     'cobrado_unitario'  => $vd['cobrado_unitario'] ?? $vd['monto_total'],
                     'comision_unitaria' => round($comisionTotal / max(1, (int) ($vd['cantidad'] ?? 1)), 2),
+                    'es_migracion'      => (bool) ($vd['es_migracion'] ?? false),
+                    'es_upgrade'        => (bool) ($vd['es_upgrade'] ?? false),
                     'es_esim'           => (bool) ($vd['es_esim'] ?? false),
+                    'plan_anterior'     => $vd['plan_anterior'] ?? null,
                 ]);
 
                 // Descuento de inventario_chips (paridad legacy procesar_reporte.php:227-301).
@@ -463,18 +545,15 @@ class ReporteController extends Controller
                     }
 
                     if ($origenCode !== '') {
-                        $descontados = $this->descontarChips((int) $idTiendaInterna, $origenCode, $cantidad, $incluirNull);
-                        if ($descontados > 0 && Schema::hasColumn('ventas', 'chips_descontados')) {
+                        $descontados = $this->descontarChips(
+                            $venta->id,
+                            (int) $idTiendaInterna,
+                            $origenCode,
+                            $cantidad,
+                            $incluirNull
+                        );
+                        if (Schema::hasColumn('ventas', 'chips_descontados')) {
                             $venta->update(['chips_descontados' => $descontados]);
-                        }
-                        if ($descontados < $cantidad) {
-                            Log::warning('Stock de chips insuficiente al guardar el cuadre.', [
-                                'reporte_id'   => $reporte->id,
-                                'tienda'       => $tiendaId,
-                                'origen'       => $origenCode,
-                                'solicitado'   => $cantidad,
-                                'descontado'   => $descontados,
-                            ]);
                         }
                     }
                 }
@@ -483,13 +562,17 @@ class ReporteController extends Controller
     }
 
     /**
-     * Descuenta `cantidad` chips del bucket (tienda_id, tienda_origen=origen [, OR NULL]).
-     * Soft-fail como el legacy: descuenta lo que haya, devuelve cuánto descontó (no lanza).
+     * Descuenta `cantidad` chips y registra exactamente de qué lotes salieron.
+     * Si el stock no alcanza, aborta el cuadre completo para no confirmar una venta inconsistente.
      */
-    private function descontarChips(int $idTiendaInterna, string $origenCode, int $cantidad, bool $incluirNull): int
+    private function descontarChips(
+        int $ventaId,
+        int $idTiendaInterna,
+        string $origenCode,
+        int $cantidad,
+        bool $incluirNull
+    ): int
     {
-        $restante = $cantidad;
-
         $lotes = DB::table('inventario_chips')
             ->where('tienda_id', $idTiendaInterna)
             ->where('stock_actual', '>', 0)
@@ -504,10 +587,25 @@ class ReporteController extends Controller
             ->lockForUpdate()
             ->get();
 
+        if ($lotes->sum(fn ($lote) => (int) $lote->stock_actual) < $cantidad) {
+            throw new \RuntimeException(
+                "Stock de chips insuficiente para {$origenCode}: se requieren {$cantidad} unidades."
+            );
+        }
+
+        $restante = $cantidad;
         foreach ($lotes as $lote) {
             if ($restante <= 0) break;
             $quita = min($restante, (int) $lote->stock_actual);
             DB::table('inventario_chips')->where('id', $lote->id)->decrement('stock_actual', $quita);
+            if (Schema::hasTable('venta_chip_movimientos')) {
+                DB::table('venta_chip_movimientos')->insert([
+                    'venta_id' => $ventaId,
+                    'inventario_chip_id' => $lote->id,
+                    'cantidad' => $quita,
+                    'created_at' => now(),
+                ]);
+            }
             $restante -= $quita;
         }
 
@@ -548,18 +646,37 @@ class ReporteController extends Controller
         $ventas = Venta::where('reporte_id', $reporte->id)->with('equipo')->get();
 
         // ID interno de la tienda para reponer inventario_chips al revertir.
-        $idTiendaInterna = DB::table('tiendas')->where('codigo', $reporte->tienda_id)->value('id');
+        $idTiendaInterna = $this->idTiendaInterna((string) $reporte->tienda_id);
         $tieneChipsCol   = Schema::hasColumn('ventas', 'chips_descontados');
 
         foreach ($ventas as $venta) {
             // Reponer chips descontados al guardar (paridad: la edición revierte el stock previo).
             $chipsPrevios = $tieneChipsCol ? (int) ($venta->chips_descontados ?? 0) : 0;
             if ($chipsPrevios > 0 && $idTiendaInterna) {
+                $repuestos = 0;
+                if (Schema::hasTable('venta_chip_movimientos')) {
+                    $movimientos = DB::table('venta_chip_movimientos')
+                        ->where('venta_id', $venta->id)
+                        ->lockForUpdate()
+                        ->get();
+
+                    foreach ($movimientos as $movimiento) {
+                        $afectadas = DB::table('inventario_chips')
+                            ->where('id', $movimiento->inventario_chip_id)
+                            ->increment('stock_actual', (int) $movimiento->cantidad);
+                        if ($afectadas > 0) {
+                            $repuestos += (int) $movimiento->cantidad;
+                        }
+                    }
+                    DB::table('venta_chip_movimientos')->where('venta_id', $venta->id)->delete();
+                }
+
+                $faltante = max(0, $chipsPrevios - $repuestos);
                 $origenCode = $venta->tipo_venta === 'APOYO'
                     ? (string) ($venta->tienda_destino ?? '')
                     : (string) $reporte->tienda_id;
-                if ($origenCode !== '') {
-                    $this->reponerChips((int) $idTiendaInterna, $origenCode, $chipsPrevios);
+                if ($faltante > 0 && $origenCode !== '') {
+                    $this->reponerChips((int) $idTiendaInterna, $origenCode, $faltante);
                 }
             }
 
@@ -589,6 +706,8 @@ class ReporteController extends Controller
     // Revierte stock → borra ventas → re-procesa todo. Requiere edición autorizada (estado_edicion=APROBADO).
     public function reprocesar(Request $request, Reporte $reporte): JsonResponse
     {
+        abort_unless($request->user()->rol === 'admin', 403);
+
         if ($reporte->estado_edicion !== 'APROBADO') {
             return response()->json(['error' => 'La edición no fue autorizada por administración.'], 422);
         }
@@ -604,15 +723,22 @@ class ReporteController extends Controller
             'recarga_bipay'                  => 'nullable|numeric|min:0',
             'pago_servicio'                  => 'nullable|numeric|min:0',
             'pago_krece'                     => 'nullable|numeric|min:0',
+            'pago_payjoy'                    => 'nullable|numeric|min:0',
             'tickets_tusamy'                 => 'nullable|numeric|min:0',
             'retiro_bipay'                   => 'nullable|numeric|min:0',
             'efectivo_entregado'             => 'required|numeric|min:0',
             'total_salidas'                  => 'nullable|numeric|min:0',
+            'salidas'                        => 'nullable|array',
+            'salidas.*.tipo'                 => 'required_with:salidas|in:adelanto,gasto,pasaje,otro',
+            'salidas.*.monto'                => 'required_with:salidas|numeric|gt:0',
+            'salidas.*.observacion'          => 'nullable|string|max:1000',
             'nombre_cubre'                   => 'nullable|string|max:100',
             'observaciones'                  => 'nullable|string',
             'obs_dia'                        => 'nullable|string',
             'destino_efectivo'               => 'nullable|string|max:50',
             'ventas'                         => 'nullable|array',
+            'ventas.*.venta_id'              => 'nullable|integer',
+            'ventas.*.vendedor_id'           => 'required|integer|exists:agentes,id',
             'ventas.*.tipo_venta'            => 'required_with:ventas|in:EQUIPO,ACCESORIO,POSTPAGO,PREPAGO,OTROS_FLUJO,APOYO',
             'ventas.*.subtipo'               => 'nullable|string|max:50',
             'ventas.*.monto_total'           => 'required_with:ventas|numeric|min:0',
@@ -644,7 +770,10 @@ class ReporteController extends Controller
         try {
             $ventas_data        = $validated['ventas'] ?? [];
             $svc                = new ComisionService();
-            $total_salidas      = (float) ($validated['total_salidas'] ?? 0);
+            $salidasData        = $validated['salidas'] ?? [];
+            $total_salidas      = $request->has('salidas')
+                ? round((float) collect($salidasData)->sum('monto'), 2)
+                : (float) ($validated['total_salidas'] ?? 0);
             $yape               = (float) ($validated['yape'] ?? 0);
             $bipay              = (float) ($validated['bipay'] ?? 0);
             $transferencia      = (float) ($validated['transferencia'] ?? 0);
@@ -656,10 +785,16 @@ class ReporteController extends Controller
                 + (float) ($validated['recarga_bipay'] ?? 0)
                 + (float) ($validated['pago_servicio'] ?? 0)
                 + (float) ($validated['pago_krece'] ?? 0)
+                + (float) ($validated['pago_payjoy'] ?? 0)
                 + (float) ($validated['tickets_tusamy'] ?? 0);
             $total_no_fisico   = $yape + $bipay + $transferencia + $retiro_bipay;
             $efectivo_esperado = round($total_sistema - $total_no_fisico - $total_salidas, 2);
             $diferencia        = round($efectivo_entregado - $efectivo_esperado, 2);
+            $reporte->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+            $snapshotAntes = $this->snapshotReporte($reporte);
+            $ventasAntes = $this->resumirVentasGuardadas($reporte->ventas);
+            $ventasDespues = $this->resumirVentasPayload($ventas_data, (int) $validated['agente_id']);
+            $cambiosVendedor = $this->detectarCambiosVendedor($ventasAntes, $ventasDespues);
 
             // 1) Revertir stock + borrar ventas previas (paridad legacy: anulación completa).
             $this->revertirVentas($reporte);
@@ -673,6 +808,7 @@ class ReporteController extends Controller
                 'recarga_bipay'       => (float) ($validated['recarga_bipay'] ?? 0),
                 'pago_servicio'       => (float) ($validated['pago_servicio'] ?? 0),
                 'pago_krece'          => (float) ($validated['pago_krece'] ?? 0),
+                'pago_payjoy'         => (float) ($validated['pago_payjoy'] ?? 0),
                 'tickets_tusamy'      => (float) ($validated['tickets_tusamy'] ?? 0),
                 'retiro_bipay'        => $retiro_bipay,
                 'transferencia'       => $transferencia,
@@ -690,17 +826,28 @@ class ReporteController extends Controller
 
             // 3) Re-procesar las nuevas ventas (stock + comisión server-side).
             $this->procesarVentas($reporte, $ventas_data, (string) $validated['tienda_id'], (int) $validated['agente_id'], $svc);
+            if ($request->has('salidas')) {
+                $this->guardarSalidas($reporte, $salidasData);
+            }
+            (new ComisionOperativaService())->recalcularReporte($reporte);
+
+            $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+            $detalleHistorial = empty($cambiosVendedor)
+                ? 'Reporte reprocesado tras edicion autorizada.'
+                : 'Cambio de vendedor/comision: ' . implode(' // ', $cambiosVendedor);
 
             HistorialReporte::create([
                 'reporte_id' => $reporte->id,
                 'usuario_id' => $request->user()?->id,
-                'accion'     => 'edicion_aplicada',
-                'detalle'    => 'Reporte re-procesado tras edición autorizada.',
+                'accion'     => empty($cambiosVendedor) ? 'edicion_reporte' : 'edicion_critica',
+                'detalle'    => $detalleHistorial,
+                'snapshot_antes' => $snapshotAntes,
+                'snapshot_despues' => $this->snapshotReporte($reporte),
             ]);
 
             DB::commit();
 
-            return response()->json($reporte->fresh()->load('ventas'));
+            return response()->json($reporte->fresh()->load(['ventas', 'salidas']));
         } catch (\RuntimeException $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
@@ -711,6 +858,152 @@ class ReporteController extends Controller
     }
 
     // ── POST /reporte-categorias/{id}/fijar-costo — Campana: fijar costo rápido
+    private function snapshotReporte(Reporte $reporte): array
+    {
+        return [
+            'reporte' => $reporte->only([
+                'agente_id', 'tienda_id', 'fecha', 'total_calculado', 'efectivo_entregado',
+                'efectivo_esperado', 'diferencia', 'total_salidas', 'destino_efectivo',
+            ]),
+            'ventas' => $this->resumirVentasGuardadas($reporte->ventas),
+            'salidas' => $reporte->salidas->map(fn (ReporteSalida $salida) => [
+                'tipo' => $salida->tipo,
+                'monto' => (float) $salida->monto,
+                'observacion' => $salida->observacion,
+            ])->values()->all(),
+        ];
+    }
+
+    private function guardarSalidas(Reporte $reporte, array $salidas): void
+    {
+        ReporteSalida::where('reporte_id', $reporte->id)->delete();
+
+        foreach ($salidas as $salida) {
+            ReporteSalida::create([
+                'reporte_id' => $reporte->id,
+                'tipo' => strtolower((string) $salida['tipo']),
+                'monto' => round((float) $salida['monto'], 2),
+                'observacion' => trim((string) ($salida['observacion'] ?? '')) ?: null,
+            ]);
+        }
+    }
+
+    private function resumirVentasGuardadas(iterable $ventas): array
+    {
+        $resumen = [];
+
+        foreach ($ventas as $venta) {
+            $descripcion = $venta->equipo?->producto_nombre_snap
+                ?? $venta->linea?->plan_nombre_snap
+                ?? $venta->subtipo
+                ?? $venta->tipo_venta;
+            $dni = $venta->cliente?->dni_ruc ?? '';
+
+            $resumen[] = [
+                'venta_id' => (int) $venta->id,
+                'clave' => $this->claveAuditoriaVenta((string) $venta->tipo_venta, (string) $descripcion, (string) $dni),
+                'descripcion' => (string) $descripcion,
+                'cliente' => (string) $dni,
+                'vendedor_id' => (int) $venta->vendedor_id,
+            ];
+        }
+
+        return $resumen;
+    }
+
+    private function resumirVentasPayload(array $ventas, int $agenteId): array
+    {
+        return collect($ventas)->map(function (array $venta) use ($agenteId) {
+            $descripcion = $venta['producto_nombre']
+                ?? $venta['plan_nombre']
+                ?? $venta['subtipo']
+                ?? $venta['tipo_venta'];
+            $dni = (string) ($venta['cliente_dni'] ?? '');
+
+            return [
+                'venta_id' => isset($venta['venta_id']) ? (int) $venta['venta_id'] : null,
+                'clave' => $this->claveAuditoriaVenta((string) $venta['tipo_venta'], (string) $descripcion, $dni),
+                'descripcion' => (string) $descripcion,
+                'cliente' => $dni,
+                'vendedor_id' => (int) ($venta['vendedor_id'] ?? $agenteId),
+            ];
+        })->all();
+    }
+
+    private function detectarCambiosVendedor(array $antes, array $despues): array
+    {
+        $antesPorId = collect($antes)->keyBy('venta_id');
+        $antesPorClave = collect($antes)->groupBy('clave')->map(fn ($items) => $items->values()->all())->all();
+        $idsUsados = [];
+        $cambios = [];
+        $nombres = DB::table('agentes')->pluck('nombres', 'id');
+
+        foreach ($despues as $ventaNueva) {
+            $ventaAnterior = null;
+            $ventaId = $ventaNueva['venta_id'] ?? null;
+
+            if ($ventaId && $antesPorId->has($ventaId)) {
+                $ventaAnterior = $antesPorId->get($ventaId);
+                $idsUsados[(int) $ventaId] = true;
+            } else {
+                foreach ($antesPorClave[$ventaNueva['clave']] ?? [] as $candidata) {
+                    if (! isset($idsUsados[(int) $candidata['venta_id']])) {
+                        $ventaAnterior = $candidata;
+                        $idsUsados[(int) $candidata['venta_id']] = true;
+                        break;
+                    }
+                }
+            }
+
+            if (! $ventaAnterior || (int) $ventaAnterior['vendedor_id'] === (int) $ventaNueva['vendedor_id']) {
+                continue;
+            }
+
+            $anterior = $nombres[(int) $ventaAnterior['vendedor_id']] ?? "Agente #{$ventaAnterior['vendedor_id']}";
+            $nuevo = $nombres[(int) $ventaNueva['vendedor_id']] ?? "Agente #{$ventaNueva['vendedor_id']}";
+            $cliente = $ventaNueva['cliente'] !== '' ? " | Cliente: {$ventaNueva['cliente']}" : '';
+            $cambios[] = "[{$ventaNueva['descripcion']}{$cliente}] de {$anterior} a {$nuevo}";
+        }
+
+        return $cambios;
+    }
+
+    private function claveAuditoriaVenta(string $tipo, string $descripcion, string $dni): string
+    {
+        return mb_strtoupper(trim($tipo) . '|' . trim($descripcion) . '|' . trim($dni));
+    }
+
+    private function idTiendaInterna(string $codigo): ?int
+    {
+        if (Schema::hasColumn('tiendas', 'id')) {
+            $id = DB::table('tiendas')->where('codigo', $codigo)->value('id');
+
+            return $id !== null ? (int) $id : null;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $tienda = DB::table('tiendas')
+                ->where('codigo', $codigo)
+                ->selectRaw('rowid as internal_id')
+                ->first();
+
+            return $tienda ? (int) $tienda->internal_id : null;
+        }
+
+        return null;
+    }
+
+    private function autorizarPropietarioOAdmin(Request $request, Reporte $reporte): void
+    {
+        $user = $request->user();
+
+        abort_unless(
+            $user->rol === 'admin' || (int) $reporte->usuario_id === (int) $user->id,
+            403,
+            'No tienes permisos sobre este reporte.'
+        );
+    }
+
     public function fijarCosto(Request $request, int $ventaEquipoId): JsonResponse
     {
         $user = $request->user();

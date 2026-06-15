@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle, ArrowLeftRight, BellRing, Check, X, Trash2,
@@ -10,6 +11,30 @@ interface Props {
   cc?: ControlCenterResponse
   isDark: boolean
   onClose: () => void
+}
+
+interface SectionProps {
+  icon: ReactNode
+  title: string
+  count: number
+  accent: string
+  sectionLabel: string
+  children: ReactNode
+}
+
+function Section({ icon, title, count, accent, sectionLabel, children }: SectionProps) {
+  if (count === 0) return null
+  return (
+    <div className="mb-4 last:mb-0">
+      <div className="flex items-center gap-2 px-1 mb-2">
+        <span style={{ color: accent }}>{icon}</span>
+        <span className={`text-[10px] font-bold uppercase tracking-widest ${sectionLabel}`}>{title}</span>
+        <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5"
+          style={{ background: `${accent}22`, color: accent }}>{count}</span>
+      </div>
+      <div className="space-y-1.5">{children}</div>
+    </div>
+  )
 }
 
 function fechaCorta(raw: string | null): string {
@@ -53,23 +78,6 @@ export function ControlCenterPanel({ cc, isDark, onClose }: Props) {
   const notifs = cc?.notificaciones_sistema.data ?? []
   const empty = anomalias.length === 0 && traslados.length === 0 && notifs.length === 0
 
-  function Section({ icon, title, count, accent, children }: {
-    icon: React.ReactNode; title: string; count: number; accent: string; children: React.ReactNode
-  }) {
-    if (count === 0) return null
-    return (
-      <div className="mb-4 last:mb-0">
-        <div className="flex items-center gap-2 px-1 mb-2">
-          <span style={{ color: accent }}>{icon}</span>
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${sectionLabel}`}>{title}</span>
-          <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5"
-            style={{ background: `${accent}22`, color: accent }}>{count}</span>
-        </div>
-        <div className="space-y-1.5">{children}</div>
-      </div>
-    )
-  }
-
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
@@ -95,7 +103,7 @@ export function ControlCenterPanel({ cc, isDark, onClose }: Props) {
         )}
 
         {/* Anomalías de caja */}
-        <Section icon={<TrendingDown size={13} />} title="Anomalías de Caja" count={anomalias.length} accent="#f87171">
+        <Section icon={<TrendingDown size={13} />} title="Anomalías de Caja" count={anomalias.length} accent="#f87171" sectionLabel={sectionLabel}>
           {anomalias.map((a) => (
             <div key={a.agente_id} className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 ${rowBg} ${rowBorder}`}>
               <div className="min-w-0">
@@ -111,7 +119,7 @@ export function ControlCenterPanel({ cc, isDark, onClose }: Props) {
         </Section>
 
         {/* Traslados pendientes */}
-        <Section icon={<ArrowLeftRight size={13} />} title="Traslados Pendientes" count={traslados.length} accent="#fbbf24">
+        <Section icon={<ArrowLeftRight size={13} />} title="Traslados Pendientes" count={traslados.length} accent="#fbbf24" sectionLabel={sectionLabel}>
           {traslados.map((t) => {
             const key = `${t.tipo_lote}-${t.id}`
             const busy = busyId === key && traslado.isPending
@@ -151,7 +159,7 @@ export function ControlCenterPanel({ cc, isDark, onClose }: Props) {
         </Section>
 
         {/* Notificaciones del sistema */}
-        <Section icon={<BellRing size={13} />} title="Notificaciones" count={notifs.length} accent={isDark ? '#a78bfa' : '#7c3aed'}>
+        <Section icon={<BellRing size={13} />} title="Notificaciones" count={notifs.length} accent={isDark ? '#a78bfa' : '#7c3aed'} sectionLabel={sectionLabel}>
           {notifs.map((n) => {
             const key = `notif-${n.id}`
             const busy = busyId === key && notif.isPending

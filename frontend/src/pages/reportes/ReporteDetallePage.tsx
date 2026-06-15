@@ -274,11 +274,12 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
   const recBipay    = n(reporte.recarga_bipay)
   const pagoServ    = n(reporte.pago_servicio)
   const pagoKrece   = n(reporte.pago_krece)
+  const pagoPayjoy  = n(reporte.pago_payjoy)
   const tickets     = n(reporte.tickets_tusamy)
 
   const totalDigital = yape + bipay + transf
   const totalRetiros = retBipay
-  const totalAdicional = recBipay + pagoServ + pagoKrece + tickets
+  const totalAdicional = recBipay + pagoServ + pagoKrece + pagoPayjoy + tickets
 
   const hayDigital   = totalDigital > 0 || retBipay > 0
   const hayAdicional = totalAdicional > 0
@@ -335,6 +336,9 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
                 {pagoKrece > 0 && (
                   <FilaRecibo label="Pago Krece" valor={sol(pagoKrece)} indent />
                 )}
+                {pagoPayjoy > 0 && (
+                  <FilaRecibo label="Pago Payjoy" valor={sol(pagoPayjoy)} indent />
+                )}
                 {tickets > 0 && (
                   <FilaRecibo label="Tickets Tusamy" valor={sol(tickets)} indent />
                 )}
@@ -348,6 +352,31 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SalidasCard({ reporte }: { reporte: ReporteConVentas }) {
+  if (!reporte.salidas?.length) return null
+
+  return (
+    <Card className="kyro-card">
+      <CardHeader className="px-4 py-2.5">
+        <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
+          Salidas y Gastos
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 px-4 py-3">
+        {reporte.salidas.map(salida => (
+          <div key={salida.id ?? `${salida.tipo}-${salida.monto}-${salida.observacion ?? ''}`} className="border-b border-kyro-border pb-2 last:border-0">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium capitalize text-kyro-text">{salida.tipo}</span>
+              <span className="font-mono text-sm font-bold text-kyro-danger">− {sol(salida.monto)}</span>
+            </div>
+            {salida.observacion && <p className="mt-0.5 text-xs text-kyro-muted">{salida.observacion}</p>}
+          </div>
+        ))}
       </CardContent>
     </Card>
   )
@@ -712,6 +741,7 @@ export function ReporteDetallePage() {
         {/* ── Columna de caja (1/3) ── */}
         <div className="space-y-4">
           <DineroDigitalCard reporte={reporte} />
+          <SalidasCard reporte={reporte} />
           <CuadreFinalCard reporte={reporte} />
         </div>
       </div>

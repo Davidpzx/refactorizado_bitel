@@ -125,7 +125,7 @@ class BipayController extends Controller
                 ->where('id', $data['cuenta_id'])
                 ->update(['saldo_bipay' => $nuevoBipay, 'saldo_anypay' => $nuevoAnypay, 'saldo_actual' => $nuevoTotal]);
 
-            DB::table('transacciones_bipay')->insert([
+            $this->insertarTransaccion([
                 'cuenta_origen_id' => $data['cuenta_id'],
                 'tipo_operacion'   => 'RECARGA',
                 'plataforma'       => $plataforma,
@@ -134,7 +134,6 @@ class BipayController extends Controller
                 'saldo_anypay_pre' => $cuenta->saldo_anypay,
                 'observacion'      => $data['referencia'] ?? null,
                 'creado_por'       => auth()->id(),
-                'creado_en'        => now(),
             ]);
 
             DB::commit();
@@ -192,7 +191,7 @@ class BipayController extends Controller
                 'saldo_actual' => $nuevoDBipay + (float) $destino->saldo_anypay,
             ]);
 
-            DB::table('transacciones_bipay')->insert([
+            $this->insertarTransaccion([
                 'cuenta_origen_id'  => $origen->id,
                 'cuenta_destino_id' => $destino->id,
                 'tipo_operacion'    => 'TRANSFERENCIA',
@@ -202,7 +201,6 @@ class BipayController extends Controller
                 'saldo_anypay_pre'  => $oAnypay,
                 'observacion'       => $data['observacion'] ?? null,
                 'creado_por'        => auth()->id(),
-                'creado_en'         => now(),
             ]);
 
             return ['ok' => true, 'origen' => $origen->alias, 'destino' => $destino->alias, 'monto' => $monto];
@@ -251,7 +249,7 @@ class BipayController extends Controller
                 'saldo_actual' => $nuevoTotal,
             ]);
 
-            DB::table('transacciones_bipay')->insert([
+            $this->insertarTransaccion([
                 'cuenta_origen_id' => $cuenta->id,
                 'tipo_operacion'   => 'AJUSTE',
                 'plataforma'       => 'AMBOS',
@@ -260,7 +258,6 @@ class BipayController extends Controller
                 'saldo_anypay_pre' => (float) $cuenta->saldo_anypay,
                 'observacion'      => $data['motivo'],
                 'creado_por'       => auth()->id(),
-                'creado_en'        => now(),
             ]);
 
             return ['ok' => true, 'diferencia' => $diferencia];
@@ -434,7 +431,7 @@ class BipayController extends Controller
                         'saldo_actual' => $saldoFinal,
                     ]);
 
-                DB::table('transacciones_bipay')->insert([
+                $this->insertarTransaccion([
                     'cuenta_origen_id' => $cuentaId,
                     'tipo_operacion' => 'DECLARACION_DIA',
                     'plataforma' => 'AMBOS',
@@ -444,8 +441,7 @@ class BipayController extends Controller
                     'saldo_anypay_pre' => $anypayFinal,
                     'observacion' => 'Tramo tienda '.$tiendaCodigo,
                     'creado_por' => $request->user()->id,
-                    'creado_en' => $ahora,
-                ]);
+                ], $ahora);
 
                 DB::table('bipay_cooldowns')->updateOrInsert(
                     [
@@ -619,7 +615,7 @@ class BipayController extends Controller
                     ->where('tienda_codigo', $tiendaCodigo)
                     ->delete();
 
-                DB::table('transacciones_bipay')->insert([
+                $this->insertarTransaccion([
                     'cuenta_origen_id' => $cuentaId,
                     'tipo_operacion' => 'CIERRE_DIA',
                     'plataforma' => 'AMBOS',
@@ -629,8 +625,7 @@ class BipayController extends Controller
                     'saldo_anypay_pre' => $anypayFinal,
                     'observacion' => 'Cierre tienda '.$tiendaCodigo,
                     'creado_por' => $request->user()->id,
-                    'creado_en' => $ahora,
-                ]);
+                ], $ahora);
 
                 return [
                     'ok' => true,
@@ -886,5 +881,15 @@ class BipayController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Cuenta eliminada.']);
+    }
+
+    private function insertarTransaccion(array $data, mixed $fecha = null): void
+    {
+        $columnaFecha = Schema::hasColumn('transacciones_bipay', 'creado_en')
+            ? 'creado_en'
+            : 'created_at';
+        $data[$columnaFecha] = $fecha ?? now();
+
+        DB::table('transacciones_bipay')->insert($data);
     }
 }

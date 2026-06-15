@@ -72,25 +72,26 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Dashboard ────────────────────────────────────────────────────────────
     Route::get('dashboard/kpis',      [DashboardController::class, 'kpis']);
-    Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias']);
+    Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias'])->middleware('role:admin');
     Route::get('control-center',      [ControlCenterController::class, 'index']);
     Route::post('marcar-notificacion', [ControlCenterController::class, 'marcarNotificacion']);
 
     // ── Historial Completo ────────────────────────────────────────────────────
-    Route::get('historial',           [HistorialController::class, 'index']);
-    Route::get('historial/exportar',  [HistorialController::class, 'exportar']);
+    Route::get('historial',           [HistorialController::class, 'index'])->middleware('role:admin');
+    Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware('role:admin');
 
     // ── Bitácora de Stock ─────────────────────────────────────────────────────
     Route::get('bitacora-stock',           [BitacoraStockController::class, 'index']);
     Route::get('bitacora-stock/kpis',      [BitacoraStockController::class, 'kpis']);
-    Route::post('bitacora-stock/corregir', [BitacoraStockController::class, 'corregir']);
+    Route::post('bitacora-stock/corregir', [BitacoraStockController::class, 'corregir'])->middleware('role:admin');
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
     Route::get('reportes/mis-reportes', [ReporteController::class, 'misReportes']);
-    Route::get('reportes/borrador', [ReporteBorradorController::class, 'show']);
-    Route::post('reportes/borrador', [ReporteBorradorController::class, 'store']);
-    Route::delete('reportes/borrador', [ReporteBorradorController::class, 'destroy']);
-    Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy']);
+    Route::get('reportes/vendedores', [ReporteController::class, 'vendedores']);
+    Route::get('reportes/borrador', [ReporteBorradorController::class, 'show'])->middleware('open.shift');
+    Route::post('reportes/borrador', [ReporteBorradorController::class, 'store'])->middleware('open.shift');
+    Route::delete('reportes/borrador', [ReporteBorradorController::class, 'destroy'])->middleware('open.shift');
+    Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy'])->middleware('open.shift');
 
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
@@ -99,13 +100,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('reportes/{reporte}/historial',              [ReporteController::class, 'historial']);
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
 
-    Route::apiResource('reportes', ReporteController::class);
+    Route::get('reportes', [ReporteController::class, 'index'])->middleware('role:admin');
+    Route::post('reportes', [ReporteController::class, 'store'])->middleware(['role:admin,tienda', 'open.shift']);
+    Route::get('reportes/{reporte}', [ReporteController::class, 'show']);
+    Route::match(['put', 'patch'], 'reportes/{reporte}', [ReporteController::class, 'update']);
+    Route::delete('reportes/{reporte}', [ReporteController::class, 'destroy']);
 
     // ── Otros recursos ────────────────────────────────────────────────────────
     // Custom agentes routes BEFORE apiResource to avoid {agente} wildcard conflict
-    Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes']);
-    Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica']);
-    Route::apiResource('agentes',     AgenteController::class);
+    Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes'])->middleware('role:admin');
+    Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica'])->middleware('role:admin');
+    Route::apiResource('agentes', AgenteController::class)->middleware('role:admin');
     Route::apiResource('clientes',    ClienteController::class);
     // Custom inventario routes MUST come before apiResource to avoid {inventario} wildcard conflict
     Route::get('inventario/kardex',          [InventarioController::class, 'kardex']);
@@ -115,50 +120,60 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex']);
     Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index']);
     Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar']);
-    Route::apiResource('inventario',  InventarioController::class);
-    Route::post('inventario/{id}/restaurar',            [InventarioController::class, 'restaurar']);
-    Route::post('inventario/{id}/recalcular-ganancias', [InventarioController::class, 'recalcularGanancias']);
+    Route::get('inventario', [InventarioController::class, 'index']);
+    Route::post('inventario', [InventarioController::class, 'store'])->middleware('role:admin');
+    Route::get('inventario/{inventario}', [InventarioController::class, 'show']);
+    Route::match(['put', 'patch'], 'inventario/{inventario}', [InventarioController::class, 'update'])->middleware('role:admin');
+    Route::delete('inventario/{inventario}', [InventarioController::class, 'destroy'])->middleware('role:admin');
+    Route::post('inventario/{id}/ajustar-stock-real', [InventarioController::class, 'ajustarStockReal'])->middleware('role:admin');
+    Route::post('inventario/{id}/restaurar',            [InventarioController::class, 'restaurar'])->middleware('role:admin');
+    Route::post('inventario/{id}/recalcular-ganancias', [InventarioController::class, 'recalcularGanancias'])->middleware('role:admin');
     Route::post('inventario/{id}/precio-agente',        [InventarioController::class, 'fijarPrecioAgente']);
     Route::apiResource('ventas',      VentaController::class);
-    Route::apiResource('comprobantes', ComprobanteController::class);
+    Route::apiResource('comprobantes', ComprobanteController::class)->middleware('role:admin');
 
     // ── Comisiones de Planes ──────────────────────────────────────────────────
     Route::get('comisiones-planes',                    [ComisionPlanController::class, 'index']);
-    Route::post('comisiones-planes',                   [ComisionPlanController::class, 'store']);
-    Route::put('comisiones-planes/{comisionesPlan}',   [ComisionPlanController::class, 'update']);
-    Route::delete('comisiones-planes/{comisionesPlan}',[ComisionPlanController::class, 'destroy']);
-    Route::post('comisiones-planes/recalcular',        [ComisionPlanController::class, 'recalcularMasivo']);
-    Route::get('config-comisiones',                        [ConfigComisionesController::class, 'index']);
-    Route::put('config-comisiones/tarifas',                [ConfigComisionesController::class, 'guardarTarifas']);
-    Route::put('config-comisiones/rangos-productividad',   [ConfigComisionesController::class, 'guardarRangosProductividad']);
-    Route::put('config-comisiones/rangos-servicio',        [ConfigComisionesController::class, 'guardarRangosServicio']);
+    Route::post('comisiones-planes',                   [ComisionPlanController::class, 'store'])->middleware('role:admin');
+    Route::put('comisiones-planes/{comisionesPlan}',   [ComisionPlanController::class, 'update'])->middleware('role:admin');
+    Route::delete('comisiones-planes/{comisionesPlan}',[ComisionPlanController::class, 'destroy'])->middleware('role:admin');
+    Route::post('comisiones-planes/recalcular',        [ComisionPlanController::class, 'recalcularMasivo'])->middleware('role:admin');
+    Route::get('config-comisiones',                        [ConfigComisionesController::class, 'index'])->middleware('role:admin');
+    Route::put('config-comisiones/tarifas',                [ConfigComisionesController::class, 'guardarTarifas'])->middleware('role:admin');
+    Route::put('config-comisiones/rangos-productividad',   [ConfigComisionesController::class, 'guardarRangosProductividad'])->middleware('role:admin');
+    Route::put('config-comisiones/rangos-servicio',        [ConfigComisionesController::class, 'guardarRangosServicio'])->middleware('role:admin');
 
     // ── Configuración Empresa ─────────────────────────────────────────────────
-    Route::get('configuracion',             [ConfiguracionController::class, 'show']);
-    Route::get('configuracion/con-logo',    [ConfiguracionController::class, 'showConLogo']);
-    Route::put('configuracion',             [ConfiguracionController::class, 'update']);
-    Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo']);
-    Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo']);
+    Route::get('configuracion',             [ConfiguracionController::class, 'show'])->middleware('role:admin');
+    Route::get('configuracion/con-logo',    [ConfiguracionController::class, 'showConLogo'])->middleware('role:admin');
+    Route::put('configuracion',             [ConfiguracionController::class, 'update'])->middleware('role:admin');
+    Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo'])->middleware('role:admin');
+    Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo'])->middleware('role:admin');
 
     // ── RENIEC DNI ────────────────────────────────────────────────────────────
     Route::get('dni/{dni}',                 [DniController::class, 'consultar']);
 
-    Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar']);
+    Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar'])->middleware('role:admin');
 
     // ── Agentes — acciones adicionales ───────────────────────────────────────
-    Route::get('agentes/{agente}/ventas',              [AgenteController::class, 'ventas']);
-    Route::get('agentes/{agente}/comisiones',          [AgenteController::class, 'comisiones']);
-    Route::patch('agentes/{id}/fechas-laborales',      [AgenteController::class, 'editarFechasLaborales']);
-    Route::post('agentes/{id}/token-seguridad',        [AgenteController::class, 'tokenSeguridad']);
-    Route::get('agentes/{id}/adelantos',               [AgenteController::class, 'adelantos']);
-    Route::post('agentes/{id}/adelantos',              [AgenteController::class, 'registrarAdelanto']);
-    Route::delete('agentes/{id}/adelantos/{adelantoId}', [AgenteController::class, 'eliminarAdelanto']);
+    Route::get('agentes/{agente}/ventas',              [AgenteController::class, 'ventas'])->middleware('role:admin');
+    Route::get('agentes/{agente}/comisiones',          [AgenteController::class, 'comisiones'])->middleware('role:admin');
+    Route::patch('agentes/{id}/fechas-laborales',      [AgenteController::class, 'editarFechasLaborales'])->middleware('role:admin');
+    Route::post('agentes/{id}/token-seguridad',        [AgenteController::class, 'tokenSeguridad'])->middleware('role:admin');
+    Route::get('agentes/{id}/adelantos',               [AgenteController::class, 'adelantos'])->middleware('role:admin');
+    Route::post('agentes/{id}/adelantos',              [AgenteController::class, 'registrarAdelanto'])->middleware('role:admin');
+    Route::delete('agentes/{id}/adelantos/{adelantoId}', [AgenteController::class, 'eliminarAdelanto'])->middleware('role:admin');
+    Route::get('agentes/{id}/perfil-rrhh',              [AgenteController::class, 'perfilRrhh'])->middleware('role:admin');
+    Route::put('agentes/{id}/perfil-rrhh',              [AgenteController::class, 'actualizarPerfilRrhh'])->middleware('role:admin');
+    Route::get('agentes/{id}/boletas',                  [AgenteController::class, 'boletas'])->middleware('role:admin');
+    Route::get('agentes/{id}/seguridad',                [AgenteController::class, 'estadoSeguridad'])->middleware('role:admin');
+    Route::post('agentes/{id}/reset-dispositivo',       [AgenteController::class, 'resetDispositivo'])->middleware('role:admin');
 
     // ── Planilla ─────────────────────────────────────────────────────────────
-    Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel']);
-    Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular']);
-    Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste']);
-    Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones']);
+    Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel'])->middleware('role:admin');
+    Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular'])->middleware('role:admin');
+    Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste'])->middleware('role:admin');
+    Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones'])->middleware('role:admin');
 
     // ── CRM ──────────────────────────────────────────────────────────────────
     Route::get('crm/pipeline',               [LeadController::class, 'pipeline']);
@@ -167,31 +182,32 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
 
     // ── Estadísticas ─────────────────────────────────────────────────────────
-    Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas']);
-    Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad']);
-    Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking']);
-    Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes']);
+    Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin');
+    Route::get('estadisticas/exportar',     [EstadisticasController::class, 'exportar'])->middleware('role:admin');
+    Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad'])->middleware('role:admin');
+    Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking'])->middleware('role:admin');
+    Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes'])->middleware('role:admin');
 
     // ── Reporte BCP ───────────────────────────────────────────────────────────
-    Route::get('reporte-bcp',         [ReporteBcpController::class, 'index']);
-    Route::post('reporte-bcp',        [ReporteBcpController::class, 'store']);
+    Route::get('reporte-bcp',         [ReporteBcpController::class, 'index'])->middleware('role:admin');
+    Route::post('reporte-bcp',        [ReporteBcpController::class, 'store'])->middleware('open.shift');
     Route::get('reporte-bcp/tiendas', [ReporteBcpController::class, 'tiendas']);
 
     // ── Usuarios ──────────────────────────────────────────────────────────────
-    Route::apiResource('usuarios', UsuarioController::class);
+    Route::apiResource('usuarios', UsuarioController::class)->middleware('role:admin');
 
     // ── Tiendas ───────────────────────────────────────────────────────────────
-    Route::apiResource('tiendas', TiendaController::class);
+    Route::apiResource('tiendas', TiendaController::class)->middleware('role:admin');
 
     // ── Bipay ─────────────────────────────────────────────────────────────────
     Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
-    Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
-    Route::post('bipay/transferir',    [BipayController::class, 'transferir']);
-    Route::post('bipay/ajustar',       [BipayController::class, 'ajustar']);
-    Route::post('bipay/cuentas',       [BipayController::class, 'crearCuenta']);
-    Route::put('bipay/cuentas/{id}',   [BipayController::class, 'editarCuenta']);
-    Route::delete('bipay/cuentas/{id}', [BipayController::class, 'eliminarCuenta']);
+    Route::post('bipay/recarga',       [BipayController::class, 'recarga'])->middleware('role:admin');
+    Route::post('bipay/transferir',    [BipayController::class, 'transferir'])->middleware('role:admin');
+    Route::post('bipay/ajustar',       [BipayController::class, 'ajustar'])->middleware('role:admin');
+    Route::post('bipay/cuentas',       [BipayController::class, 'crearCuenta'])->middleware('role:admin');
+    Route::put('bipay/cuentas/{id}',   [BipayController::class, 'editarCuenta'])->middleware('role:admin');
+    Route::delete('bipay/cuentas/{id}', [BipayController::class, 'eliminarCuenta'])->middleware('role:admin');
     Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
     Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
     Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);
@@ -199,24 +215,24 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Tickets Emitidos ─────────────────────────────────────────────────────
     Route::get('tickets',              [TicketController::class, 'index']);
     Route::get('tickets/{id}',         [TicketController::class, 'show']);
-    Route::post('tickets',             [TicketController::class, 'store']);
+    Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
     Route::patch('tickets/{id}',       [TicketController::class, 'update']);
     Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
 
     // ── Postulaciones (admin) ─────────────────────────────────────────────────
-    Route::get('postulaciones',          [PostulanteController::class, 'index']);
-    Route::get('postulaciones/{id}',     [PostulanteController::class, 'show']);
-    Route::post('postulaciones/{id}/aprobar', [PostulanteController::class, 'aprobar']);
-    Route::patch('postulaciones/{id}',   [PostulanteController::class, 'update']);
-    Route::delete('postulaciones/{id}',  [PostulanteController::class, 'destroy']);
+    Route::get('postulaciones',          [PostulanteController::class, 'index'])->middleware('role:admin');
+    Route::get('postulaciones/{id}',     [PostulanteController::class, 'show'])->middleware('role:admin');
+    Route::post('postulaciones/{id}/aprobar', [PostulanteController::class, 'aprobar'])->middleware('role:admin');
+    Route::patch('postulaciones/{id}',   [PostulanteController::class, 'update'])->middleware('role:admin');
+    Route::delete('postulaciones/{id}',  [PostulanteController::class, 'destroy'])->middleware('role:admin');
 
     // ── Diagnóstico (admin) ───────────────────────────────────────────────────
-    Route::get('diagnostico',                       [DiagnosticoController::class, 'index']);
+    Route::get('diagnostico',                       [DiagnosticoController::class, 'index'])->middleware('role:admin');
 
     // ── Panel Financieras ─────────────────────────────────────────────────────
-    Route::get('financieras',                               [PanelFinancierasController::class, 'index']);
-    Route::post('financieras/{id}/confirmar-desembolso',    [PanelFinancierasController::class, 'confirmarDesembolso']);
-    Route::post('financieras/{id}/revertir-desembolso',     [PanelFinancierasController::class, 'revertirDesembolso']);
+    Route::get('financieras',                               [PanelFinancierasController::class, 'index'])->middleware('role:admin');
+    Route::post('financieras/{id}/confirmar-desembolso',    [PanelFinancierasController::class, 'confirmarDesembolso'])->middleware('role:admin');
+    Route::post('financieras/{id}/revertir-desembolso',     [PanelFinancierasController::class, 'revertirDesembolso'])->middleware('role:admin');
 
     // ── Chips (gestión interna) ───────────────────────────────────────────────
     Route::get('chips',                         [ChipsController::class, 'index']);
@@ -224,11 +240,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('chips/{id}/cambiar-codigo',    [ChipsController::class, 'cambiarCodigo']);
     Route::delete('chips/{id}',                 [ChipsController::class, 'destroy']);
     Route::get('chips/{id}/historial',          [ChipsController::class, 'historial']);
+    Route::post('chips/{id}/ajustar-stock-real',[ChipsController::class, 'ajustarStockReal'])->middleware('role:admin');
 
 
     // ── Traslados de Equipos ──────────────────────────────────────────────────
     Route::get('traslados/pendientes-aprobacion', [TrasladoController::class, 'pendientesAprobacion']);
     Route::get('traslados',                       [TrasladoController::class, 'index']);
+    Route::post('traslados/lote/{codigoLote}/confirmar', [TrasladoController::class, 'confirmarLote']);
     Route::get('traslados/{id}',                  [TrasladoController::class, 'show']);
     Route::post('traslados',                      [TrasladoController::class, 'store']);
     Route::post('traslados/{id}/confirmar',       [TrasladoController::class, 'confirmar']);
@@ -250,16 +268,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('constancias/boleta/{id}', [ConstanciaController::class, 'accionBoleta']);
 
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
-    Route::get('asistencias',                        [AsistenciaController::class, 'index']);
-    Route::post('asistencias',                       [AsistenciaController::class, 'registrar']);
-    Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar']);
-    Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar']);
-    Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes']);
-    Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction']);
+    Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');
+    Route::post('asistencias',                       [AsistenciaController::class, 'registrar'])->middleware('role:admin');
+    Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar'])->middleware('role:admin');
+    Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar'])->middleware('role:admin');
+    Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes'])->middleware('role:admin');
+    Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction'])->middleware('role:admin');
     Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
     Route::get('asistencias/mis-tardanzas',           [AsistenciaController::class, 'misTardanzas']);
+    Route::get('asistencias/mi-historial',             [AsistenciaController::class, 'miHistorial']);
     Route::post('asistencias/salvavidas',             [AsistenciaController::class, 'salvavidas']);
-    Route::post('asistencias/excepcion',              [AsistenciaController::class, 'registrarExcepcion']);
-    Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar']);
-    Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar']);
+    Route::post('asistencias/excepcion',              [AsistenciaController::class, 'registrarExcepcion'])->middleware('role:admin');
+    Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar'])->middleware('role:admin');
+    Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar'])->middleware('role:admin');
 });

@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EstadisticasController extends Controller
 {
@@ -234,5 +238,137 @@ class EstadisticasController extends Controller
             'categoria'    => $categoria,
             'subcategorias' => $opciones,
         ]);
+    }
+
+    public function exportar(Request $request): StreamedResponse
+    {
+        $desde = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
+        $hasta = $request->get('fecha_hasta', now()->toDateString());
+        $tienda = $request->get('tienda');
+
+        $base = DB::table('ventas as v')
+            ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+            ->whereBetween('r.fecha', [$desde, $hasta])
+            ->where('r.estado', '!=', 'borrador')
+            ->when($tienda, fn ($query) => $query->where('r.tienda_id', $tienda));
+
+        $totales = (clone $base)
+            ->selectRaw("
+                COUNT(*) AS total,
+                SUM(CASE WHEN v.tipo_venta = 'POSTPAGO' THEN 1 ELSE 0 END) AS postpago,
+                SUM(CASE WHEN v.tipo_venta = 'PREPAGO' THEN 1 ELSE 0 END) AS prepago,
+                SUM(CASE WHEN v.tipo_venta = 'EQUIPO' THEN 1 ELSE 0 END) AS equipos,
+                SUM(CASE WHEN v.tipo_venta = 'ACCESORIO' THEN 1 ELSE 0 END) AS accesorios,
+                COALESCE(SUM(v.monto_total), 0) AS monto_total,
+                COALESCE(SUM(v.comision_generada), 0) AS comision_total
+            ")
+            ->first();
+
+        $tiendas = (clone $base)
+            ->selectRaw("
+                r.tienda_id,
+                COUNT(*) AS total,
+                SUM(CASE WHEN v.tipo_venta = 'POSTPAGO' THEN 1 ELSE 0 END) AS postpago,
+                SUM(CASE WHEN v.tipo_venta = 'PREPAGO' THEN 1 ELSE 0 END) AS prepago,
+                SUM(CASE WHEN v.tipo_venta = 'EQUIPO' THEN 1 ELSE 0 END) AS equipos,
+                SUM(CASE WHEN v.tipo_venta = 'ACCESORIO' THEN 1 ELSE 0 END) AS accesorios,
+                COALESCE(SUM(v.monto_total), 0) AS monto_total
+            ")
+            ->groupBy('r.tienda_id')
+            ->orderByDesc('total')
+            ->get();
+
+        $agentes = (clone $base)
+            ->join('agentes as a', 'a.id', '=', 'v.vendedor_id')
+            ->selectRaw("
+                a.nombres,
+                a.tienda_base,
+                COUNT(*) AS total,
+                SUM(CASE WHEN v.tipo_venta = 'POSTPAGO' THEN 1 ELSE 0 END) AS postpago,
+                SUM(CASE WHEN v.tipo_venta = 'PREPAGO' THEN 1 ELSE 0 END) AS prepago,
+                SUM(CASE WHEN v.tipo_venta = 'EQUIPO' THEN 1 ELSE 0 END) AS equipos,
+                SUM(CASE WHEN v.tipo_venta = 'ACCESORIO' THEN 1 ELSE 0 END) AS accesorios,
+                COALESCE(SUM(v.comision_generada), 0) AS comision_total
+            ")
+            ->groupBy('v.vendedor_id', 'a.nombres', 'a.tienda_base')
+            ->orderByDesc('total')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $resumen = $spreadsheet->getActiveSheet();
+        $resumen->setTitle('Resumen');
+        $resumen->fromArray([
+            ['Estadísticas de ventas', "{$desde} al {$hasta}"],
+            ['Filtro tienda', $tienda ?: 'Todas'],
+            ['Total ventas', (int) ($totales->total ?? 0)],
+            ['Postpago', (int) ($totales->postpago ?? 0)],
+            ['Prepago', (int) ($totales->prepago ?? 0)],
+            ['Equipos', (int) ($totales->equipos ?? 0)],
+            ['Accesorios', (int) ($totales->accesorios ?? 0)],
+            ['Monto total', (float) ($totales->monto_total ?? 0)],
+            ['Comisión total', (float) ($totales->comision_total ?? 0)],
+        ]);
+        $resumen->getStyle('A1:B1')->applyFromArray($this->estiloCabecera());
+        $resumen->getColumnDimension('A')->setAutoSize(true);
+        $resumen->getColumnDimension('B')->setAutoSize(true);
+
+        $porTienda = $spreadsheet->createSheet();
+        $porTienda->setTitle('Tiendas');
+        $porTienda->fromArray(['Posición', 'Tienda', 'Total', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Monto S/'], null, 'A1');
+        $porTienda->getStyle('A1:H1')->applyFromArray($this->estiloCabecera());
+        foreach ($tiendas as $index => $row) {
+            $porTienda->fromArray([
+                $index + 1,
+                $row->tienda_id,
+                (int) $row->total,
+                (int) $row->postpago,
+                (int) $row->prepago,
+                (int) $row->equipos,
+                (int) $row->accesorios,
+                (float) $row->monto_total,
+            ], null, 'A'.($index + 2));
+        }
+
+        $porAgente = $spreadsheet->createSheet();
+        $porAgente->setTitle('Agentes');
+        $porAgente->fromArray(['Posición', 'Agente', 'Tienda', 'Total', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Comisión S/'], null, 'A1');
+        $porAgente->getStyle('A1:I1')->applyFromArray($this->estiloCabecera());
+        foreach ($agentes as $index => $row) {
+            $porAgente->fromArray([
+                $index + 1,
+                $row->nombres,
+                $row->tienda_base,
+                (int) $row->total,
+                (int) $row->postpago,
+                (int) $row->prepago,
+                (int) $row->equipos,
+                (int) $row->accesorios,
+                (float) $row->comision_total,
+            ], null, 'A'.($index + 2));
+        }
+
+        foreach ([$porTienda, $porAgente] as $sheet) {
+            foreach ($sheet->getColumnIterator() as $column) {
+                $sheet->getColumnDimension($column->getColumnIndex())->setAutoSize(true);
+            }
+            $sheet->freezePane('A2');
+        }
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            "estadisticas_{$desde}_{$hasta}.xlsx",
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
+    }
+
+    private function estiloCabecera(): array
+    {
+        return [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
+        ];
     }
 }

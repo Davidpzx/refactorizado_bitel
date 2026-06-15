@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ComisionPlan;
+use App\Models\Reporte;
+use App\Services\ComisionOperativaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,11 +92,7 @@ class ComisionPlanController extends Controller
 
         // Cargar todos los planes en memoria para lookup O(1)
         $planesMap = ComisionPlan::all()
-            ->keyBy(fn($p) => strtolower(trim((string) $p->nombre_plan)));
-
-        if ($planesMap->isEmpty()) {
-            return response()->json(['error' => 'No hay planes de comisión configurados.'], 422);
-        }
+            ->keyBy(fn ($p) => strtolower($this->nombrePlanBase((string) $p->nombre_plan)));
 
         DB::beginTransaction();
         try {
@@ -104,16 +102,23 @@ class ComisionPlanController extends Controller
                 ->join('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
                 ->whereBetween('r.fecha', [$desde, $hasta])
                 ->where('r.estado', '!=', 'borrador')
-                ->whereIn('v.tipo_venta', ['POSTPAGO', 'PREPAGO'])
+                ->whereIn('v.tipo_venta', ['POSTPAGO', 'PREPAGO', 'APOYO'])
                 ->when($tienda, fn($q) => $q->where('r.tienda_id', $tienda))
                 ->select(
                     'v.id as venta_id',
                     'v.es_remate',
                     'v.es_extranjero',
                     'v.monto_total',
+                    'v.tipo_venta',
                     'vl.id as linea_id',
                     'vl.plan_nombre_snap',
+                    'vl.tipo_alta',
                     'vl.cantidad',
+                    'vl.cobrado_unitario',
+                    'vl.es_migracion',
+                    'vl.es_upgrade',
+                    'vl.es_esim',
+                    'vl.plan_anterior',
                 )
                 ->get();
 
@@ -124,7 +129,7 @@ class ComisionPlanController extends Controller
             $comisionesPorVenta = [];
 
             foreach ($lineas as $row) {
-                $planKey  = strtolower(trim((string) ($row->plan_nombre_snap ?? '')));
+                $planKey  = strtolower($this->nombrePlanBase((string) ($row->plan_nombre_snap ?? '')));
                 $plan     = $planesMap->get($planKey);
                 $cantidad = max(1, (int) $row->cantidad);
 
@@ -133,17 +138,7 @@ class ComisionPlanController extends Controller
                     continue;
                 }
 
-                $esExtranjero = (bool) $row->es_extranjero;
-                $esRemate     = (bool) $row->es_remate || ((float) $row->monto_total < 20.00);
-
-                if ($esRemate) {
-                    $comisionUnitaria = 0.00;
-                } else {
-                    $base = (float) ($esExtranjero ? $plan->comision_ext_n : $plan->comision_dni_n);
-                    // Costo chip: 1 sol para altas nuevas (no migración/upgrade)
-                    $costoChip        = 1.00;
-                    $comisionUnitaria = max(0.00, $base - $costoChip);
-                }
+                $comisionUnitaria = $this->recalcularComisionUnitaria($row, $plan);
 
                 DB::table('venta_lineas')
                     ->where('id', $row->linea_id)
@@ -162,18 +157,72 @@ class ComisionPlanController extends Controller
                 $updatedVentas++;
             }
 
+            $reportesOperativos = Reporte::query()
+                ->whereBetween('fecha', [$desde, $hasta])
+                ->when($tienda, fn ($q) => $q->where('tienda_id', $tienda))
+                ->get();
+            $updatedOperativos = 0;
+            $operativas = new ComisionOperativaService();
+            foreach ($reportesOperativos as $reporte) {
+                $updatedOperativos += $operativas->recalcularReporte($reporte);
+            }
+
             DB::commit();
 
             return response()->json([
                 'success'        => true,
                 'ventas_actualizadas' => $updatedVentas,
                 'lineas_actualizadas' => $updatedLineas,
+                'operativas_actualizadas' => $updatedOperativos,
                 'periodo'        => "{$desde} → {$hasta}",
-                'message'        => "Recálculo completado: {$updatedVentas} ventas, {$updatedLineas} líneas actualizadas.",
+                'message'        => "Recálculo completado: {$updatedVentas} ventas, {$updatedLineas} líneas y {$updatedOperativos} ganancias operativas actualizadas.",
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function nombrePlanBase(string $nombre): string
+    {
+        return trim((string) preg_replace(
+            '/\s*\((?:Upgrade|Migraci[oó]n)\)|\s*\[No Comisionable[^\]]*\]/iu',
+            '',
+            $nombre
+        ));
+    }
+
+    private function recalcularComisionUnitaria(object $linea, ComisionPlan $plan): float
+    {
+        $nombre = mb_strtoupper((string) $linea->plan_nombre_snap);
+        $tipoAlta = mb_strtoupper((string) $linea->tipo_alta);
+        $esUpgrade = (bool) $linea->es_upgrade
+            || str_contains($nombre, 'UPGRADE')
+            || str_contains($tipoAlta, 'UPG');
+        $esMigracion = (bool) $linea->es_migracion
+            || str_contains($nombre, 'MIGRACI')
+            || str_contains($tipoAlta, 'MIG');
+        $esEsim = (bool) $linea->es_esim || str_contains($nombre, 'ESIM');
+        $cobrado = (float) $linea->cobrado_unitario;
+        $base = (float) ((bool) $linea->es_extranjero ? $plan->comision_ext_n : $plan->comision_dni_n);
+        $esRemate = (bool) $linea->es_remate
+            || ($linea->tipo_venta !== 'PREPAGO' && ! $esUpgrade && $cobrado > 0 && $cobrado < 20);
+
+        if ($esRemate) {
+            return 0.0;
+        }
+
+        if ($esUpgrade) {
+            $diferencia = (float) $plan->fee_monto - (float) ($linea->plan_anterior ?? 0);
+
+            return $diferencia >= 20 ? 20.0 : ($diferencia >= 10 ? 10.0 : 0.0);
+        }
+
+        $costoChip = ($esMigracion || $esEsim) ? 0.0 : 1.0;
+        if (mb_strtoupper((string) $plan->tipo_servicio) === 'PREPAGO' || $linea->tipo_venta === 'PREPAGO') {
+            return max(0.0, ($cobrado > 0 ? $cobrado : $base) - $costoChip);
+        }
+
+        return max(0.0, $base - $costoChip);
     }
 }

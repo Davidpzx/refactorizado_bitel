@@ -1,40 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 
 interface QrData {
   token: string
+  image_data_uri: string
   tienda_id: string
   expires_in: number
   bloque: number
 }
 
-// ── QR renderizado con Canvas ──────────────────────────────────────────────────
-
-function QrCanvas({ token, size = 280 }: { token: string; size?: number }) {
-  const [dataUrl, setDataUrl] = useState('')
-
-  useEffect(() => {
-    // Genera QR usando la API pública de QR server (no requiere librería)
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(token)}&format=png&margin=2`
-    setDataUrl(qrUrl)
-  }, [token, size])
-
-  if (!dataUrl) {
-    return (
-      <div
-        style={{ width: size, height: size }}
-        className="bg-zinc-800 rounded-2xl animate-pulse flex items-center justify-center"
-      >
-        <span className="text-zinc-500 text-sm">Generando QR…</span>
-      </div>
-    )
-  }
-
+function QrImage({ dataUri, size = 280 }: { dataUri: string; size?: number }) {
   return (
     <img
-      src={dataUrl}
+      src={dataUri}
       alt="QR Asistencias"
       width={size}
       height={size}
@@ -78,31 +58,22 @@ function Reloj() {
 export function QrDisplayPage() {
   const { usuario } = useAuth()
   const tiendaId = usuario?.tienda_id ?? 'DEFAULT'
-  const [ttlLocal, setTtlLocal] = useState(5)
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
-  const { data, refetch } = useQuery<QrData>({
+  const { data, dataUpdatedAt } = useQuery<QrData>({
     queryKey: ['qr-stream', tiendaId],
     queryFn: () => api.get<QrData>(`/v1/attendance/qr-stream/${tiendaId}`).then(r => r.data),
     refetchInterval: 5000,
     staleTime: 0,
   })
 
-  // Countdown local sincronizado con TTL del servidor
   useEffect(() => {
-    if (data?.expires_in != null) setTtlLocal(data.expires_in)
-  }, [data?.expires_in, data?.bloque])
-
-  const tick = useCallback(() => {
-    setTtlLocal(t => {
-      if (t <= 1) { refetch(); return 5 }
-      return t - 1
-    })
-  }, [refetch])
-
-  useEffect(() => {
-    const interval = setInterval(tick, 1000)
+    const interval = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(interval)
-  }, [tick])
+  }, [])
+
+  const segundosTranscurridos = Math.floor(Math.max(0, nowMs - dataUpdatedAt) / 1000)
+  const ttlLocal = Math.max(0, (data?.expires_in ?? 5) - segundosTranscurridos)
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-6 py-8 gap-8">
@@ -121,8 +92,8 @@ export function QrDisplayPage() {
 
       {/* QR */}
       <div className="flex flex-col items-center gap-4">
-        {data?.token ? (
-          <QrCanvas token={data.token} size={300} />
+        {data?.image_data_uri ? (
+          <QrImage dataUri={data.image_data_uri} size={300} />
         ) : (
           <div className="w-[300px] h-[300px] bg-zinc-800 rounded-2xl animate-pulse" />
         )}

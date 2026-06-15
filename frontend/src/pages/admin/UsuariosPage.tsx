@@ -16,6 +16,8 @@ interface Usuario {
   email: string
   rol: 'admin' | 'tienda'
   tienda_id: string | null
+  agente_id: number | null
+  agente?: { id: number; nombres: string; dni: string } | null
   activo: boolean
   tiene_bcp: boolean
 }
@@ -39,22 +41,35 @@ const ROLES = ['admin', 'tienda']
 
 function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSuccess: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
+  const { data: agentesData } = useQuery({
+    queryKey: ['agentes-para-usuarios'],
+    queryFn: () => api.get<{ data: Array<{ id: number; nombres: string; dni: string; tienda_base: string }> }>('/v1/agentes', {
+      params: { per_page: 500 },
+    }).then(r => r.data),
+  })
+  const agentes = agentesData?.data ?? []
   const [form, setForm] = useState({
     nombre:    usuario?.nombre    ?? '',
     email:     usuario?.email     ?? '',
     password:  '',
     rol:       usuario?.rol       ?? 'tienda',
     tienda_id: usuario?.tienda_id ?? '',
+    agente_id: usuario?.agente_id ? String(usuario.agente_id) : '',
     activo:    usuario?.activo    ?? true,
     tiene_bcp: usuario?.tiene_bcp ?? false,
   })
   const [err, setErr] = useState('')
 
   const save = useMutation({
-    mutationFn: (payload: typeof form) =>
-      usuario
-        ? api.put(`/v1/usuarios/${usuario.id}`, payload).then(r => r.data)
-        : api.post('/v1/usuarios', payload).then(r => r.data),
+    mutationFn: (payload: typeof form) => {
+      const data = {
+        ...payload,
+        agente_id: payload.rol === 'tienda' && payload.agente_id ? Number(payload.agente_id) : null,
+      }
+      return usuario
+        ? api.put(`/v1/usuarios/${usuario.id}`, data).then(r => r.data)
+        : api.post('/v1/usuarios', data).then(r => r.data)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['usuarios'] })
       onSuccess()
@@ -114,6 +129,17 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
             <label htmlFor="usuario-tienda" className="mb-1 block text-xs text-kyro-muted">Tienda ID</label>
             <Input id="usuario-tienda" value={form.tienda_id ?? ''} onChange={e => setForm(f => ({ ...f, tienda_id: e.target.value.toUpperCase() }))} placeholder="P. ej. PUNDA95" />
           </div>
+          {form.rol === 'tienda' && (
+            <div className="sm:col-span-2">
+              <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado</label>
+              <Select id="usuario-agente" value={form.agente_id} onChange={e => setForm(f => ({ ...f, agente_id: e.target.value }))} required>
+                <option value="">Selecciona un agente</option>
+                {agentes.map(a => (
+                  <option key={a.id} value={a.id}>{a.nombres} · {a.dni} · {a.tienda_base}</option>
+                ))}
+              </Select>
+            </div>
+          )}
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
             Usuario activo
@@ -178,14 +204,14 @@ export function UsuariosPage() {
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                {['ID', 'Nombre', 'Email', 'Rol', 'Tienda', 'Estado', 'BCP', 'Acciones'].map(h => (
+                {['ID', 'Nombre', 'Email', 'Rol', 'Tienda', 'Agente', 'Estado', 'BCP', 'Acciones'].map(h => (
                   <th key={h} className="kyro-table-head px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-kyro-border">
-              {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
-              {!isLoading && usuarios.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Sin resultados</td></tr>}
+              {isLoading && <tr><td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
+              {!isLoading && usuarios.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">Sin resultados</td></tr>}
               {usuarios.map(u => (
                 <tr key={u.id} className="transition-colors hover:bg-kyro-elevated">
                   <td className="px-4 py-3 text-xs text-kyro-muted">#{u.id}</td>
@@ -195,6 +221,7 @@ export function UsuariosPage() {
                     <Badge variant={u.rol === 'admin' ? 'destructive' : 'success'}>{u.rol}</Badge>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-kyro-body">{u.tienda_id ?? '—'}</td>
+                  <td className="px-4 py-3 text-xs text-kyro-body">{u.agente?.nombres ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge variant={u.activo ? 'success' : 'warning'}>{u.activo ? 'Activo' : 'Inactivo'}</Badge>
                   </td>

@@ -12,7 +12,7 @@ class Reporte extends Model
     protected $fillable = [
         'agente_id', 'tienda_id', 'usuario_id', 'fecha',
         'total_dia', 'total_calculado',
-        'yape', 'bipay', 'recarga_bipay', 'pago_servicio', 'pago_krece',
+        'yape', 'bipay', 'recarga_bipay', 'pago_servicio', 'pago_krece', 'pago_payjoy',
         'tickets_tusamy', 'retiro_bipay', 'transferencia',
         'caja_inicial', 'efectivo_entregado', 'total_salidas',
         'total_restantes', 'efectivo_esperado', 'diferencia',
@@ -31,6 +31,7 @@ class Reporte extends Model
         'recarga_bipay'       => 'decimal:2',
         'pago_servicio'       => 'decimal:2',
         'pago_krece'          => 'decimal:2',
+        'pago_payjoy'         => 'decimal:2',
         'tickets_tusamy'      => 'decimal:2',
         'retiro_bipay'        => 'decimal:2',
         'transferencia'       => 'decimal:2',
@@ -46,6 +47,11 @@ class Reporte extends Model
     public function ventas(): HasMany
     {
         return $this->hasMany(Venta::class);
+    }
+
+    public function salidas(): HasMany
+    {
+        return $this->hasMany(ReporteSalida::class);
     }
 
     public function agente(): \Illuminate\Database\Eloquent\Relations\BelongsTo

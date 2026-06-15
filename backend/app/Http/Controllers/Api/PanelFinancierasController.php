@@ -137,7 +137,7 @@ class PanelFinancierasController extends Controller
         // (paridad legacy: EQUIPO_ESTANDAR de config_comisiones, default S/5).
         $comisionEquipo = 5.00;
         if (Schema::hasTable('config_comisiones')) {
-            $valor = DB::table('config_comisiones')->where('clave', 'EQUIPO_ESTANDAR')->value('valor');
+            $valor = DB::table('config_comisiones')->where('tipo', 'EQUIPO_ESTANDAR')->value('monto');
             if ($valor !== null) {
                 $comisionEquipo = (float) $valor;
             }

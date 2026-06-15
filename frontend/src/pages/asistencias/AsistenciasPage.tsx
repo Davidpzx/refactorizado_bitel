@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
-import { Download, AlertTriangle, Clock, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Download, AlertTriangle, Clock, UserCheck, UserX, AlertCircle, Pencil } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -18,12 +18,36 @@ interface AsistenciaRow {
   fecha: string
   hora_ingreso: string | null
   hora_salida: string | null
+  inicio_refrigerio: string | null
+  fin_refrigerio: string | null
+  minutos_tardanza: number
+  minutos_deuda: number
+  minutos_extra: number
+  omitio_refrigerio: number
+  turno_extendido: number
+  minutos_refrigerio_asignado: number | null
+  horas_extras_aprobadas: number
+  observacion_admin: string | null
   metodo_marcacion: string
   observacion: string | null
   requiere_revision: number
   dia_descanso: string | null
   salida_oficial: string | null
 }
+
+interface AsistenciaEditForm {
+  fecha: string
+  hora_ingreso: string
+  inicio_refrigerio: string
+  fin_refrigerio: string
+  hora_salida: string
+  omitio_refrigerio: boolean
+  horas_extras_aprobadas: string
+  minutos_refrigerio_asignado: string
+  observacion_admin: string
+}
+
+const horaInput = (hora: string | null) => hora?.slice(0, 5) ?? ''
 
 interface Kpis {
   presentes: number
@@ -54,6 +78,8 @@ export function AsistenciasPage() {
   })
   const [applied, setApplied] = useState({ ...filters })
   const [page, setPage] = useState(1)
+  const [editando, setEditando] = useState<AsistenciaRow | null>(null)
+  const [editForm, setEditForm] = useState<AsistenciaEditForm | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['asistencias', applied, page],
@@ -95,6 +121,36 @@ export function AsistenciasPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
   })
 
+  const editarRegistro = useMutation({
+    mutationFn: () => api.patch(`/v1/asistencias/${editando!.id}`, {
+      ...editForm,
+      horas_extras_aprobadas: Number(editForm?.horas_extras_aprobadas || 0),
+      minutos_refrigerio_asignado: editForm?.minutos_refrigerio_asignado === ''
+        ? null
+        : Number(editForm?.minutos_refrigerio_asignado),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['asistencias'] })
+      setEditando(null)
+      setEditForm(null)
+    },
+  })
+
+  function abrirEdicion(asistencia: AsistenciaRow) {
+    setEditando(asistencia)
+    setEditForm({
+      fecha: asistencia.fecha.slice(0, 10),
+      hora_ingreso: horaInput(asistencia.hora_ingreso),
+      inicio_refrigerio: horaInput(asistencia.inicio_refrigerio),
+      fin_refrigerio: horaInput(asistencia.fin_refrigerio),
+      hora_salida: horaInput(asistencia.hora_salida),
+      omitio_refrigerio: Boolean(asistencia.omitio_refrigerio),
+      horas_extras_aprobadas: String(asistencia.horas_extras_aprobadas ?? 0),
+      minutos_refrigerio_asignado: asistencia.minutos_refrigerio_asignado == null ? '' : String(asistencia.minutos_refrigerio_asignado),
+      observacion_admin: asistencia.observacion_admin ?? asistencia.observacion ?? '',
+    })
+  }
+
   function exportar() {
     const token = localStorage.getItem('auth_token')
     const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
@@ -109,7 +165,7 @@ export function AsistenciasPage() {
       .then(blob => {
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `asistencias_${applied.fecha_desde}_${applied.fecha_hasta}.csv`
+        a.download = `asistencias_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
         a.click()
         URL.revokeObjectURL(a.href)
       })
@@ -136,7 +192,7 @@ export function AsistenciasPage() {
           </Button>
         )}
         <Button variant="outline" size="sm" onClick={exportar}>
-          <Download size={14} /> Exportar CSV
+          <Download size={14} /> Exportar Excel
         </Button>
       </PageHeader>
 
@@ -284,10 +340,18 @@ export function AsistenciasPage() {
                         ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Tardanza</span>
                         : <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">OK</span>
                       }
+                      {(a.minutos_tardanza > 0 || a.minutos_deuda > 0) && (
+                        <p className="mt-1 text-[10px] text-kyro-muted">
+                          Tardanza {a.minutos_tardanza}m · Deuda {a.minutos_deuda}m
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {usuario?.rol === 'admin' && (
                         <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => abrirEdicion(a)}>
+                            <Pencil size={13} /> Editar
+                          </Button>
                           {esRevision && (
                             <Button size="sm" variant="outline"
                               disabled={aprobar.isPending}
@@ -320,6 +384,75 @@ export function AsistenciasPage() {
           </div>
         )}
       </div>
+
+      {editando && editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="kyro-card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6">
+            <div className="mb-5 flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-kyro-text">Editar asistencia de {editando.nombres}</h3>
+                <p className="text-xs text-kyro-muted">Tardanza y deuda se recalculan con el horario oficial.</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => { setEditando(null); setEditForm(null) }}>&times;</Button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Fecha</label>
+                <Input type="date" value={editForm.fecha} onChange={e => setEditForm(f => f && ({ ...f, fecha: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Ingreso</label>
+                <Input type="time" value={editForm.hora_ingreso} onChange={e => setEditForm(f => f && ({ ...f, hora_ingreso: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Inicio refrigerio</label>
+                <Input type="time" disabled={editForm.omitio_refrigerio} value={editForm.inicio_refrigerio} onChange={e => setEditForm(f => f && ({ ...f, inicio_refrigerio: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Fin refrigerio</label>
+                <Input type="time" disabled={editForm.omitio_refrigerio} value={editForm.fin_refrigerio} onChange={e => setEditForm(f => f && ({ ...f, fin_refrigerio: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Salida</label>
+                <Input type="time" value={editForm.hora_salida} onChange={e => setEditForm(f => f && ({ ...f, hora_salida: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-kyro-muted">Horas extra aprobadas</label>
+                <Input type="number" min="0" max="24" step="0.25" value={editForm.horas_extras_aprobadas} onChange={e => setEditForm(f => f && ({ ...f, horas_extras_aprobadas: e.target.value }))} />
+              </div>
+              {Boolean(editando.turno_extendido) && (
+                <div>
+                  <label className="mb-1 block text-xs text-kyro-muted">Refrigerio asignado (min)</label>
+                  <Input type="number" min="0" max="180" value={editForm.minutos_refrigerio_asignado} onChange={e => setEditForm(f => f && ({ ...f, minutos_refrigerio_asignado: e.target.value }))} />
+                </div>
+              )}
+              <label className="flex items-center gap-2 self-end pb-2 text-sm text-kyro-body">
+                <input type="checkbox" checked={editForm.omitio_refrigerio}
+                  onChange={e => setEditForm(f => f && ({ ...f, omitio_refrigerio: e.target.checked }))} />
+                Turno corrido / omitió refrigerio
+              </label>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs text-kyro-muted">Observación administrativa</label>
+                <textarea className="kyro-input min-h-20 w-full p-3 text-sm" maxLength={500}
+                  value={editForm.observacion_admin} onChange={e => setEditForm(f => f && ({ ...f, observacion_admin: e.target.value }))} />
+              </div>
+            </div>
+
+            {editarRegistro.isError && (
+              <p className="mt-3 text-sm text-kyro-danger">
+                {(editarRegistro.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo actualizar la asistencia.'}
+              </p>
+            )}
+            <div className="mt-5 flex gap-3">
+              <Button className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
+                {editarRegistro.isPending ? 'Recalculando...' : 'Guardar y recalcular'}
+              </Button>
+              <Button variant="outline" onClick={() => { setEditando(null); setEditForm(null) }}>Cancelar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

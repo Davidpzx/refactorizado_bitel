@@ -13,12 +13,16 @@ class VentaLinea extends Model
 
     protected $fillable = [
         'venta_id', 'plan_nombre_snap', 'tipo_alta',
-        'cantidad', 'cobrado_unitario', 'comision_unitaria', 'es_esim',
+        'cantidad', 'cobrado_unitario', 'comision_unitaria',
+        'es_migracion', 'es_upgrade', 'es_esim', 'plan_anterior',
     ];
 
     protected $casts = [
         'cobrado_unitario'  => 'decimal:2',
         'comision_unitaria' => 'decimal:2',
+        'plan_anterior'     => 'decimal:2',
+        'es_migracion'      => 'boolean',
+        'es_upgrade'        => 'boolean',
         'es_esim'           => 'boolean',
         'cantidad'          => 'integer',
     ];

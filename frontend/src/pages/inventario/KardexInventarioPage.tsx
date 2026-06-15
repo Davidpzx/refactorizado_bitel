@@ -92,7 +92,7 @@ export function KardexInventarioPage() {
     },
   })
 
-  // Exportar CSV via blob
+  // Exportar XLSX via blob
   const handleExportar = async () => {
     setExportando(true)
     try {
@@ -108,7 +108,7 @@ export function KardexInventarioPage() {
       const url = window.URL.createObjectURL(new Blob([resp.data]))
       const a = document.createElement('a')
       a.href = url
-      a.download = `kardex-${Date.now()}.csv`
+      a.download = `kardex-${Date.now()}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -128,7 +128,7 @@ export function KardexInventarioPage() {
         actions={
           <Button variant="outline" size="sm" onClick={handleExportar} disabled={exportando}>
             <Download size={14} className="mr-1.5" />
-            {exportando ? 'Exportando...' : 'Exportar CSV'}
+            {exportando ? 'Exportando...' : 'Exportar Excel'}
           </Button>
         }
       />

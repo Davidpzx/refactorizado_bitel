@@ -229,6 +229,166 @@ class AgenteController extends Controller
         return response()->json(['success' => true, 'msg' => 'Adelanto eliminado.']);
     }
 
+    public function perfilRrhh(int $id): JsonResponse
+    {
+        $agente = Agente::find($id);
+        if (! $agente) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+
+        $postulante = Schema::hasTable('postulantes_temp')
+            ? DB::table('postulantes_temp')
+                ->where('dni', $agente->dni)
+                ->where('estado', 'APROBADO')
+                ->orderByDesc('revisado_en')
+                ->first()
+            : null;
+
+        $campos = [
+            'telefono', 'correo', 'direccion', 'fecha_nacimiento', 'lugar_nacimiento',
+            'grupo_sanguineo', 'alergias', 'sistema_pension', 'nombre_afp', 'numero_cuspp',
+            'antecedentes_penales', 'antecedentes_policial', 'antecedentes_judicial',
+            'contactos_emergencia', 'carga_familiar', 'formacion_academica', 'experiencia_laboral',
+        ];
+
+        $perfil = [
+            'id' => $agente->id,
+            'dni' => $agente->dni,
+            'nombres' => $agente->nombres,
+            'apellidos' => $agente->apellidos,
+        ];
+        foreach ($campos as $campo) {
+            $valor = $agente->getAttribute($campo);
+            if (($valor === null || $valor === '' || $valor === []) && $postulante) {
+                $valor = $postulante->{$campo} ?? $valor;
+            }
+            if (in_array($campo, ['contactos_emergencia', 'carga_familiar', 'formacion_academica', 'experiencia_laboral'], true)) {
+                $valor = $this->normalizarLista($valor);
+            }
+            $perfil[$campo] = $valor;
+        }
+
+        return response()->json(['data' => $perfil]);
+    }
+
+    public function actualizarPerfilRrhh(int $id, Request $request): JsonResponse
+    {
+        $agente = Agente::find($id);
+        if (! $agente) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+
+        $validated = $request->validate([
+            'nombres' => 'sometimes|string|max:150',
+            'apellidos' => 'nullable|string|max:150',
+            'telefono' => 'nullable|string|max:15',
+            'correo' => 'nullable|email|max:120',
+            'direccion' => 'nullable|string|max:500',
+            'fecha_nacimiento' => 'nullable|date',
+            'lugar_nacimiento' => 'nullable|string|max:255',
+            'grupo_sanguineo' => 'nullable|string|max:10',
+            'alergias' => 'nullable|string|max:1000',
+            'sistema_pension' => 'nullable|string|max:50',
+            'nombre_afp' => 'nullable|string|max:50',
+            'numero_cuspp' => 'nullable|string|max:50',
+            'antecedentes_penales' => 'boolean',
+            'antecedentes_policial' => 'boolean',
+            'antecedentes_judicial' => 'boolean',
+            'contactos_emergencia' => 'array|max:10',
+            'carga_familiar' => 'array|max:20',
+            'formacion_academica' => 'array|max:20',
+            'experiencia_laboral' => 'array|max:20',
+        ]);
+
+        $columnasAgente = array_filter(
+            $validated,
+            fn ($value, $column) => Schema::hasColumn('agentes', $column),
+            ARRAY_FILTER_USE_BOTH
+        );
+        $agente->update($columnasAgente);
+
+        if (Schema::hasTable('postulantes_temp')) {
+            $columnasPostulante = array_filter(
+                $validated,
+                fn ($value, $column) => Schema::hasColumn('postulantes_temp', $column),
+                ARRAY_FILTER_USE_BOTH
+            );
+            foreach (['contactos_emergencia', 'carga_familiar', 'formacion_academica', 'experiencia_laboral'] as $json) {
+                if (array_key_exists($json, $columnasPostulante)) {
+                    $columnasPostulante[$json] = json_encode($columnasPostulante[$json], JSON_UNESCAPED_UNICODE);
+                }
+            }
+            if ($columnasPostulante) {
+                DB::table('postulantes_temp')
+                    ->where('dni', $agente->dni)
+                    ->where('estado', 'APROBADO')
+                    ->update($columnasPostulante);
+            }
+        }
+
+        return response()->json(['message' => 'Ficha RRHH actualizada.', 'data' => $agente->fresh()]);
+    }
+
+    public function boletas(int $id, Request $request): JsonResponse
+    {
+        if (! Agente::whereKey($id)->exists()) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+        if (! Schema::hasTable('pagos_planilla')) {
+            return response()->json(['data' => []]);
+        }
+
+        $boletas = DB::table('pagos_planilla')
+            ->where('agente_id', $id)
+            ->when($request->filled('desde'), fn ($q) => $q->whereDate('fecha_inicio', '>=', $request->input('desde')))
+            ->when($request->filled('hasta'), fn ($q) => $q->whereDate('fecha_fin', '<=', $request->input('hasta')))
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json(['data' => $boletas]);
+    }
+
+    public function estadoSeguridad(int $id): JsonResponse
+    {
+        $agente = Agente::find($id);
+        if (! $agente) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+
+        $expiracion = $agente->getAttribute('expiracion_token');
+        $tieneToken = $agente->getAttribute('token_emergencia')
+            && $expiracion
+            && now()->lt(\Illuminate\Support\Carbon::parse($expiracion));
+
+        return response()->json([
+            'dispositivo_vinculado' => (bool) $agente->getAttribute('hash_dispositivo'),
+            'fecha_registro_dispositivo' => $agente->getAttribute('fecha_registro_disp'),
+            'tienda_registro_inicial' => $agente->getAttribute('tienda_registro_inicial'),
+            'tiene_token' => (bool) $tieneToken,
+            'token' => $tieneToken ? $agente->getAttribute('token_emergencia') : null,
+            'tipo_token' => $tieneToken && str_starts_with((string) $expiracion, '2099') ? 'permanente' : ($tieneToken ? 'diario' : null),
+            'expiracion_token' => $tieneToken ? $expiracion : null,
+        ]);
+    }
+
+    public function resetDispositivo(int $id): JsonResponse
+    {
+        $agente = Agente::find($id);
+        if (! $agente) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+
+        $data = [];
+        foreach (['hash_dispositivo', 'token_emergencia', 'expiracion_token', 'fecha_registro_disp', 'tienda_registro_inicial'] as $column) {
+            if (Schema::hasColumn('agentes', $column)) {
+                $data[$column] = null;
+            }
+        }
+        DB::table('agentes')->where('id', $id)->update($data);
+
+        return response()->json(['message' => 'Dispositivo desvinculado y token revocado.']);
+    }
+
     // ── GET /agentes/exportar-ficha — E2: ficha técnica multi-hoja (paridad exportar_excel_agentes_pro) ──
     // Hoja "Personal" (listado) + 1 hoja por agente con datos RRHH de postulantes_temp.
     public function exportarFichaTecnica(Request $request): StreamedResponse
@@ -384,5 +544,19 @@ class AgenteController extends Controller
             }
             $r++;
         }
+    }
+
+    private function normalizarLista(mixed $valor): array
+    {
+        if (is_array($valor)) {
+            return $valor;
+        }
+        if (! is_string($valor) || trim($valor) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($valor, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 }

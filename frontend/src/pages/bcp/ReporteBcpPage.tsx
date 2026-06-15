@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { apiErrorData } from '../../lib/httpError'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
@@ -62,8 +63,8 @@ export function ReporteBcpPage() {
       setForm(f => ({ ...f, cantidad_operaciones: '', queda_efectivo: '', queda_tarjeta: '', incidencias_sistema: '', nombre_agente_bcp: '' }))
       qc.invalidateQueries({ queryKey: ['reporte-bcp'] })
     },
-    onError: (err: any) => {
-      setError(err?.response?.data?.message ?? 'Error al enviar reporte.')
+    onError: (err: unknown) => {
+      setError(apiErrorData(err).message ?? 'Error al enviar reporte.')
     },
   })
 

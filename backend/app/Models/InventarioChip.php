@@ -13,11 +13,13 @@ class InventarioChip extends Model
         'tienda_origen',
         'tipo_chip',
         'stock_actual',
+        'series_info',
     ];
 
     protected $casts = [
         'stock_actual' => 'integer',
         'tienda_id'    => 'integer',
+        'series_info'  => 'array',
     ];
 
     public function tienda()

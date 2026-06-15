@@ -183,8 +183,8 @@ class AsistenciaTest extends TestCase
             'radio_permitido' => 60,
         ]);
 
-        $bloque = (int) floor(time() / 5);
-        $hmac = substr(hash_hmac('sha256', "AST|T02|{$bloque}", config('app.key')), 0, 16);
+        $bloque = (int) floor(now()->timestamp / 5);
+        $hmac = substr(hash_hmac('sha256', "AST|T02|{$bloque}", config('attendance.qr_secret')), 0, 16);
 
         $this->postJson('/api/v1/attendance/mark-qr', [
             'dni' => '12345678',

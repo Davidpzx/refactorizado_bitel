@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
+import { apiErrorData } from '../../lib/httpError'
 import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -35,6 +36,21 @@ interface SaldoData {
   kpis: Kpis
 }
 
+interface BipayTransaction {
+  id: number
+  created_at: string
+  tipo_operacion: string
+  plataforma?: string | null
+  origen_alias?: string | null
+  destino_alias?: string | null
+  monto: number
+  observacion?: string | null
+}
+
+interface TransaccionesData {
+  data: BipayTransaction[]
+}
+
 export function PanelBipayPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas'>('saldo')
@@ -53,9 +69,9 @@ export function PanelBipayPage() {
   })
   const [txApplied, setTxApplied] = useState({ ...txFilters })
 
-  const { data: txData, isLoading: loadingTx } = useQuery({
+  const { data: txData, isLoading: loadingTx } = useQuery<TransaccionesData>({
     queryKey: ['bipay-transacciones', txApplied],
-    queryFn: () => api.get('/v1/bipay/transacciones', { params: txApplied }).then(r => r.data),
+    queryFn: () => api.get<TransaccionesData>('/v1/bipay/transacciones', { params: txApplied }).then(r => r.data),
     enabled: tab === 'transacciones',
   })
 
@@ -77,7 +93,7 @@ export function PanelBipayPage() {
       setRecargaForm(f => ({ ...f, monto_bipay: '', monto_anypay: '', referencia: '' }))
       qc.invalidateQueries({ queryKey: ['bipay-saldo'] })
     },
-    onError: (e: any) => setRecargaErr(e?.response?.data?.error ?? 'Error al registrar recarga.'),
+    onError: (error: unknown) => setRecargaErr(apiErrorData(error).error ?? 'Error al registrar recarga.'),
   })
 
   // D3 — Transferencia entre cuentas (admin)
@@ -86,7 +102,10 @@ export function PanelBipayPage() {
   const transferir = useMutation({
     mutationFn: (p: Record<string, unknown>) => api.post('/v1/bipay/transferir', p).then(r => r.data),
     onSuccess: (res) => { setTransMsg(res.message ?? 'Transferencia realizada.'); setTransErr(''); setTransForm(f => ({ ...f, monto: '', observacion: '' })); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
-    onError: (e: any) => setTransErr(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Error al transferir.'),
+    onError: (error: unknown) => {
+      const data = apiErrorData(error)
+      setTransErr(data.message ?? data.error ?? 'Error al transferir.')
+    },
   })
 
   // D3 — Ajuste manual de saldo (admin)
@@ -95,7 +114,10 @@ export function PanelBipayPage() {
   const ajustar = useMutation({
     mutationFn: (p: Record<string, unknown>) => api.post('/v1/bipay/ajustar', p).then(r => r.data),
     onSuccess: (res) => { setAjusteMsg(res.message ?? 'Saldo ajustado.'); setAjusteErr(''); setAjusteForm(f => ({ ...f, motivo: '' })); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
-    onError: (e: any) => setAjusteErr(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Error al ajustar.'),
+    onError: (error: unknown) => {
+      const data = apiErrorData(error)
+      setAjusteErr(data.message ?? data.error ?? 'Error al ajustar.')
+    },
   })
 
   // ── Gestión de cuentas (CRUD) — paridad legacy panel_bipay nueva/editar/eliminar ──
@@ -115,13 +137,13 @@ export function PanelBipayPage() {
       setCuentaMsg(res.message ?? 'Cuenta guardada.'); setCuentaErr(''); resetCuenta()
       qc.invalidateQueries({ queryKey: ['bipay-saldo'] })
     },
-    onError: (e: any) => setCuentaErr(e?.response?.data?.message ?? 'Error al guardar la cuenta.'),
+    onError: (error: unknown) => setCuentaErr(apiErrorData(error).message ?? 'Error al guardar la cuenta.'),
   })
 
   const eliminarCuenta = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/bipay/cuentas/${id}`).then(r => r.data),
     onSuccess: (res: { message?: string }) => { setCuentaMsg(res.message ?? 'Cuenta eliminada.'); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
-    onError: (e: any) => setCuentaErr(e?.response?.data?.message ?? 'Error al eliminar la cuenta.'),
+    onError: (error: unknown) => setCuentaErr(apiErrorData(error).message ?? 'Error al eliminar la cuenta.'),
   })
 
   const warning = saldoData?.warning
@@ -262,7 +284,7 @@ export function PanelBipayPage() {
                   {!loadingTx && (txData?.data ?? []).length === 0 && (
                     <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin transacciones en el período</td></tr>
                   )}
-                  {(txData?.data ?? []).map((tx: any) => (
+                  {(txData?.data ?? []).map(tx => (
                     <tr key={tx.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-yape/5">
                       <td className="px-4 py-3 text-xs tabular-nums text-gray-600 dark:text-zinc-400">{new Date(tx.created_at).toLocaleDateString('es-PE')}</td>
                       <td className="px-4 py-3">

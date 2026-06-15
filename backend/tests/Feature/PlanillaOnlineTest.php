@@ -16,11 +16,13 @@ class PlanillaOnlineTest extends TestCase
     public function test_comision_online_recargas_mas_bcp(): void
     {
         // Tablas legacy no migradas: se crean para el test (en el VPS ya existen).
-        Schema::create('config_comisiones', function (Blueprint $t) {
-            $t->id();
-            $t->string('tipo', 50);
-            $t->decimal('monto', 12, 2)->default(0);
-        });
+        if (! Schema::hasTable('config_comisiones')) {
+            Schema::create('config_comisiones', function (Blueprint $t) {
+                $t->id();
+                $t->string('tipo', 50);
+                $t->decimal('monto', 12, 2)->default(0);
+            });
+        }
         if (! Schema::hasTable('reportes_bcp')) {
             Schema::create('reportes_bcp', function (Blueprint $t) {
                 $t->id();

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { useCrearReporte, usePlanesComisiones } from '../../hooks/useReportes'
+import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -21,6 +21,8 @@ import { calcularCuadre, calcularComision, validarStock } from '../../lib/cuadre
 import { api } from '../../services/api'
 import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
+import { reportesApi } from '../../services/reportes.api'
+import type { VendedorReporte } from '../../types/reporte'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
@@ -56,6 +58,8 @@ const TIPOS_SALIDA = ['Pasaje','Gasto','Adelanto','Otro']
 // ── Zod ───────────────────────────────────────────────────────────────────────
 
 const ventaSchema = z.object({
+  venta_id:             z.number().int().positive().optional(),
+  vendedor_id:          z.number().int().min(1, 'Selecciona el vendedor'),
   tipo_venta:           z.enum(['EQUIPO','ACCESORIO','POSTPAGO','PREPAGO','OTROS_FLUJO','APOYO']),
   subtipo:              z.string().optional().or(z.literal('')),
   monto_total:          z.number().min(0),
@@ -97,6 +101,7 @@ const schema = z.object({
   recarga_bipay:      z.number().min(0),
   pago_servicio:      z.number().min(0),
   pago_krece:         z.number().min(0),
+  pago_payjoy:        z.number().min(0),
   tickets_tusamy:     z.number().min(0),
   efectivo_entregado: z.number().min(0),
   total_salidas:      z.number().min(0),
@@ -110,6 +115,7 @@ type FormData     = z.infer<typeof schema>
 type VentaFormData = z.infer<typeof ventaSchema>
 
 const VENTA_DEFAULT: VentaFormData = {
+  vendedor_id:0,
   tipo_venta:'POSTPAGO', subtipo:'', monto_total:0, efectivo_inicial:0,
   cross_selling:false, tienda_destino:'', es_remate:false, es_extranjero:false,
   es_migracion:false, es_upgrade:false, es_esim:false, plan_anterior:0,
@@ -119,14 +125,33 @@ const VENTA_DEFAULT: VentaFormData = {
   cobrado_unitario:0, comision_unitaria:0,
 }
 
-// ── Salidas locales (no van al schema, se suman en total_salidas) ─────────────
+// ── Salidas detalladas ────────────────────────────────────────────────────────
 
 type SalidaItem = { id: string; tipo: string; monto: number; motivo: string }
+
+function VendedorSelect({
+  index, register, vendedores,
+}: {
+  index: number
+  register: ReturnType<typeof useForm<FormData>>['register']
+  vendedores: VendedorReporte[]
+}) {
+  return (
+    <Select {...register(`ventas.${index}.vendedor_id`, { valueAsNumber: true })} className="kyro-input h-8 text-xs">
+      <option value={0}>Vendedor...</option>
+      {vendedores.map((v) => (
+        <option key={v.id} value={v.id}>
+          {v.nombres} ({v.tienda_base})
+        </option>
+      ))}
+    </Select>
+  )
+}
 
 // ── Componente: fila compacta para POSTPAGO / PREPAGO ────────────────────────
 
 function LineaRow({
-  index, register, control, errors, tipo, onRemove, planes,
+  index, register, control, errors, tipo, onRemove, planes, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
@@ -135,12 +160,14 @@ function LineaRow({
   tipo: 'POSTPAGO' | 'PREPAGO'
   onRemove: () => void
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
+  vendedores: VendedorReporte[]
 }) {
   const up = useWatch({ control, name: `ventas.${index}.es_upgrade` })
   const e  = errors.ventas?.[index]
 
   return (
-    <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+    <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+      <VendedorSelect index={index} register={register} vendedores={vendedores} />
       <div>
         <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Celular" maxLength={15} className="kyro-input h-8 text-xs" />
       </div>
@@ -199,17 +226,19 @@ function LineaRow({
 // ── Componente: fila para VENTAS DE APOYO (otras tiendas) ────────────────────
 
 function ApoyoRow({
-  index, register, errors, onRemove, planes,
+  index, register, errors, onRemove, planes, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   onRemove: () => void
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
+  vendedores: VendedorReporte[]
 }) {
   const e = errors.ventas?.[index]
   return (
-    <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+    <div className="grid grid-cols-[150px_130px_1fr_70px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+      <VendedorSelect index={index} register={register} vendedores={vendedores} />
       <div>
         <Select {...register(`ventas.${index}.tienda_destino`)} className="kyro-input h-8 text-xs">
           <option value="">— Tienda —</option>
@@ -239,7 +268,7 @@ function ApoyoRow({
 // ── Componente: fila compacta para EQUIPO / ACCESORIO ────────────────────────
 
 function EquipoRow({
-  index, register, control, errors, onRemove, items, setValue,
+  index, register, control, errors, onRemove, items, setValue, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
@@ -248,6 +277,7 @@ function EquipoRow({
   onRemove: () => void
   items: InventarioItem[]
   setValue: ReturnType<typeof useForm<FormData>>['setValue']
+  vendedores: VendedorReporte[]
 }) {
   const tipoPago    = useWatch({ control, name: `ventas.${index}.tipo_pago` })
   const productoNom = useWatch({ control, name: `ventas.${index}.producto_nombre` })
@@ -260,7 +290,8 @@ function EquipoRow({
 
   return (
     <div className="space-y-1 py-1.5 border-b border-kyro-border last:border-0">
-      <div className="grid grid-cols-[1fr_140px_110px_90px_auto] gap-1.5 items-end">
+      <div className="grid grid-cols-[150px_1fr_140px_110px_90px_auto] gap-1.5 items-end">
+        <VendedorSelect index={index} register={register} vendedores={vendedores} />
         <div>
           <Input {...reg} list="inv-equipos-datalist"
             placeholder="Producto (nombre o búsqueda)" className="kyro-input h-8 text-xs"
@@ -328,16 +359,18 @@ function EquipoRow({
 // ── Componente: fila compacta para OTROS_FLUJO ───────────────────────────────
 
 function OtroRow({
-  index, register, errors, onRemove,
+  index, register, errors, onRemove, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   onRemove: () => void
+  vendedores: VendedorReporte[]
 }) {
   const e = errors.ventas?.[index]
   return (
-    <div className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+    <div className="grid grid-cols-[150px_1fr_100px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
+      <VendedorSelect index={index} register={register} vendedores={vendedores} />
       <div>
         <Input {...register(`ventas.${index}.subtipo`)} placeholder="Descripción / Motivo" className="kyro-input h-8 text-xs" />
       </div>
@@ -353,11 +386,24 @@ function OtroRow({
 
 // ── Página principal ──────────────────────────────────────────────────────────
 
-export function NuevoReportePage() {
+type NuevoReportePageProps = {
+  mode?: 'create' | 'edit'
+}
+
+export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const navigate    = useNavigate()
+  const { id }      = useParams<{ id: string }>()
   const { usuario } = useAuth()
-  const crear       = useCrearReporte()
   const { data: planesData = [] } = usePlanesComisiones()
+  const esEdicion = mode === 'edit'
+  const reporteId = Number(id ?? 0)
+  const inicializadoRef = useRef(false)
+
+  const { data: reporteEditar, isLoading: cargandoReporte } = useQuery({
+    queryKey: ['reporte', reporteId],
+    queryFn: () => reportesApi.obtener(reporteId),
+    enabled: esEdicion && reporteId > 0,
+  })
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -365,11 +411,11 @@ export function NuevoReportePage() {
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: {
-        agente_id: usuario?.id ?? 0, tienda_id: usuario?.tienda_id ?? '',
+        agente_id: usuario?.agente_id ?? 0, tienda_id: usuario?.tienda_id ?? '',
         fecha: today, nombre_cubre: '',
         caja_inicial: 0, yape: 0, bipay: 0, transferencia: 0,
         retiro_bipay: 0, recarga_bipay: 0, pago_servicio: 0,
-        pago_krece: 0, tickets_tusamy: 0,
+        pago_krece: 0, pago_payjoy: 0, tickets_tusamy: 0,
         efectivo_entregado: 0, total_salidas: 0,
         destino_efectivo: 'EN_CAJA', observaciones: '', obs_dia: '',
         ventas: [],
@@ -377,16 +423,116 @@ export function NuevoReportePage() {
     })
 
   useEffect(() => {
-    if (usuario) {
-      setValue('agente_id', usuario.id)
+    if (usuario && !esEdicion) {
+      setValue('agente_id', usuario.agente_id ?? 0)
       setValue('tienda_id', usuario.tienda_id)
     }
-  }, [usuario, setValue])
+  }, [esEdicion, usuario, setValue])
 
   const { fields, append, remove } = useFieldArray({ control, name: 'ventas' })
 
   // ── Salidas de efectivo (estado local) ─────────────────────────────────────
   const [salidaItems, setSalidaItems] = useState<SalidaItem[]>([])
+
+  useEffect(() => {
+    if (!esEdicion || !reporteEditar || inicializadoRef.current) return
+
+    const ventasIniciales: VentaFormData[] = reporteEditar.ventas.map((venta) => {
+      const nombrePlan = venta.linea?.plan_nombre_snap ?? ''
+      const tipoPago = venta.equipo?.tipo_pago === 'CUOTAS' ? 'CUOTAS' : 'CONTADO'
+
+      return {
+        ...VENTA_DEFAULT,
+        venta_id: venta.id,
+        vendedor_id: venta.vendedor_id,
+        tipo_venta: venta.tipo_venta,
+        subtipo: venta.subtipo ?? '',
+        monto_total: Number(venta.monto_total),
+        efectivo_inicial: Number(venta.efectivo_inicial),
+        cross_selling: venta.cross_selling,
+        tienda_destino: venta.tienda_destino ?? '',
+        es_remate: venta.es_remate,
+        es_extranjero: venta.es_extranjero,
+        es_migracion: nombrePlan.toUpperCase().includes('MIGRACI'),
+        es_upgrade: nombrePlan.toUpperCase().includes('UPGRADE'),
+        es_esim: venta.linea?.es_esim ?? false,
+        cliente_dni: venta.cliente?.dni_ruc ?? '',
+        inventario_tienda_id: venta.equipo?.inventario_tienda_id ?? 0,
+        producto_nombre: venta.equipo?.producto_nombre_snap ?? '',
+        imei_serial: venta.equipo?.imei_serial_snap ?? '',
+        tipo_pago: tipoPago,
+        financiera: venta.equipo?.financiera ?? '',
+        precio_venta: Number(venta.equipo?.precio_venta ?? venta.monto_total),
+        costo_snap: Number(venta.equipo?.costo_snap ?? 0),
+        por_cobrar_financiera: Number(venta.equipo?.por_cobrar_financiera ?? 0),
+        plan_nombre: nombrePlan,
+        tipo_alta: venta.linea?.tipo_alta ?? 'MNP',
+        cantidad: venta.linea?.cantidad ?? 1,
+        cobrado_unitario: Number(venta.linea?.cobrado_unitario ?? venta.monto_total),
+        comision_unitaria: Number(venta.linea?.comision_unitaria ?? 0),
+      }
+    })
+
+    const destino = ['TIENDA', 'ENTREGADO', 'EN_CAJA'].includes(reporteEditar.destino_efectivo)
+      ? reporteEditar.destino_efectivo as FormData['destino_efectivo']
+      : 'EN_CAJA'
+
+    reset({
+      agente_id: reporteEditar.agente_id,
+      tienda_id: reporteEditar.tienda_id,
+      fecha: reporteEditar.fecha,
+      nombre_cubre: reporteEditar.nombre_cubre ?? '',
+      caja_inicial: Number(reporteEditar.caja_inicial),
+      yape: Number(reporteEditar.yape),
+      bipay: Number(reporteEditar.bipay),
+      transferencia: Number(reporteEditar.transferencia),
+      retiro_bipay: Number(reporteEditar.retiro_bipay),
+      recarga_bipay: Number(reporteEditar.recarga_bipay),
+      pago_servicio: Number(reporteEditar.pago_servicio),
+      pago_krece: Number(reporteEditar.pago_krece),
+      pago_payjoy: Number(reporteEditar.pago_payjoy ?? 0),
+      tickets_tusamy: Number(reporteEditar.tickets_tusamy),
+      efectivo_entregado: Number(reporteEditar.efectivo_entregado),
+      total_salidas: Number(reporteEditar.total_salidas),
+      destino_efectivo: destino,
+      observaciones: reporteEditar.observaciones ?? '',
+      obs_dia: reporteEditar.obs_dia ?? '',
+      ventas: ventasIniciales,
+    })
+
+    const totalSalidas = Number(reporteEditar.total_salidas)
+    setSalidaItems(reporteEditar.salidas?.length
+      ? reporteEditar.salidas.map(salida => ({
+          id: crypto.randomUUID(),
+          tipo: salida.tipo.charAt(0).toUpperCase() + salida.tipo.slice(1),
+          monto: Number(salida.monto),
+          motivo: salida.observacion ?? '',
+        }))
+      : totalSalidas > 0
+        ? [{ id: crypto.randomUUID(), tipo: 'Otro', monto: totalSalidas, motivo: 'Total previo sin desglose' }]
+        : [])
+    inicializadoRef.current = true
+  }, [esEdicion, reporteEditar, reset])
+
+  const guardar = useMutation({
+    mutationFn: (data: FormData) => {
+      const payload = {
+        ...data,
+        usuario_id: usuario?.id ?? 0,
+        salidas: salidaItems
+          .filter(salida => Number(salida.monto) > 0)
+          .map(salida => ({
+            tipo: salida.tipo.toLowerCase() as 'adelanto' | 'gasto' | 'pasaje' | 'otro',
+            monto: Number(salida.monto),
+            observacion: salida.motivo,
+          })),
+      }
+      return esEdicion
+        ? reportesApi.reprocesar(reporteId, payload)
+        : reportesApi.crear(payload)
+    },
+    onSuccess: () => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial'),
+  })
 
   const agregarSalida = () =>
     setSalidaItems(prev => [...prev, { id: crypto.randomUUID(), tipo: 'Pasaje', monto: 0, motivo: '' }])
@@ -403,7 +549,7 @@ export function NuevoReportePage() {
   }, [salidaItems, setValue])
 
   // ── Borrador en la nube (auto-save 60s + manual) ──────────────────────────────
-  const esTienda = usuario?.rol === 'tienda'
+  const esTienda = usuario?.rol === 'tienda' && !esEdicion
   const [borradorMsg, setBorradorMsg] = useState('')
   const [borradorDisponible, setBorradorDisponible] = useState<Record<string, unknown> | null>(null)
   const [ticketDesc, setTicketDesc] = useState<string | null>(null)
@@ -426,7 +572,15 @@ export function NuevoReportePage() {
 
   function restaurarBorrador(data: Record<string, unknown>) {
     const d = data as { form?: FormData; salidaItems?: SalidaItem[] }
-    if (d.form) reset(d.form)
+    if (d.form) {
+      reset({
+        ...d.form,
+        ventas: (d.form.ventas ?? []).map((venta) => ({
+          ...venta,
+          vendedor_id: venta.vendedor_id || usuario?.agente_id || 0,
+        })),
+      })
+    }
     if (Array.isArray(d.salidaItems)) setSalidaItems(d.salidaItems)
     setBorradorDisponible(null)
     setBorradorMsg('Borrador cargado')
@@ -463,6 +617,7 @@ export function NuevoReportePage() {
 
   // ── Totales en tiempo real ─────────────────────────────────────────────────
   const ventas            = watch('ventas')
+  const tiendaSeleccionada= watch('tienda_id')
   const caja_inicial      = watch('caja_inicial')      || 0
   const total_salidas     = watch('total_salidas')     || 0
   const yape              = watch('yape')              || 0
@@ -472,6 +627,7 @@ export function NuevoReportePage() {
   const recarga_bipay     = watch('recarga_bipay')     || 0
   const pago_servicio     = watch('pago_servicio')     || 0
   const pago_krece        = watch('pago_krece')        || 0
+  const pago_payjoy       = watch('pago_payjoy')       || 0
   const tickets_tusamy    = watch('tickets_tusamy')    || 0
   const efectivo_entregado= watch('efectivo_entregado')|| 0
   const destino           = watch('destino_efectivo')
@@ -531,7 +687,7 @@ export function NuevoReportePage() {
   const totalEquipos      = sub(['EQUIPO','ACCESORIO'])
   const totalOtrosFlujo   = sub('OTROS_FLUJO')
   const totalApoyo        = sub('APOYO')
-  const ingresosFijos     = recarga_bipay + pago_servicio + pago_krece + tickets_tusamy
+  const ingresosFijos     = recarga_bipay + pago_servicio + pago_krece + pago_payjoy + tickets_tusamy
   const otrosFijos        = totalOtrosFlujo + ingresosFijos
 
   // total_sistema (legacy): suma de las 5 secciones de venta
@@ -562,25 +718,47 @@ export function NuevoReportePage() {
 
   // ── Inventario de la tienda para el datalist de equipos (T7) ───────────────
   const { data: invData } = useQuery({
-    queryKey: ['inventario-cuadre', usuario?.tienda_id],
-    queryFn: () => inventarioApi.listar({ tienda: usuario?.tienda_id, per_page: 300 }).then((r) => r.data),
-    staleTime: 60_000, retry: false, enabled: esTienda,
+    queryKey: ['inventario-cuadre', tiendaSeleccionada],
+    queryFn: () => inventarioApi.listar({ tienda: tiendaSeleccionada, per_page: 300 }).then((r) => r.data),
+    staleTime: 60_000, retry: false, enabled: !!tiendaSeleccionada,
   })
   const inventarioItems = (invData ?? []).filter(
     it => it.estado === 'DISPONIBLE' && (it.tipo === 'EQUIPO' || it.tipo === 'ACCESORIO'),
   )
 
+  const { data: vendedores = [] } = useQuery({
+    queryKey: ['vendedores-reporte', tiendaSeleccionada],
+    queryFn: () => reportesApi.vendedores(tiendaSeleccionada),
+    staleTime: 60_000,
+    enabled: !!tiendaSeleccionada,
+  })
+
+  const ventaNueva = (overrides: Partial<VentaFormData>): VentaFormData => ({
+    ...VENTA_DEFAULT,
+    vendedor_id: usuario?.agente_id ?? reporteEditar?.agente_id ?? 0,
+    ...overrides,
+  })
+
   const onSubmit = (data: FormData) => {
-    crear.mutate(
-      { ...data, usuario_id: usuario?.id ?? data.agente_id },
-      { onSuccess: () => navigate('/reportes') },
+    guardar.mutate(data)
+  }
+
+  if (esEdicion && cargandoReporte) {
+    return <div className="flex h-64 items-center justify-center text-sm text-kyro-muted">Cargando reporte...</div>
+  }
+
+  if (esEdicion && (!reporteEditar || reporteEditar.estado_edicion !== 'APROBADO' || usuario?.rol !== 'admin')) {
+    return (
+      <div className="kyro-card mx-auto max-w-xl p-6 text-center text-sm text-kyro-warning">
+        El reprocesado completo requiere una edición aprobada y una cuenta administradora.
+      </div>
     )
   }
 
   return (
     <div className="max-w-[1100px] mx-auto">
       <PageHeader
-        title="Registrar Cuadre Diario"
+        title={esEdicion ? `Editar Cuadre #${reporteId}` : 'Registrar Cuadre Diario'}
         description="Cierre de caja y ventas del día."
         actions={
           <div className="flex items-center gap-2">
@@ -597,7 +775,7 @@ export function NuevoReportePage() {
               </Button>
             )}
             {borradorMsg && <span className="text-xs text-kyro-muted">{borradorMsg}</span>}
-            <Button variant="outline" onClick={() => navigate('/reportes')}>Cancelar</Button>
+            <Button variant="outline" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')}>Cancelar</Button>
           </div>
         }
       />
@@ -646,18 +824,18 @@ export function NuevoReportePage() {
               title="Ventas Postpago" accent={ACCENT.postpago}
               count={postpagoRows.length} addLabel="Agregar Postpago"
               subtotal={totalPostpago}
-              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' })}
+              onAdd={() => append(ventaNueva({ tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' }))}
             >
               {postpagoRows.length > 0 && (
-                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
-                  <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
+                <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
+                  <span>Vendedor</span><span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
               {postpagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : postpagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="POSTPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
+                      errors={errors} tipo="POSTPAGO" planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -665,18 +843,18 @@ export function NuevoReportePage() {
               title="Ventas Prepago / Chips" accent={ACCENT.prepago}
               count={prepagoRows.length} addLabel="Agregar Prepago"
               subtotal={totalPrepago}
-              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'PREPAGO', tipo_alta: 'LN' })}
+              onAdd={() => append(ventaNueva({ tipo_venta: 'PREPAGO', tipo_alta: 'LN' }))}
             >
               {prepagoRows.length > 0 && (
-                <div className="grid grid-cols-[120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
-                  <span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
+                <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
+                  <span>Vendedor</span><span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
                 </div>
               )}
               {prepagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : prepagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="PREPAGO" planes={planesData} onRemove={() => remove(v.idx)} />
+                      errors={errors} tipo="PREPAGO" planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -684,7 +862,7 @@ export function NuevoReportePage() {
               title="Equipos y Accesorios" accent={ACCENT.equipos}
               count={equipoRows.length} addLabel="Vender de Stock"
               subtotal={totalEquipos}
-              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'EQUIPO' })}
+              onAdd={() => append(ventaNueva({ tipo_venta: 'EQUIPO' }))}
             >
               <datalist id="inv-equipos-datalist">
                 {inventarioItems.map(it => (
@@ -697,11 +875,11 @@ export function NuevoReportePage() {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
                     <EquipoRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} />
+                      errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} vendedores={vendedores} />
                   ))}
               {equipoRows.length > 0 && (
                 <button type="button"
-                  onClick={() => append({ ...VENTA_DEFAULT, tipo_venta: 'ACCESORIO' })}
+                  onClick={() => append(ventaNueva({ tipo_venta: 'ACCESORIO' }))}
                   className="text-xs font-medium mt-1 text-kyro-indigo hover:text-kyro-gold">
                   + Agregar Accesorio
                 </button>
@@ -712,12 +890,12 @@ export function NuevoReportePage() {
               title="Otros Ingresos (Flujo)" accent={ACCENT.otros}
               count={otrosRows.length} addLabel="Agregar"
               subtotal={totalOtrosFlujo}
-              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'OTROS_FLUJO' })}
+              onAdd={() => append(ventaNueva({ tipo_venta: 'OTROS_FLUJO' }))}
             >
               {otrosRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : otrosRows.map(v => (
-                    <OtroRow key={v.id} index={v.idx} register={register} errors={errors} onRemove={() => remove(v.idx)} />
+                    <OtroRow key={v.id} index={v.idx} register={register} errors={errors} vendedores={vendedores} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -725,18 +903,18 @@ export function NuevoReportePage() {
               title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo}
               count={apoyoRows.length} addLabel="Agregar Venta de Apoyo"
               subtotal={totalApoyo}
-              onAdd={() => append({ ...VENTA_DEFAULT, tipo_venta: 'APOYO', tipo_alta: 'LN' })}
+              onAdd={() => append(ventaNueva({ tipo_venta: 'APOYO', tipo_alta: 'LN' }))}
             >
               {apoyoRows.length > 0 && (
-                <div className="grid grid-cols-[130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
-                  <span>Tienda</span><span>Plan</span><span>Cant</span><span>Cobrado c/u</span><span />
+                <div className="grid grid-cols-[150px_130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
+                  <span>Vendedor</span><span>Tienda</span><span>Plan</span><span>Cant</span><span>Cobrado c/u</span><span />
                 </div>
               )}
               {apoyoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin ventas de apoyo.</p>
                 : apoyoRows.map(v => (
                     <ApoyoRow key={v.id} index={v.idx} register={register} errors={errors}
-                      planes={planesData} onRemove={() => remove(v.idx)} />
+                      planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -804,6 +982,7 @@ export function NuevoReportePage() {
                 ['recarga_bipay', 'Recarga Bipay'],
                 ['pago_servicio', 'Pago de Servicio'],
                 ['pago_krece',    'Pago Krece'],
+                ['pago_payjoy',   'Pago Payjoy'],
                 ['tickets_tusamy','Tickets Tusamy'],
               ] as const).map(([field, label]) => (
                 <div key={field} className="flex items-center gap-2">
@@ -941,9 +1120,9 @@ export function NuevoReportePage() {
           </div>
         </div>
 
-        {crear.isError && (
+        {guardar.isError && (
           <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2">
-            {(crear.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+            {(guardar.error as { response?: { data?: { error?: string } } })?.response?.data?.error
               ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
           </p>
         )}
@@ -955,11 +1134,11 @@ export function NuevoReportePage() {
         )}
 
         <div className="flex gap-3 pb-8">
-          <Button type="submit" disabled={crear.isPending || stockInsuficiente}
+          <Button type="submit" disabled={guardar.isPending || stockInsuficiente}
             className="flex-1 h-11 text-base font-semibold bg-kyro-gold hover:brightness-110 text-kyro-gold-ink border-kyro-gold">
-            {stockInsuficiente ? 'STOCK INSUFICIENTE' : crear.isPending ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
+            {stockInsuficiente ? 'STOCK INSUFICIENTE' : guardar.isPending ? 'Guardando reporte...' : esEdicion ? 'Aplicar Reprocesado Completo' : 'Guardar Reporte Completo'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/reportes')} disabled={crear.isPending}>
+          <Button type="button" variant="outline" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')} disabled={guardar.isPending}>
             Cancelar
           </Button>
         </div>
@@ -972,7 +1151,7 @@ export function NuevoReportePage() {
           onClose={() => setTicketDesc(null)}
           defaultDescripcion={ticketDesc ?? ''}
           tiendaId={usuario?.tienda_id ?? ''}
-          agenteId={usuario?.id ?? 0}
+          agenteId={usuario?.agente_id ?? 0}
           vendedor={usuario?.nombre ?? ''}
         />
       )}

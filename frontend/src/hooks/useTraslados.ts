@@ -33,6 +33,15 @@ export function useConfirmarTraslado() {
   })
 }
 
+export function useConfirmarLoteTraslado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ codigoLote, data }: { codigoLote: string; data: ConfirmarTrasladoPayload }) =>
+      trasladosApi.confirmarLote(codigoLote, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['traslados'] }),
+  })
+}
+
 export function useGestionarTraslado() {
   const qc = useQueryClient()
   return useMutation({

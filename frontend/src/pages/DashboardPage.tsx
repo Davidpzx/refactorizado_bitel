@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
+import { apiErrorData } from '../lib/httpError'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ function ModalEditarDestino({
           {DESTINOS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         {error && (
-          <p className="text-xs text-red-600">{(error as any)?.response?.data?.error ?? 'Error al actualizar'}</p>
+          <p className="text-xs text-red-600">{apiErrorData(error).error ?? 'Error al actualizar'}</p>
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

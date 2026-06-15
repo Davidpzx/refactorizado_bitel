@@ -99,7 +99,7 @@ class ConstanciaController extends Controller
     public function agente(int $id)
     {
         $agente = DB::table('agentes as a')
-            ->leftJoin('tiendas as t', 't.codigo', '=', 'a.tienda_id')
+            ->leftJoin('tiendas as t', 't.codigo', '=', 'a.tienda_base')
             ->where('a.id', $id)
             ->select('a.*', 't.nombre as tienda_nombre')
             ->first();

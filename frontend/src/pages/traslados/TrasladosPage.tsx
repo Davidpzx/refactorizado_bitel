@@ -7,6 +7,7 @@ import {
   useTraslados,
   useCrearTraslado,
   useConfirmarTraslado,
+  useConfirmarLoteTraslado,
   useGestionarTraslado,
 } from '../../hooks/useTraslados'
 import { useAuth } from '../../hooks/useAuth'
@@ -173,25 +174,36 @@ function CrearTrasladoDialog({
 
 function ConfirmarDialog({
   traslado,
+  lote = false,
   onClose,
 }: {
   traslado: Traslado | null
+  lote?: boolean
   onClose: () => void
 }) {
   const confirmar = useConfirmarTraslado()
+  const confirmarLote = useConfirmarLoteTraslado()
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ConfirmarForm>({
     resolver: zodResolver(confirmarSchema),
   })
 
   const onSubmit = (data: ConfirmarForm) => {
     if (!traslado) return
+    if (lote && traslado.codigo_lote) {
+      confirmarLote.mutate(
+        { codigoLote: traslado.codigo_lote, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
+        { onSuccess: () => { reset(); onClose() } },
+      )
+      return
+    }
     confirmar.mutate(
       { id: traslado.id, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
       { onSuccess: () => { reset(); onClose() } },
     )
   }
 
-  const mutError = confirmar.error as { response?: { data?: { message?: string } } } | null
+  const mutError = (confirmar.error || confirmarLote.error) as { response?: { data?: { message?: string } } } | null
+  const isPending = confirmar.isPending || confirmarLote.isPending
 
   return (
     <Dialog open={!!traslado} onClose={onClose} title="Confirmar Recepción" maxWidth="sm">
@@ -231,10 +243,10 @@ function ConfirmarDialog({
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={confirmar.isPending} className="flex-1">
+          <Button type="submit" disabled={isPending} className="flex-1">
             {confirmar.isPending ? 'Confirmando...' : 'Confirmar Recepción'}
           </Button>
-          <Button type="button" variant="outline" onClick={onClose} disabled={confirmar.isPending}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             Cancelar
           </Button>
         </div>
@@ -246,6 +258,7 @@ function ConfirmarDialog({
 function getColumns(
   usuario: { rol: string; tienda_id: string } | null,
   onConfirmar: (t: Traslado) => void,
+  onConfirmarLote: (t: Traslado) => void,
   onGestionar: (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => void,
   gestionando: boolean,
 ): ColumnDef<Traslado>[] {
@@ -289,6 +302,11 @@ function getColumns(
             {puedeConfirmar && (
               <Button size="sm" variant="outline" onClick={() => onConfirmar(t)}>
                 Confirmar
+              </Button>
+            )}
+            {puedeConfirmar && t.codigo_lote && (
+              <Button size="sm" onClick={() => onConfirmarLote(t)}>
+                Confirmar lote
               </Button>
             )}
             {puedeAprobarRechazar && (
@@ -337,6 +355,7 @@ export function TrasladosPage() {
   const [destino, setDestino]       = useState('')
   const [dialogCrear, setDialogCrear]       = useState(false)
   const [trasladoConfirmar, setTrasladoConfirmar] = useState<Traslado | null>(null)
+  const [loteConfirmar, setLoteConfirmar] = useState<Traslado | null>(null)
 
   const { data, isLoading } = useTraslados({
     estado:         estado   || undefined,
@@ -366,6 +385,7 @@ export function TrasladosPage() {
   const columns = getColumns(
     usuario ? { rol: usuario.rol, tienda_id: usuario.tienda_id } : null,
     setTrasladoConfirmar,
+    setLoteConfirmar,
     handleGestionar,
     gestionar.isPending,
   )
@@ -443,6 +463,11 @@ export function TrasladosPage() {
       <ConfirmarDialog
         traslado={trasladoConfirmar}
         onClose={() => setTrasladoConfirmar(null)}
+      />
+      <ConfirmarDialog
+        traslado={loteConfirmar}
+        lote
+        onClose={() => setLoteConfirmar(null)}
       />
     </div>
   )

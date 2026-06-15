@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TrasladoController extends Controller
 {
@@ -270,7 +271,9 @@ class TrasladoController extends Controller
             $confirmadoPorId = $authAgenteId;
         } else {
             if (empty($authDni)) {
-                $usuarioDni = DB::table('usuarios')->where('id', $user->id)->value('dni');
+                $usuarioDni = Schema::hasColumn('usuarios', 'dni')
+                    ? DB::table('usuarios')->where('id', $user->id)->value('dni')
+                    : null;
                 $authDni    = $usuarioDni ?? '';
             }
         }
@@ -356,6 +359,143 @@ class TrasladoController extends Controller
             'success'     => true,
             'traslado_id' => $id,
             'message'     => "Recepción confirmada. {$result['cant']} ud. de \"{$result['nombre']}\" recibidos en {$result['destino']}.",
+        ]);
+    }
+
+    // POST /traslados/lote/{codigoLote}/confirmar
+    // Confirma todos los items pendientes del lote en una sola transaccion.
+    public function confirmarLote(Request $request, string $codigoLote): JsonResponse
+    {
+        $user = Auth::user();
+        $esAdmin = $user->rol === 'admin';
+        $codigoLote = trim($codigoLote);
+        $observacion = substr(trim($request->input('observacion', '')), 0, 200);
+        $authAgenteId = (int) $request->input('auth_agente_id', 0);
+        $authDni = trim($request->input('auth_dni', ''));
+        $confirmadoPorId = null;
+
+        if ($codigoLote === '') {
+            return response()->json(['success' => false, 'message' => 'Codigo de lote requerido.'], 422);
+        }
+
+        if (! $esAdmin) {
+            if (! $authAgenteId || ! $authDni) {
+                return response()->json(['success' => false, 'message' => 'Credenciales de autorizacion requeridas.'], 422);
+            }
+            $agente = Agente::whereKey($authAgenteId)
+                ->whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
+                ->where('estado', 'ACTIVO')
+                ->first();
+            if (! $agente) {
+                return response()->json(['success' => false, 'message' => 'Credenciales invalidas o agente no activo.'], 403);
+            }
+            $confirmadoPorId = $authAgenteId;
+        } elseif ($authDni === '' && Schema::hasColumn('usuarios', 'dni')) {
+            $authDni = (string) (DB::table('usuarios')->where('id', $user->id)->value('dni') ?? '');
+        }
+
+        try {
+            $resultado = DB::transaction(function () use (
+                $codigoLote,
+                $user,
+                $esAdmin,
+                $observacion,
+                $confirmadoPorId,
+                $authDni
+            ) {
+                $traslados = TrasladoStock::where('codigo_lote', $codigoLote)
+                    ->where('estado', 'PENDIENTE')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($traslados->isEmpty()) {
+                    throw new \RuntimeException('No hay items pendientes para este lote.');
+                }
+
+                $destinos = $traslados->pluck('tienda_destino')->unique();
+                if ($destinos->count() !== 1) {
+                    throw new \RuntimeException('El lote contiene mas de una tienda destino.');
+                }
+                $destino = (string) $destinos->first();
+                if (! $esAdmin && $destino !== (string) $user->tienda_id) {
+                    throw new \RuntimeException('Solo la tienda destino puede confirmar este lote.');
+                }
+
+                $confirmados = [];
+                foreach ($traslados as $traslado) {
+                    $origen = InventarioTienda::whereKey($traslado->producto_id)
+                        ->where('estado', 'TRASLADO')
+                        ->lockForUpdate()
+                        ->first();
+                    if (! $origen) {
+                        throw new \RuntimeException("Item {$traslado->id}: producto no encontrado en transito.");
+                    }
+
+                    $cantidad = (int) $traslado->cantidad;
+                    $nombre = $origen->producto_nombre;
+                    $imei = $origen->imei_serial;
+                    $tipo = $origen->tipo;
+                    $precios = [
+                        'precio_costo' => $origen->precio_costo,
+                        'precio_minimo' => $origen->precio_minimo,
+                        'precio_normal' => $origen->precio_normal,
+                    ];
+
+                    $origen->delete();
+
+                    $destinoId = null;
+                    if ($tipo === 'ACCESORIO') {
+                        $existente = InventarioTienda::where('tienda_id', $destino)
+                            ->where('producto_nombre', $nombre)
+                            ->where('tipo', 'ACCESORIO')
+                            ->where('estado', 'DISPONIBLE')
+                            ->lockForUpdate()
+                            ->first();
+                        if ($existente) {
+                            $existente->increment('cantidad', $cantidad);
+                            $destinoId = $existente->id;
+                        }
+                    }
+
+                    if (! $destinoId) {
+                        $nuevo = InventarioTienda::create([
+                            'tienda_id' => $destino,
+                            'tipo' => $tipo,
+                            'producto_nombre' => $nombre,
+                            'imei_serial' => $imei,
+                            'cantidad' => $cantidad,
+                            ...$precios,
+                            'estado' => 'DISPONIBLE',
+                            'fecha_registro' => now(),
+                        ]);
+                        $destinoId = $nuevo->id;
+                    }
+
+                    $traslado->update([
+                        'producto_id' => $destinoId,
+                        'producto_nombre_snap' => $nombre,
+                        'imei_serial_snap' => $imei,
+                        'estado' => 'CONFIRMADO',
+                        'fecha_confirmacion' => now(),
+                        'confirmado_por_id' => $confirmadoPorId,
+                        'confirmado_dni' => $authDni ?: null,
+                        'observacion_recepcion' => $observacion ?: null,
+                    ]);
+                    $confirmados[] = $traslado->id;
+                }
+
+                return ['ids' => $confirmados, 'destino' => $destino];
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'codigo_lote' => $codigoLote,
+            'confirmados' => $resultado['ids'],
+            'message' => count($resultado['ids']) . " item(s) recibidos en {$resultado['destino']}.",
         ]);
     }
 

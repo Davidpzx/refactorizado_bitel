@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,10 +12,25 @@ use Illuminate\Support\Facades\Schema;
 
 class TicketController extends Controller
 {
+    public function __construct(private readonly UserAgentResolver $userAgentResolver)
+    {
+    }
+
     // ── POST /tickets — Crear ticket (soporta payload simple o items[]) ─────────
     public function store(Request $request): JsonResponse
     {
         $user     = Auth::user();
+        $esAdmin  = $user->rol === 'admin';
+        $agenteId = $esAdmin
+            ? (int) $request->input('agente_id', 0)
+            : $this->userAgentResolver->resolveOrFail($user)->id;
+        $tiendaId = $esAdmin
+            ? substr(trim((string) $request->input('tienda_id', '')), 0, 20)
+            : trim((string) $user->tienda_id);
+
+        if ($agenteId <= 0 || $tiendaId === '') {
+            return response()->json(['ok' => false, 'message' => 'Agente y tienda son obligatorios.'], 422);
+        }
         $itemsRaw = $request->input('items');
 
         $monto          = 0.0;
@@ -72,9 +88,11 @@ class TicketController extends Controller
         $formaPago = !empty($metodos) ? implode('+', $metodos) : 'Efectivo';
 
         $id = DB::table('tickets_emitidos')->insertGetId([
-            'tienda_id'      => substr(trim($request->input('tienda_id', $user->tienda_id ?? '')), 0, 20),
-            'agente_id'      => (int) $request->input('agente_id', 0),
-            'vendedor'       => substr(trim($request->input('vendedor', '')), 0, 100),
+            'tienda_id'      => $tiendaId,
+            'agente_id'      => $agenteId,
+            'vendedor'       => $esAdmin
+                ? substr(trim((string) $request->input('vendedor', '')), 0, 100)
+                : substr((string) $user->nombre, 0, 100),
             'nombre_cliente' => $nombreCliente,
             'dni_cliente'    => $dniCliente,
             'forma_pago'     => $formaPago,
@@ -96,7 +114,7 @@ class TicketController extends Controller
     }
 
     // ── GET /tickets/{id} — Ver ticket individual (para impresión) ───────────
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $ticket = DB::table('tickets_emitidos as t')
             ->leftJoin('agentes as a', 'a.id', '=', 't.agente_id')
@@ -107,6 +125,11 @@ class TicketController extends Controller
         if (!$ticket) {
             return response()->json(['message' => 'Ticket no encontrado.'], 404);
         }
+        abort_if(
+            $request->user()->rol !== 'admin' && $ticket->tienda_id !== $request->user()->tienda_id,
+            403,
+            'No tienes permisos sobre este ticket.'
+        );
         return response()->json($ticket);
     }
 
@@ -115,6 +138,16 @@ class TicketController extends Controller
     // enviando solo `estado`) ya no borra el nombre/pagos del ticket.
     public function update(Request $request, int $id): JsonResponse
     {
+        $ticket = DB::table('tickets_emitidos')->where('id', $id)->first();
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket no encontrado.'], 404);
+        }
+        abort_if(
+            $request->user()->rol !== 'admin' && $ticket->tienda_id !== $request->user()->tienda_id,
+            403,
+            'No tienes permisos sobre este ticket.'
+        );
+
         $textos = [
             'nombre_cliente' => 150,
             'forma_pago'     => 50,

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Laravel\Sanctum\HasApiTokens;
 
 class Usuario extends Authenticatable
@@ -15,7 +16,7 @@ class Usuario extends Authenticatable
     public $timestamps = false;
 
     protected $fillable = [
-        'nombre', 'email', 'password', 'rol', 'tienda_id', 'activo',
+        'nombre', 'email', 'password', 'rol', 'tienda_id', 'agente_id', 'activo',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -34,5 +35,10 @@ class Usuario extends Authenticatable
     public function scopePorRol(Builder $query, string $rol): Builder
     {
         return $query->where('rol', $rol);
+    }
+
+    public function agente(): BelongsTo
+    {
+        return $this->belongsTo(Agente::class);
     }
 }

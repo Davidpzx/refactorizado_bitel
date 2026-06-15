@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle } from 'lucide-react'
@@ -50,6 +51,7 @@ function getColumns(
   onEliminar: (i: InventarioItem) => void,
   eliminando: boolean,
   onFijarPrecio?: (i: InventarioItem) => void,
+  onAjustar?: (i: InventarioItem) => void,
 ): ColumnDef<InventarioItem>[] {
   return [
     { accessorKey: 'producto_nombre', header: 'Producto' },
@@ -98,6 +100,11 @@ function getColumns(
               <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
                 Editar
               </Button>
+              {onAjustar && (
+                <Button size="sm" variant="outline" onClick={() => onAjustar(row.original)}>
+                  Ajustar stock
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="destructive"
@@ -231,6 +238,10 @@ export function InventarioPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando]     = useState<InventarioItem | undefined>()
+  const [ajusteItem, setAjusteItem] = useState<InventarioItem | undefined>()
+  const [cantidadReal, setCantidadReal] = useState('')
+  const [observacionAjuste, setObservacionAjuste] = useState('')
+  const [ajusteError, setAjusteError] = useState('')
 
   // T2.3 — Fijar precio por el agente (solo precio_normal, con DNI).
   const [precioItem, setPrecioItem] = useState<InventarioItem | undefined>()
@@ -244,9 +255,24 @@ export function InventarioPage() {
       qc.invalidateQueries({ queryKey: ['inventario'] })
       setPrecioItem(undefined); setPrecioVal(''); setPrecioDni(''); setPrecioErr('')
     },
-    onError: (e: any) => setPrecioErr(e?.response?.data?.msg ?? 'No se pudo fijar el precio.'),
+    onError: (e: AxiosError<{ msg?: string }>) => setPrecioErr(e.response?.data?.msg ?? 'No se pudo fijar el precio.'),
   })
   const abrirPrecio = (i: InventarioItem) => { setPrecioItem(i); setPrecioVal(''); setPrecioDni(''); setPrecioErr('') }
+  const ajustarStock = useMutation({
+    mutationFn: (p: { id: number; cantidad_real: number; observacion: string }) =>
+      api.post(`/v1/inventario/${p.id}/ajustar-stock-real`, p).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventario'] })
+      setAjusteItem(undefined); setCantidadReal(''); setObservacionAjuste(''); setAjusteError('')
+    },
+    onError: (e: AxiosError<{ message?: string }>) => setAjusteError(e.response?.data?.message ?? 'No se pudo ajustar el stock.'),
+  })
+  const abrirAjuste = (i: InventarioItem) => {
+    setAjusteItem(i)
+    setCantidadReal(String(i.cantidad))
+    setObservacionAjuste('')
+    setAjusteError('')
+  }
 
   const { data, isLoading } = useInventario({
     q:        query  || undefined,
@@ -284,7 +310,13 @@ export function InventarioPage() {
 
   const hayFiltros = query || tienda || tipo || estado
 
-  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending, esTienda ? abrirPrecio : undefined)
+  const columns = getColumns(
+    abrirEditar,
+    handleEliminar,
+    eliminar.isPending,
+    esTienda ? abrirPrecio : undefined,
+    esTienda ? undefined : abrirAjuste,
+  )
 
   return (
     <div>
@@ -368,6 +400,51 @@ export function InventarioPage() {
         maxWidth="lg"
       >
         <InventarioForm item={editando} onSuccess={cerrar} onCancel={cerrar} />
+      </Dialog>
+
+      <Dialog
+        open={!!ajusteItem}
+        onClose={() => setAjusteItem(undefined)}
+        title="Sincronizar stock fisico"
+        maxWidth="sm"
+      >
+        {ajusteItem && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-kyro-text">{ajusteItem.producto_nombre}</p>
+              <p className="text-xs text-kyro-muted">Stock actual en sistema: {ajusteItem.cantidad}</p>
+            </div>
+            <div>
+              <Label>Cantidad fisica real</Label>
+              <Input type="number" min="0" value={cantidadReal} onChange={e => setCantidadReal(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>Observacion del ajuste</Label>
+              <textarea
+                rows={3}
+                value={observacionAjuste}
+                onChange={e => setObservacionAjuste(e.target.value)}
+                className="kyro-input mt-1 w-full"
+                placeholder="Motivo y referencia del conteo fisico"
+              />
+            </div>
+            {ajusteError && <p className="text-xs text-kyro-danger">{ajusteError}</p>}
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                disabled={ajustarStock.isPending || cantidadReal === '' || observacionAjuste.trim().length < 10}
+                onClick={() => ajustarStock.mutate({
+                  id: ajusteItem.id,
+                  cantidad_real: Number(cantidadReal),
+                  observacion: observacionAjuste.trim(),
+                })}
+              >
+                {ajustarStock.isPending ? 'Ajustando...' : 'Aplicar ajuste'}
+              </Button>
+              <Button variant="outline" onClick={() => setAjusteItem(undefined)}>Cancelar</Button>
+            </div>
+          </div>
+        )}
       </Dialog>
 
       {/* T2.3 — Diálogo fijar precio (agente) */}

@@ -11,6 +11,7 @@ export interface Reporte {
   recarga_bipay: string
   pago_servicio: string
   pago_krece: string
+  pago_payjoy: string
   tickets_tusamy: string
   retiro_bipay: string
   transferencia: string
@@ -33,6 +34,7 @@ export interface Reporte {
   estado_edicion: 'CERRADO' | 'SOLICITADO' | 'APROBADO'
   motivo_edicion: string | null
   ventas_count?: number
+  agente_nombre?: string
 }
 
 export interface ReporteFilters {
@@ -45,6 +47,8 @@ export interface ReporteFilters {
 }
 
 export interface VentaItem {
+  venta_id?: number
+  vendedor_id: number
   tipo_venta: 'EQUIPO' | 'ACCESORIO' | 'POSTPAGO' | 'PREPAGO' | 'OTROS_FLUJO' | 'APOYO'
   subtipo?: string
   monto_total: number
@@ -69,6 +73,10 @@ export interface VentaItem {
   cantidad?: number
   cobrado_unitario?: number
   comision_unitaria?: number
+  es_migracion?: boolean
+  es_upgrade?: boolean
+  es_esim?: boolean
+  plan_anterior?: number
 }
 
 export interface CreateReportePayload {
@@ -83,6 +91,7 @@ export interface CreateReportePayload {
   recarga_bipay: number
   pago_servicio: number
   pago_krece: number
+  pago_payjoy: number
   tickets_tusamy: number
   retiro_bipay: number
   efectivo_entregado: number
@@ -92,6 +101,14 @@ export interface CreateReportePayload {
   obs_dia?: string
   destino_efectivo?: string
   ventas: VentaItem[]
+  salidas: SalidaReporte[]
+}
+
+export interface SalidaReporte {
+  id?: number
+  tipo: 'adelanto' | 'gasto' | 'pasaje' | 'otro'
+  monto: number
+  observacion?: string | null
 }
 
 export interface ComisionPlan {
@@ -128,7 +145,10 @@ export interface VentaLineaDetalle {
   cantidad: number
   cobrado_unitario: string
   comision_unitaria: string
+  es_migracion: boolean
+  es_upgrade: boolean
   es_esim: boolean
+  plan_anterior: string | null
 }
 
 export interface ClienteResumen {
@@ -160,4 +180,12 @@ export interface VentaConDetalle {
 
 export interface ReporteConVentas extends Reporte {
   ventas: VentaConDetalle[]
+  salidas: SalidaReporte[]
+}
+
+export interface VendedorReporte {
+  id: number
+  dni: string
+  nombres: string
+  tienda_base: string
 }

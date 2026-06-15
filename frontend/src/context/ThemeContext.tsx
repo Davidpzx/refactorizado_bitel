@@ -1,18 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-
-type Theme = 'dark' | 'light'
-
-interface ThemeContextValue {
-  theme: Theme
-  toggleTheme: () => void
-  isDark: boolean
-}
-
-const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
-  toggleTheme: () => {},
-  isDark: true,
-})
+import { useEffect, useState, type ReactNode } from 'react'
+import { ThemeContext, type Theme } from './theme-context'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -33,7 +20,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       html.classList.remove('dark')
       html.classList.add('light')
     }
-    try { localStorage.setItem('kyro-theme', theme) } catch {}
+    try {
+      localStorage.setItem('kyro-theme', theme)
+    } catch {
+      // El tema visual sigue funcionando aunque el navegador bloquee storage.
+    }
   }, [theme])
 
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
@@ -44,5 +35,3 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     </ThemeContext.Provider>
   )
 }
-
-export const useTheme = () => useContext(ThemeContext)

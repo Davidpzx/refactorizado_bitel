@@ -9,14 +9,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InventarioController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
         $items = InventarioTienda::query()
             ->when($request->q,      fn($q, $t) => $q->buscar($t))
-            ->when($request->tienda, fn($q, $t) => $q->porTienda($t))
+            ->when($user->rol !== 'admin', fn($q) => $q->porTienda($user->tienda_id))
+            ->when($user->rol === 'admin' && $request->tienda, fn($q, $t) => $q->porTienda($t))
             ->when($request->tipo,   fn($q, $t) => $q->porTipo($t))
             ->when($request->estado, fn($q, $e) => $q->porEstado($e))
             ->orderByDesc('fecha_registro')
@@ -67,6 +73,8 @@ class InventarioController extends Controller
             'producto_nombre'   => 'required|string|max:150',
             'tipo'              => 'required|in:EQUIPO,ACCESORIO,CHIP',
             'imei_serial'       => 'nullable|string|max:50|unique:inventario_tiendas,imei_serial',
+            'imei_seriales'     => 'nullable|array|max:200',
+            'imei_seriales.*'   => 'required|string|max:50|distinct',
             'precio_costo'      => 'required|numeric|min:0',
             'precio_minimo'     => 'required|numeric|min:0',
             'precio_normal'     => 'required|numeric|min:0',
@@ -86,15 +94,56 @@ class InventarioController extends Controller
             'estado.in'                => 'El estado debe ser DISPONIBLE, VENDIDO o TRASLADO.',
         ]);
 
-        $validated['fecha_registro'] = now();
+        $imeis = collect($validated['imei_seriales'] ?? [])
+            ->push($validated['imei_serial'] ?? null)
+            ->filter(fn ($imei) => trim((string) $imei) !== '')
+            ->map(fn ($imei) => trim((string) $imei))
+            ->unique()
+            ->values();
 
+        if ($validated['tipo'] === 'EQUIPO' && $imeis->isNotEmpty()) {
+            $existentes = InventarioTienda::whereIn('imei_serial', $imeis)->pluck('imei_serial');
+            if ($existentes->isNotEmpty()) {
+                return response()->json([
+                    'message' => 'Estos IMEI/series ya existen: ' . $existentes->implode(', '),
+                ], 422);
+            }
+
+            unset($validated['imei_serial'], $validated['imei_seriales']);
+            $items = DB::transaction(function () use ($validated, $imeis, $request) {
+                return $imeis->map(function ($imei) use ($validated, $request) {
+                    return InventarioTienda::create([
+                        ...$validated,
+                        'imei_serial' => $imei,
+                        'cantidad' => 1,
+                        'registrado_por' => $request->user()->id,
+                        'fecha_registro' => now(),
+                    ]);
+                });
+            });
+
+            return response()->json([
+                'message' => $items->count() . ' equipos registrados.',
+                'data' => $items,
+                'registrados' => $items->count(),
+            ], 201);
+        }
+
+        unset($validated['imei_seriales']);
+        $validated['registrado_por'] = $request->user()->id;
+        $validated['fecha_registro'] = now();
         $item = InventarioTienda::create($validated);
 
         return response()->json($item, 201);
     }
 
-    public function show(InventarioTienda $inventario): JsonResponse
+    public function show(Request $request, InventarioTienda $inventario): JsonResponse
     {
+        abort_if(
+            $request->user()->rol !== 'admin' && $inventario->tienda_id !== $request->user()->tienda_id,
+            403,
+            'No tienes permisos sobre este inventario.'
+        );
         return response()->json($inventario);
     }
 
@@ -118,10 +167,62 @@ class InventarioController extends Controller
         return response()->json($inventario->fresh());
     }
 
-    public function destroy(InventarioTienda $inventario): JsonResponse
+    public function destroy(Request $request, InventarioTienda $inventario): JsonResponse
     {
-        $inventario->delete();
+        DB::transaction(function () use ($request, $inventario) {
+            $this->registrarMovimientoInventario(
+                $request,
+                $inventario,
+                'RESTA',
+                (int) $inventario->cantidad,
+                (int) $inventario->cantidad,
+                0,
+                '[ELIMINACION] Item eliminado del inventario por un administrador.'
+            );
+            $inventario->delete();
+        });
         return response()->json(null, 204);
+    }
+
+    public function ajustarStockReal(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'cantidad_real' => 'required|integer|min:0|max:99999',
+            'observacion' => 'required|string|min:10|max:500',
+        ]);
+
+        $item = InventarioTienda::find($id);
+        if (! $item) {
+            return response()->json(['message' => 'Item de inventario no encontrado.'], 404);
+        }
+
+        $anterior = (int) $item->cantidad;
+        $nuevo = (int) $validated['cantidad_real'];
+        $accion = $nuevo >= $anterior ? 'SUMA' : 'RESTA';
+
+        DB::transaction(function () use ($request, $item, $anterior, $nuevo, $accion, $validated) {
+            $item->update([
+                'cantidad' => $nuevo,
+                'estado' => $nuevo > 0 ? 'DISPONIBLE' : 'VENDIDO',
+            ]);
+
+            $this->registrarMovimientoInventario(
+                $request,
+                $item,
+                $accion,
+                abs($nuevo - $anterior),
+                $anterior,
+                $nuevo,
+                '[AJUSTE MAESTRO] ' . $validated['observacion']
+            );
+        });
+
+        return response()->json([
+            'message' => "Stock sincronizado: {$anterior} -> {$nuevo}.",
+            'stock_anterior' => $anterior,
+            'stock_nuevo' => $nuevo,
+            'diferencia' => $nuevo - $anterior,
+        ]);
     }
 
     // ── POST /inventario/{id}/precio-agente — Agente fija SOLO precio_normal ─────
@@ -182,6 +283,54 @@ class InventarioController extends Controller
             'producto' => $producto->producto_nombre,
             'precio'   => $precioNormal,
         ]);
+    }
+
+    private function registrarMovimientoInventario(
+        Request $request,
+        InventarioTienda $item,
+        string $accion,
+        int $cantidad,
+        int $stockAnterior,
+        int $stockNuevo,
+        string $observacion
+    ): void {
+        if (! Schema::hasTable('historial_inventario')) {
+            return;
+        }
+
+        $user = $request->user();
+        $agenteId = $user->agente_id ?? null;
+        $dni = $agenteId ? DB::table('agentes')->where('id', $agenteId)->value('dni') : null;
+        $tiendaId = Schema::hasColumn('tiendas', 'id')
+            ? DB::table('tiendas')->where('codigo', $item->tienda_id)->value('id')
+            : $item->tienda_id;
+
+        $data = [
+            'tienda_id' => $tiendaId ?: $item->tienda_id,
+            'agente_id' => $agenteId,
+            'producto_id' => $item->id,
+            'accion' => $accion,
+            'cantidad' => $cantidad,
+            'observacion' => $observacion,
+            'fecha_hora' => now(),
+        ];
+
+        $opcionales = [
+            'motivo' => 'AJUSTE',
+            'tienda_origen' => $item->tienda_id,
+            'imei_serial' => $item->imei_serial,
+            'precio_en_ese_momento' => $item->precio_normal,
+            'dni_autorizacion' => $dni,
+            'stock_anterior' => $stockAnterior,
+            'stock_nuevo' => $stockNuevo,
+        ];
+        foreach ($opcionales as $column => $value) {
+            if (Schema::hasColumn('historial_inventario', $column)) {
+                $data[$column] = $value;
+            }
+        }
+
+        DB::table('historial_inventario')->insert($data);
     }
 
     // ── POST /inventario/{id}/recalcular-ganancias — Actualiza JSON detalle ─────
@@ -436,42 +585,99 @@ class InventarioController extends Controller
         ]);
     }
 
-    // ── GET /inventario/exportar-kardex — CSV del kardex ─────────────────────────
-    public function exportarKardex(Request $request)
+    // ── GET /inventario/exportar-kardex — XLSX del kardex ────────────────────────
+    public function exportarKardex(Request $request): StreamedResponse
     {
         $user    = Auth::user();
         $esAdmin = $user->rol === 'admin';
         $tienda  = trim($request->input('tienda', ''));
         if (!$esAdmin) $tienda = $user->tienda_id ?? '';
 
-        $where = "WHERE it.tipo IN ('EQUIPO', 'ACCESORIO')";
-        $params = [];
-        if ($tienda && !in_array(strtolower($tienda), ['', 'all', 'todas', '0'], true)) {
-            $where .= " AND it.tienda_id = ?";
-            $params[] = $tienda;
+        $items = InventarioTienda::query()
+            ->whereIn('tipo', ['EQUIPO', 'ACCESORIO'])
+            ->when(
+                $tienda && ! in_array(strtolower($tienda), ['all', 'todas', '0'], true),
+                fn ($query) => $query->where('tienda_id', $tienda)
+            )
+            ->when($request->filled('tipo'), fn ($query) => $query->where('tipo', strtoupper($request->string('tipo'))))
+            ->when($request->filled('estado'), fn ($query) => $query->where('estado', strtoupper($request->string('estado'))))
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $texto = '%'.trim((string) $request->input('q')).'%';
+                $query->where(fn ($q) => $q->where('producto_nombre', 'like', $texto)->orWhere('imei_serial', 'like', $texto));
+            })
+            ->orderByDesc('fecha_registro')
+            ->orderByDesc('id')
+            ->get();
+
+        $tiendas = DB::table('tiendas')->pluck('nombre', 'codigo');
+        $rows = $items->map(function (InventarioTienda $item) use ($tiendas, $esAdmin) {
+            $venta = DB::table('venta_equipos as ve')
+                ->join('ventas as v', 'v.id', '=', 've.venta_id')
+                ->leftJoin('reportes as r', 'r.id', '=', 'v.reporte_id')
+                ->leftJoin('agentes as a', 'a.id', '=', 'v.vendedor_id')
+                ->where('ve.inventario_tienda_id', $item->id)
+                ->orderByDesc('ve.id')
+                ->select('ve.precio_venta', 've.tipo_pago', 'r.fecha', 'a.nombres')
+                ->first();
+
+            $historial = DB::table('historial_inventario as h')
+                ->leftJoin('agentes as a', 'a.id', '=', 'h.agente_id')
+                ->where('h.producto_id', $item->id)
+                ->where('h.accion', 'RESTA')
+                ->orderByDesc('h.fecha_hora')
+                ->select('h.fecha_hora', 'a.nombres')
+                ->first();
+
+            return [
+                $item->producto_nombre,
+                $item->tipo,
+                $item->imei_serial,
+                $tiendas[$item->tienda_id] ?? $item->tienda_id,
+                $item->fecha_registro ? date('d/m/Y', strtotime((string) $item->fecha_registro)) : null,
+                ($item->fecha_venta ? date('d/m/Y', strtotime((string) $item->fecha_venta)) : null)
+                    ?? ($venta?->fecha ? date('d/m/Y', strtotime($venta->fecha)) : null)
+                    ?? ($historial?->fecha_hora ? date('d/m/Y', strtotime($historial->fecha_hora)) : null),
+                $venta?->nombres ?? $historial?->nombres,
+                ...($esAdmin ? [(float) $item->precio_costo] : []),
+                (float) ($venta?->precio_venta ?? $item->precio_normal),
+                ucfirst(strtolower((string) ($venta?->tipo_pago ?? 'CONTADO'))),
+                $item->estado,
+            ];
+        });
+
+        $headers = ['Producto', 'Tipo', 'IMEI / Serial', 'Tienda', 'Fecha Ingreso', 'Fecha Venta', 'Agente Vendedor'];
+        if ($esAdmin) {
+            $headers[] = 'Costo S/';
         }
+        array_push($headers, 'Precio S/', 'Tipo Pago', 'Estado');
 
-        $rows = DB::select("
-            SELECT it.tienda_id AS tienda, it.tipo, it.producto_nombre AS producto,
-                   it.imei_serial AS imei, it.estado,
-                   DATE_FORMAT(it.fecha_registro,'%d/%m/%Y') AS fecha_ingreso,
-                   it.precio_costo, it.precio_normal AS precio_venta
-            FROM inventario_tiendas it $where
-            ORDER BY it.tienda_id, it.fecha_registro DESC
-        ", $params);
-
-        $bom  = "\xEF\xBB\xBF";
-        $head = "Tienda,Tipo,Producto,IMEI/Serie,Estado,Fecha Ingreso,Costo,Precio Venta\n";
-        $body = '';
-        foreach ($rows as $r) {
-            $r = (array)$r;
-            $body .= implode(',', array_map(fn($v) => '"' . str_replace('"', '""', $v ?? '') . '"', $r)) . "\n";
-        }
-
-        return response($bom . $head . $body, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="kardex_' . date('Y-m-d') . '.csv"',
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Kardex');
+        $sheet->fromArray($headers, null, 'A1');
+        $ultimaColumna = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
         ]);
+        foreach ($rows as $index => $row) {
+            $sheet->fromArray($row, null, 'A'.($index + 2));
+        }
+        for ($column = 1; $column <= count($headers); $column++) {
+            $sheet->getColumnDimension(
+                \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column)
+            )->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            'kardex_'.($tienda !== '' ? strtolower($tienda).'_' : 'global_').date('Y-m-d').'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     // ── POST /inventario/{id}/restaurar — Rescate manual (solo admin) ──────────

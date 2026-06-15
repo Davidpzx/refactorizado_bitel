@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useAuthStore } from '../../store/authStore'
+import { apiErrorData } from '../../lib/httpError'
 
 const schema = z.object({
   email:    z.string().email('Correo inválido'),
@@ -26,9 +27,9 @@ export function LoginPage() {
 
   const errorMessage = (() => {
     if (!loginError) return null
-    const err = loginError as any
-    return err?.response?.data?.errors?.email?.[0]
-      ?? err?.response?.data?.message
+    const data = apiErrorData(loginError)
+    return data.errors?.email?.[0]
+      ?? data.message
       ?? 'Error al iniciar sesión. Verifica tus credenciales.'
   })()
 

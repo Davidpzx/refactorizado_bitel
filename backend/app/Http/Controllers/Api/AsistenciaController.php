@@ -3,16 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\UserAgentResolver;
 use Carbon\Carbon;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AsistenciaController extends Controller
 {
+    public function __construct(private readonly UserAgentResolver $userAgentResolver)
+    {
+    }
+
     private function tablaExiste(): bool
     {
         return Schema::hasTable('asistencias');
@@ -209,9 +221,9 @@ class AsistenciaController extends Controller
         }
         [, $tiendaToken, $bloqueToken, $hmacToken] = $parts;
 
-        $bloqueActual = (int) floor(time() / 5);
+        $bloqueActual = (int) floor($this->ahora()->timestamp / 5);
         $bloqueQr = filter_var($bloqueToken, FILTER_VALIDATE_INT);
-        $hmacEsperado = substr(hash_hmac('sha256', "AST|{$tiendaToken}|{$bloqueToken}", config('app.key')), 0, 16);
+        $hmacEsperado = substr(hash_hmac('sha256', "AST|{$tiendaToken}|{$bloqueToken}", $this->qrSecret()), 0, 16);
         if ($bloqueQr === false || abs($bloqueActual - $bloqueQr) > 2 || ! hash_equals($hmacEsperado, strtolower($hmacToken))) {
             return response()->json(['error' => 'QR expirado o inválido. Escanea de nuevo.'], 422);
         }
@@ -252,13 +264,27 @@ class AsistenciaController extends Controller
             $momento = $intento;
         }
 
-        return $this->procesarMarcacion($agente, $data['tipo'] ?? null, 'QR', [
-            'tienda_id' => $this->identificadorTienda($tienda),
-            'hora_intento_gps' => $intento?->toDateTimeString(),
-            'omitir_refrigerio' => (bool) ($data['omitir_refrigerio'] ?? $data['omitir_ref'] ?? false),
-            'turno_extendido' => (bool) ($data['turno_extendido'] ?? false),
-            'minutos_refrigerio_asignado' => $data['minutos_refrigerio_asignado'] ?? null,
-        ], $momento);
+        return DB::transaction(function () use ($agente, $data, $intento, $momento, $tienda) {
+            $lock = DB::table('tiendas');
+            if (isset($tienda->id)) {
+                $lock->where('id', $tienda->id);
+            } else {
+                $lock->where('codigo', $this->identificadorTienda($tienda));
+            }
+            $lock->lockForUpdate()->first();
+
+            if ($error = $this->validarCapacidadQr($tienda, $momento)) {
+                return $error;
+            }
+
+            return $this->procesarMarcacion($agente, $data['tipo'] ?? null, 'QR', [
+                'tienda_id' => $this->identificadorTienda($tienda),
+                'hora_intento_gps' => $intento?->toDateTimeString(),
+                'omitir_refrigerio' => (bool) ($data['omitir_refrigerio'] ?? $data['omitir_ref'] ?? false),
+                'turno_extendido' => (bool) ($data['turno_extendido'] ?? false),
+                'minutos_refrigerio_asignado' => $data['minutos_refrigerio_asignado'] ?? null,
+            ], $momento);
+        });
     }
 
     public function markPhoto(Request $request): JsonResponse
@@ -513,7 +539,7 @@ class AsistenciaController extends Controller
         return 'completado';
     }
 
-    public function qrStream(string $tienda_id): JsonResponse
+    public function qrStream(Request $request, string $tienda_id): JsonResponse
     {
         $tienda = $this->buscarTienda($tienda_id);
         if (! $tienda) {
@@ -521,17 +547,71 @@ class AsistenciaController extends Controller
         }
 
         $tiendaId = $this->identificadorTienda($tienda);
-        $bloque = (int) floor(time() / 5);
-        $hmac = substr(hash_hmac('sha256', "AST|{$tiendaId}|{$bloque}", config('app.key')), 0, 16);
+        $user = $request->user();
+        if ($user?->rol !== 'admin' && strtoupper((string) $user?->tienda_id) !== strtoupper($tiendaId)) {
+            abort(403, 'No puedes generar el QR de otra tienda.');
+        }
+
+        $ahora = $this->ahora();
+        $bloque = (int) floor($ahora->timestamp / 5);
+        $hmac = substr(hash_hmac('sha256', "AST|{$tiendaId}|{$bloque}", $this->qrSecret()), 0, 16);
         $token = "AST|{$tiendaId}|{$bloque}|{$hmac}";
-        $ttl = 5 - (time() % 5);
+        $ttl = 5 - ($ahora->timestamp % 5);
+        $qr = new QrCode(
+            data: $token,
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+        );
 
         return response()->json([
             'token' => $token,
+            'image_data_uri' => (new SvgWriter())->write($qr)->getDataUri(),
             'tienda_id' => $tiendaId,
             'expires_in' => $ttl,
             'bloque' => $bloque,
         ]);
+    }
+
+    private function qrSecret(): string
+    {
+        $secret = (string) config('attendance.qr_secret');
+        if ($secret === '') {
+            throw new \RuntimeException('QR_SECRET_KEY no está configurado.');
+        }
+
+        return $secret;
+    }
+
+    private function validarCapacidadQr(object $tienda, Carbon $momento): ?JsonResponse
+    {
+        $tiendaId = $this->identificadorTienda($tienda);
+        $desde = $momento->copy()->subSeconds(10)->toTimeString();
+        $totalAgentes = max(1, DB::table('agentes')
+            ->where('tienda_base', $tiendaId)
+            ->where('estado', 'ACTIVO')
+            ->count());
+
+        $escaneosRecientes = DB::table('asistencias')
+            ->where('fecha', $momento->toDateString())
+            ->where('tienda_id', $tiendaId)
+            ->where(function ($query) use ($desde) {
+                $query
+                    ->where(fn ($q) => $q->where('metodo_marcacion', 'QR')->where('hora_ingreso', '>=', $desde))
+                    ->orWhere(fn ($q) => $q->where('metodo_salida_refrigerio', 'QR')->where('inicio_refrigerio', '>=', $desde))
+                    ->orWhere(fn ($q) => $q->where('metodo_entrada_refrigerio', 'QR')->where('fin_refrigerio', '>=', $desde))
+                    ->orWhere(fn ($q) => $q->where('metodo_salida', 'QR')->where('hora_salida', '>=', $desde));
+            })
+            ->count();
+
+        if ($escaneosRecientes < $totalAgentes) {
+            return null;
+        }
+
+        return response()->json([
+            'error' => 'Demasiados escaneos simultáneos en esta tienda. Espera unos segundos.',
+            'code' => 'QR_COLLISION',
+        ], 429);
     }
 
     private function buscarAgente(string $dni): ?object
@@ -1129,7 +1209,10 @@ class AsistenciaController extends Controller
                 'a.*',
                 'ag.nombres',
                 'ag.tienda_base',
+                'ag.hora_ingreso as ingreso_oficial',
                 'ag.hora_salida as salida_oficial',
+                'ag.hora_ref_inicio as ref_inicio_oficial',
+                'ag.hora_ref_fin as ref_fin_oficial',
                 'ag.dia_descanso',
             ])
             ->orderByDesc('a.fecha')
@@ -1225,7 +1308,7 @@ class AsistenciaController extends Controller
         return response()->json(['message' => 'Asistencia aprobada.']);
     }
 
-    public function exportar(Request $request)
+    public function exportar(Request $request): StreamedResponse|JsonResponse
     {
         if (! $this->tablaExiste()) {
             return response()->json(['error' => 'Tabla asistencias no configurada.'], 422);
@@ -1239,30 +1322,68 @@ class AsistenciaController extends Controller
             ->join('agentes as ag', 'ag.id', '=', 'a.agente_id')
             ->whereBetween('a.fecha', [$desde, $hasta])
             ->when($agente, fn ($q) => $q->where('a.agente_id', $agente))
-            ->select('a.fecha', 'ag.nombres', 'ag.tienda_base', 'a.hora_ingreso', 'a.hora_salida',
-                'a.minutos_tardanza', 'a.metodo_marcacion', 'a.observacion')
+            ->select(
+                'a.fecha',
+                'ag.nombres',
+                'ag.dia_descanso',
+                'a.estado_asistencia',
+                'a.hora_ingreso',
+                'a.inicio_refrigerio',
+                'a.fin_refrigerio',
+                'a.hora_salida',
+                'a.omitio_refrigerio',
+                'a.minutos_tardanza',
+                'a.minutos_deuda',
+            )
             ->orderByDesc('a.fecha')
+            ->orderBy('ag.nombres')
             ->get();
 
-        $csv = "\xEF\xBB\xBF";
-        $csv .= "Fecha,Agente,Tienda,Ingreso,Salida,Min.Tardanza,Método,Observación\n";
-        foreach ($rows as $row) {
-            $csv .= implode(',', [
-                $row->fecha,
-                '"'.str_replace('"', '""', $row->nombres ?? '').'"',
-                $row->tienda_base ?? '',
-                $row->hora_ingreso ?? '',
-                $row->hora_salida ?? '',
-                $row->minutos_tardanza ?? 0,
-                $row->metodo_marcacion ?? 'MANUAL',
-                '"'.str_replace('"', '""', $row->observacion ?? '').'"',
-            ])."\n";
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Asistencias');
+        $sheet->fromArray([
+            'Fecha', 'Día', 'Agente', 'Estado', 'Ingreso', 'Sal. Refri.',
+            'Reg. Refri.', 'Salida Final', 'Turno Corrido', 'Min. Tardanza', 'Min. Deuda',
+        ], null, 'A1');
+        $sheet->getStyle('A1:K1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+        ]);
+
+        $dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+        foreach ($rows as $index => $row) {
+            $fecha = Carbon::parse($row->fecha);
+            $dia = $dias[$fecha->dayOfWeek];
+            $esDescanso = $dia === strtoupper((string) ($row->dia_descanso ?? ''));
+            $sheet->fromArray([
+                $fecha->format('d/m/Y'),
+                $dia.($esDescanso ? ' (DESC)' : ''),
+                $row->nombres,
+                $row->estado_asistencia,
+                $row->hora_ingreso ? substr($row->hora_ingreso, 0, 5) : '-',
+                $row->inicio_refrigerio ? substr($row->inicio_refrigerio, 0, 5) : '-',
+                $row->fin_refrigerio ? substr($row->fin_refrigerio, 0, 5) : '-',
+                $row->hora_salida ? substr($row->hora_salida, 0, 5) : 'NO MARCÓ',
+                $row->omitio_refrigerio ? 'Sí' : 'No',
+                (int) $row->minutos_tardanza,
+                (int) $row->minutos_deuda,
+            ], null, 'A'.($index + 2));
         }
 
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="asistencias_'.$desde.'_'.$hasta.'.csv"',
-        ]);
+        foreach (range('A', 'K') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            "asistencias_{$desde}_al_{$hasta}.xlsx",
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     // ── POST /attendance/salvavidas — Perdonar tardanza con descuento en refrigerio ──
@@ -1278,12 +1399,7 @@ class AsistenciaController extends Controller
             return response()->json(['success' => false, 'mensaje' => "Los minutos deben estar entre 1 y 120. Valor recibido: {$minutos}."]);
         }
 
-        // Identificar al agente por DNI
-        $dni = trim($request->input('dni', ''));
-        $agente = DB::table('agentes')->where('dni', $dni)->first();
-        if (! $agente) {
-            return response()->json(['success' => false, 'mensaje' => 'Agente no encontrado.']);
-        }
+        $agente = $this->userAgentResolver->resolveOrFail($request->user());
 
         $fechaHoy = now()->toDateString();
 
@@ -1297,6 +1413,9 @@ class AsistenciaController extends Controller
 
             if (! $asistenciaPasada) {
                 throw new \Exception('El registro de asistencia no existe.');
+            }
+            if ((int) $asistenciaPasada->agente_id !== (int) $agente->id) {
+                abort(403, 'La asistencia no pertenece al usuario autenticado.');
             }
 
             // Solo tardanzas de esta semana
@@ -1350,6 +1469,9 @@ class AsistenciaController extends Controller
                 'success' => true,
                 'mensaje' => "¡Salvavidas aplicado! Se perdonó tu tardanza del {$fechaFormateada}. Hoy se descontarán {$minutos} minutos de tu refrigerio.",
             ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -1365,43 +1487,155 @@ class AsistenciaController extends Controller
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
 
-        $asistencia = DB::table('asistencias')->where('id', $id)->first();
+        $asistencia = DB::table('asistencias as a')
+            ->join('agentes as ag', 'ag.id', '=', 'a.agente_id')
+            ->where('a.id', $id)
+            ->select([
+                'a.*',
+                'ag.hora_ingreso as ingreso_oficial',
+                'ag.hora_salida as salida_oficial',
+                'ag.hora_ref_inicio as ref_inicio_oficial',
+                'ag.hora_ref_fin as ref_fin_oficial',
+                'ag.dia_descanso',
+            ])
+            ->first();
         if (! $asistencia) {
             return response()->json(['success' => false, 'message' => 'Asistencia no encontrada.'], 404);
         }
 
+        $validated = $request->validate([
+            'fecha' => ['sometimes', 'date_format:Y-m-d'],
+            'hora_ingreso' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'hora_salida' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'inicio_refrigerio' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'fin_refrigerio' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'omitio_refrigerio' => ['sometimes', 'boolean'],
+            'observacion_admin' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'horas_extras_aprobadas' => ['sometimes', 'numeric', 'between:0,24'],
+            'horas_extras' => ['sometimes', 'numeric', 'between:0,24'],
+            'minutos_refrigerio_asignado' => ['sometimes', 'nullable', 'integer', 'between:0,180'],
+        ]);
+
         $update = [];
+        if (array_key_exists('fecha', $validated)) {
+            $update['fecha'] = $validated['fecha'];
+        }
         foreach (['hora_ingreso', 'hora_salida', 'inicio_refrigerio', 'fin_refrigerio'] as $campo) {
-            if ($request->has($campo)) {
-                $update[$campo] = $request->input($campo) ?: null;
+            if (array_key_exists($campo, $validated)) {
+                $update[$campo] = $validated[$campo] ? $validated[$campo].':00' : null;
             }
         }
-        if ($request->has('omitio_refrigerio')) {
-            $update['omitio_refrigerio'] = $request->boolean('omitio_refrigerio') ? 1 : 0;
+        if (array_key_exists('omitio_refrigerio', $validated)) {
+            $update['omitio_refrigerio'] = (bool) $validated['omitio_refrigerio'];
         }
-        if ($request->has('observacion_admin')) {
-            $update['observacion_admin'] = substr(trim($request->input('observacion_admin', '')), 0, 500);
+        if (array_key_exists('observacion_admin', $validated)) {
+            $observacion = trim((string) ($validated['observacion_admin'] ?? ''));
+            if (Schema::hasColumn('asistencias', 'observacion_admin')) {
+                $update['observacion_admin'] = $observacion ?: null;
+            }
+            if (Schema::hasColumn('asistencias', 'observacion_tardanza')) {
+                $update['observacion_tardanza'] = $observacion ?: null;
+            } elseif (Schema::hasColumn('asistencias', 'observacion')) {
+                $update['observacion'] = $observacion ?: null;
+            }
         }
-        // Acciones admin granulares (paridad acciones_asistencia.php). Guardadas por columna por drift legacy.
-        if ($request->has('estado_asistencia') && Schema::hasColumn('asistencias', 'estado_asistencia')) {
-            $update['estado_asistencia'] = substr(trim($request->input('estado_asistencia', '')), 0, 50) ?: null;
+
+        $horasExtras = $validated['horas_extras_aprobadas'] ?? $validated['horas_extras'] ?? null;
+        if ($horasExtras !== null && Schema::hasColumn('asistencias', 'horas_extras_aprobadas')) {
+            $update['horas_extras_aprobadas'] = round((float) $horasExtras, 2);
         }
-        if ($request->has('horas_extras') && Schema::hasColumn('asistencias', 'horas_extras')) {
-            $update['horas_extras'] = max(0, (float) $request->input('horas_extras', 0));
+
+        if (array_key_exists('minutos_refrigerio_asignado', $validated)) {
+            if (! (bool) ($asistencia->turno_extendido ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se puede asignar refrigerio a un turno extendido.',
+                ], 422);
+            }
+            $update['minutos_refrigerio_asignado'] = $validated['minutos_refrigerio_asignado'];
         }
-        if ($request->has('minutos_refrigerio_asignado') && Schema::hasColumn('asistencias', 'minutos_refrigerio_asignado')) {
-            $update['minutos_refrigerio_asignado'] = max(0, (int) $request->input('minutos_refrigerio_asignado', 0));
+
+        $estado = (object) array_merge((array) $asistencia, $update);
+        [$minutosTardanza, $minutosDeuda, $tardanzaRefrigerio] = $this->recalcularTiemposAsistencia($estado);
+        $update['minutos_tardanza'] = $minutosTardanza;
+        $update['minutos_deuda'] = $minutosDeuda;
+        $update['minutos_extra'] = 0;
+        if (Schema::hasColumn('asistencias', 'minutos_tardanza_refrigerio')) {
+            $update['minutos_tardanza_refrigerio'] = $tardanzaRefrigerio;
         }
-        if ($request->has('minutos_tardanza') && Schema::hasColumn('asistencias', 'minutos_tardanza')) {
-            $update['minutos_tardanza'] = max(0, (int) $request->input('minutos_tardanza', 0));
+
+        if (Schema::hasColumn('asistencias', 'updated_at')) {
+            $update['updated_at'] = now();
         }
 
         if (! empty($update)) {
-            $update['updated_at'] = now();
             DB::table('asistencias')->where('id', $id)->update($update);
         }
 
-        return response()->json(['success' => true, 'message' => 'Asistencia actualizada correctamente.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Asistencia actualizada y recalculada correctamente.',
+            'minutos_tardanza' => $minutosTardanza,
+            'minutos_deuda' => $minutosDeuda,
+            'minutos_tardanza_refrigerio' => $tardanzaRefrigerio,
+        ]);
+    }
+
+    private function recalcularTiemposAsistencia(object $asistencia): array
+    {
+        $dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+        $fecha = Carbon::parse($asistencia->fecha);
+        $esDescanso = $dias[$fecha->dayOfWeek] === strtoupper((string) ($asistencia->dia_descanso ?? ''));
+
+        $minutosTardanza = 0;
+        $tardanzaRefrigerio = 0;
+        $minutosDeuda = 0;
+
+        if (! $esDescanso && $asistencia->hora_ingreso && $asistencia->ingreso_oficial) {
+            $ingresoReal = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->hora_ingreso));
+            $ingresoOficial = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->ingreso_oficial));
+            if ($ingresoReal->gt($ingresoOficial)) {
+                $minutosTardanza += $ingresoOficial->diffInMinutes($ingresoReal);
+            }
+        }
+
+        $omitioRefrigerio = (bool) ($asistencia->omitio_refrigerio ?? false);
+        if (! $esDescanso && ! $omitioRefrigerio && $asistencia->inicio_refrigerio && $asistencia->fin_refrigerio) {
+            $duracionPermitida = null;
+            if ((bool) ($asistencia->turno_extendido ?? false) && $asistencia->minutos_refrigerio_asignado !== null) {
+                $duracionPermitida = (int) $asistencia->minutos_refrigerio_asignado;
+            } elseif ($asistencia->ref_inicio_oficial && $asistencia->ref_fin_oficial) {
+                $refInicioOficial = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->ref_inicio_oficial));
+                $refFinOficial = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->ref_fin_oficial));
+                $duracionPermitida = $refInicioOficial->diffInMinutes($refFinOficial);
+            }
+
+            if ($duracionPermitida !== null) {
+                if ((bool) ($asistencia->comodin_usado ?? false) && (int) ($asistencia->min_comodin ?? 0) > 0) {
+                    $duracionPermitida = max(30, $duracionPermitida - (int) $asistencia->min_comodin);
+                }
+                $refInicioReal = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->inicio_refrigerio));
+                $refFinReal = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->fin_refrigerio));
+                $duracionReal = $refInicioReal->diffInMinutes($refFinReal);
+                $tardanzaRefrigerio = max(0, $duracionReal - $duracionPermitida);
+                $minutosTardanza += $tardanzaRefrigerio;
+            }
+        }
+
+        if ($asistencia->hora_salida && $asistencia->salida_oficial) {
+            $salidaReal = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->hora_salida));
+            $salidaOficial = Carbon::createFromFormat('H:i:s', $this->normalizarHora($asistencia->salida_oficial));
+            if ($salidaReal->lt($salidaOficial)) {
+                $minutosDeuda = $salidaReal->diffInMinutes($salidaOficial);
+            }
+        }
+
+        return [$minutosTardanza, $minutosDeuda, $tardanzaRefrigerio];
+    }
+
+    private function normalizarHora(string $hora): string
+    {
+        return strlen($hora) === 5 ? $hora.':00' : substr($hora, 0, 8);
     }
 
     // ── DELETE /asistencias/{id} — Eliminar registro (admin, paridad acciones_asistencia.php) ──
@@ -1423,7 +1657,7 @@ class AsistenciaController extends Controller
     // tardanzas recuperables de la semana actual y si ya usó su comodín.
     public function misTardanzas(Request $request): JsonResponse
     {
-        $dni = trim((string) $request->input('dni', ''));
+        $dni = $this->userAgentResolver->resolveOrFail($request->user())->dni;
         if (! preg_match('/^\d{8}$/', $dni)) {
             return response()->json(['success' => false, 'mensaje' => 'DNI inválido.'], 422);
         }
@@ -1432,7 +1666,6 @@ class AsistenciaController extends Controller
         if (! $agente) {
             return response()->json(['success' => false, 'mensaje' => 'Agente no encontrado.'], 404);
         }
-
         $inicioSemana = now()->startOfWeek()->toDateString();
         $finSemana    = now()->endOfWeek()->toDateString();
 
@@ -1463,6 +1696,77 @@ class AsistenciaController extends Controller
             'agente'         => ['id' => $agente->id, 'nombres' => $agente->nombres],
             'tardanzas'      => $tardanzas,
             'salvavidas_usado' => $yaUso,
+        ]);
+    }
+
+    // GET /asistencias/mi-historial
+    // Historial del agente autenticado, comisiones por dia y panel del equipo
+    // cuando el agente vinculado es jefe de tienda.
+    public function miHistorial(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'fecha_desde' => 'nullable|date_format:Y-m-d',
+            'fecha_hasta' => 'nullable|date_format:Y-m-d|after_or_equal:fecha_desde',
+        ]);
+
+        $agente = $this->userAgentResolver->resolveOrFail($request->user());
+        $desde = $validated['fecha_desde'] ?? now()->startOfMonth()->toDateString();
+        $hasta = $validated['fecha_hasta'] ?? now()->toDateString();
+
+        $asistencias = DB::table('asistencias')
+            ->where('agente_id', $agente->id)
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->orderByDesc('fecha')
+            ->get();
+
+        $comisiones = Schema::hasTable('ventas') && Schema::hasTable('reportes')
+            ? DB::table('ventas as v')
+                ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+                ->where('v.vendedor_id', $agente->id)
+                ->whereBetween('r.fecha', [$desde, $hasta])
+                ->where('v.comision_estado', '!=', 'ANULADA')
+                ->groupBy('r.fecha')
+                ->orderByDesc('r.fecha')
+                ->selectRaw('r.fecha, MIN(r.id) as reporte_id, COUNT(v.id) as items, COALESCE(SUM(v.comision_generada), 0) as comision')
+                ->get()
+            : collect();
+
+        $rolJefe = strtolower(trim((string) ($agente->es_gerencia ?? '0')));
+        $esJefe = ! in_array($rolJefe, ['', '0', 'false', 'no'], true);
+        $equipo = collect();
+
+        if ($esJefe) {
+            $equipo = DB::table('agentes as a')
+                ->leftJoin('asistencias as asi', function ($join) use ($desde, $hasta) {
+                    $join->on('asi.agente_id', '=', 'a.id')
+                        ->whereBetween('asi.fecha', [$desde, $hasta]);
+                })
+                ->where('a.tienda_base', $agente->tienda_base)
+                ->where('a.estado', 'ACTIVO')
+                ->groupBy('a.id', 'a.nombres', 'a.dni', 'a.tienda_base')
+                ->orderBy('a.nombres')
+                ->selectRaw("
+                    a.id, a.nombres, a.dni, a.tienda_base,
+                    COALESCE(SUM(CASE WHEN asi.hora_ingreso IS NOT NULL THEN 1 ELSE 0 END), 0) as presentes,
+                    COALESCE(SUM(CASE WHEN asi.estado_asistencia = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END), 0) as faltas,
+                    COALESCE(SUM(asi.minutos_tardanza), 0) as tardanza_total
+                ")
+                ->get();
+        }
+
+        return response()->json([
+            'agente' => [
+                'id' => $agente->id,
+                'dni' => $agente->dni,
+                'nombres' => $agente->nombres,
+                'tienda_base' => $agente->tienda_base,
+                'es_jefe' => $esJefe,
+            ],
+            'periodo' => ['desde' => $desde, 'hasta' => $hasta],
+            'asistencias' => $asistencias,
+            'comisiones' => $comisiones,
+            'total_comisiones' => round((float) $comisiones->sum('comision'), 2),
+            'equipo' => $equipo,
         ]);
     }
 

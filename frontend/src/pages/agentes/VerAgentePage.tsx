@@ -7,7 +7,7 @@ import type { PaginatedResponse } from '../../types/pagination'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp } from 'lucide-react'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -228,6 +228,225 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
   )
 }
 
+type ListaRrhh = Array<Record<string, string | number>>
+interface PerfilRrhh {
+  nombres: string
+  apellidos: string | null
+  telefono: string | null
+  correo: string | null
+  direccion: string | null
+  fecha_nacimiento: string | null
+  lugar_nacimiento: string | null
+  grupo_sanguineo: string | null
+  alergias: string | null
+  sistema_pension: string | null
+  nombre_afp: string | null
+  numero_cuspp: string | null
+  antecedentes_penales: boolean
+  antecedentes_policial: boolean
+  antecedentes_judicial: boolean
+  contactos_emergencia: ListaRrhh
+  carga_familiar: ListaRrhh
+  formacion_academica: ListaRrhh
+  experiencia_laboral: ListaRrhh
+}
+
+interface Boleta {
+  id: number
+  fecha_inicio: string
+  fecha_fin: string
+  total_pagado: string
+  estado: 'PENDIENTE' | 'PAGADO'
+  fecha_pago: string
+}
+
+const listaATexto = (items: ListaRrhh, keys: string[]) =>
+  (items ?? []).map(item => keys.map(key => String(item[key] ?? '')).join(' | ')).join('\n')
+
+const textoALista = (text: string, keys: string[]): ListaRrhh =>
+  text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const values = line.split('|').map(value => value.trim())
+    return Object.fromEntries(keys.map((key, index) => [key, values[index] ?? '']))
+  })
+
+async function descargar(path: string, filename: string) {
+  const response = await api.get(path, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function PerfilRrhhPanel({ agenteId }: { agenteId: string }) {
+  const { data } = useQuery({
+    queryKey: ['agente-perfil-rrhh', agenteId],
+    queryFn: () => api.get<{ data: PerfilRrhh }>(`/v1/agentes/${agenteId}/perfil-rrhh`).then(r => r.data.data),
+  })
+  if (!data) return <section className="kyro-card p-5 text-sm text-kyro-muted">Cargando ficha RRHH...</section>
+
+  return <PerfilRrhhEditor key={agenteId} agenteId={agenteId} initial={data} />
+}
+
+function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: PerfilRrhh }) {
+  const qc = useQueryClient()
+  const [form, setForm] = useState<PerfilRrhh>(initial)
+  const [listas, setListas] = useState({
+    contactos: listaATexto(initial.contactos_emergencia, ['nombre', 'parentesco', 'telefono']),
+    familia: listaATexto(initial.carga_familiar, ['nombre', 'parentesco', 'edad']),
+    formacion: listaATexto(initial.formacion_academica, ['nivel', 'institucion', 'carrera', 'anio_fin']),
+    experiencia: listaATexto(initial.experiencia_laboral, ['empresa', 'cargo', 'desde', 'hasta']),
+  })
+  const guardar = useMutation({
+    mutationFn: () => api.put(`/v1/agentes/${agenteId}/perfil-rrhh`, {
+      ...form,
+      contactos_emergencia: textoALista(listas.contactos, ['nombre', 'parentesco', 'telefono']),
+      carga_familiar: textoALista(listas.familia, ['nombre', 'parentesco', 'edad']),
+      formacion_academica: textoALista(listas.formacion, ['nivel', 'institucion', 'carrera', 'anio_fin']),
+      experiencia_laboral: textoALista(listas.experiencia, ['empresa', 'cargo', 'desde', 'hasta']),
+    }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-perfil-rrhh', agenteId] }),
+  })
+
+  const set = (key: keyof PerfilRrhh, value: string | boolean) => setForm(current => ({ ...current, [key]: value }))
+
+  return (
+    <section className="kyro-card p-5 lg:col-span-2">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-kyro-text">Ficha RRHH</h3>
+          <p className="text-xs text-kyro-muted">Datos personales, previsionales, familiares y laborales.</p>
+        </div>
+        <Button size="sm" disabled={guardar.isPending} onClick={() => guardar.mutate()}>
+          <Save size={14} /> {guardar.isPending ? 'Guardando...' : 'Guardar ficha'}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {([
+          ['apellidos', 'Apellidos', 'text'], ['telefono', 'Telefono', 'text'], ['correo', 'Correo', 'email'], ['direccion', 'Direccion', 'text'],
+          ['fecha_nacimiento', 'Fecha nacimiento', 'date'], ['lugar_nacimiento', 'Lugar nacimiento', 'text'],
+          ['grupo_sanguineo', 'Grupo sanguineo', 'text'], ['alergias', 'Alergias', 'text'],
+          ['sistema_pension', 'Sistema pension', 'text'], ['nombre_afp', 'AFP', 'text'], ['numero_cuspp', 'CUSPP', 'text'],
+        ] as Array<[keyof PerfilRrhh, string, string]>).map(([key, label, type]) => (
+          <div key={key}>
+            <label className="mb-1 block text-xs text-kyro-muted">{label}</label>
+            <Input type={type} value={String(form[key] ?? '')} onChange={e => set(key, e.target.value)} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-kyro-body">
+        {([
+          ['antecedentes_penales', 'Antecedentes penales'],
+          ['antecedentes_policial', 'Antecedentes policiales'],
+          ['antecedentes_judicial', 'Antecedentes judiciales'],
+        ] as Array<[keyof PerfilRrhh, string]>).map(([key, label]) => (
+          <label key={key} className="flex items-center gap-2">
+            <input type="checkbox" checked={Boolean(form[key])} onChange={e => set(key, e.target.checked)} />
+            {label}
+          </label>
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {([
+          ['contactos', 'Contactos emergencia', 'nombre | parentesco | telefono'],
+          ['familia', 'Carga familiar', 'nombre | parentesco | edad'],
+          ['formacion', 'Formacion academica', 'nivel | institucion | carrera | anio'],
+          ['experiencia', 'Experiencia laboral', 'empresa | cargo | desde | hasta'],
+        ] as const).map(([key, label, help]) => (
+          <div key={key}>
+            <label className="mb-1 block text-xs font-medium text-kyro-body">{label}</label>
+            <textarea
+              rows={4}
+              value={listas[key]}
+              onChange={e => setListas(current => ({ ...current, [key]: e.target.value }))}
+              className="kyro-input w-full text-sm"
+              placeholder={help}
+            />
+            <p className="mt-1 text-[11px] text-kyro-muted">Una fila por registro: {help}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }) {
+  const qc = useQueryClient()
+  const { data } = useQuery({
+    queryKey: ['agente-boletas', agenteId],
+    queryFn: () => api.get<{ data: Boleta[] }>(`/v1/agentes/${agenteId}/boletas`).then(r => r.data.data),
+  })
+  const accion = useMutation({
+    mutationFn: ({ id, accion }: { id: number; accion: 'pagar' | 'eliminar' }) => api.patch(`/v1/constancias/boleta/${id}`, { accion }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-boletas', agenteId] }),
+  })
+  const boletas = data ?? []
+
+  return (
+    <section className="kyro-card p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Boletas</h3>
+      <p className="mb-3 text-xs text-kyro-muted">Liquidaciones generadas para el agente.</p>
+      <div className="max-h-64 divide-y divide-kyro-border overflow-y-auto rounded-kyro border border-kyro-border">
+        {boletas.length === 0 && <p className="p-4 text-center text-xs text-kyro-muted">Sin boletas generadas.</p>}
+        {boletas.map(boleta => (
+          <div key={boleta.id} className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-kyro-text">{boleta.fecha_inicio} al {boleta.fecha_fin}</p>
+                <p className="font-mono text-sm font-bold text-kyro-gold">{fmt(boleta.total_pagado)}</p>
+              </div>
+              <Badge variant={boleta.estado === 'PAGADO' ? 'success' : 'warning'}>{boleta.estado}</Badge>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => descargar(`/v1/constancias/boleta/${boleta.id}`, `boleta_${nombre}_${boleta.id}.pdf`)}>
+                <Download size={13} /> PDF
+              </Button>
+              {boleta.estado === 'PENDIENTE' && <Button size="sm" onClick={() => accion.mutate({ id: boleta.id, accion: 'pagar' })}>Marcar pagado</Button>}
+              <Button size="sm" variant="destructive" onClick={() => confirm('Eliminar esta boleta?') && accion.mutate({ id: boleta.id, accion: 'eliminar' })}>
+                <Trash2 size={13} />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
+  const qc = useQueryClient()
+  const { data } = useQuery({
+    queryKey: ['agente-seguridad', agenteId],
+    queryFn: () => api.get(`/v1/agentes/${agenteId}/seguridad`).then(r => r.data),
+  })
+  const reset = useMutation({
+    mutationFn: () => api.post(`/v1/agentes/${agenteId}/reset-dispositivo`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-seguridad', agenteId] }),
+  })
+
+  return (
+    <section className="kyro-card p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Smartphone size={15} className="text-kyro-gold" /> Dispositivo</h3>
+      <p className="mb-3 text-xs text-kyro-muted">Vinculacion del celular y token activo.</p>
+      <div className="space-y-2 text-xs text-kyro-body">
+        <p>Dispositivo: <strong>{data?.dispositivo_vinculado ? 'Vinculado' : 'Sin vincular'}</strong></p>
+        <p>Tienda inicial: <strong>{data?.tienda_registro_inicial ?? '-'}</strong></p>
+        <p>Token: <strong>{data?.tiene_token ? `${data.token} (${data.tipo_token})` : 'Sin token activo'}</strong></p>
+      </div>
+      <Button
+        size="sm"
+        variant="destructive"
+        className="mt-4"
+        disabled={reset.isPending}
+        onClick={() => confirm('Desvincular el dispositivo y revocar el token?') && reset.mutate()}
+      >
+        {reset.isPending ? 'Procesando...' : 'Resetear dispositivo'}
+      </Button>
+    </section>
+  )
+}
+
 export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
   const { usuario }  = useAuth()
@@ -319,6 +538,16 @@ export function VerAgentePage() {
           <div className="ml-auto rounded-kyro border border-kyro-border bg-kyro-elevated px-4 py-3 text-right">
             <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-kyro-subtle">Sueldo base</p>
             <p className="mt-1 font-mono text-lg font-bold tabular-nums text-kyro-text">{fmt(agente.sueldo_base)}</p>
+            {isAdmin && id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => descargar(`/v1/constancias/agente/${id}`, `certificado_${agente.nombres.replace(/\s+/g, '_')}.pdf`)}
+              >
+                <Download size={13} /> Certificado
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -356,6 +585,9 @@ export function VerAgentePage() {
           <FechasLaboralesPanel agenteId={id} agente={agente} />
           <TokenSeguridadPanel agenteId={id} />
           <AdelantosPanel agenteId={id} />
+          <SeguridadDispositivoPanel agenteId={id} />
+          <BoletasPanel agenteId={id} nombre={agente.nombres.replace(/\s+/g, '_')} />
+          <PerfilRrhhPanel agenteId={id} />
         </div>
       )}
 

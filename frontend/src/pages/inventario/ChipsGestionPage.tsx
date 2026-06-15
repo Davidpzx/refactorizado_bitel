@@ -19,6 +19,7 @@ interface Chip {
   tienda_origen: string
   tipo_chip: string
   stock_actual: number
+  series_info?: Array<{ inicio: string; fin: string | null }> | null
   tienda: ChipTienda
 }
 
@@ -54,16 +55,26 @@ export function ChipsGestionPage() {
   const [cambiarDialog, setCambiarDialog]   = useState<Chip | null>(null)
   const [historialDialog, setHistorialDialog] = useState<Chip | null>(null)
   const [agregarDialog, setAgregarDialog]   = useState(false)
+  const [ajusteDialog, setAjusteDialog]     = useState<Chip | null>(null)
 
   const [codigoDestino, setCodigoDestino] = useState('')
   const [cantidadCambiar, setCantidadCambiar] = useState('')
 
-  const [agregarForm, setAgregarForm] = useState({
+  const [agregarForm, setAgregarForm] = useState<{
+    tienda_id: string
+    tienda_origen: string
+    tipo_chip: string
+    cantidad: string
+    series?: string
+  }>({
     tienda_id:    '',
     tienda_origen: '',
     tipo_chip:    'FÍSICO',
     cantidad:     '',
+    series:       '',
   })
+  const [cantidadReal, setCantidadReal] = useState('')
+  const [observacionAjuste, setObservacionAjuste] = useState('')
 
   const { data, isLoading } = useQuery<{ data: Chip[] }>({
     queryKey: ['chips'],
@@ -89,7 +100,7 @@ export function ChipsGestionPage() {
   })
 
   const agregarStock = useMutation({
-    mutationFn: (body: { tienda_id: number; tienda_origen: string; tipo_chip: string; cantidad: number }) =>
+    mutationFn: (body: { tienda_id: number; tienda_origen: string; tipo_chip: string; cantidad: number; series: Array<{ inicio: string; fin: string | null }> }) =>
       api.post('/v1/chips', body).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chips'] })
@@ -101,6 +112,17 @@ export function ChipsGestionPage() {
   const eliminar = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/chips/${id}`).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['chips'] }),
+  })
+
+  const ajustarStock = useMutation({
+    mutationFn: (body: { id: number; cantidad_real: number; observacion: string }) =>
+      api.post(`/v1/chips/${body.id}/ajustar-stock-real`, body).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chips'] })
+      setAjusteDialog(null)
+      setCantidadReal('')
+      setObservacionAjuste('')
+    },
   })
 
   const chips = data?.data ?? []
@@ -120,6 +142,10 @@ export function ChipsGestionPage() {
       tienda_origen: agregarForm.tienda_origen,
       tipo_chip:    agregarForm.tipo_chip,
       cantidad:     Number(agregarForm.cantidad),
+      series: (agregarForm.series ?? '').split(/\r?\n/).map(line => {
+        const [inicio, fin] = line.split(/[-|,]/).map(v => v.trim())
+        return { inicio, fin: fin || null }
+      }).filter(r => r.inicio),
     })
   }
 
@@ -205,6 +231,19 @@ export function ChipsGestionPage() {
                         {isAdmin && (
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setAjusteDialog(chip)
+                              setCantidadReal(String(chip.stock_actual))
+                              setObservacionAjuste('')
+                            }}
+                          >
+                            Ajustar stock
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
                             variant="destructive"
                             onClick={() => handleEliminar(chip)}
                             disabled={eliminar.isPending}
@@ -254,6 +293,42 @@ export function ChipsGestionPage() {
               disabled={cambiarCodigo.isPending || !codigoDestino || !cantidadCambiar}
             >
               {cambiarCodigo.isPending ? 'Moviendo...' : 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={!!ajusteDialog}
+        onClose={() => setAjusteDialog(null)}
+        title={`Ajustar stock - ${ajusteDialog?.tienda_origen ?? ''}`}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-kyro-body">Cantidad fisica real</label>
+            <Input type="number" min="0" value={cantidadReal} onChange={e => setCantidadReal(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-kyro-body">Observacion</label>
+            <textarea
+              rows={3}
+              value={observacionAjuste}
+              onChange={e => setObservacionAjuste(e.target.value)}
+              className="kyro-input w-full"
+              placeholder="Motivo y referencia del conteo fisico"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setAjusteDialog(null)}>Cancelar</Button>
+            <Button
+              disabled={!ajusteDialog || cantidadReal === '' || observacionAjuste.trim().length < 10 || ajustarStock.isPending}
+              onClick={() => ajusteDialog && ajustarStock.mutate({
+                id: ajusteDialog.id,
+                cantidad_real: Number(cantidadReal),
+                observacion: observacionAjuste.trim(),
+              })}
+            >
+              {ajustarStock.isPending ? 'Ajustando...' : 'Aplicar ajuste'}
             </Button>
           </div>
         </div>
@@ -341,6 +416,17 @@ export function ChipsGestionPage() {
                 placeholder="0"
                 min={1}
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Rangos de series (opcional)</label>
+              <textarea
+                rows={4}
+                value={agregarForm.series ?? ''}
+                onChange={(e) => setAgregarForm((f) => ({ ...f, series: e.target.value }))}
+                className="kyro-input w-full font-mono text-sm"
+                placeholder={'8951150000000000001 - 8951150000000000050\n8951150000000000100'}
+              />
+              <p className="mt-1 text-xs text-kyro-muted">Un rango por linea: inicio - fin.</p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setAgregarDialog(false)}>Cancelar</Button>

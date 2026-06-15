@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
@@ -49,7 +50,7 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
           className="kyro-input w-full resize-none"
         />
         {error && (
-          <p className="text-xs text-kyro-danger">{(error as any)?.response?.data?.error ?? 'Error al enviar solicitud'}</p>
+          <p className="text-xs text-kyro-danger">{(error as AxiosError<{ error?: string }>)?.response?.data?.error ?? 'Error al enviar solicitud'}</p>
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -76,6 +77,117 @@ interface MisTardanzas {
   mensaje?: string
 }
 
+interface HistorialOperativo {
+  agente: {
+    id: number
+    dni: string
+    nombres: string
+    tienda_base: string
+    es_jefe: boolean
+  }
+  periodo: { desde: string; hasta: string }
+  asistencias: Array<{
+    id: number
+    fecha: string
+    hora_ingreso: string | null
+    hora_salida: string | null
+    minutos_tardanza?: number
+    estado_asistencia?: string
+  }>
+  comisiones: Array<{
+    fecha: string
+    reporte_id: number
+    items: number
+    comision: string | number
+  }>
+  total_comisiones: number
+  equipo: Array<{
+    id: number
+    nombres: string
+    dni: string
+    presentes: number
+    faltas: number
+    tardanza_total: number
+  }>
+}
+
+function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
+  if (!data) return null
+
+  return (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <section className="kyro-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-kyro-border p-4">
+          <div>
+            <h3 className="text-sm font-semibold text-kyro-text">Comisiones por dia</h3>
+            <p className="text-xs text-kyro-muted">Ventas atribuidas al agente autenticado.</p>
+          </div>
+          <span className="font-mono font-bold text-kyro-success">{fmt(data.total_comisiones)}</span>
+        </div>
+        <div className="max-h-72 divide-y divide-kyro-border overflow-y-auto">
+          {data.comisiones.length === 0 && <p className="p-5 text-center text-xs text-kyro-muted">Sin comisiones en el periodo.</p>}
+          {data.comisiones.map(item => (
+            <Link key={`${item.fecha}-${item.reporte_id}`} to={`/reportes/${item.reporte_id}`} className="flex items-center justify-between p-3 hover:bg-kyro-elevated">
+              <div>
+                <p className="text-sm font-medium text-kyro-text">{new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</p>
+                <p className="text-xs text-kyro-muted">{item.items} item(s) comisionables</p>
+              </div>
+              <span className="font-mono font-bold text-kyro-success">+{fmt(item.comision)}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="kyro-card overflow-hidden">
+        <div className="border-b border-kyro-border p-4">
+          <h3 className="text-sm font-semibold text-kyro-text">Resumen de asistencia</h3>
+          <p className="text-xs text-kyro-muted">{data.agente.nombres} · {data.periodo.desde} al {data.periodo.hasta}</p>
+        </div>
+        <div className="max-h-72 divide-y divide-kyro-border overflow-y-auto">
+          {data.asistencias.length === 0 && <p className="p-5 text-center text-xs text-kyro-muted">Sin marcas en el periodo.</p>}
+          {data.asistencias.map(item => (
+            <div key={item.id} className="grid grid-cols-4 gap-2 p-3 text-xs">
+              <span className="text-kyro-body">{new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
+              <span className="text-kyro-muted">{item.hora_ingreso?.slice(0, 5) ?? '--:--'} - {item.hora_salida?.slice(0, 5) ?? '--:--'}</span>
+              <span className={(item.minutos_tardanza ?? 0) > 0 ? 'font-bold text-kyro-warning' : 'text-kyro-muted'}>{item.minutos_tardanza ?? 0} min</span>
+              <span className="text-right text-kyro-muted">{item.estado_asistencia ?? 'REGULAR'}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {data.agente.es_jefe && (
+        <section className="kyro-card overflow-hidden xl:col-span-2">
+          <div className="border-b border-kyro-border p-4">
+            <h3 className="text-sm font-semibold text-kyro-text">Equipo de tienda {data.agente.tienda_base}</h3>
+            <p className="text-xs text-kyro-muted">Presencias, faltas y tardanza acumulada del periodo.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  {['Agente', 'DNI', 'Presencias', 'Faltas', 'Tardanza'].map(h => <th key={h} className="kyro-table-head px-4 py-3 text-left">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {data.equipo.map(miembro => (
+                  <tr key={miembro.id} className="[&>td]:border-b [&>td]:border-kyro-border">
+                    <td className="px-4 py-3 font-medium text-kyro-text">{miembro.nombres}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-kyro-muted">{miembro.dni}</td>
+                    <td className="px-4 py-3">{miembro.presentes}</td>
+                    <td className="px-4 py-3 text-kyro-danger">{miembro.faltas}</td>
+                    <td className="px-4 py-3 text-kyro-warning">{miembro.tardanza_total} min</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
 // Salvavidas: el agente recupera una tardanza de la semana (paridad legacy mi_historial).
 function SalvavidasPanel() {
   const [dni, setDni]       = useState('')
@@ -93,7 +205,7 @@ function SalvavidasPanel() {
       asistencia_id: t.id, minutos: t.minutos_tardanza ?? 0, dni: consultado,
     }).then(r => r.data),
     onSuccess: (r: { success: boolean; mensaje?: string }) => { setMsg(r.mensaje ?? (r.success ? 'Tardanza recuperada.' : 'No se pudo recuperar.')); refetch() },
-    onError: (e: any) => setMsg(e?.response?.data?.mensaje ?? 'Error al recuperar la tardanza.'),
+    onError: (e: AxiosError<{ mensaje?: string }>) => setMsg(e.response?.data?.mensaje ?? 'Error al recuperar la tardanza.'),
   })
 
   const tardanzas = data?.tardanzas ?? []
@@ -158,6 +270,15 @@ export function MiHistorialPage() {
         },
       }).then(r => r.data),
   })
+  const { data: historialOperativo } = useQuery({
+    queryKey: ['mi-historial-operativo', applied.fecha_desde, applied.fecha_hasta],
+    queryFn: () => api.get<HistorialOperativo>('/v1/asistencias/mi-historial', {
+      params: {
+        fecha_desde: applied.fecha_desde || undefined,
+        fecha_hasta: applied.fecha_hasta || undefined,
+      },
+    }).then(r => r.data),
+  })
 
   const reportes = data?.data ?? []
   const meta = data
@@ -182,6 +303,7 @@ export function MiHistorialPage() {
       <PageHeader title="Mi Historial Personal" subtitle="Consulta tus cierres, diferencias y solicitudes de edición" />
 
       <SalvavidasPanel />
+      <HistorialOperativoPanel data={historialOperativo} />
 
       {/* KPIs personales de la página actual */}
       {!isLoading && reportes.length > 0 && (

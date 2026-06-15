@@ -22,26 +22,29 @@ export function BipayConsole() {
   const [anypay, setAnypay] = useState('')
   const [cierreBipay, setCierreBipay] = useState('')
   const [cierreAnypay, setCierreAnypay] = useState('')
-  const [cooldown, setCooldown] = useState(0)
+  const [cooldownEndsAt, setCooldownEndsAt] = useState(0)
+  const [nowMs, setNowMs] = useState(() => Date.now())
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'err'; texto: string } | null>(null)
 
-  const { data, isError } = useQuery({
+  const { data, isError, dataUpdatedAt } = useQuery({
     queryKey: ['bipay-cajero-estado'],
     queryFn: () => bipayCajeroApi.estado(),
     refetchInterval: 15_000,
     retry: false,
   })
 
-  // Sincronizar cooldown desde el backend y descontar localmente
   useEffect(() => {
-    if (data?.cooldown_segs !== undefined) setCooldown(data.cooldown_segs)
-  }, [data?.cooldown_segs])
-
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000)
+    const t = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(t)
-  }, [cooldown])
+  }, [])
+
+  const serverCooldownEndsAt = data?.cooldown_segs
+    ? dataUpdatedAt + data.cooldown_segs * 1000
+    : 0
+  const cooldown = Math.max(
+    0,
+    Math.ceil((Math.max(serverCooldownEndsAt, cooldownEndsAt) - nowMs) / 1000),
+  )
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['bipay-cajero-estado'] })
 
@@ -51,8 +54,8 @@ export function BipayConsole() {
       anypay !== '' ? Number(anypay) : undefined,
     ),
     onSuccess: (r: { ok: boolean; msg?: string; cooldown_segs?: number }) => {
-      if (r.ok) { setMsg({ tipo: 'ok', texto: 'Tramo registrado.' }); setBipay(''); setAnypay(''); if (r.cooldown_segs) setCooldown(r.cooldown_segs); invalidate() }
-      else { setMsg({ tipo: 'err', texto: r.msg ?? 'No se pudo registrar.' }); if (r.cooldown_segs) setCooldown(r.cooldown_segs) }
+      if (r.ok) { setMsg({ tipo: 'ok', texto: 'Tramo registrado.' }); setBipay(''); setAnypay(''); if (r.cooldown_segs) setCooldownEndsAt(Date.now() + r.cooldown_segs * 1000); invalidate() }
+      else { setMsg({ tipo: 'err', texto: r.msg ?? 'No se pudo registrar.' }); if (r.cooldown_segs) setCooldownEndsAt(Date.now() + r.cooldown_segs * 1000) }
     },
     onError: () => setMsg({ tipo: 'err', texto: 'Error al registrar el tramo.' }),
   })

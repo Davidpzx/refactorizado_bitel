@@ -28,7 +28,7 @@ class ReporteBorradorTest extends TestCase
 
     public function test_guarda_y_actualiza_un_unico_borrador_por_usuario_tienda_y_fecha(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
 
         $this->actingAs($usuario, 'sanctum')
             ->post('/api/v1/reportes/borrador', [
@@ -70,12 +70,12 @@ class ReporteBorradorTest extends TestCase
 
     public function test_recupera_primero_el_borrador_propio_y_hace_fallback_a_la_misma_tienda(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
-        $companero = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
+        $companero = $this->vendedorVinculado('PUNDA50');
 
         DB::table('reportes_borradores')->insert([
             [
-                'agente_id' => $companero->id,
+                'agente_id' => $companero->agente_id,
                 'tienda_id' => 'PUNDA50',
                 'fecha' => '2026-06-11',
                 'datos_json' => json_encode(['origen' => 'companero']),
@@ -83,7 +83,7 @@ class ReporteBorradorTest extends TestCase
                 'actualizado_en' => now()->subMinute(),
             ],
             [
-                'agente_id' => $usuario->id,
+                'agente_id' => $usuario->agente_id,
                 'tienda_id' => 'PUNDA50',
                 'fecha' => '2026-06-11',
                 'datos_json' => json_encode(['origen' => 'propio']),
@@ -96,11 +96,11 @@ class ReporteBorradorTest extends TestCase
             ->getJson('/api/v1/reportes/borrador')
             ->assertOk()
             ->assertJsonPath('borrador.origen', 'propio')
-            ->assertJsonPath('borrador._cloud_agente', $usuario->id)
+            ->assertJsonPath('borrador._cloud_agente', $usuario->agente_id)
             ->assertJsonPath('borrador._mismo_usuario', true);
 
         DB::table('reportes_borradores')
-            ->where('agente_id', $usuario->id)
+            ->where('agente_id', $usuario->agente_id)
             ->delete();
 
         $this->actingAs($usuario, 'sanctum')
@@ -112,11 +112,11 @@ class ReporteBorradorTest extends TestCase
 
     public function test_no_expone_borradores_de_otra_tienda(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
-        $otro = Usuario::factory()->vendedor('TACDA13')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
+        $otro = $this->vendedorVinculado('TACDA13');
 
         DB::table('reportes_borradores')->insert([
-            'agente_id' => $otro->id,
+            'agente_id' => $otro->agente_id,
             'tienda_id' => 'TACDA13',
             'fecha' => '2026-06-11',
             'datos_json' => json_encode(['secreto' => true]),
@@ -132,12 +132,12 @@ class ReporteBorradorTest extends TestCase
 
     public function test_elimina_solo_el_borrador_propio_del_dia(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
-        $companero = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
+        $companero = $this->vendedorVinculado('PUNDA50');
 
         foreach ([$usuario, $companero] as $propietario) {
             DB::table('reportes_borradores')->insert([
-                'agente_id' => $propietario->id,
+                'agente_id' => $propietario->agente_id,
                 'tienda_id' => 'PUNDA50',
                 'fecha' => '2026-06-11',
                 'datos_json' => '{}',
@@ -152,19 +152,19 @@ class ReporteBorradorTest extends TestCase
             ->assertJsonPath('success', true);
 
         $this->assertDatabaseMissing('reportes_borradores', [
-            'agente_id' => $usuario->id,
+            'agente_id' => $usuario->agente_id,
         ]);
         $this->assertDatabaseHas('reportes_borradores', [
-            'agente_id' => $companero->id,
+            'agente_id' => $companero->agente_id,
         ]);
     }
 
     public function test_acepta_el_formato_legacy_para_eliminar_por_post(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
 
         DB::table('reportes_borradores')->insert([
-            'agente_id' => $usuario->id,
+            'agente_id' => $usuario->agente_id,
             'tienda_id' => 'PUNDA50',
             'fecha' => '2026-06-11',
             'datos_json' => '{}',
@@ -178,16 +178,16 @@ class ReporteBorradorTest extends TestCase
             ->assertJsonPath('success', true);
 
         $this->assertDatabaseMissing('reportes_borradores', [
-            'agente_id' => $usuario->id,
+            'agente_id' => $usuario->agente_id,
         ]);
     }
 
     public function test_guardar_reporte_completo_limpia_el_borrador_del_usuario(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
 
         DB::table('reportes_borradores')->insert([
-            'agente_id' => $usuario->id,
+            'agente_id' => $usuario->agente_id,
             'tienda_id' => 'PUNDA50',
             'fecha' => '2026-06-11',
             'datos_json' => '{}',
@@ -208,7 +208,7 @@ class ReporteBorradorTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseMissing('reportes_borradores', [
-            'agente_id' => $usuario->id,
+            'agente_id' => $usuario->agente_id,
             'tienda_id' => 'PUNDA50',
             'fecha' => '2026-06-11',
         ]);

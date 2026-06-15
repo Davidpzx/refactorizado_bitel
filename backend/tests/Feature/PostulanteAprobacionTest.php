@@ -18,28 +18,35 @@ class PostulanteAprobacionTest extends TestCase
     {
         parent::setUp();
 
-        Schema::table('agentes', function (Blueprint $table) {
-            $table->string('apellidos', 150)->nullable();
-            $table->string('telefono', 15)->nullable();
-            $table->string('correo', 120)->nullable();
-            $table->date('fecha_nacimiento')->nullable();
-            $table->text('direccion')->nullable();
-            $table->string('lugar_nacimiento', 255)->nullable();
-            $table->longText('formacion_academica')->nullable();
-            $table->text('carga_familiar')->nullable();
-            $table->text('experiencia_laboral')->nullable();
-            $table->string('sistema_pension', 10)->nullable();
-            $table->string('nombre_afp', 50)->nullable();
-            $table->string('numero_cuspp', 20)->nullable();
-            $table->string('grupo_sanguineo', 5)->nullable();
-            $table->text('alergias')->nullable();
-            $table->boolean('antecedentes_penales')->default(false);
-            $table->boolean('antecedentes_policial')->default(false);
-            $table->boolean('antecedentes_judicial')->default(false);
-            $table->text('contactos_emergencia')->nullable();
-            $table->date('fecha_ingreso')->nullable();
-            $table->timestamps();
-        });
+        $columns = [
+            'apellidos' => fn (Blueprint $table) => $table->string('apellidos', 150)->nullable(),
+            'telefono' => fn (Blueprint $table) => $table->string('telefono', 15)->nullable(),
+            'correo' => fn (Blueprint $table) => $table->string('correo', 120)->nullable(),
+            'fecha_nacimiento' => fn (Blueprint $table) => $table->date('fecha_nacimiento')->nullable(),
+            'direccion' => fn (Blueprint $table) => $table->text('direccion')->nullable(),
+            'lugar_nacimiento' => fn (Blueprint $table) => $table->string('lugar_nacimiento', 255)->nullable(),
+            'formacion_academica' => fn (Blueprint $table) => $table->longText('formacion_academica')->nullable(),
+            'carga_familiar' => fn (Blueprint $table) => $table->text('carga_familiar')->nullable(),
+            'experiencia_laboral' => fn (Blueprint $table) => $table->text('experiencia_laboral')->nullable(),
+            'sistema_pension' => fn (Blueprint $table) => $table->string('sistema_pension', 10)->nullable(),
+            'nombre_afp' => fn (Blueprint $table) => $table->string('nombre_afp', 50)->nullable(),
+            'numero_cuspp' => fn (Blueprint $table) => $table->string('numero_cuspp', 20)->nullable(),
+            'grupo_sanguineo' => fn (Blueprint $table) => $table->string('grupo_sanguineo', 5)->nullable(),
+            'alergias' => fn (Blueprint $table) => $table->text('alergias')->nullable(),
+            'antecedentes_penales' => fn (Blueprint $table) => $table->boolean('antecedentes_penales')->default(false),
+            'antecedentes_policial' => fn (Blueprint $table) => $table->boolean('antecedentes_policial')->default(false),
+            'antecedentes_judicial' => fn (Blueprint $table) => $table->boolean('antecedentes_judicial')->default(false),
+            'contactos_emergencia' => fn (Blueprint $table) => $table->text('contactos_emergencia')->nullable(),
+            'fecha_ingreso' => fn (Blueprint $table) => $table->date('fecha_ingreso')->nullable(),
+            'created_at' => fn (Blueprint $table) => $table->timestamp('created_at')->nullable(),
+            'updated_at' => fn (Blueprint $table) => $table->timestamp('updated_at')->nullable(),
+        ];
+
+        foreach ($columns as $column => $definition) {
+            if (! Schema::hasColumn('agentes', $column)) {
+                Schema::table('agentes', $definition);
+            }
+        }
     }
 
     public function test_admin_aprueba_postulante_copiando_datos_y_pin_por_defecto(): void

@@ -131,13 +131,13 @@ export function EstadisticasPage() {
     const token = localStorage.getItem('auth_token')
     const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
     const params = new URLSearchParams(applied as Record<string, string>)
-    const url = `${base}/v1/estadisticas/ventas?${params.toString()}`
+    const url = `${base}/v1/estadisticas/exportar?${params.toString()}`
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob())
       .then(blob => {
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `estadisticas_${applied.fecha_desde}_${applied.fecha_hasta}.json`
+        a.download = `estadisticas_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
         a.click()
       })
   }

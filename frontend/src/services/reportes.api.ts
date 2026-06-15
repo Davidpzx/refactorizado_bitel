@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { ComisionPlan, CreateReportePayload, Reporte, ReporteConVentas, ReporteFilters } from '../types/reporte'
+import type { ComisionPlan, CreateReportePayload, Reporte, ReporteConVentas, ReporteFilters, VendedorReporte } from '../types/reporte'
 import type { PaginatedResponse } from '../types/pagination'
 
 export const reportesApi = {
@@ -11,6 +11,12 @@ export const reportesApi = {
 
   crear: (data: CreateReportePayload) =>
     api.post<Reporte>('/v1/reportes', data).then((r) => r.data),
+
+  reprocesar: (id: number, data: CreateReportePayload) =>
+    api.put<ReporteConVentas>(`/v1/reportes/${id}/reprocesar`, data).then((r) => r.data),
+
+  vendedores: (tienda_id?: string) =>
+    api.get<VendedorReporte[]>('/v1/reportes/vendedores', { params: { tienda_id } }).then((r) => r.data),
 
   actualizar: (id: number, data: Partial<CreateReportePayload>) =>
     api.put<Reporte>(`/v1/reportes/${id}`, data).then((r) => r.data),

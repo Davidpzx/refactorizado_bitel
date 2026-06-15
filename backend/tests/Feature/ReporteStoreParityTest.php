@@ -13,7 +13,7 @@ class ReporteStoreParityTest extends TestCase
 
     public function test_store_calcula_comision_server_side_segun_tramos_legacy(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
 
         // Plan sembrado: base S/15 (la comisión NO se confía al cliente).
         DB::table('comisiones_planes')->insert([
@@ -62,7 +62,7 @@ class ReporteStoreParityTest extends TestCase
 
     public function test_store_mantiene_guardia_anti_duplicado(): void
     {
-        $usuario = Usuario::factory()->vendedor('PUNDA50')->create();
+        $usuario = $this->vendedorVinculado('PUNDA50');
         $payload = $this->payload($usuario);
 
         $this->actingAs($usuario, 'sanctum')
@@ -78,7 +78,7 @@ class ReporteStoreParityTest extends TestCase
 
     public function test_equipo_cuotas_pendiente_y_desembolso_libera_comision(): void
     {
-        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+        $vendedor = $this->vendedorVinculado('PUNDA50');
         $admin    = Usuario::factory()->admin()->create();
 
         // Equipo a CUOTAS sin inventario_tienda_id (salta la guardia de stock B1).
@@ -93,7 +93,7 @@ class ReporteStoreParityTest extends TestCase
                 ]],
             ]))->assertCreated();
 
-        $venta = DB::table('ventas')->where('vendedor_id', $vendedor->id)->where('tipo_venta', 'EQUIPO')->first();
+        $venta = DB::table('ventas')->where('vendedor_id', $vendedor->agente_id)->where('tipo_venta', 'EQUIPO')->first();
         $this->assertSame('PENDIENTE', $venta->comision_estado);     // diferida hasta el desembolso
         $this->assertSame(0.0, (float) $venta->comision_generada);
 
@@ -117,7 +117,8 @@ class ReporteStoreParityTest extends TestCase
 
     public function test_reprocesar_revierte_stock_y_recrea_ventas(): void
     {
-        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+        $vendedor = $this->vendedorVinculado('PUNDA50');
+        $admin = Usuario::factory()->admin()->create();
 
         $invId = DB::table('inventario_tiendas')->insertGetId([
             'tienda_id' => 'PUNDA50', 'tipo' => 'EQUIPO', 'producto_nombre' => 'iPhone 15',
@@ -144,8 +145,9 @@ class ReporteStoreParityTest extends TestCase
         // Autorizar edición y reprocesar SIN el equipo → el stock debe volver a 1.
         DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'APROBADO']);
 
-        $this->actingAs($vendedor, 'sanctum')
+        $this->actingAs($admin, 'sanctum')
             ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'agente_id' => $vendedor->agente_id,
                 'fecha' => now()->toDateString(), 'efectivo_entregado' => 0, 'ventas' => [],
             ]))->assertOk();
 
@@ -155,9 +157,86 @@ class ReporteStoreParityTest extends TestCase
         $this->assertSame('CERRADO', DB::table('reportes')->where('id', $reporteId)->value('estado_edicion'));
     }
 
+    public function test_store_y_reprocesar_respetan_vendedor_por_venta_y_auditan_el_cambio(): void
+    {
+        $cajero = $this->vendedorVinculado('PUNDA50');
+        $admin = Usuario::factory()->admin()->create();
+        $otroAgenteId = 2200;
+
+        DB::table('agentes')->insert([
+            'id' => $otroAgenteId,
+            'nombres' => 'Segundo vendedor',
+            'estado' => 'ACTIVO',
+            'tienda_base' => 'PUNDA50',
+            'dni' => '00002200',
+        ]);
+
+        $resp = $this->actingAs($cajero, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($cajero, [
+                'fecha' => now()->toDateString(),
+                'efectivo_entregado' => 60,
+                'ventas' => [
+                    [
+                        'tipo_venta' => 'OTROS_FLUJO',
+                        'subtipo' => 'Recarga',
+                        'monto_total' => 20,
+                        'efectivo_inicial' => 20,
+                        'vendedor_id' => $cajero->agente_id,
+                    ],
+                    [
+                        'tipo_venta' => 'OTROS_FLUJO',
+                        'subtipo' => 'Accesorio manual',
+                        'monto_total' => 40,
+                        'efectivo_inicial' => 40,
+                        'vendedor_id' => $otroAgenteId,
+                    ],
+                ],
+            ]))
+            ->assertCreated();
+
+        $reporteId = $resp->json('id');
+        $ventas = DB::table('ventas')->where('reporte_id', $reporteId)->orderBy('id')->get();
+        $this->assertSame([$cajero->agente_id, $otroAgenteId], $ventas->pluck('vendedor_id')->map(fn ($id) => (int) $id)->all());
+
+        DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'APROBADO']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($cajero, [
+                'agente_id' => $cajero->agente_id,
+                'fecha' => now()->toDateString(),
+                'efectivo_entregado' => 60,
+                'ventas' => [
+                    [
+                        'venta_id' => $ventas[0]->id,
+                        'tipo_venta' => 'OTROS_FLUJO',
+                        'subtipo' => 'Recarga',
+                        'monto_total' => 20,
+                        'efectivo_inicial' => 20,
+                        'vendedor_id' => $otroAgenteId,
+                    ],
+                    [
+                        'venta_id' => $ventas[1]->id,
+                        'tipo_venta' => 'OTROS_FLUJO',
+                        'subtipo' => 'Accesorio manual',
+                        'monto_total' => 40,
+                        'efectivo_inicial' => 40,
+                        'vendedor_id' => $otroAgenteId,
+                    ],
+                ],
+            ]))
+            ->assertOk();
+
+        $historial = DB::table('historial_reportes')->where('reporte_id', $reporteId)->latest('id')->first();
+        $this->assertSame('edicion_critica', $historial->accion);
+        $this->assertStringContainsString('Agente vinculado', $historial->detalle);
+        $this->assertStringContainsString('Segundo vendedor', $historial->detalle);
+        $this->assertNotNull($historial->snapshot_antes);
+        $this->assertNotNull($historial->snapshot_despues);
+    }
+
     public function test_edicion_ligera_recalcula_diferencia_y_cierra_edicion(): void
     {
-        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+        $vendedor = $this->vendedorVinculado('PUNDA50');
 
         $resp = $this->actingAs($vendedor, 'sanctum')
             ->postJson('/api/v1/reportes', $this->payload($vendedor, [
@@ -177,8 +256,8 @@ class ReporteStoreParityTest extends TestCase
 
     private function payload(Usuario $usuario, array $overrides = []): array
     {
-        return array_replace([
-            'agente_id' => $usuario->id,
+        $payload = array_replace([
+            'agente_id' => $usuario->agente_id,
             'tienda_id' => 'PUNDA50',
             'usuario_id' => $usuario->id,
             'fecha' => '2026-06-13',
@@ -195,5 +274,12 @@ class ReporteStoreParityTest extends TestCase
             'total_salidas' => 0,
             'ventas' => [],
         ], $overrides);
+
+        $payload['ventas'] = array_map(
+            fn (array $venta) => array_replace(['vendedor_id' => $usuario->agente_id], $venta),
+            $payload['ventas']
+        );
+
+        return $payload;
     }
 }

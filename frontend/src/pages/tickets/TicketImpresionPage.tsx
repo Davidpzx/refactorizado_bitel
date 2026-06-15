@@ -27,7 +27,7 @@ export function TicketImpresionPage() {
   const { data: ticket, isLoading, isError } = useQuery<Ticket>({
     queryKey: ['ticket', id],
     queryFn: async () => {
-      const r = await api.get(`/tickets/${id}`)
+      const r = await api.get(`/v1/tickets/${id}`)
       return r.data
     },
     enabled: !!id,

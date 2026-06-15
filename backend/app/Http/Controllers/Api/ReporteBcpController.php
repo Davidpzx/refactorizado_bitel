@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ReporteBcpController extends Controller
 {
+    public function __construct(private readonly UserAgentResolver $userAgentResolver)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         if (!Schema::hasTable('reportes_bcp')) {
@@ -26,7 +31,7 @@ class ReporteBcpController extends Controller
 
         $query = DB::table('reportes_bcp as rb')
             ->leftJoin('tiendas as t', 't.id', '=', 'rb.sucursal_id')
-            ->leftJoin('usuarios as u', 'u.id', '=', 'rb.agente_id')
+            ->leftJoin('agentes as a', 'a.id', '=', 'rb.agente_id')
             ->whereBetween('rb.fecha', [$desde, $hasta]);
 
         if ($tienda) {
@@ -61,7 +66,7 @@ class ReporteBcpController extends Controller
             ->select([
                 'rb.*',
                 't.nombre AS nombre_tienda',
-                'u.nombre AS nombre_agente',
+                'a.nombres AS nombre_agente',
             ])
             ->orderBy('rb.sucursal_id')
             ->orderByDesc('rb.fecha')
@@ -100,6 +105,20 @@ class ReporteBcpController extends Controller
             'incidencias_sistema'  => ['nullable', 'string'],
         ]);
 
+        $user = $request->user();
+        $agente = $this->userAgentResolver->resolveOrFail($user);
+        $sucursalId = (int) $data['sucursal_id'];
+
+        if ($user->rol !== 'admin') {
+            $sucursalId = (int) DB::table('tiendas')
+                ->where('codigo', $user->tienda_id)
+                ->value('id');
+
+            if ($sucursalId <= 0) {
+                return response()->json(['error' => 'No se pudo resolver la sucursal del usuario autenticado.'], 422);
+            }
+        }
+
         $turnoGuardado = $data['turno_hora'];
         if (!empty($data['nombre_agente_bcp'])) {
             $turnoGuardado .= '|' . $data['nombre_agente_bcp'];
@@ -107,8 +126,8 @@ class ReporteBcpController extends Controller
 
         $id = DB::table('reportes_bcp')->insertGetId([
             'fecha'                => $data['fecha'],
-            'sucursal_id'          => $data['sucursal_id'],
-            'agente_id'            => auth()->id(),
+            'sucursal_id'          => $sucursalId,
+            'agente_id'            => $agente->id,
             'turno_hora'           => $turnoGuardado,
             'cantidad_operaciones' => $data['cantidad_operaciones'],
             'queda_efectivo'       => $data['queda_efectivo'],

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query'
 import { postulacionesApi } from '../services/postulaciones.api'
+import { apiErrorData, apiErrorStatus } from '../lib/httpError'
 import { useTiendasPublicas } from '../hooks/usePostulaciones'
 import type { PostulacionPublicaPayload, CargaFamiliarItem, FormacionItem, ExperienciaItem } from '../types/postulacion'
 
@@ -51,11 +52,11 @@ function PostulacionForm() {
   const enviar = useMutation({
     mutationFn: (payload: PostulacionPublicaPayload) => postulacionesApi.enviarPublica(payload),
     onSuccess: () => { setEnviado(true) },
-    onError: (err: any) => {
-      if (err?.response?.status === 409) {
+    onError: (err: unknown) => {
+      if (apiErrorStatus(err) === 409) {
         setErrorDup(true)
       } else {
-        setErrorMsg(err?.response?.data?.message ?? 'Error al enviar la postulación.')
+        setErrorMsg(apiErrorData(err).message ?? 'Error al enviar la postulación.')
       }
     },
   })

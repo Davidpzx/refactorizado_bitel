@@ -220,6 +220,27 @@ class PostulanteController extends Controller
 
             $agenteId = DB::table('agentes')->insertGetId($datosAgente);
 
+            if (
+                Schema::hasColumn('usuarios', 'agente_id')
+                && (Schema::hasColumn('usuarios', 'dni') || ! empty($postulante->correo))
+            ) {
+                DB::table('usuarios')
+                    ->whereNull('agente_id')
+                    ->where(function ($query) use ($postulante) {
+                        if (Schema::hasColumn('usuarios', 'dni')) {
+                            $query->whereRaw('TRIM(dni) = ?', [trim((string) $postulante->dni)]);
+                        }
+                        if (! empty($postulante->correo)) {
+                            $method = Schema::hasColumn('usuarios', 'dni') ? 'orWhereRaw' : 'whereRaw';
+                            $query->{$method}(
+                                'LOWER(TRIM(email)) = ?',
+                                [mb_strtolower(trim((string) $postulante->correo))]
+                            );
+                        }
+                    })
+                    ->update(['agente_id' => $agenteId]);
+            }
+
             DB::table('postulantes_temp')->where('id', $id)->update([
                 'estado'       => 'APROBADO',
                 'revisado_en'  => now(),

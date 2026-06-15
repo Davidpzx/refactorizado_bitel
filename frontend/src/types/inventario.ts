@@ -22,6 +22,7 @@ export interface InventarioPayload {
   producto_nombre: string
   tipo: 'EQUIPO' | 'ACCESORIO' | 'CHIP'
   imei_serial?: string | null
+  imei_seriales?: string[]
   precio_costo: number
   precio_minimo: number
   precio_normal: number

@@ -12,10 +12,15 @@ class Agente extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'dni', 'nombres', 'tienda_base', 'hora_ingreso', 'hora_salida',
+        'dni', 'nombres', 'apellidos', 'tienda_base', 'hora_ingreso', 'hora_salida',
         'sueldo_base', 'dia_pago', 'estado', 'dia_descanso',
         'pin_seguridad', 'fecha_ingreso', 'correo', 'telefono', 'direccion',
         'es_gerencia', 'permiso_largo', 'fecha_retorno',
+        'fecha_prueba_inicio', 'fecha_prueba_fin', 'fecha_nacimiento',
+        'lugar_nacimiento', 'formacion_academica', 'carga_familiar',
+        'experiencia_laboral', 'contactos_emergencia', 'sistema_pension',
+        'nombre_afp', 'numero_cuspp', 'grupo_sanguineo', 'alergias',
+        'antecedentes_penales', 'antecedentes_policial', 'antecedentes_judicial',
     ];
 
     protected $hidden = ['pin_seguridad', 'hash_dispositivo', 'hash_facial'];
@@ -31,6 +36,10 @@ class Agente extends Model
         'formacion_academica'   => 'array',
         'carga_familiar'        => 'array',
         'experiencia_laboral'   => 'array',
+        'contactos_emergencia'  => 'array',
+        'antecedentes_penales'  => 'boolean',
+        'antecedentes_policial' => 'boolean',
+        'antecedentes_judicial' => 'boolean',
     ];
 
     public function asistencias(): HasMany

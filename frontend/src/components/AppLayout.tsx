@@ -3,7 +3,7 @@ import { Outlet, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
 import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
@@ -134,7 +134,7 @@ export function AppLayout() {
     ? 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
 
-  function SidebarContent() {
+  function renderSidebarContent() {
     return (
       <div className="flex flex-col h-full">
         {/* Logo ─────────────────────────────────────────────────────────── */}
@@ -328,7 +328,7 @@ export function AppLayout() {
           collapsed ? 'w-16' : 'w-[260px]',
         ].join(' ')}
       >
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
 
       {/* Sidebar mobile overlay ──────────────────────────────────────────── */}
@@ -341,7 +341,7 @@ export function AppLayout() {
           <aside
             className="kyro-glass relative z-10 flex w-[260px] flex-col border border-kyro-border"
           >
-            <SidebarContent />
+            {renderSidebarContent()}
           </aside>
         </div>
       )}

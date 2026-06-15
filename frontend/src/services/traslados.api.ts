@@ -22,6 +22,9 @@ export const trasladosApi = {
   confirmar: (id: number, data: ConfirmarTrasladoPayload) =>
     api.post<Traslado>(`/v1/traslados/${id}/confirmar`, data).then((r) => r.data),
 
+  confirmarLote: (codigoLote: string, data: ConfirmarTrasladoPayload) =>
+    api.post(`/v1/traslados/lote/${encodeURIComponent(codigoLote)}/confirmar`, data).then((r) => r.data),
+
   gestionar: (id: number, data: GestionarTrasladoPayload) =>
     api.post<Traslado>(`/v1/traslados/${id}/gestionar`, data).then((r) => r.data),
 

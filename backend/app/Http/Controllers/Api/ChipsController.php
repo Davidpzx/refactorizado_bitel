@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ChipsController extends Controller
 {
@@ -44,6 +45,14 @@ class ChipsController extends Controller
         $tiendaOrigen = trim($request->input('tienda_origen', ''));
         $tipoChip     = trim($request->input('tipo_chip', 'FÍSICO'));
         $cantidad     = (int) $request->input('cantidad', 0);
+        $series       = collect($request->input('series', []))
+            ->filter(fn ($r) => is_array($r) && trim((string) ($r['inicio'] ?? '')) !== '')
+            ->map(fn ($r) => [
+                'inicio' => trim((string) $r['inicio']),
+                'fin' => trim((string) ($r['fin'] ?? '')) ?: null,
+            ])
+            ->values()
+            ->all();
 
         if (!$tiendaId || !$tiendaOrigen || $cantidad <= 0) {
             return response()->json(['success' => false, 'message' => 'Datos inválidos.'], 422);
@@ -55,6 +64,9 @@ class ChipsController extends Controller
 
         if ($existente) {
             $existente->increment('stock_actual', $cantidad);
+            if (Schema::hasColumn('inventario_chips', 'series_info') && $series) {
+                $existente->update(['series_info' => array_merge($existente->series_info ?? [], $series)]);
+            }
             $chip = $existente->fresh();
         } else {
             $chip = InventarioChip::create([
@@ -62,6 +74,7 @@ class ChipsController extends Controller
                 'tienda_origen' => $tiendaOrigen,
                 'tipo_chip'    => $tipoChip,
                 'stock_actual' => $cantidad,
+                'series_info'  => $series ?: null,
             ]);
         }
 
@@ -71,6 +84,44 @@ class ChipsController extends Controller
             'success' => true,
             'message' => "{$cantidad} chip(s) agregados correctamente.",
             'data'    => $chip,
+        ]);
+    }
+
+    public function ajustarStockReal(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'cantidad_real' => 'required|integer|min:0|max:999999',
+            'observacion' => 'required|string|min:10|max:500',
+        ]);
+
+        $chip = InventarioChip::find($id);
+        if (! $chip) {
+            return response()->json(['message' => 'Lote de chips no encontrado.'], 404);
+        }
+
+        $anterior = (int) $chip->stock_actual;
+        $nuevo = (int) $validated['cantidad_real'];
+        $accion = $nuevo >= $anterior ? 'SUMA' : 'RESTA';
+
+        DB::transaction(function () use ($chip, $anterior, $nuevo, $accion, $validated, $request) {
+            $chip->update(['stock_actual' => $nuevo]);
+            $this->registrarHistorial(
+                $chip->tienda_id,
+                $request->user()->agente_id ?? null,
+                $accion,
+                abs($nuevo - $anterior),
+                $chip->tienda_origen,
+                '[AJUSTE MAESTRO] ' . $validated['observacion'],
+                $anterior,
+                $nuevo
+            );
+        });
+
+        return response()->json([
+            'message' => "Stock de chips sincronizado: {$anterior} -> {$nuevo}.",
+            'stock_anterior' => $anterior,
+            'stock_nuevo' => $nuevo,
+            'diferencia' => $nuevo - $anterior,
         ]);
     }
 
@@ -267,10 +318,19 @@ class ChipsController extends Controller
         ]);
     }
 
-    private function registrarHistorial(int $tiendaId, ?int $agenteId, string $accion, int $cantidad, string $tiendaOrigen, string $observacion): void
+    private function registrarHistorial(
+        int $tiendaId,
+        ?int $agenteId,
+        string $accion,
+        int $cantidad,
+        string $tiendaOrigen,
+        string $observacion,
+        ?int $stockAnterior = null,
+        ?int $stockNuevo = null
+    ): void
     {
         try {
-            DB::table('historial_inventario')->insert([
+            $data = [
                 'tienda_id'    => $tiendaId,
                 'agente_id'    => $agenteId,
                 'accion'       => $accion,
@@ -279,7 +339,13 @@ class ChipsController extends Controller
                 'observacion'  => $observacion,
                 'producto_id'  => null,
                 'fecha_hora'   => now(),
-            ]);
+            ];
+            if (Schema::hasColumn('historial_inventario', 'motivo')) $data['motivo'] = 'AJUSTE';
+            if (Schema::hasColumn('historial_inventario', 'stock_anterior')) {
+                $data['stock_anterior'] = $stockAnterior;
+                $data['stock_nuevo'] = $stockNuevo;
+            }
+            DB::table('historial_inventario')->insert($data);
         } catch (\Throwable) {}
     }
 }
