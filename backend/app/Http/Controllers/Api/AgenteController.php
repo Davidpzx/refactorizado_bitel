@@ -155,6 +155,80 @@ class AgenteController extends Controller
         return response()->json(['success' => true, 'msg' => 'Fechas laborales actualizadas correctamente.']);
     }
 
+    // ── GET /agentes/{id}/adelantos — Lista adelantos del agente (admin) ────────
+    // Paridad legacy gerencia/ver_agente.php (lectura + total descontado en planilla).
+    public function adelantos(int $id, Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('adelantos')) {
+            return response()->json(['data' => [], 'total' => 0]);
+        }
+
+        $query = DB::table('adelantos')->where('agente_id', $id);
+        if ($request->filled('desde')) $query->whereDate('fecha', '>=', $request->input('desde'));
+        if ($request->filled('hasta')) $query->whereDate('fecha', '<=', $request->input('hasta'));
+
+        $rows  = $query->orderByDesc('fecha')->get();
+        $total = (float) $rows->sum('monto');
+
+        return response()->json(['data' => $rows, 'total' => round($total, 2)]);
+    }
+
+    // ── POST /agentes/{id}/adelantos — Registrar adelanto (admin) ───────────────
+    public function registrarAdelanto(int $id, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
+        }
+
+        $validated = $request->validate([
+            'monto'  => 'required|numeric|gt:0',
+            'fecha'  => 'nullable|date',
+            'motivo' => 'nullable|string|max:255',
+        ]);
+
+        if (! Agente::whereKey($id)->exists()) {
+            return response()->json(['success' => false, 'msg' => 'Agente no encontrado.'], 404);
+        }
+        if (! Schema::hasTable('adelantos')) {
+            return response()->json(['success' => false, 'msg' => 'La tabla de adelantos no está disponible.'], 503);
+        }
+
+        $adelantoId = DB::table('adelantos')->insertGetId([
+            'agente_id'  => $id,
+            'fecha'      => $validated['fecha'] ?? now()->toDateString(),
+            'monto'      => round((float) $validated['monto'], 2),
+            'motivo'     => $validated['motivo'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'msg'     => 'Adelanto registrado correctamente.',
+            'id'      => $adelantoId,
+        ], 201);
+    }
+
+    // ── DELETE /agentes/{id}/adelantos/{adelantoId} — Eliminar adelanto (admin) ─
+    public function eliminarAdelanto(int $id, int $adelantoId, Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
+        }
+        if (! Schema::hasTable('adelantos')) {
+            return response()->json(['success' => false, 'msg' => 'No disponible.'], 503);
+        }
+
+        $deleted = DB::table('adelantos')->where('id', $adelantoId)->where('agente_id', $id)->delete();
+        if (! $deleted) {
+            return response()->json(['success' => false, 'msg' => 'Adelanto no encontrado.'], 404);
+        }
+
+        return response()->json(['success' => true, 'msg' => 'Adelanto eliminado.']);
+    }
+
     // ── GET /agentes/exportar-ficha — E2: ficha técnica multi-hoja (paridad exportar_excel_agentes_pro) ──
     // Hoja "Personal" (listado) + 1 hoja por agente con datos RRHH de postulantes_temp.
     public function exportarFichaTecnica(Request $request): StreamedResponse

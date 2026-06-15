@@ -131,8 +131,108 @@ class EstadisticasController extends Controller
         ]);
     }
 
+    // ── GET /estadisticas/ranking — Ranking con categoría + subcategoría ────────
+    // Paridad legacy api/obtener_ranking_agentes.php (drill-down equipos/postpago/chips).
     public function rankingAgentes(Request $request): JsonResponse
     {
-        return $this->productividad($request);
+        $desde       = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
+        $hasta       = $request->get('fecha_hasta', now()->toDateString());
+        $tienda      = $request->get('tienda');
+        $categoria   = $request->get('categoria', 'todo');     // todo | equipos | postpago | chips
+        $subcategoria = trim((string) $request->get('subcategoria', ''));
+
+        // Sin filtro de categoría → ranking general (comportamiento previo).
+        if ($categoria === 'todo' || $categoria === '') {
+            return $this->productividad($request);
+        }
+
+        $tipoVenta = match ($categoria) {
+            'equipos'  => 'EQUIPO',
+            'postpago' => 'POSTPAGO',
+            'chips'    => 'PREPAGO',
+            default    => null,
+        };
+        if ($tipoVenta === null) {
+            return response()->json(['error' => 'Categoría inválida.'], 422);
+        }
+
+        $query = DB::table('ventas as v')
+            ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+            ->join('agentes as a', 'a.id', '=', 'v.vendedor_id')
+            ->whereBetween('r.fecha', [$desde, $hasta])
+            ->where('r.estado', '!=', 'borrador')
+            ->where('v.tipo_venta', $tipoVenta)
+            ->when($tienda, fn ($q) => $q->where('r.tienda_id', $tienda));
+
+        // Subcategoría: modelo de equipo o plan de línea.
+        if ($subcategoria !== '') {
+            if ($categoria === 'equipos') {
+                $query->join('venta_equipos as ve', 've.venta_id', '=', 'v.id')
+                      ->where('ve.producto_nombre_snap', $subcategoria);
+            } else {
+                $query->join('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
+                      ->where('vl.plan_nombre_snap', $subcategoria);
+            }
+        }
+
+        $ranking = $query
+            ->selectRaw('
+                v.vendedor_id,
+                a.nombres,
+                a.tienda_base,
+                COUNT(*) AS total,
+                COALESCE(SUM(v.comision_generada), 0) AS comision_total
+            ')
+            ->groupBy('v.vendedor_id', 'a.nombres', 'a.tienda_base')
+            ->orderByDesc('total')
+            ->limit(30)
+            ->get();
+
+        return response()->json([
+            'periodo'      => ['desde' => $desde, 'hasta' => $hasta],
+            'categoria'    => $categoria,
+            'subcategoria' => $subcategoria,
+            'ranking'      => $ranking,
+        ]);
+    }
+
+    // ── GET /estadisticas/ranking/subfiltros — Opciones de subcategoría del período ──
+    // Paridad legacy api/obtener_subfiltros_ranking.php (poblar el <select> dinámico).
+    public function subfiltrosRanking(Request $request): JsonResponse
+    {
+        $desde     = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
+        $hasta     = $request->get('fecha_hasta', now()->toDateString());
+        $tienda    = $request->get('tienda');
+        $categoria = $request->get('categoria', 'todo');
+
+        $opciones = [];
+
+        if (in_array($categoria, ['equipos', 'postpago', 'chips'], true)) {
+            $tipoVenta = $categoria === 'equipos' ? 'EQUIPO' : ($categoria === 'postpago' ? 'POSTPAGO' : 'PREPAGO');
+
+            $base = DB::table('ventas as v')
+                ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
+                ->whereBetween('r.fecha', [$desde, $hasta])
+                ->where('r.estado', '!=', 'borrador')
+                ->where('v.tipo_venta', $tipoVenta)
+                ->when($tienda, fn ($q) => $q->where('r.tienda_id', $tienda));
+
+            if ($categoria === 'equipos') {
+                $opciones = $base->join('venta_equipos as ve', 've.venta_id', '=', 'v.id')
+                    ->whereNotNull('ve.producto_nombre_snap')
+                    ->distinct()->orderBy('ve.producto_nombre_snap')
+                    ->pluck('ve.producto_nombre_snap');
+            } else {
+                $opciones = $base->join('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
+                    ->whereNotNull('vl.plan_nombre_snap')
+                    ->distinct()->orderBy('vl.plan_nombre_snap')
+                    ->pluck('vl.plan_nombre_snap');
+            }
+        }
+
+        return response()->json([
+            'categoria'    => $categoria,
+            'subcategorias' => $opciones,
+        ]);
     }
 }

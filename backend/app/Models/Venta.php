@@ -17,7 +17,7 @@ class Venta extends Model
         'reporte_id', 'vendedor_id', 'cliente_id',
         'tipo_venta', 'subtipo', 'cross_selling', 'tienda_destino',
         'monto_total', 'efectivo_inicial', 'comision_generada',
-        'comision_estado', 'es_remate', 'es_extranjero',
+        'comision_estado', 'es_remate', 'es_extranjero', 'chips_descontados',
     ];
 
     protected $casts = [

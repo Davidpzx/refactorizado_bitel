@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BipayController;
 use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
+use App\Http\Controllers\Api\ConfigComisionesController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\ConfiguracionController;
 use App\Http\Controllers\Api\ControlCenterController;
@@ -117,6 +118,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('inventario',  InventarioController::class);
     Route::post('inventario/{id}/restaurar',            [InventarioController::class, 'restaurar']);
     Route::post('inventario/{id}/recalcular-ganancias', [InventarioController::class, 'recalcularGanancias']);
+    Route::post('inventario/{id}/precio-agente',        [InventarioController::class, 'fijarPrecioAgente']);
     Route::apiResource('ventas',      VentaController::class);
     Route::apiResource('comprobantes', ComprobanteController::class);
 
@@ -126,6 +128,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('comisiones-planes/{comisionesPlan}',   [ComisionPlanController::class, 'update']);
     Route::delete('comisiones-planes/{comisionesPlan}',[ComisionPlanController::class, 'destroy']);
     Route::post('comisiones-planes/recalcular',        [ComisionPlanController::class, 'recalcularMasivo']);
+    Route::get('config-comisiones',                        [ConfigComisionesController::class, 'index']);
+    Route::put('config-comisiones/tarifas',                [ConfigComisionesController::class, 'guardarTarifas']);
+    Route::put('config-comisiones/rangos-productividad',   [ConfigComisionesController::class, 'guardarRangosProductividad']);
+    Route::put('config-comisiones/rangos-servicio',        [ConfigComisionesController::class, 'guardarRangosServicio']);
 
     // ── Configuración Empresa ─────────────────────────────────────────────────
     Route::get('configuracion',             [ConfiguracionController::class, 'show']);
@@ -144,6 +150,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('agentes/{agente}/comisiones',          [AgenteController::class, 'comisiones']);
     Route::patch('agentes/{id}/fechas-laborales',      [AgenteController::class, 'editarFechasLaborales']);
     Route::post('agentes/{id}/token-seguridad',        [AgenteController::class, 'tokenSeguridad']);
+    Route::get('agentes/{id}/adelantos',               [AgenteController::class, 'adelantos']);
+    Route::post('agentes/{id}/adelantos',              [AgenteController::class, 'registrarAdelanto']);
+    Route::delete('agentes/{id}/adelantos/{adelantoId}', [AgenteController::class, 'eliminarAdelanto']);
 
     // ── Planilla ─────────────────────────────────────────────────────────────
     Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel']);
@@ -160,6 +169,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Estadísticas ─────────────────────────────────────────────────────────
     Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas']);
     Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad']);
+    Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking']);
     Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes']);
 
     // ── Reporte BCP ───────────────────────────────────────────────────────────
@@ -179,6 +189,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('bipay/recarga',       [BipayController::class, 'recarga']);
     Route::post('bipay/transferir',    [BipayController::class, 'transferir']);
     Route::post('bipay/ajustar',       [BipayController::class, 'ajustar']);
+    Route::post('bipay/cuentas',       [BipayController::class, 'crearCuenta']);
+    Route::put('bipay/cuentas/{id}',   [BipayController::class, 'editarCuenta']);
+    Route::delete('bipay/cuentas/{id}', [BipayController::class, 'eliminarCuenta']);
     Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
     Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
     Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);
@@ -244,7 +257,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes']);
     Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction']);
     Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
+    Route::get('asistencias/mis-tardanzas',           [AsistenciaController::class, 'misTardanzas']);
     Route::post('asistencias/salvavidas',             [AsistenciaController::class, 'salvavidas']);
+    Route::post('asistencias/excepcion',              [AsistenciaController::class, 'registrarExcepcion']);
     Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar']);
     Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar']);
 });

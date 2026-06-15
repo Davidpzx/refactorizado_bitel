@@ -37,7 +37,7 @@ interface SaldoData {
 
 export function PanelBipayPage() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar'>('saldo')
+  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas'>('saldo')
 
   // Saldo query
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
@@ -98,6 +98,32 @@ export function PanelBipayPage() {
     onError: (e: any) => setAjusteErr(e?.response?.data?.message ?? e?.response?.data?.error ?? 'Error al ajustar.'),
   })
 
+  // ── Gestión de cuentas (CRUD) — paridad legacy panel_bipay nueva/editar/eliminar ──
+  const cuentaVacia = { id: 0, alias: '', tipo: 'MADRE', numero_cuenta: '', nombre_titular: '', cuenta_madre_id: '', saldo_bipay: '', saldo_anypay: '', umbral_alerta: '' }
+  const [cuentaForm, setCuentaForm] = useState({ ...cuentaVacia })
+  const [cuentaMsg, setCuentaMsg] = useState(''); const [cuentaErr, setCuentaErr] = useState('')
+  const editandoCuenta = cuentaForm.id > 0
+
+  const resetCuenta = () => { setCuentaForm({ ...cuentaVacia }); setCuentaMsg(''); setCuentaErr('') }
+
+  const guardarCuenta = useMutation({
+    mutationFn: (p: Record<string, unknown>) =>
+      (editandoCuenta
+        ? api.put(`/v1/bipay/cuentas/${cuentaForm.id}`, p)
+        : api.post('/v1/bipay/cuentas', p)).then(r => r.data),
+    onSuccess: (res: { message?: string }) => {
+      setCuentaMsg(res.message ?? 'Cuenta guardada.'); setCuentaErr(''); resetCuenta()
+      qc.invalidateQueries({ queryKey: ['bipay-saldo'] })
+    },
+    onError: (e: any) => setCuentaErr(e?.response?.data?.message ?? 'Error al guardar la cuenta.'),
+  })
+
+  const eliminarCuenta = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/bipay/cuentas/${id}`).then(r => r.data),
+    onSuccess: (res: { message?: string }) => { setCuentaMsg(res.message ?? 'Cuenta eliminada.'); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
+    onError: (e: any) => setCuentaErr(e?.response?.data?.message ?? 'Error al eliminar la cuenta.'),
+  })
+
   const warning = saldoData?.warning
 
   if (warning) {
@@ -114,6 +140,7 @@ export function PanelBipayPage() {
     { id: 'recarga',       label: 'Nueva Recarga',  Icon: RefreshCw },
     { id: 'transferir',    label: 'Transferir',     Icon: Send },
     { id: 'ajustar',       label: 'Ajustar Saldo',  Icon: SlidersHorizontal },
+    { id: 'cuentas',       label: 'Cuentas',        Icon: CreditCard },
   ] as const
 
   const inputCls = 'kyro-input'
@@ -396,6 +423,114 @@ export function PanelBipayPage() {
               onClick={() => ajustar.mutate({ cuenta_id: Number(ajusteForm.cuenta_id), saldo_bipay: Number(ajusteForm.saldo_bipay || 0), saldo_anypay: Number(ajusteForm.saldo_anypay || 0), motivo: ajusteForm.motivo })}>
               {ajustar.isPending ? 'Ajustando…' : 'Aplicar Ajuste'}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Cuentas (CRUD) ───────────────────────────────────────────────────── */}
+      {tab === 'cuentas' && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Lista */}
+          <div className="kyro-card overflow-hidden lg:col-span-2">
+            <div className="border-b border-kyro-border px-4 py-3">
+              <h2 className="text-sm font-bold text-kpi-bipay">Cuentas registradas</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="kyro-table-head">
+                    {['Alias', 'N° Cuenta', 'Tipo', 'Saldo', 'Acciones'].map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(saldoData?.cuentas ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin cuentas registradas</td></tr>
+                  )}
+                  {(saldoData?.cuentas ?? []).map(c => (
+                    <tr key={c.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-bipay/5">
+                      <td className="px-4 py-3 font-medium text-kyro-text">{c.alias}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-kyro-muted">{c.numero_cuenta}</td>
+                      <td className="px-4 py-3 text-xs uppercase text-kyro-muted">{c.tipo}</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-kyro-text">{pen.format(c.saldo_actual)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => { setCuentaErr(''); setCuentaMsg(''); setCuentaForm({ id: c.id, alias: c.alias, tipo: c.tipo, numero_cuenta: c.numero_cuenta, nombre_titular: '', cuenta_madre_id: '', saldo_bipay: '', saldo_anypay: '', umbral_alerta: '' }) }}>Editar</Button>
+                          <Button size="sm" variant="outline" className="border-kyro-danger text-kyro-danger hover:bg-kyro-danger/10"
+                            disabled={eliminarCuenta.isPending}
+                            onClick={() => { if (confirm(`¿Eliminar la cuenta "${c.alias}"?`)) eliminarCuenta.mutate(c.id) }}>Eliminar</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Formulario */}
+          <div className="kyro-card border-t-2 border-t-kpi-bipay p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
+              <CreditCard size={15} style={{ color: BIPAY }} /> {editandoCuenta ? 'Editar cuenta' : 'Nueva cuenta'}
+            </h2>
+            {cuentaMsg && (<div className="mb-3 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success"><CheckCircle2 size={15} /> {cuentaMsg}</div>)}
+            {cuentaErr && (<div className="mb-3 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger"><XCircle size={15} /> {cuentaErr}</div>)}
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Alias *</label>
+                <input type="text" value={cuentaForm.alias} onChange={e => setCuentaForm(f => ({ ...f, alias: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Tipo *</label>
+                  <select value={cuentaForm.tipo} onChange={e => setCuentaForm(f => ({ ...f, tipo: e.target.value }))} className={inputCls}>
+                    <option value="MADRE">MADRE</option>
+                    <option value="HIJO">HIJO</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">N° Cuenta *</label>
+                  <input type="text" value={cuentaForm.numero_cuenta} onChange={e => setCuentaForm(f => ({ ...f, numero_cuenta: e.target.value }))} className={inputCls} />
+                </div>
+              </div>
+              {cuentaForm.tipo === 'HIJO' && (
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta madre *</label>
+                  <select value={cuentaForm.cuenta_madre_id} onChange={e => setCuentaForm(f => ({ ...f, cuenta_madre_id: e.target.value }))} className={inputCls}>
+                    <option value="">-- Seleccionar --</option>
+                    {(saldoData?.cuentas ?? []).filter(c => c.tipo === 'MADRE').map(c => <option key={c.id} value={c.id}>{c.alias}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Titular</label>
+                <input type="text" value={cuentaForm.nombre_titular} onChange={e => setCuentaForm(f => ({ ...f, nombre_titular: e.target.value }))} className={inputCls} />
+              </div>
+              {!editandoCuenta && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Saldo Bipay inicial</label>
+                    <input type="number" min="0" step="0.01" value={cuentaForm.saldo_bipay} onChange={e => setCuentaForm(f => ({ ...f, saldo_bipay: e.target.value }))} className={`${inputCls} tabular-nums`} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Saldo Anypay inicial</label>
+                    <input type="number" min="0" step="0.01" value={cuentaForm.saldo_anypay} onChange={e => setCuentaForm(f => ({ ...f, saldo_anypay: e.target.value }))} className={`${inputCls} tabular-nums`} />
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <Button className="flex-1"
+                  disabled={guardarCuenta.isPending || !cuentaForm.alias || !cuentaForm.numero_cuenta || (cuentaForm.tipo === 'HIJO' && !cuentaForm.cuenta_madre_id)}
+                  onClick={() => { setCuentaMsg(''); setCuentaErr(''); guardarCuenta.mutate({
+                    alias: cuentaForm.alias, tipo: cuentaForm.tipo, numero_cuenta: cuentaForm.numero_cuenta,
+                    nombre_titular: cuentaForm.nombre_titular || undefined,
+                    cuenta_madre_id: cuentaForm.tipo === 'HIJO' ? Number(cuentaForm.cuenta_madre_id) : undefined,
+                    saldo_bipay: Number(cuentaForm.saldo_bipay || 0), saldo_anypay: Number(cuentaForm.saldo_anypay || 0),
+                  }) }}>
+                  {guardarCuenta.isPending ? 'Guardando…' : editandoCuenta ? 'Actualizar' : 'Crear cuenta'}
+                </Button>
+                {editandoCuenta && <Button variant="outline" onClick={resetCuenta}>Cancelar</Button>}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -778,4 +778,113 @@ class BipayController extends Controller
             ->values()
             ->all();
     }
+
+    // ── POST /bipay/cuentas — Crear cuenta Madre/Hijo (admin) ───────────────────
+    // Paridad legacy gerencia/panel_bipay.php (acción nueva_cuenta).
+    public function crearCuenta(Request $request): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('cuentas_bipay')) {
+            return response()->json(['success' => false, 'message' => 'Tabla Bipay no configurada.'], 422);
+        }
+
+        $data = $request->validate([
+            'alias'           => ['required', 'string', 'max:80'],
+            'tipo'            => ['required', 'in:MADRE,HIJO'],
+            'numero_cuenta'   => ['required', 'string', 'max:60'],
+            'nombre_titular'  => ['nullable', 'string', 'max:100'],
+            'cuenta_madre_id' => ['nullable', 'integer', 'required_if:tipo,HIJO'],
+            'saldo_bipay'     => ['nullable', 'numeric', 'min:0'],
+            'saldo_anypay'    => ['nullable', 'numeric', 'min:0'],
+            'umbral_alerta'   => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $saldoBipay  = round((float) ($data['saldo_bipay'] ?? 0), 2);
+        $saldoAnypay = round((float) ($data['saldo_anypay'] ?? 0), 2);
+
+        $insert = [
+            'alias'         => $data['alias'],
+            'tipo'          => $data['tipo'],
+            'numero_cuenta' => $data['numero_cuenta'],
+            'saldo_bipay'   => $saldoBipay,
+            'saldo_anypay'  => $saldoAnypay,
+            'saldo_actual'  => $saldoBipay + $saldoAnypay,
+        ];
+        if (Schema::hasColumn('cuentas_bipay', 'nombre_titular'))  $insert['nombre_titular']  = $data['nombre_titular'] ?? null;
+        if (Schema::hasColumn('cuentas_bipay', 'cuenta_madre_id')) $insert['cuenta_madre_id'] = $data['tipo'] === 'HIJO' ? ($data['cuenta_madre_id'] ?: null) : null;
+        if (Schema::hasColumn('cuentas_bipay', 'umbral_alerta'))   $insert['umbral_alerta']   = round((float) ($data['umbral_alerta'] ?? 0), 2);
+
+        $id = DB::table('cuentas_bipay')->insertGetId($insert);
+
+        return response()->json(['success' => true, 'message' => "Cuenta \"{$data['alias']}\" creada.", 'id' => $id], 201);
+    }
+
+    // ── PUT /bipay/cuentas/{id} — Editar cuenta (admin) ─────────────────────────
+    public function editarCuenta(Request $request, int $id): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('cuentas_bipay')) {
+            return response()->json(['success' => false, 'message' => 'Tabla Bipay no configurada.'], 422);
+        }
+
+        $data = $request->validate([
+            'alias'           => ['required', 'string', 'max:80'],
+            'tipo'            => ['required', 'in:MADRE,HIJO'],
+            'numero_cuenta'   => ['required', 'string', 'max:60'],
+            'nombre_titular'  => ['nullable', 'string', 'max:100'],
+            'cuenta_madre_id' => ['nullable', 'integer', 'required_if:tipo,HIJO'],
+            'umbral_alerta'   => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        if (! DB::table('cuentas_bipay')->where('id', $id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Cuenta no encontrada.'], 404);
+        }
+
+        // No se tocan saldos aquí (eso es recarga/ajuste); solo datos de la cuenta.
+        $update = [
+            'alias'         => $data['alias'],
+            'tipo'          => $data['tipo'],
+            'numero_cuenta' => $data['numero_cuenta'],
+        ];
+        if (Schema::hasColumn('cuentas_bipay', 'nombre_titular'))  $update['nombre_titular']  = $data['nombre_titular'] ?? null;
+        if (Schema::hasColumn('cuentas_bipay', 'cuenta_madre_id')) $update['cuenta_madre_id'] = $data['tipo'] === 'HIJO' ? ($data['cuenta_madre_id'] ?: null) : null;
+        if (Schema::hasColumn('cuentas_bipay', 'umbral_alerta'))   $update['umbral_alerta']   = round((float) ($data['umbral_alerta'] ?? 0), 2);
+
+        DB::table('cuentas_bipay')->where('id', $id)->update($update);
+
+        return response()->json(['success' => true, 'message' => "Cuenta \"{$data['alias']}\" actualizada."]);
+    }
+
+    // ── DELETE /bipay/cuentas/{id} — Eliminar cuenta (admin) ────────────────────
+    public function eliminarCuenta(Request $request, int $id): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('cuentas_bipay')) {
+            return response()->json(['success' => false, 'message' => 'Tabla Bipay no configurada.'], 422);
+        }
+
+        // Bloquear borrado si tiene subcuentas o transacciones asociadas (integridad legacy).
+        if (Schema::hasColumn('cuentas_bipay', 'cuenta_madre_id')
+            && DB::table('cuentas_bipay')->where('cuenta_madre_id', $id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'No se puede eliminar: tiene subcuentas asociadas.'], 422);
+        }
+        if (Schema::hasTable('transacciones_bipay')
+            && DB::table('transacciones_bipay')
+                ->where('cuenta_origen_id', $id)->orWhere('cuenta_destino_id', $id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'No se puede eliminar: tiene transacciones asociadas.'], 422);
+        }
+
+        $deleted = DB::table('cuentas_bipay')->where('id', $id)->delete();
+        if (! $deleted) {
+            return response()->json(['success' => false, 'message' => 'Cuenta no encontrada.'], 404);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Cuenta eliminada.']);
+    }
 }

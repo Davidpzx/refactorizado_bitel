@@ -61,10 +61,10 @@ interface AgentRank {
   vendedor_id: number
   nombres: string
   tienda_base: string
-  postpago: number
-  prepago: number
-  equipos: number
-  accesorios: number
+  postpago?: number
+  prepago?: number
+  equipos?: number
+  accesorios?: number
   comision_total: string
   total: number
 }
@@ -80,6 +80,10 @@ export function EstadisticasPage() {
   const [applied, setApplied] = useState({ ...filters })
   const [tab, setTab] = useState<'resumen' | 'tiendas' | 'top' | 'ranking'>('resumen')
 
+  // Subfiltros del ranking (paridad legacy obtener_ranking/subfiltros).
+  const [rankCat, setRankCat] = useState<'todo' | 'equipos' | 'postpago' | 'chips'>('todo')
+  const [rankSub, setRankSub] = useState('')
+
   const { data: statsData, isLoading } = useQuery({
     queryKey: ['estadisticas-ventas', applied],
     queryFn: () =>
@@ -87,10 +91,24 @@ export function EstadisticasPage() {
   })
 
   const { data: rankingData } = useQuery({
-    queryKey: ['estadisticas-ranking', applied],
+    queryKey: ['estadisticas-ranking', applied, rankCat, rankSub],
     queryFn: () =>
-      api.get('/v1/estadisticas/productividad', { params: applied }).then(r => r.data),
+      api.get('/v1/estadisticas/ranking', {
+        params: { ...applied, categoria: rankCat, subcategoria: rankSub },
+      }).then(r => r.data),
   })
+
+  // Opciones de subcategoría según la categoría elegida.
+  const { data: subfiltrosData } = useQuery({
+    queryKey: ['estadisticas-subfiltros', applied, rankCat],
+    enabled: rankCat !== 'todo',
+    queryFn: () =>
+      api.get('/v1/estadisticas/ranking/subfiltros', {
+        params: { ...applied, categoria: rankCat },
+      }).then(r => r.data),
+  })
+  const subcategorias: string[] = subfiltrosData?.subcategorias ?? []
+  const rankingFiltrado = rankCat !== 'todo'
 
   const totales: Totales | null = statsData?.totales ?? null
   const series: Serie[]         = statsData?.series ?? []
@@ -292,14 +310,41 @@ export function EstadisticasPage() {
       {!isLoading && tab === 'ranking' && (
         <div className="kyro-card overflow-hidden">
           <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/40 to-transparent" />
-          <div className="border-b border-kyro-border p-4">
+          <div className="flex flex-col gap-3 border-b border-kyro-border p-4 sm:flex-row sm:items-end sm:justify-between">
             <h3 className="text-sm font-semibold text-kyro-text">Ranking de Productividad por Agente</h3>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Categoría</label>
+                <select
+                  value={rankCat}
+                  onChange={e => { setRankCat(e.target.value as typeof rankCat); setRankSub('') }}
+                  className="kyro-input h-9 w-36"
+                >
+                  <option value="todo">Todas</option>
+                  <option value="equipos">Equipos</option>
+                  <option value="postpago">Postpago</option>
+                  <option value="chips">Chips/Prepago</option>
+                </select>
+              </div>
+              {rankingFiltrado && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Subfiltro</label>
+                  <select value={rankSub} onChange={e => setRankSub(e.target.value)} className="kyro-input h-9 w-48">
+                    <option value="">Todos</option>
+                    {subcategorias.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="kyro-table-head">
-                  {['#', 'Agente', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Comisión', 'Total'].map(h => (
+                  {(rankingFiltrado
+                    ? ['#', 'Agente', 'Tienda', 'Ventas', 'Comisión']
+                    : ['#', 'Agente', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Comisión', 'Total']
+                  ).map(h => (
                     <th key={h} className="px-4 py-3 text-left">{h}</th>
                   ))}
                 </tr>
@@ -310,16 +355,25 @@ export function EstadisticasPage() {
                     <td className="px-4 py-3 text-xs text-gray-400">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-medium text-kyro-text">{a.nombres}</td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-500">{a.tienda_base}</td>
-                    <td className="px-4 py-3 font-bold text-blue-700">{a.postpago}</td>
-                    <td className="px-4 py-3 font-bold text-purple-700">{a.prepago}</td>
-                    <td className="px-4 py-3 font-bold text-orange-700">{a.equipos}</td>
-                    <td className="px-4 py-3 font-bold text-green-700">{a.accesorios}</td>
-                    <td className="px-4 py-3 font-mono text-green-700">{pen.format(Number(a.comision_total))}</td>
-                    <td className="px-4 py-3 font-bold text-kyro-text">{a.total}</td>
+                    {rankingFiltrado ? (
+                      <>
+                        <td className="px-4 py-3 font-bold text-kyro-text">{a.total}</td>
+                        <td className="px-4 py-3 font-mono text-green-700">{pen.format(Number(a.comision_total))}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-bold text-blue-700">{a.postpago}</td>
+                        <td className="px-4 py-3 font-bold text-purple-700">{a.prepago}</td>
+                        <td className="px-4 py-3 font-bold text-orange-700">{a.equipos}</td>
+                        <td className="px-4 py-3 font-bold text-green-700">{a.accesorios}</td>
+                        <td className="px-4 py-3 font-mono text-green-700">{pen.format(Number(a.comision_total))}</td>
+                        <td className="px-4 py-3 font-bold text-kyro-text">{a.total}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
                 {ranking.length === 0 && (
-                  <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">Sin datos en el período</td></tr>
+                  <tr><td colSpan={rankingFiltrado ? 5 : 9} className="px-4 py-10 text-center text-gray-400">Sin datos en el período</td></tr>
                 )}
               </tbody>
             </table>

@@ -15,6 +15,7 @@ import { Select } from '../../components/ui/select'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { Label } from '../../components/ui/label'
 import { InventarioForm } from './InventarioForm'
+import { useAuth } from '../../hooks/useAuth'
 import type { InventarioItem } from '../../types/inventario'
 
 const TIENDAS = [
@@ -48,6 +49,7 @@ function getColumns(
   onEditar: (i: InventarioItem) => void,
   onEliminar: (i: InventarioItem) => void,
   eliminando: boolean,
+  onFijarPrecio?: (i: InventarioItem) => void,
 ): ColumnDef<InventarioItem>[] {
   return [
     { accessorKey: 'producto_nombre', header: 'Producto' },
@@ -87,17 +89,25 @@ function getColumns(
       header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-            Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onEliminar(row.original)}
-            disabled={eliminando}
-          >
-            Eliminar
-          </Button>
+          {onFijarPrecio ? (
+            <Button size="sm" variant="outline" onClick={() => onFijarPrecio(row.original)}>
+              Fijar precio
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onEliminar(row.original)}
+                disabled={eliminando}
+              >
+                Eliminar
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -210,6 +220,9 @@ function CampanaCostosWidget() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function InventarioPage() {
+  const { usuario } = useAuth()
+  const esTienda    = usuario?.rol !== 'admin'
+  const qc          = useQueryClient()
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
   const [tienda, setTienda]         = useState('')
@@ -218,6 +231,22 @@ export function InventarioPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando]     = useState<InventarioItem | undefined>()
+
+  // T2.3 — Fijar precio por el agente (solo precio_normal, con DNI).
+  const [precioItem, setPrecioItem] = useState<InventarioItem | undefined>()
+  const [precioVal, setPrecioVal]   = useState('')
+  const [precioDni, setPrecioDni]   = useState('')
+  const [precioErr, setPrecioErr]   = useState('')
+  const fijarPrecio = useMutation({
+    mutationFn: (p: { id: number; precio_normal: number; dni_autoriza: string }) =>
+      api.post(`/v1/inventario/${p.id}/precio-agente`, { precio_normal: p.precio_normal, dni_autoriza: p.dni_autoriza }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventario'] })
+      setPrecioItem(undefined); setPrecioVal(''); setPrecioDni(''); setPrecioErr('')
+    },
+    onError: (e: any) => setPrecioErr(e?.response?.data?.msg ?? 'No se pudo fijar el precio.'),
+  })
+  const abrirPrecio = (i: InventarioItem) => { setPrecioItem(i); setPrecioVal(''); setPrecioDni(''); setPrecioErr('') }
 
   const { data, isLoading } = useInventario({
     q:        query  || undefined,
@@ -255,7 +284,7 @@ export function InventarioPage() {
 
   const hayFiltros = query || tienda || tipo || estado
 
-  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
+  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending, esTienda ? abrirPrecio : undefined)
 
   return (
     <div>
@@ -339,6 +368,45 @@ export function InventarioPage() {
         maxWidth="lg"
       >
         <InventarioForm item={editando} onSuccess={cerrar} onCancel={cerrar} />
+      </Dialog>
+
+      {/* T2.3 — Diálogo fijar precio (agente) */}
+      <Dialog
+        open={!!precioItem}
+        onClose={() => setPrecioItem(undefined)}
+        title="Fijar precio de venta"
+        maxWidth="sm"
+      >
+        {precioItem && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-kyro-text">{precioItem.producto_nombre}</p>
+              <p className="text-xs text-kyro-muted">
+                Precio actual: S/ {parseFloat(precioItem.precio_normal).toFixed(2)}
+                {precioItem.precio_minimo ? ` · Mínimo: S/ ${parseFloat(String(precioItem.precio_minimo)).toFixed(2)}` : ''}
+              </p>
+            </div>
+            <div>
+              <Label className="text-xs">Nuevo precio de venta (S/)</Label>
+              <Input type="number" step="0.01" min="0" value={precioVal}
+                onChange={e => setPrecioVal(e.target.value)} placeholder="0.00" className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs">DNI que autoriza (agente activo)</Label>
+              <Input type="text" inputMode="numeric" maxLength={8} value={precioDni}
+                onChange={e => setPrecioDni(e.target.value.replace(/\D/g, ''))} placeholder="8 dígitos" className="mt-1" />
+            </div>
+            {precioErr && <p className="text-xs text-kyro-danger">{precioErr}</p>}
+            <div className="flex gap-3 pt-1">
+              <Button className="flex-1"
+                disabled={fijarPrecio.isPending || !precioVal || Number(precioVal) <= 0 || precioDni.length !== 8}
+                onClick={() => fijarPrecio.mutate({ id: precioItem.id, precio_normal: Number(precioVal), dni_autoriza: precioDni })}>
+                {fijarPrecio.isPending ? 'Guardando...' : 'Fijar precio'}
+              </Button>
+              <Button variant="outline" onClick={() => setPrecioItem(undefined)}>Cancelar</Button>
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
   )

@@ -62,6 +62,83 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
   )
 }
 
+interface Tardanza {
+  id: number
+  fecha: string
+  hora_ingreso: string | null
+  minutos_tardanza?: number
+}
+interface MisTardanzas {
+  success: boolean
+  agente?: { id: number; nombres: string }
+  tardanzas: Tardanza[]
+  salvavidas_usado: boolean
+  mensaje?: string
+}
+
+// Salvavidas: el agente recupera una tardanza de la semana (paridad legacy mi_historial).
+function SalvavidasPanel() {
+  const [dni, setDni]       = useState('')
+  const [consultado, setConsultado] = useState('')
+  const [msg, setMsg]       = useState<string | null>(null)
+
+  const { data, refetch, isFetching } = useQuery({
+    queryKey: ['mis-tardanzas', consultado],
+    queryFn: () => api.get<MisTardanzas>('/v1/asistencias/mis-tardanzas', { params: { dni: consultado } }).then(r => r.data),
+    enabled: consultado.length === 8,
+  })
+
+  const recuperar = useMutation({
+    mutationFn: (t: Tardanza) => api.post('/v1/asistencias/salvavidas', {
+      asistencia_id: t.id, minutos: t.minutos_tardanza ?? 0, dni: consultado,
+    }).then(r => r.data),
+    onSuccess: (r: { success: boolean; mensaje?: string }) => { setMsg(r.mensaje ?? (r.success ? 'Tardanza recuperada.' : 'No se pudo recuperar.')); refetch() },
+    onError: (e: any) => setMsg(e?.response?.data?.mensaje ?? 'Error al recuperar la tardanza.'),
+  })
+
+  const tardanzas = data?.tardanzas ?? []
+  const usado     = data?.salvavidas_usado ?? false
+
+  return (
+    <section className="kyro-card border-l-4 border-l-kyro-gold p-5">
+      <h3 className="mb-1 text-sm font-semibold text-kyro-text">🛟 Salvavidas — recuperar tardanza</h3>
+      <p className="mb-3 text-xs text-kyro-muted">Ingresa tu DNI para ver tus tardanzas de esta semana. Solo 1 recuperación por semana.</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">DNI</label>
+          <Input type="text" inputMode="numeric" maxLength={8} value={dni}
+            onChange={e => setDni(e.target.value.replace(/\D/g, ''))} placeholder="8 dígitos" className="w-36" />
+        </div>
+        <Button size="sm" disabled={dni.length !== 8 || isFetching} onClick={() => { setMsg(null); setConsultado(dni) }}>
+          {isFetching ? 'Consultando...' : 'Consultar'}
+        </Button>
+      </div>
+
+      {data?.agente && (
+        <p className="mt-3 text-xs text-kyro-muted">Agente: <span className="font-medium text-kyro-text">{data.agente.nombres}</span></p>
+      )}
+      {msg && <p className="mt-2 rounded-kyro bg-kyro-elevated px-3 py-2 text-xs text-kyro-body">{msg}</p>}
+
+      {consultado.length === 8 && (
+        <div className="mt-3 divide-y divide-kyro-border rounded-kyro border border-kyro-border">
+          {tardanzas.length === 0 && <p className="px-3 py-4 text-center text-xs text-kyro-muted">Sin tardanzas esta semana 🎉</p>}
+          {tardanzas.map(t => (
+            <div key={t.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span className="text-xs text-kyro-muted">{new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
+              <span className="text-xs text-kyro-body">Ingreso {t.hora_ingreso?.slice(0, 5) ?? '—'}</span>
+              <span className="font-mono text-xs font-bold text-kyro-warning">{t.minutos_tardanza ?? 0} min</span>
+              <Button size="sm" variant="outline" disabled={usado || recuperar.isPending}
+                onClick={() => { setMsg(null); recuperar.mutate(t) }}>
+                {usado ? 'Ya usado' : 'Recuperar'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function MiHistorialPage() {
   const [filters, setFilters] = useState({ fecha_desde: '', fecha_hasta: '', estado: '' })
   const [page, setPage] = useState(1)
@@ -103,6 +180,8 @@ export function MiHistorialPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Mi Historial Personal" subtitle="Consulta tus cierres, diferencias y solicitudes de edición" />
+
+      <SalvavidasPanel />
 
       {/* KPIs personales de la página actual */}
       {!isLoading && reportes.length > 0 && (

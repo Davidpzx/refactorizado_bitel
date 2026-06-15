@@ -73,6 +73,28 @@ export function AsistenciasPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
   })
 
+  // ── Excepciones (FALTA/PERMISO/PERDONAR) — paridad legacy acciones_asistencia ──
+  const [showExc, setShowExc] = useState(false)
+  const [exc, setExc] = useState({ agente_id: '', fecha: new Date().toISOString().slice(0, 10), estado: 'FALTA_INJUSTIFICADA' })
+
+  const registrarExcepcion = useMutation({
+    mutationFn: () => api.post('/v1/asistencias/excepcion', {
+      agente_id: Number(exc.agente_id),
+      fecha: exc.fecha,
+      estado: exc.estado,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['asistencias'] })
+      setShowExc(false)
+      setExc(e => ({ ...e, agente_id: '' }))
+    },
+  })
+
+  const eliminarRegistro = useMutation({
+    mutationFn: (id: number) => api.delete(`/v1/asistencias/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
+  })
+
   function exportar() {
     const token = localStorage.getItem('auth_token')
     const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
@@ -108,10 +130,54 @@ export function AsistenciasPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes">
+        {usuario?.rol === 'admin' && (
+          <Button variant="outline" size="sm" onClick={() => setShowExc(s => !s)}>
+            <AlertCircle size={14} /> Registrar excepción
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={exportar}>
           <Download size={14} /> Exportar CSV
         </Button>
       </PageHeader>
+
+      {/* Formulario de excepción (admin) */}
+      {showExc && usuario?.rol === 'admin' && (
+        <div className="kyro-card border-l-4 border-l-kyro-warning p-4">
+          <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar excepción de asistencia</h3>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ID Agente</label>
+              <Input type="number" placeholder="Ej. 12" value={exc.agente_id}
+                onChange={e => setExc(s => ({ ...s, agente_id: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Fecha</label>
+              <Input type="date" value={exc.fecha}
+                onChange={e => setExc(s => ({ ...s, fecha: e.target.value }))} className="kyro-input" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Tipo</label>
+              <select value={exc.estado} onChange={e => setExc(s => ({ ...s, estado: e.target.value }))} className="kyro-input h-9 w-52">
+                <option value="FALTA_INJUSTIFICADA">Falta injustificada</option>
+                <option value="PERMISO">Permiso (deuda 9h)</option>
+                <option value="PERDONAR">Perdonar (borrar negativo)</option>
+              </select>
+            </div>
+            <Button
+              disabled={!exc.agente_id || registrarExcepcion.isPending}
+              onClick={() => registrarExcepcion.mutate()}
+            >
+              {registrarExcepcion.isPending ? 'Guardando...' : 'Registrar'}
+            </Button>
+            <Button variant="outline" onClick={() => setShowExc(false)}>Cancelar</Button>
+          </div>
+          {registrarExcepcion.isError && (
+            <p className="mt-2 text-xs text-kyro-danger">
+              {(registrarExcepcion.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo registrar la excepción.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Filtros */}
       <ListToolbar description="Acota el periodo y el agente que deseas revisar">
@@ -220,13 +286,23 @@ export function AsistenciasPage() {
                       }
                     </td>
                     <td className="px-4 py-3">
-                      {esRevision && usuario?.rol === 'admin' && (
-                        <Button size="sm" variant="outline"
-                          disabled={aprobar.isPending}
-                          onClick={() => aprobar.mutate(a.id)}
-                        >
-                          Aprobar
-                        </Button>
+                      {usuario?.rol === 'admin' && (
+                        <div className="flex items-center gap-2">
+                          {esRevision && (
+                            <Button size="sm" variant="outline"
+                              disabled={aprobar.isPending}
+                              onClick={() => aprobar.mutate(a.id)}
+                            >
+                              Aprobar
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline"
+                            disabled={eliminarRegistro.isPending}
+                            onClick={() => { if (confirm('¿Eliminar este registro de asistencia?')) eliminarRegistro.mutate(a.id) }}
+                          >
+                            <UserX size={13} /> Eliminar
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>

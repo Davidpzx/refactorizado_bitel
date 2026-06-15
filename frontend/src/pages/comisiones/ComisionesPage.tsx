@@ -251,6 +251,83 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ── Tarifas operativas Modal (paridad legacy guardar_tarifas_ajax) ─────────────
+
+interface ConfigComisiones {
+  tarifas: { ganancia_recargas: number; ganancia_bipay: number; ganancia_krece: number; ganancia_payjoy: number }
+}
+
+function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['config-comisiones'],
+    queryFn: () => api.get<ConfigComisiones>('/v1/config-comisiones').then(r => r.data),
+  })
+
+  const [form, setForm] = useState({ ganancia_recargas: '', ganancia_bipay: '', ganancia_krece: '', ganancia_payjoy: '' })
+  const [msg, setMsg] = useState<string | null>(null)
+  const [cargado, setCargado] = useState(false)
+
+  if (data && !cargado) {
+    setForm({
+      ganancia_recargas: String(data.tarifas.ganancia_recargas ?? 0),
+      ganancia_bipay:    String(data.tarifas.ganancia_bipay ?? 0),
+      ganancia_krece:    String(data.tarifas.ganancia_krece ?? 0),
+      ganancia_payjoy:   String(data.tarifas.ganancia_payjoy ?? 0),
+    })
+    setCargado(true)
+  }
+
+  const guardar = useMutation({
+    mutationFn: () => api.put('/v1/config-comisiones/tarifas', {
+      ganancia_recargas: Number(form.ganancia_recargas),
+      ganancia_bipay:    Number(form.ganancia_bipay),
+      ganancia_krece:    Number(form.ganancia_krece),
+      ganancia_payjoy:   Number(form.ganancia_payjoy),
+    }).then(r => r.data),
+    onSuccess: (r: { msg?: string }) => setMsg(r.msg ?? 'Tarifas guardadas.'),
+    onError: () => setMsg('Error al guardar las tarifas.'),
+  })
+
+  const field = (key: keyof typeof form, label: string, suffix: string) => (
+    <div>
+      <Label htmlFor={key}>{label}</Label>
+      <div className="relative mt-1">
+        <Input id={key} type="number" step="0.01" min="0" value={form[key]}
+          onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="pr-10" />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-kyro-muted">{suffix}</span>
+      </div>
+    </div>
+  )
+
+  if (isLoading) return <p className="py-6 text-center text-sm text-kyro-muted">Cargando configuración...</p>
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-kyro-body">
+        Ganancia de la empresa por servicios operativos. <strong>No</strong> modifica reportes históricos
+        (para eso usa el recálculo masivo).
+      </p>
+      <div className="grid grid-cols-2 gap-4">
+        {field('ganancia_recargas', 'Recargas', '%')}
+        {field('ganancia_bipay', 'Bipay', 'S/')}
+        {field('ganancia_krece', 'Krece', 'S/')}
+        {field('ganancia_payjoy', 'Payjoy', 'S/')}
+      </div>
+
+      {msg && (
+        <p className={`rounded-kyro px-3 py-2 text-sm ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>
+      )}
+
+      <div className="flex gap-3">
+        <Button className="flex-1" disabled={guardar.isPending} onClick={() => { setMsg(null); guardar.mutate() }}>
+          {guardar.isPending ? 'Guardando...' : 'Guardar tarifas'}
+        </Button>
+        <Button variant="outline" onClick={onClose}>Cerrar</Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal wrapper ─────────────────────────────────────────────────────────────
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
@@ -271,7 +348,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 export function ComisionesPage() {
   const [filtroTipo, setFiltroTipo] = useState('')
-  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | null>(null)
+  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | 'tarifas' | null>(null)
   const [planEditando, setPlanEditando] = useState<ComisionPlan | null>(null)
 
   const qc = useQueryClient()
@@ -297,6 +374,9 @@ export function ComisionesPage() {
       {/* Header */}
       <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio">
         <div className="flex flex-wrap gap-3">
+          <Button variant="outline" onClick={() => setModal('tarifas')}>
+            <AlertCircle size={15} className="mr-2" /> Tarifas operativas
+          </Button>
           <Button variant="outline" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
           </Button>
@@ -407,6 +487,11 @@ export function ComisionesPage() {
       {modal === 'recalcular' && (
         <Modal title="Recálculo masivo de comisiones" onClose={closeModal}>
           <RecalcularModal onClose={closeModal} />
+        </Modal>
+      )}
+      {modal === 'tarifas' && (
+        <Modal title="Tarifas operativas (recargas / financieras)" onClose={closeModal}>
+          <TarifasOperativasModal onClose={closeModal} />
         </Modal>
       )}
     </div>

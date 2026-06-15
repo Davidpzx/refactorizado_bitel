@@ -124,6 +124,66 @@ class InventarioController extends Controller
         return response()->json(null, 204);
     }
 
+    // ── POST /inventario/{id}/precio-agente — Agente fija SOLO precio_normal ─────
+    // Paridad legacy tienda/fijar_precio_agente.php: el agente/tienda fija el precio
+    // de venta (≥ precio_minimo), con DNI de un agente activo. Nunca toca costo/mínimo.
+    public function fijarPrecioAgente(Request $request, int $id): JsonResponse
+    {
+        $user = Auth::user();
+        if ($user->rol === 'admin') {
+            return response()->json(['success' => false, 'msg' => 'Los administradores usan el panel de gerencia.'], 403);
+        }
+
+        $validated = $request->validate([
+            'precio_normal' => 'required|numeric|gt:0',
+            'dni_autoriza'  => ['required', 'regex:/^\d{8}$/'],
+        ], [
+            'precio_normal.gt'    => 'El precio de venta debe ser mayor a cero.',
+            'dni_autoriza.regex'  => 'DNI inválido (debe tener 8 dígitos).',
+        ]);
+
+        $precioNormal = round((float) $validated['precio_normal'], 2);
+
+        $agente = DB::table('agentes')
+            ->where('dni', $validated['dni_autoriza'])
+            ->where('estado', 'ACTIVO')
+            ->first();
+        if (! $agente) {
+            return response()->json(['success' => false, 'msg' => 'DNI no corresponde a un agente activo.'], 422);
+        }
+
+        $producto = InventarioTienda::find($id);
+        if (! $producto) {
+            return response()->json(['success' => false, 'msg' => 'El producto no existe en el inventario.'], 404);
+        }
+
+        // Blindaje de propiedad: el producto debe ser de la tienda del usuario.
+        if ((string) $producto->tienda_id !== (string) $user->tienda_id) {
+            return response()->json(['success' => false, 'msg' => 'El producto no pertenece a tu tienda.'], 403);
+        }
+
+        // Defensa en profundidad: precio_normal nunca por debajo del mínimo.
+        $precioMinimo = (float) ($producto->precio_minimo ?? 0);
+        if ($precioMinimo > 0 && $precioNormal < $precioMinimo) {
+            return response()->json([
+                'success' => false,
+                'msg'     => sprintf(
+                    'El precio de venta (S/ %.2f) no puede ser menor al mínimo (S/ %.2f).',
+                    $precioNormal, $precioMinimo
+                ),
+            ], 422);
+        }
+
+        $producto->update(['precio_normal' => $precioNormal]);
+
+        return response()->json([
+            'success'  => true,
+            'msg'      => 'Precio de venta actualizado correctamente.',
+            'producto' => $producto->producto_nombre,
+            'precio'   => $precioNormal,
+        ]);
+    }
+
     // ── POST /inventario/{id}/recalcular-ganancias — Actualiza JSON detalle ─────
     public function recalcularGanancias(Request $request, int $id): JsonResponse
     {

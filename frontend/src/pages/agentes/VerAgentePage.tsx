@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import type { Agente } from '../../types/agente'
 import type { Reporte } from '../../types/reporte'
@@ -149,6 +149,85 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
   )
 }
 
+interface Adelanto {
+  id: number
+  fecha: string
+  monto: string
+  motivo: string | null
+}
+
+function AdelantosPanel({ agenteId }: { agenteId: string }) {
+  const qc = useQueryClient()
+  const [monto, setMonto]   = useState('')
+  const [fecha, setFecha]   = useState(new Date().toISOString().slice(0, 10))
+  const [motivo, setMotivo] = useState('')
+
+  const { data } = useQuery({
+    queryKey: ['agente-adelantos', agenteId],
+    queryFn: () => api.get<{ data: Adelanto[]; total: number }>(`/v1/agentes/${agenteId}/adelantos`).then(r => r.data),
+  })
+  const adelantos = data?.data ?? []
+  const total     = data?.total ?? 0
+
+  const registrar = useMutation({
+    mutationFn: () => api.post(`/v1/agentes/${agenteId}/adelantos`, { monto: Number(monto), fecha, motivo }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['agente-adelantos', agenteId] }); setMonto(''); setMotivo('') },
+  })
+  const eliminar = useMutation({
+    mutationFn: (adelantoId: number) => api.delete(`/v1/agentes/${agenteId}/adelantos/${adelantoId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-adelantos', agenteId] }),
+  })
+
+  return (
+    <section className="kyro-card relative overflow-hidden p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
+        <DollarSign size={15} className="text-kyro-gold" /> Adelantos
+      </h3>
+      <p className="mb-4 text-xs text-kyro-muted">Adelantos de sueldo; se descuentan en la planilla del mes.</p>
+
+      <div className="mb-4 flex flex-wrap items-end gap-2">
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Monto (S/)</label>
+          <Input type="number" step="0.01" value={monto} onChange={e => setMonto(e.target.value)} className="w-28" placeholder="0.00" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Fecha</label>
+          <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+        </div>
+        <div className="min-w-[8rem] flex-1">
+          <label className="mb-1 block text-xs text-kyro-muted">Motivo</label>
+          <Input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Opcional" />
+        </div>
+        <Button size="sm" disabled={!monto || Number(monto) <= 0 || registrar.isPending} onClick={() => registrar.mutate()}>
+          {registrar.isPending ? 'Guardando...' : 'Registrar'}
+        </Button>
+      </div>
+
+      <div className="rounded-kyro border border-kyro-border">
+        <div className="flex items-center justify-between border-b border-kyro-border px-3 py-2 text-xs text-kyro-muted">
+          <span>{adelantos.length} adelanto(s)</span>
+          <span className="font-mono font-bold text-kyro-danger">Total: -{fmt(total)}</span>
+        </div>
+        <div className="max-h-48 overflow-y-auto divide-y divide-kyro-border">
+          {adelantos.length === 0 && <p className="px-3 py-4 text-center text-xs text-kyro-muted">Sin adelantos registrados</p>}
+          {adelantos.map(a => (
+            <div key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span className="font-mono text-xs text-kyro-muted">{new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-kyro-body">{a.motivo || '—'}</span>
+              <span className="font-mono font-bold text-kyro-danger">-{fmt(a.monto)}</span>
+              <button
+                className="text-xs text-kyro-muted hover:text-kyro-danger"
+                disabled={eliminar.isPending}
+                onClick={() => { if (confirm('¿Eliminar este adelanto?')) eliminar.mutate(a.id) }}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
   const { usuario }  = useAuth()
@@ -276,6 +355,7 @@ export function VerAgentePage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <FechasLaboralesPanel agenteId={id} agente={agente} />
           <TokenSeguridadPanel agenteId={id} />
+          <AdelantosPanel agenteId={id} />
         </div>
       )}
 

@@ -350,6 +350,9 @@ class ReporteController extends Controller
      */
     private function procesarVentas(Reporte $reporte, array $ventasData, string $tiendaId, int $agenteId, ComisionService $comisionService): void
     {
+        // ID interno (numérico) de la tienda para inventario_chips.tienda_id (paridad legacy procesar_reporte).
+        $idTiendaInterna = DB::table('tiendas')->where('codigo', $tiendaId)->value('id');
+
         foreach ($ventasData as $vd) {
             $cliente_id = null;
             if (! empty($vd['cliente_dni'])) {
@@ -440,7 +443,99 @@ class ReporteController extends Controller
                     'comision_unitaria' => round($comisionTotal / max(1, (int) ($vd['cantidad'] ?? 1)), 2),
                     'es_esim'           => (bool) ($vd['es_esim'] ?? false),
                 ]);
+
+                // Descuento de inventario_chips (paridad legacy procesar_reporte.php:227-301).
+                // Migración/upgrade/eSIM no consumen chip físico.
+                $consumeChip = ! ((bool) ($vd['es_migracion'] ?? false))
+                    && ! ((bool) ($vd['es_upgrade'] ?? false))
+                    && ! ((bool) ($vd['es_esim'] ?? false));
+
+                if ($consumeChip && $idTiendaInterna) {
+                    $cantidad = max(1, (int) ($vd['cantidad'] ?? 1));
+                    if ($vd['tipo_venta'] === 'APOYO') {
+                        // Apoyo: descuenta del lote del store destino que esta tienda tiene físicamente.
+                        $origenCode  = (string) ($vd['tienda_destino'] ?? '');
+                        $incluirNull = false;
+                    } else {
+                        // Postpago/Prepago: lote propio (tienda_origen = código propio o NULL).
+                        $origenCode  = $tiendaId;
+                        $incluirNull = true;
+                    }
+
+                    if ($origenCode !== '') {
+                        $descontados = $this->descontarChips((int) $idTiendaInterna, $origenCode, $cantidad, $incluirNull);
+                        if ($descontados > 0 && Schema::hasColumn('ventas', 'chips_descontados')) {
+                            $venta->update(['chips_descontados' => $descontados]);
+                        }
+                        if ($descontados < $cantidad) {
+                            Log::warning('Stock de chips insuficiente al guardar el cuadre.', [
+                                'reporte_id'   => $reporte->id,
+                                'tienda'       => $tiendaId,
+                                'origen'       => $origenCode,
+                                'solicitado'   => $cantidad,
+                                'descontado'   => $descontados,
+                            ]);
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    /**
+     * Descuenta `cantidad` chips del bucket (tienda_id, tienda_origen=origen [, OR NULL]).
+     * Soft-fail como el legacy: descuenta lo que haya, devuelve cuánto descontó (no lanza).
+     */
+    private function descontarChips(int $idTiendaInterna, string $origenCode, int $cantidad, bool $incluirNull): int
+    {
+        $restante = $cantidad;
+
+        $lotes = DB::table('inventario_chips')
+            ->where('tienda_id', $idTiendaInterna)
+            ->where('stock_actual', '>', 0)
+            ->where(function ($q) use ($origenCode, $incluirNull) {
+                $q->where('tienda_origen', $origenCode);
+                if ($incluirNull) {
+                    $q->orWhereNull('tienda_origen');
+                }
+            })
+            ->orderByRaw('tienda_origen = ? DESC', [$origenCode]) // primero el lote exacto
+            ->orderByDesc('stock_actual')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($lotes as $lote) {
+            if ($restante <= 0) break;
+            $quita = min($restante, (int) $lote->stock_actual);
+            DB::table('inventario_chips')->where('id', $lote->id)->decrement('stock_actual', $quita);
+            $restante -= $quita;
+        }
+
+        return $cantidad - $restante;
+    }
+
+    /**
+     * Repone `cantidad` chips al lote canónico (tienda_id, tienda_origen=origen); lo crea si no existe.
+     * Usado al revertir un reporte (edición) para no dejar el stock de chips descuadrado.
+     */
+    private function reponerChips(int $idTiendaInterna, string $origenCode, int $cantidad): void
+    {
+        if ($cantidad <= 0) {
+            return;
+        }
+
+        $afectadas = DB::table('inventario_chips')
+            ->where('tienda_id', $idTiendaInterna)
+            ->where('tienda_origen', $origenCode)
+            ->increment('stock_actual', $cantidad);
+
+        if ($afectadas === 0) {
+            DB::table('inventario_chips')->insert([
+                'tienda_id'     => $idTiendaInterna,
+                'tienda_origen' => $origenCode,
+                'tipo_chip'     => 'FÍSICO',
+                'stock_actual'  => $cantidad,
+            ]);
         }
     }
 
@@ -452,7 +547,22 @@ class ReporteController extends Controller
     {
         $ventas = Venta::where('reporte_id', $reporte->id)->with('equipo')->get();
 
+        // ID interno de la tienda para reponer inventario_chips al revertir.
+        $idTiendaInterna = DB::table('tiendas')->where('codigo', $reporte->tienda_id)->value('id');
+        $tieneChipsCol   = Schema::hasColumn('ventas', 'chips_descontados');
+
         foreach ($ventas as $venta) {
+            // Reponer chips descontados al guardar (paridad: la edición revierte el stock previo).
+            $chipsPrevios = $tieneChipsCol ? (int) ($venta->chips_descontados ?? 0) : 0;
+            if ($chipsPrevios > 0 && $idTiendaInterna) {
+                $origenCode = $venta->tipo_venta === 'APOYO'
+                    ? (string) ($venta->tienda_destino ?? '')
+                    : (string) $reporte->tienda_id;
+                if ($origenCode !== '') {
+                    $this->reponerChips((int) $idTiendaInterna, $origenCode, $chipsPrevios);
+                }
+            }
+
             $invId = (int) ($venta->equipo->inventario_tienda_id ?? 0);
             if ($venta->equipo && $invId > 0) {
                 $update = ['cantidad' => DB::raw('cantidad + 1')];

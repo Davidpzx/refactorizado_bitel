@@ -1417,4 +1417,117 @@ class AsistenciaController extends Controller
         }
         return response()->json(['success' => true, 'message' => 'Registro de asistencia eliminado.']);
     }
+
+    // ── GET /asistencias/mis-tardanzas?dni= — Tardanzas de la semana del agente ──
+    // Alimenta el salvavidas (paridad legacy mi_historial.php): el agente ve sus
+    // tardanzas recuperables de la semana actual y si ya usó su comodín.
+    public function misTardanzas(Request $request): JsonResponse
+    {
+        $dni = trim((string) $request->input('dni', ''));
+        if (! preg_match('/^\d{8}$/', $dni)) {
+            return response()->json(['success' => false, 'mensaje' => 'DNI inválido.'], 422);
+        }
+
+        $agente = DB::table('agentes')->where('dni', $dni)->first();
+        if (! $agente) {
+            return response()->json(['success' => false, 'mensaje' => 'Agente no encontrado.'], 404);
+        }
+
+        $inicioSemana = now()->startOfWeek()->toDateString();
+        $finSemana    = now()->endOfWeek()->toDateString();
+
+        $tieneTardanzaCol = Schema::hasColumn('asistencias', 'minutos_tardanza');
+        $tieneComodinCol  = Schema::hasColumn('asistencias', 'comodin_usado');
+
+        $query = DB::table('asistencias')
+            ->where('agente_id', $agente->id)
+            ->whereBetween('fecha', [$inicioSemana, $finSemana]);
+        if ($tieneTardanzaCol) {
+            $query->where('minutos_tardanza', '>', 0);
+        }
+
+        $cols = ['id', 'fecha', 'hora_ingreso'];
+        if ($tieneTardanzaCol) $cols[] = 'minutos_tardanza';
+        if ($tieneComodinCol)  $cols[] = 'comodin_usado';
+
+        $tardanzas = $query->orderBy('fecha')->get($cols);
+
+        $yaUso = $tieneComodinCol && DB::table('asistencias')
+            ->where('agente_id', $agente->id)
+            ->whereBetween('fecha', [$inicioSemana, $finSemana])
+            ->where('comodin_usado', 1)
+            ->exists();
+
+        return response()->json([
+            'success'        => true,
+            'agente'         => ['id' => $agente->id, 'nombres' => $agente->nombres],
+            'tardanzas'      => $tardanzas,
+            'salvavidas_usado' => $yaUso,
+        ]);
+    }
+
+    // ── POST /asistencias/excepcion — Registrar FALTA/PERMISO o PERDONAR (admin) ──
+    // Paridad legacy gerencia/acciones_asistencia.php (acción registrar_excepcion).
+    public function registrarExcepcion(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+
+        $validated = $request->validate([
+            'agente_id' => 'required|integer|min:1',
+            'fecha'     => 'required|date_format:Y-m-d',
+            'estado'    => 'required|in:FALTA_INJUSTIFICADA,PERMISO,PERDONAR',
+        ]);
+
+        $agenteId = (int) $validated['agente_id'];
+        $fecha    = $validated['fecha'];
+        $estado   = $validated['estado'];
+
+        // PERDONAR: borra cualquier registro negativo del agente en esa fecha.
+        if ($estado === 'PERDONAR') {
+            $borrados = DB::table('asistencias')
+                ->where('agente_id', $agenteId)
+                ->whereDate('fecha', $fecha)
+                ->whereIn('estado_asistencia', ['FALTA_INJUSTIFICADA', 'PERMISO', 'EXCEPCION'])
+                ->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => $borrados > 0 ? 'Excepción perdonada (registro negativo eliminado).' : 'No había registros negativos que perdonar.',
+            ]);
+        }
+
+        // FALTA/PERMISO: insertar excepción (sin duplicar el día).
+        $existe = DB::table('asistencias')
+            ->where('agente_id', $agenteId)
+            ->whereDate('fecha', $fecha)
+            ->exists();
+        if ($existe) {
+            return response()->json(['success' => false, 'message' => 'Ya existe un registro de asistencia para ese día.'], 422);
+        }
+
+        $tiendaId = DB::table('agentes')->where('id', $agenteId)->value('tienda_base') ?? 'S/T';
+        // PERMISO → deuda de 540 min (9h) para forzar recuperación; FALTA → sin deuda de minutos.
+        $minutosDeuda = $estado === 'PERMISO' ? 540 : 0;
+
+        $insert = [
+            'agente_id' => $agenteId,
+            'tienda_id' => $tiendaId,
+            'fecha'     => $fecha,
+        ];
+        if (Schema::hasColumn('asistencias', 'estado_asistencia')) $insert['estado_asistencia'] = $estado;
+        if (Schema::hasColumn('asistencias', 'minutos_deuda'))     $insert['minutos_deuda']     = $minutosDeuda;
+        if (Schema::hasColumn('asistencias', 'hora_ingreso'))      $insert['hora_ingreso']      = '00:00:00';
+        if (Schema::hasColumn('asistencias', 'latitud_ingreso'))   $insert['latitud_ingreso']   = 'EXCEPCION';
+        if (Schema::hasColumn('asistencias', 'longitud_ingreso'))  $insert['longitud_ingreso']  = 'EXCEPCION';
+
+        DB::table('asistencias')->insert($insert);
+
+        return response()->json([
+            'success' => true,
+            'message' => $estado === 'PERMISO' ? 'Permiso registrado (genera deuda de 9h).' : 'Falta injustificada registrada.',
+        ], 201);
+    }
 }
