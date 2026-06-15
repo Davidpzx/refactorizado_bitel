@@ -55,12 +55,20 @@ Para **no agotar los tokens de Claude**, el trabajo pesado se delega a los otros
 | **Claude** (yo) | — | Cabeza técnica: plan, verificación, integración, git, decisiones finales | activo |
 | **Codex** | `mcp__codex-cli__codex` (model `gpt-5.5`, `sandbox: danger-full-access`, workingDirectory absoluto) | Implementación pesada de features | ✔ conectado |
 | **Gemini** | `mcp__gemini-cli__ask-gemini` / `brainstorm` | Leer/analizar mucho código, búsquedas amplias, brainstorm | ✔ conectado |
-| **Antigravity** | MCP `antigravity` (cmd `agy mcp`, user scope) | 4º agente (IDE agéntico Google) | ✘ pendiente: exponer CLI `agy` en PATH |
+| **Antigravity** (`agy`) | CLI `C:\Users\Usuario\AppData\Local\agy\bin\agy.exe` (ya en User PATH; full access = flag `--dangerously-skip-permissions`). **NO es MCP** — no tiene modo servidor (`agy help mcp` → unknown subcommand). | 4º agente: lo maneja David en el IDE/terminal Antigravity; Claude le pasa el prompt | manual (interactivo) |
+
+**Importante sobre `agy`:** es una CLI agéntica interactiva (como Claude Code). `agy -p` (headless) **cuelga al pipearse**, así que Claude NO puede scriptearlo de forma confiable. La orquesta lo usa con humano en el loop: David ejecuta `agy` y pega el prompt que Claude prepara.
+
+**Modelos de Antigravity** (menú "Switch Model" en `agy`). Como el agente Gemini-MCP ya cubre Gemini, en `agy` usar **los otros**: Claude Sonnet 4.6 (normal) o Gemini 3.5 Flash; evitar Gemini 3.1 Pro (redundante) y Claude Opus 4.6 (premium / = Claude-orquestador).
+- **Recomendado por defecto:** `Claude Sonnet 4.6 (Thinking)` (id `claude-sonnet-4-6`) para implementación de calidad.
+- **Rápido/barato:** `Gemini 3.5 Flash (High/Medium/Low)`.
+- Otros disponibles: `Gemini 3.1 Pro (Low/High)`, `Claude Opus 4.6 (Thinking)` (`claude-opus-4-6`), `GPT-OSS 120B (Medium)`.
+- Seleccionar con el menú "Switch Model" dentro de `agy`.
 
 **Regla de delegación (ahorro de tokens de Claude):**
-- Análisis/lectura de muchos archivos → **Gemini**
-- Implementación de features completas → **Codex** (verificar diff + build después; tiende a exceder scope)
-- Tareas agénticas de IDE / multimodal → **Antigravity** (cuando conecte)
+- Análisis/lectura de muchos archivos → **Gemini** (MCP `gemini-cli`)
+- Implementación de features completas → **Codex** (MCP `codex-cli`; verificar diff + build después; tiende a exceder scope)
+- Tareas en el IDE Antigravity / segunda opinión → **agy** (David lo maneja, modelo Sonnet 4.6 o Flash)
 - Claude no implementa en bloque salvo cambios triviales o si los MCPs fallan.
 
 ## Handoff de sesión — 2026-06-14 (9 gaps de paridad)
