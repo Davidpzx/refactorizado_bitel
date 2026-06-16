@@ -63,6 +63,7 @@ Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
     Route::post('mark-qr',      [AsistenciaController::class, 'markQr']);
     Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto']);
 });
+Route::post('/v1/asistencias/turno-corrido', [AsistenciaController::class, 'turnoCorrido'])->middleware('throttle:60,1');
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
@@ -163,6 +164,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('agentes/{id}/adelantos',               [AgenteController::class, 'adelantos'])->middleware('role:admin');
     Route::post('agentes/{id}/adelantos',              [AgenteController::class, 'registrarAdelanto'])->middleware('role:admin');
     Route::delete('agentes/{id}/adelantos/{adelantoId}', [AgenteController::class, 'eliminarAdelanto'])->middleware('role:admin');
+    Route::get('agentes/{id}/liquidacion-asistencias', [AsistenciaController::class, 'liquidacionAsistencias'])->middleware('role:admin');
     Route::get('agentes/{id}/perfil-rrhh',              [AgenteController::class, 'perfilRrhh'])->middleware('role:admin');
     Route::put('agentes/{id}/perfil-rrhh',              [AgenteController::class, 'actualizarPerfilRrhh'])->middleware('role:admin');
     Route::get('agentes/{id}/boletas',                  [AgenteController::class, 'boletas'])->middleware('role:admin');

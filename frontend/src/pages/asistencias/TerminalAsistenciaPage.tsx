@@ -412,6 +412,27 @@ export function TerminalAsistenciaPage() {
     )
   }
 
+  async function activarTurnoCorrido() {
+    if (!dni) return
+    setLoading(true)
+    try {
+      const huella = huellaRef.current || obtenerOCrearHuella(dni)
+      await api.post('/v1/asistencias/turno-corrido', { dni, huella })
+      const res = await api.get(`/v1/attendance/status/${dni}`, { params: { device_id: huella } })
+      const data: AgenteStatus = res.data
+      setStatus(data)
+      setTipo(data.siguiente_marcacion as TipoMarcacion)
+      setMensaje('Turno corrido activado.')
+      setSubMensaje('Proxima marcacion: Salida.')
+      setPaso('ok')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'No se pudo activar turno corrido.'
+      fallarA(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const nombreTienda = (cod: string) => tiendas.find((t) => (t.codigo ?? String(t.id)) === cod || String(t.id) === cod)?.nombre ?? cod
 
   return (
@@ -490,6 +511,12 @@ export function TerminalAsistenciaPage() {
               {loading ? 'Procesando...' : `MARCAR ${TIPO_LABEL[tipo].toUpperCase()}`}
             </button>
             <button onClick={() => setPaso('fallback')} className="text-xs text-zinc-500 hover:text-amber-400">¿Problemas con el GPS? Usar otra forma</button>
+            {status.siguiente_marcacion === 'inicio_refrigerio' && (
+              <button onClick={activarTurnoCorrido} disabled={loading}
+                className="w-full rounded-2xl border border-amber-400/40 bg-amber-500/10 py-3 text-sm font-semibold text-amber-300 transition-all hover:bg-amber-500/20 disabled:opacity-40">
+                Turno corrido (omitir refrigerio)
+              </button>
+            )}
             <button onClick={() => setPaso('token')} className="text-xs text-amber-400/80 hover:text-amber-300">Usar token de emergencia</button>
             <button onClick={reset} className="text-xs text-zinc-600 hover:text-zinc-400">← Cancelar</button>
           </div>

@@ -67,6 +67,7 @@ class ReporteController extends Controller
         $validated = $request->validate([
             'agente_id'                      => 'nullable|integer',
             'tienda_id'                      => 'required|string|max:50',
+            '_modo_dios'                     => 'nullable|boolean',
             'usuario_id'                     => 'nullable|integer',
             'fecha'                          => 'required|date',
             'caja_inicial'                   => 'required|numeric|min:0',
@@ -122,11 +123,17 @@ class ReporteController extends Controller
 
         $user = $request->user();
         $esAdmin = $user->rol === 'admin';
+        $tiendaSolicitada = trim((string) $validated['tienda_id']);
+
+        if (! $esAdmin && ($validated['_modo_dios'] ?? false) && $tiendaSolicitada !== trim((string) $user->tienda_id)) {
+            abort(403, 'Solo admin puede cuadrar por otra tienda.');
+        }
+
         $agenteId = $esAdmin
             ? (int) ($validated['agente_id'] ?? 0)
             : $this->userAgentResolver->resolveOrFail($user)->id;
         $tiendaId = $esAdmin
-            ? (string) $validated['tienda_id']
+            ? $tiendaSolicitada
             : trim((string) $user->tienda_id);
 
         if ($agenteId <= 0 || ! DB::table('agentes')->where('id', $agenteId)->exists()) {

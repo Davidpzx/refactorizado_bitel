@@ -390,12 +390,18 @@ type NuevoReportePageProps = {
   mode?: 'create' | 'edit'
 }
 
+interface TiendaOption {
+  codigo: string
+  nombre: string
+}
+
 export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const navigate    = useNavigate()
   const { id }      = useParams<{ id: string }>()
   const { usuario } = useAuth()
   const { data: planesData = [] } = usePlanesComisiones()
   const esEdicion = mode === 'edit'
+  const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
   const inicializadoRef = useRef(false)
 
@@ -423,7 +429,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     })
 
   useEffect(() => {
-    if (usuario && !esEdicion) {
+    if (usuario && !esEdicion && usuario.rol !== 'admin') {
       setValue('agente_id', usuario.agente_id ?? 0)
       setValue('tienda_id', usuario.tienda_id)
     }
@@ -733,6 +739,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     enabled: !!tiendaSeleccionada,
   })
 
+  const { data: tiendasAdmin = [] } = useQuery({
+    queryKey: ['tiendas-modo-dios'],
+    queryFn: () => api.get<{ data: TiendaOption[] }>('/v1/tiendas', { params: { per_page: 200 } }).then((r) => r.data.data),
+    staleTime: 60_000,
+    enabled: esAdminReporte,
+  })
+
   const ventaNueva = (overrides: Partial<VentaFormData>): VentaFormData => ({
     ...VENTA_DEFAULT,
     vendedor_id: usuario?.agente_id ?? reporteEditar?.agente_id ?? 0,
@@ -794,9 +807,19 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </div>
             <div>
               <Label htmlFor="tienda_id" className="text-xs font-medium text-kyro-body">Tienda *</Label>
-              <Select id="tienda_id" {...register('tienda_id')} className="kyro-input mt-1 h-8 text-sm">
+              <Select
+                id="tienda_id"
+                {...register('tienda_id', {
+                  onChange: () => {
+                    if (esAdminReporte) setValue('agente_id', 0)
+                  },
+                })}
+                className="kyro-input mt-1 h-8 text-sm"
+              >
                 <option value="">— Selecciona —</option>
-                {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
+                {esAdminReporte
+                  ? tiendasAdmin.map(t => <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>)
+                  : TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
               </Select>
               {errors.tienda_id && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
             </div>
@@ -804,6 +827,19 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               <Label htmlFor="nombre_cubre" className="text-xs font-medium text-kyro-body">Cubre tienda (si aplica)</Label>
               <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Nombre" className="kyro-input mt-1 h-8 text-sm" />
             </div>
+            {esAdminReporte && (
+              <div>
+                <Label htmlFor="agente_id" className="text-xs font-medium text-kyro-body">Agente responsable *</Label>
+                <Select id="agente_id" {...register('agente_id', { valueAsNumber: true })} className="kyro-input mt-1 h-8 text-sm">
+                  <option value={0}>Selecciona agente</option>
+                  {vendedores.map((v) => (
+                    <option key={v.id} value={v.id}>{v.nombres}</option>
+                  ))}
+                </Select>
+                {errors.agente_id && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.agente_id.message}</p>}
+              </div>
+            )}
+            {!esAdminReporte && (
             <div className="flex items-end">
               <div className="text-xs text-kyro-muted bg-kyro-elevated rounded-kyro px-2 py-1.5 w-full border border-kyro-border">
                 <span className="text-kyro-subtle">Agente:</span>{' '}
@@ -811,7 +847,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 <input type="hidden" {...register('agente_id', { valueAsNumber: true })} />
               </div>
             </div>
+            )}
           </div>
+          {esAdminReporte && (
+            <div className="mt-3 rounded-kyro border border-kyro-warning/40 bg-kyro-warning/10 px-3 py-2 text-xs text-kyro-warning">
+              Modo admin: el cuadre se registrara para la tienda y agente seleccionados.
+            </div>
+          )}
         </GlassPanel>
 
         {/* ── Cuerpo: dos columnas ── */}

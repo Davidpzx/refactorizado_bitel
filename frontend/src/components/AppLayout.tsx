@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'] },
   { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'] },
   { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'] },
+  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'] },
   { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'] },
   { to: '/revisar-stock',  label: 'Revisar Stock',   Icon: Package,         roles: ['admin'] },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'] },
@@ -56,8 +57,8 @@ const NAV_ITEMS: NavItem[] = [
 const SECTION_SEPARATORS: Record<number, string> = {
   0:  'Operaciones',
   7:  'Personal',
-  11: 'Recursos',
-  17: 'Administración',
+  12: 'Recursos',
+  18: 'Administración',
 }
 
 export function AppLayout() {

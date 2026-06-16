@@ -352,6 +352,114 @@ class AsistenciaController extends Controller
         ]);
     }
 
+    public function turnoCorrido(Request $request): JsonResponse
+    {
+        if (! $this->tablaExiste()) {
+            return response()->json(['error' => 'Sistema de asistencias no configurado.'], 503);
+        }
+
+        $data = $request->validate([
+            'dni' => ['required', 'string'],
+            'huella' => ['required', 'string'],
+        ]);
+
+        $agente = $this->buscarAgente($data['dni']);
+        if (! $agente) {
+            return response()->json(['error' => 'DNI no encontrado.'], 404);
+        }
+        if ($error = $this->validarAgenteActivo($agente)) {
+            return $error;
+        }
+
+        $hoy = $this->ahora()->toDateString();
+        $asistencia = DB::table('asistencias')
+            ->where('agente_id', $agente->id)
+            ->whereDate('fecha', $hoy)
+            ->first();
+
+        if (! $asistencia || empty($asistencia->hora_ingreso)) {
+            return response()->json(['error' => 'Sin entrada registrada hoy.'], 422);
+        }
+        if (! empty($asistencia->hora_salida)) {
+            return response()->json(['error' => 'Ya registro salida.'], 422);
+        }
+        if (! empty($asistencia->inicio_refrigerio) || ! empty($asistencia->fin_refrigerio)) {
+            return response()->json(['error' => 'Ya inicio el refrigerio.'], 422);
+        }
+
+        DB::table('asistencias')
+            ->where('id', $asistencia->id)
+            ->update([
+                'omitio_refrigerio' => true,
+                'updated_at' => $this->ahora(),
+            ]);
+
+        return response()->json([
+            'message' => 'Turno corrido activado. Su proxima marcacion es la salida.',
+            'omitio_refrigerio' => true,
+            'siguiente_marcacion' => 'salida',
+        ]);
+    }
+
+    public function liquidacionAsistencias(Request $request, int $id): JsonResponse
+    {
+        abort_if($request->user()?->rol !== 'admin', 403);
+
+        $agente = DB::table('agentes')->where('id', $id)->first();
+        if (! $agente) {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'mes' => ['nullable', 'date_format:Y-m'],
+        ]);
+        $mes = $data['mes'] ?? $this->ahora()->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $mes));
+
+        $asistencias = DB::table('asistencias')
+            ->where('agente_id', $id)
+            ->whereYear('fecha', $year)
+            ->whereMonth('fecha', $month)
+            ->orderBy('fecha')
+            ->get();
+
+        $valorMinuto = (float) config('attendance.valor_minuto_tardanza', 0.10);
+        $dias = $asistencias->map(function (object $asistencia) use ($valorMinuto) {
+            $tardanza = (int) ($asistencia->minutos_tardanza ?? 0);
+            $deuda = (int) ($asistencia->minutos_deuda ?? 0);
+            $comodin = (bool) ($asistencia->comodin_usado ?? false);
+            $descuento = $comodin ? 0 : $deuda * $valorMinuto;
+
+            return [
+                'fecha' => $asistencia->fecha,
+                'estado' => $asistencia->estado_asistencia ?? 'REGULAR',
+                'hora_entrada' => $asistencia->hora_ingreso,
+                'hora_salida' => $asistencia->hora_salida,
+                'minutos_tardanza' => $tardanza,
+                'minutos_deuda' => $deuda,
+                'uso_comodin' => $comodin,
+                'omitio_refrigerio' => (bool) ($asistencia->omitio_refrigerio ?? false),
+                'descuento_soles' => round($descuento, 2),
+            ];
+        });
+
+        return response()->json([
+            'agente' => [
+                'id' => (int) $agente->id,
+                'nombre' => $agente->nombres ?? $agente->nombre ?? '',
+                'dni' => $agente->dni,
+            ],
+            'mes' => $mes,
+            'dias' => $dias->values(),
+            'resumen' => [
+                'total_tardanzas_min' => $dias->sum('minutos_tardanza'),
+                'deuda_acumulada_min' => $dias->sum('minutos_deuda'),
+                'comodines_usados' => $dias->where('uso_comodin', true)->count(),
+                'total_descuento_soles' => round($dias->sum('descuento_soles'), 2),
+            ],
+        ]);
+    }
+
     private function procesarMarcacion(
         object $agente,
         ?string $tipoSolicitado,
