@@ -37,3 +37,5 @@ docker-compose up -d
 
 Backend `.env` — ver `.env.example`  
 Frontend `.env.local` — ver `.env.example`
+
+<!-- deploy-test: 2026-06-16T1 -->
