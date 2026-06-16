@@ -5,8 +5,8 @@ Esta es la ruta de **implementación**. Aquí Codex escribe el código.
 Es el refactor del sistema legacy Vitaltel/DASAM a Laravel 11 + React 18.
 
 ## Stack tecnológico
-- **Backend**: Laravel 11, PHP 8.2, XAMPP
-- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Laravel 12, PHP 8.2, XAMPP
+- **Frontend**: React 19 + TypeScript + Vite
 - **BD**: MySQL (migración desde legacy)
 - **Infra**: Docker (docker-compose.yml / docker-compose.prod.yml)
 
@@ -59,17 +59,41 @@ Para **no agotar los tokens de Claude**, el trabajo pesado se delega a los otros
 
 **Importante sobre `agy`:** es una CLI agéntica interactiva (como Claude Code). `agy -p` (headless) **cuelga al pipearse**, así que Claude NO puede scriptearlo de forma confiable. La orquesta lo usa con humano en el loop: David ejecuta `agy` y pega el prompt que Claude prepara.
 
-**Modelos de Antigravity** (menú "Switch Model" en `agy`). Como el agente Gemini-MCP ya cubre Gemini, en `agy` usar **los otros**: Claude Sonnet 4.6 (normal) o Gemini 3.5 Flash; evitar Gemini 3.1 Pro (redundante) y Claude Opus 4.6 (premium / = Claude-orquestador).
-- **Recomendado por defecto:** `Claude Sonnet 4.6 (Thinking)` (id `claude-sonnet-4-6`) para implementación de calidad.
-- **Rápido/barato:** `Gemini 3.5 Flash (High/Medium/Low)`.
-- Otros disponibles: `Gemini 3.1 Pro (Low/High)`, `Claude Opus 4.6 (Thinking)` (`claude-opus-4-6`), `GPT-OSS 120B (Medium)`.
-- Seleccionar con el menú "Switch Model" dentro de `agy`.
+**Modelos de Antigravity** (menú "Switch Model" en `agy`). Como el agente Gemini-MCP ya cubre Gemini, en `agy` usar **los otros**: Claude Sonnet 4.6 (`claude-sonnet-4-6`) o Gemini 2.5 Flash; evitar Claude Opus 4.6.
+- **Recomendado por defecto:** `Claude Sonnet 4.6 (Thinking)` para implementación de calidad.
+- **Rápido/barato:** `Gemini 2.5 Flash`.
 
 **Regla de delegación (ahorro de tokens de Claude):**
 - Análisis/lectura de muchos archivos → **Gemini** (MCP `gemini-cli`)
 - Implementación de features completas → **Codex** (MCP `codex-cli`; verificar diff + build después; tiende a exceder scope)
 - Tareas en el IDE Antigravity / segunda opinión → **agy** (David lo maneja, modelo Sonnet 4.6 o Flash)
 - Claude no implementa en bloque salvo cambios triviales o si los MCPs fallan.
+
+### Calibración de modelos por tarea — OBLIGATORIO antes de delegar
+
+Ambos MCPs aceptan override de modelo por llamada. Claude DEBE elegir según complejidad:
+
+#### Codex (`mcp__codex-cli__codex`)
+
+| Complejidad | `model` | `reasoningEffort` | `sandbox` | Cuándo usar |
+|-------------|---------|-------------------|-----------|-------------|
+| **Simple** | `gpt-4o` | `low` | `workspace-write` | 1 archivo, bug fix puntual, rename, snippet |
+| **Media** | `gpt-5.3-codex` | `medium` | `workspace-write` | Feature de 2-4 archivos, CRUD completo, migración simple |
+| **Compleja** | `gpt-5.5` | `high` | `danger-full-access` | Feature multi-módulo, refactor grande, integración de sistemas |
+| **Máxima** | `gpt-5.5` | `xhigh` | `danger-full-access` | Solo si `high` falló o la tarea es crítica/seguridad |
+
+> `o4-mini` es alternativa económica a `gpt-5.5` para razonamiento lógico sin escritura masiva de código.
+
+#### Gemini (`mcp__gemini-cli__ask-gemini`)
+
+Gemini se usa poco. Cuando se usa, casi siempre el default (`gemini-2.5-pro`) es el correcto — es el modelo más capaz disponible (lo que `agy` llama "Gemini 3.1 Pro Preview" es el mismo modelo internamente).
+
+| Caso | `model` | Cuándo usar |
+|------|---------|-------------|
+| **Casi siempre** | *(omitir → `gemini-2.5-pro`)* | Análisis de código, arquitectura, brainstorm, lectura amplia |
+| **Consulta trivial** | `gemini-2.5-flash` | Solo si la respuesta esperada es 1-2 líneas y no requiere razonamiento |
+
+> Default sin `model` = `gemini-2.5-pro`. No pasar Flash salvo que sea una búsqueda de 1 dato puntual.
 
 ## Handoff de sesión — 2026-06-14 (9 gaps de paridad)
 
