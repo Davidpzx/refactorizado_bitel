@@ -11,7 +11,9 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
 import type { Agente } from '../../types/agente'
-import { Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
+import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import { api } from '../../services/api'
 
 type BadgeVariant = 'success' | 'warning' | 'destructive'
 const estadoVariant: Record<Agente['estado'], BadgeVariant> = {
@@ -76,7 +78,19 @@ function getColumns(
   ]
 }
 
+async function descargarFicha() {
+  const res = await api.get('/v1/agentes/exportar-ficha', { responseType: 'blob' })
+  const url = URL.createObjectURL(res.data as Blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'ficha_tecnica_personal.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function AgentesPage() {
+  const { usuario }                 = useAuth()
+  const isAdmin                     = usuario?.rol === 'admin'
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
@@ -118,7 +132,16 @@ export function AgentesPage() {
       <PageHeader
         title="Agentes"
         description="Gestión del personal de ventas registrado en el sistema."
-        actions={<Button onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>}
+        actions={
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button variant="outline" onClick={descargarFicha}>
+                <Download size={15} /> Ficha técnica
+              </Button>
+            )}
+            <Button onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
+          </div>
+        }
       />
 
       <ListToolbar description="Busca por documento o nombre del agente.">
