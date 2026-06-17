@@ -80,7 +80,6 @@ export function AsistenciasPage() {
   const [page, setPage] = useState(1)
   const [editando, setEditando] = useState<AsistenciaRow | null>(null)
   const [editForm, setEditForm] = useState<AsistenciaEditForm | null>(null)
-  const [exportando, setExportando] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['asistencias', applied, page],
@@ -151,6 +150,8 @@ export function AsistenciasPage() {
       observacion_admin: asistencia.observacion_admin ?? asistencia.observacion ?? '',
     })
   }
+
+  const [exportando, setExportando] = useState(false)
 
   async function exportar() {
     setExportando(true)
@@ -451,4 +452,12 @@ export function AsistenciasPage() {
             <div className="mt-5 flex gap-3">
               <Button className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
                 {editarRegistro.isPending ? 'Recalculando...' : 'Guardar y recalcular'}
-              </Butto
+              </Button>
+              <Button variant="outline" onClick={() => { setEditando(null); setEditForm(null) }}>Cancelar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

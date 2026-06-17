@@ -117,8 +117,6 @@ export function EstadisticasPage() {
   const topEquipos: TopItem[]   = statsData?.top_equipos ?? []
   const ranking: AgentRank[]    = rankingData?.ranking ?? []
 
-  const [exportando, setExportando] = useState(false)
-
   const categoriaBar = totales
     ? [
         { name: 'Postpago',   value: Number(totales.postpago),   fill: COLORS.postpago },
@@ -128,6 +126,8 @@ export function EstadisticasPage() {
         { name: 'Accesorios', value: Number(totales.accesorios), fill: COLORS.accesorios },
       ]
     : []
+
+  const [exportando, setExportando] = useState(false)
 
   async function exportarExcel() {
     setExportando(true)
@@ -409,4 +409,13 @@ function TopList({ title, items, color }: { title: string; items: { name: string
               </span>
               <span className="truncate text-sm text-kyro-body">{item.name}</span>
             </div>
-            <span className={`ml-2 shrink-0 text-sm font-bold ${colorMap[color] ?? '
+            <span className={`ml-2 shrink-0 text-sm font-bold ${colorMap[color] ?? 'text-kyro-text'}`}>{item.total}</span>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="px-4 py-6 text-center text-gray-400 text-sm">Sin datos</p>
+        )}
+      </div>
+    </div>
+  )
+}

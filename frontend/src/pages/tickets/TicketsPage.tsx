@@ -468,4 +468,9 @@ export function TicketsPage() {
         {modoNuevo ? (
           <NuevoTicketForm onSuccess={cerrar} onCancel={cerrar} />
         ) : editando ? (
-          <EditarTicketForm ticket={editando} onSuccess={cerrar}
+          <EditarTicketForm ticket={editando} onSuccess={cerrar} onCancel={cerrar} />
+        ) : null}
+      </Dialog>
+    </div>
+  )
+}
