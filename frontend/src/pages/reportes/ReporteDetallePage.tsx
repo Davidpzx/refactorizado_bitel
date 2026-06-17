@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
+import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { reportesApi, type HistorialReporteEntry } from '../../services/reportes.api'
+import { api } from '../../services/api'
 import type { ReporteConVentas, VentaConDetalle } from '../../types/reporte'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -574,7 +576,18 @@ function SkeletonDetalle() {
 export function ReporteDetallePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { usuario } = useAuth()
+  const qc = useQueryClient()
   const { data: reporte, isLoading, isError } = useReporte(Number(id))
+
+  const aprobarEdicion = useMutation({
+    mutationFn: (reporteId: number) =>
+      api.post(`/v1/reportes/${reporteId}/aprobar-edicion`).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reporte', Number(id)] })
+      qc.invalidateQueries({ queryKey: ['historial'] })
+    },
+  })
 
   if (isLoading) return <SkeletonDetalle />
 
@@ -654,7 +667,23 @@ export function ReporteDetallePage() {
                 <Badge variant="destructive">Requiere aprobación</Badge>
               )}
               {reporte.estado_edicion === 'SOLICITADO' && (
-                <Badge variant="warning">Edición solicitada</Badge>
+                <>
+                  <Badge variant="warning">Edición solicitada</Badge>
+                  {usuario?.rol === 'admin' && (
+                    <Button
+                      size="sm"
+                      disabled={aprobarEdicion.isPending}
+                      onClick={() => {
+                        if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
+                          aprobarEdicion.mutate(reporte.id)
+                        }
+                      }}
+                      className="h-7 gap-1 bg-kyro-success/15 px-2 text-xs text-kyro-success hover:bg-kyro-success/30"
+                    >
+                      ✓ Aprobar edición
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -784,37 +813,4 @@ export function ReporteDetallePage() {
                   Motivo de edición
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1">
-                <p className="text-sm text-kyro-warning whitespace-pre-wrap leading-relaxed">
-                  {reporte.motivo_edicion}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ── Aprobación ── */}
-      {reporte.estado === 'aprobado' && reporte.fecha_aprobacion && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-kyro-success">
-          <span className="font-semibold">✓ Aprobado</span>
-          <span className="text-kyro-subtle">·</span>
-          <span>{reporte.fecha_aprobacion.slice(0, 10)}</span>
-        </div>
-      )}
-
-      {/* ── Historial de Auditoría ── */}
-      <Card className="kyro-card mt-6">
-        <CardHeader className="py-3 px-4 border-b border-kyro-border">
-          <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
-            Historial de auditoría
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 py-4">
-          <HistorialTimeline reporteId={reporte.id} />
-        </CardContent>
-      </Card>
-
-    </div>
-  )
-}
+             
