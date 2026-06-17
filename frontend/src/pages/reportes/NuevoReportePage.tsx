@@ -769,7 +769,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto">
+    <div className="max-w-[1100px] mx-auto space-y-4">
       <PageHeader
         title={esEdicion ? `Editar Cuadre #${reporteId}` : 'Registrar Cuadre Diario'}
         description="Cierre de caja y ventas del día."

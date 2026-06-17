@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
@@ -577,7 +578,7 @@ function HistorialTimeline({ reporteId }: { reporteId: number }) {
 
         return (
           <li key={entry.id} className="ml-4">
-            <span className={`absolute -left-1.5 w-3 h-3 rounded-full border-2 border-white ${cfg.dot}`} />
+            <span className={`absolute -left-1.5 w-3 h-3 rounded-full border-2 border-kyro-card ${cfg.dot}`} />
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
               <span className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</span>
               <span className="text-[10px] text-kyro-subtle shrink-0">{fechaStr}</span>
@@ -692,7 +693,7 @@ export function ReporteDetallePage() {
           onClick={() => navigate('/reportes')}
           className="text-kyro-muted hover:text-kyro-text"
         >
-          <span>←</span>
+          <ChevronLeft size={16} />
           <span>Reportes</span>
         </Button>
         <p className="text-xs text-kyro-subtle">
@@ -765,7 +766,7 @@ export function ReporteDetallePage() {
             </div>
             <div className="kyro-card border-l-4 border-l-kpi-neutral px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Agente</p>
-              <p className="text-sm font-bold text-kyro-text">#{reporte.agente_id}</p>
+              <p className="text-sm font-bold text-kyro-text">{reporte.agente_nombre ?? `#${reporte.agente_id}`}</p>
             </div>
             <div className="kyro-card border-l-4 border-l-kpi-total px-3 py-2.5">
               <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Total ventas</p>

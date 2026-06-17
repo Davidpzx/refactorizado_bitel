@@ -167,14 +167,14 @@ export function EstadisticasPage() {
 
       <ListToolbar description="Ajusta el período de análisis y limita los resultados a una tienda.">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Desde</label>
+            <label className="block text-xs text-kyro-muted mb-1">Desde</label>
             <input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
               className="kyro-input h-9 w-40"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+            <label className="block text-xs text-kyro-muted mb-1">Hasta</label>
             <input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
               className="kyro-input h-9 w-40"
@@ -182,7 +182,7 @@ export function EstadisticasPage() {
           </div>
           {usuario?.rol === 'admin' && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Tienda</label>
+              <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
               <input type="text" placeholder="Todas" value={filters.tienda}
                 onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))}
                 className="kyro-input h-9 w-32"
@@ -223,7 +223,7 @@ export function EstadisticasPage() {
         onChange={(id) => setTab(id as typeof tab)}
       />
 
-      {isLoading && <div className="text-center py-10 text-gray-400 text-sm">Cargando estadísticas...</div>}
+      {isLoading && <div className="text-center py-10 text-kyro-muted text-sm">Cargando estadísticas...</div>}
 
       {/* TAB: Resumen */}
       {!isLoading && tab === 'resumen' && (
@@ -288,15 +288,15 @@ export function EstadisticasPage() {
                   <tr key={t.tienda_id} className="border-b border-kyro-border transition-colors hover:bg-kyro-gold/5">
                     <td className="px-4 py-3 text-gray-400 text-xs">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-mono font-medium text-slate-700">{t.tienda_id}</td>
-                    <td className="px-4 py-3 font-bold text-blue-700">{t.postpago}</td>
+                    <td className="px-4 py-3 font-bold text-blue-700 dark:text-blue-400">{t.postpago}</td>
                     <td className="px-4 py-3 font-bold text-purple-700">{t.prepago}</td>
-                    <td className="px-4 py-3 font-bold text-orange-700">{t.equipos}</td>
-                    <td className="px-4 py-3 font-bold text-green-700">{t.accesorios}</td>
+                    <td className="px-4 py-3 font-bold text-orange-700 dark:text-orange-400">{t.equipos}</td>
+                    <td className="px-4 py-3 font-bold text-green-700 dark:text-green-400">{t.accesorios}</td>
                     <td className="px-4 py-3 font-bold text-kyro-text">{t.total}</td>
                   </tr>
                 ))}
                 {porTienda.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Sin datos</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Sin datos</td></tr>
                 )}
               </tbody>
             </table>
@@ -320,7 +320,7 @@ export function EstadisticasPage() {
             <h3 className="text-sm font-semibold text-kyro-text">Ranking de Productividad por Agente</h3>
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Categoría</label>
+                <label className="block text-xs text-kyro-muted mb-1">Categoría</label>
                 <select
                   value={rankCat}
                   onChange={e => { setRankCat(e.target.value as typeof rankCat); setRankSub('') }}
@@ -334,7 +334,7 @@ export function EstadisticasPage() {
               </div>
               {rankingFiltrado && (
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Subfiltro</label>
+                  <label className="block text-xs text-kyro-muted mb-1">Subfiltro</label>
                   <select value={rankSub} onChange={e => setRankSub(e.target.value)} className="kyro-input h-9 w-48">
                     <option value="">Todos</option>
                     {subcategorias.map(s => <option key={s} value={s}>{s}</option>)}
@@ -358,28 +358,28 @@ export function EstadisticasPage() {
               <tbody>
                 {ranking.map((a, i) => (
                   <tr key={a.vendedor_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-gold/5' : 'hover:bg-kyro-gold/5'}`}>
-                    <td className="px-4 py-3 text-xs text-gray-400">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
+                    <td className="px-4 py-3 text-xs text-kyro-muted">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-medium text-kyro-text">{a.nombres}</td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-500">{a.tienda_base}</td>
                     {rankingFiltrado ? (
                       <>
                         <td className="px-4 py-3 font-bold text-kyro-text">{a.total}</td>
-                        <td className="px-4 py-3 font-mono text-green-700">{pen.format(Number(a.comision_total))}</td>
+                        <td className="px-4 py-3 font-mono text-green-700 dark:text-green-400">{pen.format(Number(a.comision_total))}</td>
                       </>
                     ) : (
                       <>
-                        <td className="px-4 py-3 font-bold text-blue-700">{a.postpago}</td>
+                        <td className="px-4 py-3 font-bold text-blue-700 dark:text-blue-400">{a.postpago}</td>
                         <td className="px-4 py-3 font-bold text-purple-700">{a.prepago}</td>
-                        <td className="px-4 py-3 font-bold text-orange-700">{a.equipos}</td>
-                        <td className="px-4 py-3 font-bold text-green-700">{a.accesorios}</td>
-                        <td className="px-4 py-3 font-mono text-green-700">{pen.format(Number(a.comision_total))}</td>
+                        <td className="px-4 py-3 font-bold text-orange-700 dark:text-orange-400">{a.equipos}</td>
+                        <td className="px-4 py-3 font-bold text-green-700 dark:text-green-400">{a.accesorios}</td>
+                        <td className="px-4 py-3 font-mono text-green-700 dark:text-green-400">{pen.format(Number(a.comision_total))}</td>
                         <td className="px-4 py-3 font-bold text-kyro-text">{a.total}</td>
                       </>
                     )}
                   </tr>
                 ))}
                 {ranking.length === 0 && (
-                  <tr><td colSpan={rankingFiltrado ? 5 : 9} className="px-4 py-10 text-center text-gray-400">Sin datos en el período</td></tr>
+                  <tr><td colSpan={rankingFiltrado ? 5 : 9} className="px-4 py-10 text-center text-kyro-muted">Sin datos en el período</td></tr>
                 )}
               </tbody>
             </table>
@@ -392,7 +392,7 @@ export function EstadisticasPage() {
 
 function TopList({ title, items, color }: { title: string; items: { name: string; total: number }[]; color: string }) {
   const colorMap: Record<string, string> = {
-    blue: 'text-blue-700', orange: 'text-orange-700', green: 'text-green-700',
+    blue: 'text-blue-700 dark:text-blue-400', orange: 'text-orange-700 dark:text-orange-400', green: 'text-green-700 dark:text-green-400',
   }
   return (
     <div className="kyro-card overflow-hidden">
@@ -404,7 +404,7 @@ function TopList({ title, items, color }: { title: string; items: { name: string
         {items.map((item, i) => (
           <div key={i} className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.04]">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs text-gray-400 w-5 shrink-0">
+              <span className="text-xs text-kyro-muted w-5 shrink-0">
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}
               </span>
               <span className="truncate text-sm text-kyro-body">{item.name}</span>
@@ -413,7 +413,7 @@ function TopList({ title, items, color }: { title: string; items: { name: string
           </div>
         ))}
         {items.length === 0 && (
-          <p className="px-4 py-6 text-center text-gray-400 text-sm">Sin datos</p>
+          <p className="px-4 py-6 text-center text-kyro-muted text-sm">Sin datos</p>
         )}
       </div>
     </div>
