@@ -117,6 +117,8 @@ export function EstadisticasPage() {
   const topEquipos: TopItem[]   = statsData?.top_equipos ?? []
   const ranking: AgentRank[]    = rankingData?.ranking ?? []
 
+  const [exportando, setExportando] = useState(false)
+
   const categoriaBar = totales
     ? [
         { name: 'Postpago',   value: Number(totales.postpago),   fill: COLORS.postpago },
@@ -127,19 +129,23 @@ export function EstadisticasPage() {
       ]
     : []
 
-  function exportarExcel() {
-    const token = localStorage.getItem('auth_token')
-    const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
-    const params = new URLSearchParams(applied as Record<string, string>)
-    const url = `${base}/v1/estadisticas/exportar?${params.toString()}`
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob())
-      .then(blob => {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `estadisticas_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
-        a.click()
-      })
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const params = new URLSearchParams(applied as Record<string, string>)
+      const url = `${base}/v1/estadisticas/exportar?${params.toString()}`
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const blob = await r.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `estadisticas_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } finally {
+      setExportando(false)
+    }
   }
 
   const TABS = [
@@ -154,8 +160,8 @@ export function EstadisticasPage() {
       <PageHeader
         title="Estadísticas de Ventas"
         description="Explora el rendimiento comercial por categoría, tienda, producto y agente."
-        actions={<Button variant="outline" size="sm" onClick={exportarExcel}>
-          <Download size={14} /> Exportar
+        actions={<Button variant="outline" size="sm" onClick={exportarExcel} disabled={exportando}>
+          <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar'}
         </Button>}
       />
 
@@ -403,13 +409,4 @@ function TopList({ title, items, color }: { title: string; items: { name: string
               </span>
               <span className="truncate text-sm text-kyro-body">{item.name}</span>
             </div>
-            <span className={`ml-2 shrink-0 text-sm font-bold ${colorMap[color] ?? 'text-kyro-text'}`}>{item.total}</span>
-          </div>
-        ))}
-        {items.length === 0 && (
-          <p className="px-4 py-6 text-center text-gray-400 text-sm">Sin datos</p>
-        )}
-      </div>
-    </div>
-  )
-}
+            <span className={`ml-2 shrink-0 text-sm font-bold ${colorMap[color] ?? '

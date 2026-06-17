@@ -78,6 +78,7 @@ function getColumns(
   onReimprimir: (t: Ticket) => void,
   onAnular: (t: Ticket) => void,
   isAdmin: boolean,
+  isAnulando: boolean,
 ): ColumnDef<Ticket>[] {
   return [
     {
@@ -144,6 +145,7 @@ function getColumns(
               size="sm"
               variant="ghost"
               title="Anular ticket"
+              disabled={isAnulando}
               className="text-kyro-danger hover:text-kyro-danger hover:bg-kyro-danger/10"
               onClick={() => onAnular(row.original)}
             >
@@ -398,7 +400,7 @@ export function TicketsPage() {
 
   const hayFiltros = desde || hasta || tienda_id || q || dniCliente || formaPago
 
-  const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin)
+  const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin, anular.isPending)
 
   return (
     <div>
@@ -466,9 +468,4 @@ export function TicketsPage() {
         {modoNuevo ? (
           <NuevoTicketForm onSuccess={cerrar} onCancel={cerrar} />
         ) : editando ? (
-          <EditarTicketForm ticket={editando} onSuccess={cerrar} onCancel={cerrar} />
-        ) : null}
-      </Dialog>
-    </div>
-  )
-}
+          <EditarTicketForm ticket={editando} onSuccess={cerrar}

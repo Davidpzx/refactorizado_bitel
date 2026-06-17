@@ -80,6 +80,7 @@ export function AsistenciasPage() {
   const [page, setPage] = useState(1)
   const [editando, setEditando] = useState<AsistenciaRow | null>(null)
   const [editForm, setEditForm] = useState<AsistenciaEditForm | null>(null)
+  const [exportando, setExportando] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['asistencias', applied, page],
@@ -151,24 +152,27 @@ export function AsistenciasPage() {
     })
   }
 
-  function exportar() {
-    const token = localStorage.getItem('auth_token')
-    const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
-    const params = new URLSearchParams()
-    if (applied.fecha_desde) params.set('fecha_desde', applied.fecha_desde)
-    if (applied.fecha_hasta) params.set('fecha_hasta', applied.fecha_hasta)
-    if (applied.agente_id)   params.set('agente_id',   applied.agente_id)
-    fetch(`${base}/v1/asistencias/exportar?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.blob())
-      .then(blob => {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `asistencias_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
-        a.click()
-        URL.revokeObjectURL(a.href)
+  async function exportar() {
+    setExportando(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const params = new URLSearchParams()
+      if (applied.fecha_desde) params.set('fecha_desde', applied.fecha_desde)
+      if (applied.fecha_hasta) params.set('fecha_hasta', applied.fecha_hasta)
+      if (applied.agente_id)   params.set('agente_id',   applied.agente_id)
+      const r = await fetch(`${base}/v1/asistencias/exportar?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
+      const blob = await r.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `asistencias_${applied.fecha_desde}_${applied.fecha_hasta}.xlsx`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } finally {
+      setExportando(false)
+    }
   }
 
   if (data?.warning) {
@@ -191,8 +195,8 @@ export function AsistenciasPage() {
             <AlertCircle size={14} /> Registrar excepción
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={exportar}>
-          <Download size={14} /> Exportar Excel
+        <Button variant="outline" size="sm" onClick={exportar} disabled={exportando}>
+          <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
       </PageHeader>
 
@@ -447,12 +451,4 @@ export function AsistenciasPage() {
             <div className="mt-5 flex gap-3">
               <Button className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
                 {editarRegistro.isPending ? 'Recalculando...' : 'Guardar y recalcular'}
-              </Button>
-              <Button variant="outline" onClick={() => { setEditando(null); setEditForm(null) }}>Cancelar</Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+              </Butto
