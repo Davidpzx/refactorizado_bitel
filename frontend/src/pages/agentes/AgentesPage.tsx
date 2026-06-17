@@ -58,26 +58,18 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/agentes/${row.original.id}`}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 text-xs font-medium text-kyro-body transition-colors hover:border-kyro-gold hover:text-kyro-gold"
-          >
-            <Eye size={13} /> Ver
+        <div className="flex items-center gap-1">
+          <Link to={`/agentes/${row.original.id}`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver perfil">
+            <Eye size={13} />
           </Link>
-          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-            <Pencil size={13} /> Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onEliminar(row.original)}
-            disabled={eliminando}
-          >
-            <Trash2 size={13} /> Eliminar
-          </Button>
+          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar agente">
+            <Pencil size={13} />
+          </button>
+          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar agente">
+            <Trash2 size={13} />
+          </button>
         </div>
       ),
     },
@@ -122,7 +114,7 @@ export function AgentesPage() {
   const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Agentes"
         description="Gestión del personal de ventas registrado en el sistema."

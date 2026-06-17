@@ -59,20 +59,15 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-            <Pencil size={13} /> Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onEliminar(row.original)}
-            disabled={eliminando}
-          >
-            <Trash2 size={13} /> Eliminar
-          </Button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar cliente">
+            <Pencil size={13} />
+          </button>
+          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar cliente">
+            <Trash2 size={13} />
+          </button>
         </div>
       ),
     },
@@ -117,7 +112,7 @@ export function ClientesPage() {
   const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Clientes"
         description="Base de clientes del sistema CRM."

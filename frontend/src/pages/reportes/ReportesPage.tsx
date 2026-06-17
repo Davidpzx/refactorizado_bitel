@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useReportes, useEliminarReporte } from '../../hooks/useReportes'
 import { DataTable } from '../../components/DataTable'
@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { PageTabs } from '../../components/ui/PageTabs'
+import { Eye, Trash2 } from 'lucide-react'
 import type { Reporte } from '../../types/reporte'
 
 const TIENDAS = [
@@ -26,7 +27,6 @@ const estadoVariant: Record<Reporte['estado'], EstadoVariant> = {
 }
 
 function getColumns(
-  onVer: (r: Reporte) => void,
   onEliminar: (r: Reporte) => void,
   eliminando: boolean,
 ): ColumnDef<Reporte>[] {
@@ -73,21 +73,16 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => onVer(row.original)}>
-            Ver
-          </Button>
+        <div className="flex items-center gap-1">
+          <Link to={`/reportes/${row.original.id}`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver detalle">
+            <Eye size={13} />
+          </Link>
           {row.original.estado !== 'aprobado' && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onEliminar(row.original)}
-              disabled={eliminando}
-            >
-              Eliminar
-            </Button>
+            <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar reporte">
+              <Trash2 size={13} />
+            </button>
           )}
         </div>
       ),
@@ -96,7 +91,6 @@ function getColumns(
 }
 
 export function ReportesPage() {
-  const navigate = useNavigate()
   const [tienda, setTienda]         = useState('')
   const [estado, setEstado]         = useState('')
   const [fechaDesde, setFechaDesde] = useState('')
@@ -129,19 +123,16 @@ export function ReportesPage() {
 
   const hayFiltros = tienda || estado || fechaDesde || fechaHasta
   const columns = getColumns(
-    (r) => navigate(`/reportes/${r.id}`),
     handleEliminar,
     eliminar.isPending,
   )
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Reportes Diarios"
         description="Historial de reportes de caja por tienda."
-        actions={
-          <Button onClick={() => navigate('/reportes/nuevo')}>+ Nuevo reporte</Button>
-        }
+        actions={<Link to="/reportes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-kyro-gold px-4 text-sm font-semibold text-[#1a1a1a] shadow-sm transition-all hover:opacity-90">+ Nuevo reporte</Link>}
       />
 
       <PageTabs
