@@ -140,7 +140,7 @@ export function HistorialLiquidacionPage() {
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="kyro-table-head">
                   <tr>
-                    {['Fecha', 'Estado', 'Entrada', 'Salida', 'Tardanza', 'Deuda', 'Comodin', 'Turno', 'Descuento'].map((h, i) => (
+                    {['Fecha', 'Estado', 'Entrada', 'Salida', 'Tardanza', 'Deuda', 'Comodin', 'Turno', 'Descuento'].map((h) => (
                       <th key={h} className={`px-4 py-3 text-xs font-semibold ${['Tardanza', 'Deuda', 'Descuento'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
