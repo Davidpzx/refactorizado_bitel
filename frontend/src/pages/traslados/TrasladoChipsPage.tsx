@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { Dialog } from '../../components/ui/dialog'
+import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -263,6 +264,7 @@ function getTrasladoColumns(
   onConfirmar: (t: TrasladoChip) => void,
   onGestionar: (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => void,
   gestionando: boolean,
+  onConstancia: (t: TrasladoChip) => void,
 ): ColumnDef<TrasladoChip>[] {
   const isAdmin = usuario?.rol === 'admin'
 
@@ -296,11 +298,17 @@ function getTrasladoColumns(
         const puedeCancelar =
           isAdmin &&
           (t.estado === 'PENDIENTE' || t.estado === 'PENDIENTE_APROBACION')
+        const esConfirmado = t.estado === 'CONFIRMADO'
 
-        if (!puedeConfirmar && !puedeAprobarRechazar && !puedeCancelar) return null
+        if (!puedeConfirmar && !puedeAprobarRechazar && !puedeCancelar && !esConfirmado) return null
 
         return (
           <div className="flex items-center gap-2 flex-wrap">
+            {esConfirmado && (
+              <Button size="sm" variant="outline" onClick={() => onConstancia(t)}>
+                Constancia
+              </Button>
+            )}
             {puedeConfirmar && (
               <Button size="sm" variant="outline" onClick={() => onConfirmar(t)}>
                 Confirmar
@@ -373,11 +381,27 @@ export function TrasladoChipsPage() {
   )
   const stockPageCount = Math.ceil(stockRows.length / stockPagination.pageSize)
 
+  function descargarConstanciaChip(t: TrasladoChip) {
+    const token = localStorage.getItem('auth_token')
+    const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+    const url   = `${base}/v1/constancias/traslado?tipo=chips&id=${t.id}`
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `constancia_chips_${t.id}.pdf`
+        a.click()
+        URL.revokeObjectURL(a.href)
+      })
+  }
+
   const trasladoColumns = getTrasladoColumns(
     usuario ? { rol: usuario.rol, tienda_id: usuario.tienda_id } : null,
     setTrasladoConfirmar,
     handleGestionar,
     gestionar.isPending,
+    descargarConstanciaChip,
   )
 
   return (

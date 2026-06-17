@@ -15,6 +15,7 @@ import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -261,6 +262,7 @@ function getColumns(
   onConfirmarLote: (t: Traslado) => void,
   onGestionar: (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => void,
   gestionando: boolean,
+  onConstancia: (t: Traslado) => void,
 ): ColumnDef<Traslado>[] {
   const isAdmin = usuario?.rol === 'admin'
 
@@ -295,10 +297,16 @@ function getColumns(
           isAdmin &&
           (t.estado === 'PENDIENTE' || t.estado === 'PENDIENTE_APROBACION')
 
-        if (!puedeConfirmar && !puedeAprobarRechazar && !puedeCancelar) return null
+        const esConfirmado = t.estado === 'CONFIRMADO'
+        if (!puedeConfirmar && !puedeAprobarRechazar && !puedeCancelar && !esConfirmado) return null
 
         return (
           <div className="flex items-center gap-2 flex-wrap">
+            {esConfirmado && (
+              <Button size="sm" variant="outline" onClick={() => onConstancia(t)}>
+                Constancia
+              </Button>
+            )}
             {puedeConfirmar && (
               <Button size="sm" variant="outline" onClick={() => onConfirmar(t)}>
                 Confirmar
@@ -382,12 +390,33 @@ export function TrasladosPage() {
 
   const hayFiltros = estado || origen || destino
 
+  function descargarConstancia(t: Traslado) {
+    const token = localStorage.getItem('auth_token')
+    const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+    const params = t.codigo_lote
+      ? `tipo=equipos&lote=${encodeURIComponent(t.codigo_lote)}`
+      : `tipo=equipos&id=${t.id}`
+    const url = `${base}/v1/constancias/traslado?${params}`
+    const a = document.createElement('a')
+    a.href = url
+    a.setAttribute('download', `constancia_traslado_${t.id}.pdf`)
+    // Use fetch to attach auth header
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        a.href = URL.createObjectURL(blob)
+        a.click()
+        URL.revokeObjectURL(a.href)
+      })
+  }
+
   const columns = getColumns(
     usuario ? { rol: usuario.rol, tienda_id: usuario.tienda_id } : null,
     setTrasladoConfirmar,
     setLoteConfirmar,
     handleGestionar,
     gestionar.isPending,
+    descargarConstancia,
   )
 
   return (

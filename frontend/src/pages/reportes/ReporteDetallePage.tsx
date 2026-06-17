@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
@@ -386,7 +387,20 @@ function SalidasCard({ reporte }: { reporte: ReporteConVentas }) {
 
 // ─── Card: Cuadre Final de Efectivo ──────────────────────────────────────────
 
-function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
+function CuadreFinalCard({
+  reporte,
+  isAdmin = false,
+  onCambiarDestino,
+  isPendingDestino = false,
+}: {
+  reporte: ReporteConVentas
+  isAdmin?: boolean
+  onCambiarDestino?: (destino: string, obs: string) => void
+  isPendingDestino?: boolean
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [nuevoDestino, setNuevoDestino] = useState('')
+  const [obsDestino, setObsDestino] = useState('')
   const diff      = n(reporte.diferencia)
   const absDiff   = Math.abs(diff)
   const esOk      = absDiff < 0.01
@@ -450,11 +464,57 @@ function CuadreFinalCard({ reporte }: { reporte: ReporteConVentas }) {
         </div>
 
         {/* Destino del efectivo */}
-        <div className="mt-3 pt-3 border-t border-kyro-border flex justify-between items-center">
-          <span className="text-xs text-kyro-muted font-medium uppercase tracking-wide">
-            Destino del efectivo
-          </span>
-          <span className="text-xs font-semibold text-kyro-body">{destino}</span>
+        <div className="mt-3 pt-3 border-t border-kyro-border">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-kyro-muted font-medium uppercase tracking-wide">
+              Destino del efectivo
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-kyro-body">{destino}</span>
+              {isAdmin && onCambiarDestino && (
+                <button
+                  type="button"
+                  onClick={() => { setShowForm(s => !s); setNuevoDestino(''); setObsDestino('') }}
+                  className="text-[10px] text-kyro-info hover:text-kyro-gold underline"
+                >
+                  {showForm ? 'Cancelar' : 'Cambiar'}
+                </button>
+              )}
+            </div>
+          </div>
+          {showForm && onCambiarDestino && (
+            <div className="mt-2 space-y-2 rounded-kyro border border-kyro-border bg-kyro-elevated p-3">
+              <select
+                value={nuevoDestino}
+                onChange={e => setNuevoDestino(e.target.value)}
+                className="kyro-input w-full text-xs"
+              >
+                <option value="">— Seleccionar destino —</option>
+                <option value="BANCO">Depositado en Banco</option>
+                <option value="ENTREGADO">Entregado al Supervisor/Gerente</option>
+                <option value="EN_CAJA">Guardado en Caja Fuerte Central</option>
+                <option value="TIENDA">⚠ Revertir — Sigue en Tienda</option>
+              </select>
+              <textarea
+                value={obsDestino}
+                onChange={e => setObsDestino(e.target.value)}
+                placeholder="Observación (opcional)"
+                rows={2}
+                className="kyro-input w-full resize-none text-xs"
+              />
+              <Button
+                size="sm"
+                className="w-full"
+                disabled={!nuevoDestino || isPendingDestino}
+                onClick={() => {
+                  onCambiarDestino(nuevoDestino, obsDestino)
+                  setShowForm(false)
+                }}
+              >
+                {isPendingDestino ? 'Guardando...' : 'Guardar destino'}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Total salidas como referencia */}
@@ -586,6 +646,15 @@ export function ReporteDetallePage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reporte', Number(id)] })
       qc.invalidateQueries({ queryKey: ['historial'] })
+    },
+  })
+
+  const marcarDestino = useMutation({
+    mutationFn: ({ destino, observacion }: { destino: string; observacion: string }) =>
+      api.patch(`/v1/reportes/${id}/destino-efectivo`, { destino_efectivo: destino, observacion }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reporte', Number(id)] })
+      qc.invalidateQueries({ queryKey: ['historial-reporte', Number(id)] })
     },
   })
 
@@ -771,7 +840,12 @@ export function ReporteDetallePage() {
         <div className="space-y-4">
           <DineroDigitalCard reporte={reporte} />
           <SalidasCard reporte={reporte} />
-          <CuadreFinalCard reporte={reporte} />
+          <CuadreFinalCard
+            reporte={reporte}
+            isAdmin={usuario?.rol === 'admin'}
+            onCambiarDestino={(destino, obs) => marcarDestino.mutate({ destino, observacion: obs })}
+            isPendingDestino={marcarDestino.isPending}
+          />
         </div>
       </div>
 
