@@ -30,7 +30,7 @@ export function RevisarFotosPage() {
   const items = data?.data ?? []
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Revisar Fotos de Asistencia"
         description="Audita las marcaciones del Protocolo de Local Cerrado. Aprobar elimina la foto (zero-retention)."

@@ -68,7 +68,7 @@ export function DiagnosticoPage() {
   if (!data) return null
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl space-y-6">
         <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real">
           <div className="flex flex-wrap items-center gap-2">
             {data.traslados_pendientes > 0 && (

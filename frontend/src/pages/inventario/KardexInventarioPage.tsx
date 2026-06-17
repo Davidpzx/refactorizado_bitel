@@ -121,7 +121,7 @@ export function KardexInventarioPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Kardex de Inventario"
         description="Historial completo de movimientos de stock."

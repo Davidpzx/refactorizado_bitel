@@ -149,7 +149,7 @@ export function TiendasPage() {
   const tiendas: Tienda[] = data?.data ?? []
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Tiendas"
         description="Catálogo de sucursales registradas en el sistema."
@@ -192,13 +192,9 @@ export function TiendasPage() {
                     <Badge variant={t.activo ? 'success' : 'warning'}>{t.activo ? 'Activa' : 'Inactiva'}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setEditando(t); setDialogOpen(true) }}><Pencil size={13} /> Editar</Button>
-                      <Button size="sm" variant="destructive"
-                        disabled={eliminar.isPending}
-                        onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }}>
-                        <Trash2 size={13} /> Eliminar
-                      </Button>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditando(t); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar tienda"><Pencil size={13} /></button>
+                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>

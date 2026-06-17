@@ -179,7 +179,7 @@ export function UsuariosPage() {
   const usuarios: Usuario[] = data?.data ?? []
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Usuarios del Sistema"
         description="Gestión de accesos y roles."
@@ -227,13 +227,9 @@ export function UsuariosPage() {
                   </td>
                   <td className="px-4 py-3 text-center text-kyro-body">{u.tiene_bcp ? '✓' : '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setEditando(u); setDialogOpen(true) }}><Pencil size={13} /> Editar</Button>
-                      <Button size="sm" variant="destructive"
-                        disabled={eliminar.isPending}
-                        onClick={() => { if (confirm(`¿Eliminar usuario ${u.nombre}?`)) eliminar.mutate(u.id) }}>
-                        <Trash2 size={13} /> Eliminar
-                      </Button>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditando(u); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar usuario"><Pencil size={13} /></button>
+                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar usuario ${u.nombre}?`)) eliminar.mutate(u.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar usuario"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>

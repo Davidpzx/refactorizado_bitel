@@ -63,7 +63,7 @@ export function RevisarStockPage() {
   const items = data?.data ?? []
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Revisar Stock · Precios pendientes"
         description="Configura el costo, precio mínimo y precio de venta del stock disponible sin precio."

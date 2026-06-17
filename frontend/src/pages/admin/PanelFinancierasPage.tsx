@@ -93,7 +93,7 @@ export function PanelFinancierasPage() {
   const filtros  = data?.filtros_disponibles
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Panel de Financieras"
         description="Seguimiento de desembolsos y comisiones por financiera."

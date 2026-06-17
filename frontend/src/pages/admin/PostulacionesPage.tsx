@@ -53,20 +53,15 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => onVer(row.original)}>
-            Ver detalles
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onEliminar(row.original)}
-            disabled={eliminando}
-          >
-            Eliminar
-          </Button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onVer(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver detalles">
+            <Eye size={13} />
+          </button>
+          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar">
+            <Trash2 size={13} />
+          </button>
         </div>
       ),
     },
@@ -320,7 +315,7 @@ export function PostulacionesPage() {
   const columns = getColumns(abrirDetalle, handleEliminar, eliminar.isPending)
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Postulantes"
         description="Gestión de postulaciones recibidas."

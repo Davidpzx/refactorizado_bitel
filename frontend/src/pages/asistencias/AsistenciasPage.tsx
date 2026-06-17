@@ -353,24 +353,12 @@ export function AsistenciasPage() {
                     </td>
                     <td className="px-4 py-3">
                       {usuario?.rol === 'admin' && (
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" onClick={() => abrirEdicion(a)}>
-                            <Pencil size={13} /> Editar
-                          </Button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => abrirEdicion(a)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar asistencia"><Pencil size={13} /></button>
                           {esRevision && (
-                            <Button size="sm" variant="outline"
-                              disabled={aprobar.isPending}
-                              onClick={() => aprobar.mutate(a.id)}
-                            >
-                              Aprobar
-                            </Button>
+                            <button disabled={aprobar.isPending} onClick={() => aprobar.mutate(a.id)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-green-500/40 hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-40 disabled:pointer-events-none" title="Aprobar"><CheckCircle size={13} /></button>
                           )}
-                          <Button size="sm" variant="outline"
-                            disabled={eliminarRegistro.isPending}
-                            onClick={() => { if (confirm('¿Eliminar este registro de asistencia?')) eliminarRegistro.mutate(a.id) }}
-                          >
-                            <UserX size={13} /> Eliminar
-                          </Button>
+                          <button disabled={eliminarRegistro.isPending} onClick={() => { if (confirm("¿Eliminar este registro de asistencia?")) eliminarRegistro.mutate(a.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar"><UserX size={13} /></button>
                         </div>
                       )}
                     </td>
