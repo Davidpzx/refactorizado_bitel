@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { api } from '../../../services/api'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -28,23 +28,18 @@ export function TicketIngresoModal({
   const [guardando, setGuardando] = useState(false)
   const [error, setError]       = useState('')
 
-  const total    = useMemo(() => items.reduce((a, it) => a + (Number(it.monto) || 0), 0), [items])
-  const recibido = efectivo + yape + bipay + plin
-  const vuelto   = recibido - total
 
   useEffect(() => {
     if (open) {
       setItems([{ descripcion: defaultDescripcion, monto: 0 }])
-      setEfectivo(0)
-      setYape(0)
-      setBipay(0)
-      setPlin(0)
-      setNombre('')
-      setDni('')
-      setTelefono('')
-      setError('')
+      setEfectivo(0); setYape(0); setBipay(0); setPlin(0)
+      setNombre(''); setDni(''); setTelefono(''); setError('')
     }
   }, [open, defaultDescripcion])
+
+  const total    = useMemo(() => items.reduce((a, it) => a + (Number(it.monto) || 0), 0), [items])
+  const recibido = efectivo + yape + bipay + plin
+  const vuelto   = recibido - total
 
   if (!open) return null
 
@@ -117,4 +112,12 @@ export function TicketIngresoModal({
         {error && <p className="text-kyro-danger text-xs mt-2">{error}</p>}
 
         <div className="flex gap-2 mt-4">
-          <Button type="button" onClick={guardar} disabled={guardando} class
+          <Button type="button" onClick={guardar} disabled={guardando} className="flex-1 bg-kyro-gold text-kyro-gold-ink border-kyro-gold hover:brightness-110">
+            {guardando ? 'Generando...' : 'Guardar e Imprimir'}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+        </div>
+      </GlassPanel>
+    </div>
+  )
+}

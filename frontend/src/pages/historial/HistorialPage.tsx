@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle} from 'lucide-react'
 import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -34,6 +34,12 @@ export function HistorialPage() {
 
   const qc = useQueryClient()
 
+  const aprobarEdicion = useMutation({
+    mutationFn: (id: number) =>
+      api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['historial'] }),
+  })
+
   const { data, isLoading } = useQuery({
     queryKey: ['historial', applied],
     queryFn: () =>
@@ -47,12 +53,6 @@ export function HistorialPage() {
         fecha_desde: applied.fecha_desde || undefined,
         fecha_hasta: applied.fecha_hasta || undefined,
       }),
-  })
-
-  const aprobarEdicion = useMutation({
-    mutationFn: (id: number) =>
-      api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['historial'] }),
   })
 
   const reportes = data?.data ?? []
@@ -243,13 +243,12 @@ export function HistorialPage() {
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/reportes/${r.id}`}
-                          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-400/10"
-                        >
-                          <Eye size={13} /> Ver
-                        </Link>
+                      <Link
+                        to={`/reportes/${r.id}`}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-400/10"
+                      >
+                        <Eye size={13} /> Ver
+                      </Link>
                         {isSolicitado && usuario?.rol === 'admin' && (
                           <Button
                             size="sm"
@@ -264,7 +263,6 @@ export function HistorialPage() {
                             <CheckCircle size={12} /> Aprobar edición
                           </Button>
                         )}
-                      </div>
                     </td>
                   </tr>
                 )
@@ -282,4 +280,39 @@ export function HistorialPage() {
               disabled={page <= 1}
               onClick={() => goToPage(page - 1)}
             >
-              <ChevronLeft size={14} /> 
+              <ChevronLeft size={14} /> Anterior
+            </Button>
+            <span className="text-xs text-gray-500">
+              {meta.from}–{meta.to} de {meta.total}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.last_page}
+              onClick={() => goToPage(page + 1)}
+            >
+              Siguiente <ChevronRight size={14} />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?: string }) {
+  if (estadoEdicion === 'SOLICITADO') {
+    return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 font-medium">Ed. solicitada</span>
+  }
+  const map: Record<string, string> = {
+    borrador: 'bg-kpi-neutral/15 text-kyro-muted',
+    enviado:  'bg-kyro-info/15 text-kyro-info',
+    editado:  'bg-kyro-warning/15 text-kyro-warning',
+    aprobado: 'bg-kyro-success/15 text-kyro-success',
+  }
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${map[estado] ?? 'bg-kpi-neutral/15 text-kyro-muted'}`}>
+      {estado}
+    </span>
+  )
+}

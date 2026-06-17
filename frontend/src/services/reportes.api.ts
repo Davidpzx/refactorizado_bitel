@@ -47,4 +47,8 @@ export interface HistorialReporteEntry {
   accion: 'crear' | 'solicito_edicion' | 'edicion_aprobada' | 'edicion_rechazada' | 'edicion_reporte' | 'edicion_critica' | 'edicion_restaurada' | 'destino_modificado'
   detalle: string | null
   snapshot_antes: Record<string, unknown> | null
-  snapshot_despues: Record<string, unkno
+  snapshot_despues: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+  usuario?: { id: number; nombre: string } | null
+}
