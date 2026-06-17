@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Pencil, Trash2, SlidersHorizontal, Tag, History } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
 import { DataTable } from '../../components/DataTable'
@@ -88,31 +89,43 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {onFijarPrecio ? (
-            <Button size="sm" variant="outline" onClick={() => onFijarPrecio(row.original)}>
-              Fijar precio
-            </Button>
+            <button
+              onClick={() => onFijarPrecio(row.original)}
+              title="Fijar precio de venta"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2 text-xs font-medium text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+            >
+              <Tag size={13} /> Fijar precio
+            </button>
           ) : (
             <>
-              <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-                Editar
-              </Button>
+              <button
+                onClick={() => onEditar(row.original)}
+                title="Editar item"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+              >
+                <Pencil size={13} />
+              </button>
               {onAjustar && (
-                <Button size="sm" variant="outline" onClick={() => onAjustar(row.original)}>
-                  Ajustar stock
-                </Button>
+                <button
+                  onClick={() => onAjustar(row.original)}
+                  title="Ajustar stock físico"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400"
+                >
+                  <SlidersHorizontal size={13} />
+                </button>
               )}
-              <Button
-                size="sm"
-                variant="destructive"
+              <button
                 onClick={() => onEliminar(row.original)}
                 disabled={eliminando}
+                title="Eliminar item"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none"
               >
-                Eliminar
-              </Button>
+                <Trash2 size={13} />
+              </button>
             </>
           )}
         </div>
@@ -319,11 +332,24 @@ export function InventarioPage() {
   )
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Inventario de Tiendas"
         description="Stock de equipos, accesorios y chips por tienda."
-        actions={<Button onClick={abrirCrear}>+ Nuevo item</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            {!esTienda && (
+              <Link
+                to="/bitacora-stock"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-amber-300 hover:text-amber-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:text-amber-400"
+                title="Historial de movimientos de equipos y accesorios"
+              >
+                <History size={14} /> Bitácora Stock
+              </Link>
+            )}
+            <Button onClick={abrirCrear}>+ Nuevo item</Button>
+          </div>
+        }
       />
 
       <CampanaCostosWidget />
