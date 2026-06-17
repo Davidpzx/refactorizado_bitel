@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle} from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle, Pencil } from 'lucide-react'
 import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -15,6 +15,18 @@ const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0)
 function diferenciaClass(val: number) {
   if (val === 0) return 'bg-kpi-neutral/15 text-kyro-muted'
   return val < 0 ? 'bg-kyro-danger/15 text-kyro-danger' : 'bg-kyro-warning/15 text-kyro-warning'
+}
+
+function destinoBadgeClass(destino: string) {
+  const map: Record<string, string> = {
+    BANCO:     'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    ENTREGADO: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    EN_CAJA:   'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    GERENCIA:  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+    AGENTE:    'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+    TIENDA:    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  }
+  return map[destino] ?? 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300'
 }
 
 const ESTADOS = ['', 'borrador', 'enviado', 'editado', 'aprobado']
@@ -75,103 +87,102 @@ export function HistorialPage() {
     setApplied((a) => ({ ...a, page: p }))
   }
 
+  function exportarCSV() {
+    const params = new URLSearchParams()
+    if (applied.fecha_desde) params.set('fecha_desde', applied.fecha_desde)
+    if (applied.fecha_hasta) params.set('fecha_hasta', applied.fecha_hasta)
+    if (applied.tienda) params.set('tienda', applied.tienda)
+    if (applied.agente_id) params.set('agente_id', String(applied.agente_id))
+    if (applied.estado) params.set('estado', applied.estado)
+    const token = localStorage.getItem('auth_token')
+    const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+    const url = `${base}/v1/historial/exportar?${params.toString()}`
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const burl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = burl
+        link.download = `historial_${new Date().toISOString().slice(0, 10)}.csv`
+        link.click()
+        URL.revokeObjectURL(burl)
+      })
+  }
+
+  const tableHeaders = ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
+  const rightAligned = new Set(['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'])
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Historial Completo de Reportes"
         description="Audita reportes, diferencias y estados con trazabilidad por período."
-        actions={<Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const params = new URLSearchParams()
-            if (applied.fecha_desde) params.set('fecha_desde', applied.fecha_desde)
-            if (applied.fecha_hasta) params.set('fecha_hasta', applied.fecha_hasta)
-            if (applied.tienda) params.set('tienda', applied.tienda)
-            if (applied.agente_id) params.set('agente_id', String(applied.agente_id))
-            if (applied.estado) params.set('estado', applied.estado)
-            const token = localStorage.getItem('auth_token')
-            const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
-            const url = `${base}/v1/historial/exportar?${params.toString()}`
-            const a = document.createElement('a')
-            a.href = url
-            a.setAttribute('data-auth', token ?? '')
-            // Open in new tab — the browser will download the CSV
-            fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-              .then(r => r.blob())
-              .then(blob => {
-                const burl = URL.createObjectURL(blob)
-                const link = document.createElement('a')
-                link.href = burl
-                link.download = `historial_${new Date().toISOString().slice(0, 10)}.csv`
-                link.click()
-                URL.revokeObjectURL(burl)
-              })
-          }}
-        >
-          <Download size={14} /> Exportar CSV
-        </Button>}
+        actions={
+          <Button variant="outline" size="sm" onClick={exportarCSV}>
+            <Download size={14} /> Exportar CSV
+          </Button>
+        }
       />
 
       <ListToolbar description="Combina fechas, tienda, agente y estado para localizar reportes específicos.">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Desde</label>
-            <input
-              type="date"
-              value={filters.fecha_desde}
-              onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
-              className="kyro-input h-9 w-40"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Hasta</label>
-            <input
-              type="date"
-              value={filters.fecha_hasta}
-              onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
-              className="kyro-input h-9 w-40"
-            />
-          </div>
-          {usuario?.rol === 'admin' && (
-            <>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Tienda</label>
-                <input
-                  type="text"
-                  placeholder="Todas"
-                  value={filters.tienda}
-                  onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))}
-                  className="kyro-input h-9 w-32"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">ID Agente</label>
-                <input
-                  type="number"
-                  placeholder="Todos"
-                  value={filters.agente_id}
-                  onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))}
-                  className="kyro-input h-9 w-28"
-                />
-              </div>
-            </>
-          )}
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Estado</label>
-            <select
-              value={filters.estado}
-              onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-              className="kyro-input h-9 w-36"
-            >
-              {ESTADOS.map((e) => (
-                <option key={e} value={e}>
-                  {e === '' ? 'Todos' : e}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button onClick={applyFilters}>Buscar</Button>
-          <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Desde</label>
+          <input
+            type="date"
+            value={filters.fecha_desde}
+            onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Hasta</label>
+          <input
+            type="date"
+            value={filters.fecha_hasta}
+            onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+        {usuario?.rol === 'admin' && (
+          <>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
+              <input
+                type="text"
+                placeholder="Todas"
+                value={filters.tienda}
+                onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))}
+                className="kyro-input h-9 w-32"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">ID Agente</label>
+              <input
+                type="number"
+                placeholder="Todos"
+                value={filters.agente_id}
+                onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))}
+                className="kyro-input h-9 w-28"
+              />
+            </div>
+          </>
+        )}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Estado</label>
+          <select
+            value={filters.estado}
+            onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
+            className="kyro-input h-9 w-36"
+          >
+            {ESTADOS.map((e) => (
+              <option key={e} value={e}>
+                {e === '' ? 'Todos' : e}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button onClick={applyFilters}>Buscar</Button>
+        <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
       <div className="kyro-card overflow-hidden">
@@ -179,7 +190,7 @@ export function HistorialPage() {
           <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros encontrados`}
           </h2>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-400 dark:text-zinc-500">
             Página {meta?.current_page ?? 1} de {meta?.last_page ?? 1}
           </span>
         </div>
@@ -187,10 +198,10 @@ export function HistorialPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="kyro-table-head">
-                {['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Estado', ''].map((h) => (
+                {tableHeaders.map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 ${['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'].includes(h) ? 'text-right' : 'text-left'}`}
+                    className={`px-4 py-3 ${rightAligned.has(h) ? 'text-right' : 'text-left'}`}
                   >
                     {h}
                   </th>
@@ -200,14 +211,14 @@ export function HistorialPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">
                     Cargando...
                   </td>
                 </tr>
               )}
               {!isLoading && reportes.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">
                     Sin resultados para los filtros aplicados
                   </td>
                 </tr>
@@ -215,11 +226,15 @@ export function HistorialPage() {
               {reportes.map((r) => {
                 const dif = Number(r.diferencia)
                 const isSolicitado = r.estado_edicion === 'SOLICITADO'
+                const isNegative   = dif < 0
                 const rowCls = isSolicitado
-                  ? 'border-b border-yellow-300 bg-yellow-50 animate-pulse'
-                  : dif < 0
-                  ? 'border-b border-red-100 bg-red-50/40'
+                  ? 'border-b border-l-4 border-l-yellow-400 border-yellow-200 bg-yellow-50/80 animate-pulse dark:border-l-yellow-400 dark:border-yellow-400/20 dark:bg-yellow-400/[0.06]'
+                  : isNegative
+                  ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/40 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
                   : 'border-b border-kyro-border transition-colors hover:bg-kyro-gold/5'
+
+                const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO'
+                const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'
 
                 return (
                   <tr key={r.id} className={rowCls}>
@@ -240,15 +255,38 @@ export function HistorialPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-semibold ${destinoBadgeClass(r.destino_efectivo ?? 'TIENDA')}`}>
+                        {r.destino_efectivo ?? 'TIENDA'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        to={`/reportes/${r.id}`}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-400/10"
-                      >
-                        <Eye size={13} /> Ver
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/reportes/${r.id}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400"
+                          title="Ver detalle"
+                        >
+                          <Eye size={14} />
+                        </Link>
+                        {canEdit ? (
+                          <Link
+                            to={`/reportes/${r.id}/editar`}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                            title="Editar reporte"
+                          >
+                            <Pencil size={14} />
+                          </Link>
+                        ) : editPending ? (
+                          <span
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-yellow-300/40 text-yellow-400 opacity-60 cursor-default dark:border-yellow-500/20"
+                            title="Solicitud de edición pendiente de aprobación"
+                          >
+                            <Pencil size={14} />
+                          </span>
+                        ) : null}
                         {isSolicitado && usuario?.rol === 'admin' && (
                           <Button
                             size="sm"
@@ -260,9 +298,10 @@ export function HistorialPage() {
                             }}
                             className="h-7 gap-1 bg-kyro-success/15 px-2 text-xs text-kyro-success hover:bg-kyro-success/30"
                           >
-                            <CheckCircle size={12} /> Aprobar edición
+                            <CheckCircle size={12} /> Aprobar
                           </Button>
                         )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -282,7 +321,7 @@ export function HistorialPage() {
             >
               <ChevronLeft size={14} /> Anterior
             </Button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-zinc-400">
               {meta.from}–{meta.to} de {meta.total}
             </span>
             <Button
@@ -302,7 +341,7 @@ export function HistorialPage() {
 
 function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?: string }) {
   if (estadoEdicion === 'SOLICITADO') {
-    return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 font-medium">Ed. solicitada</span>
+    return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium">Ed. solicitada</span>
   }
   const map: Record<string, string> = {
     borrador: 'bg-kpi-neutral/15 text-kyro-muted',
