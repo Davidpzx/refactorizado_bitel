@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { PageHeader } from '../../components/PageHeader'
+import { Select } from '../../components/ui/select'
+import { Label } from '../../components/ui/label'
+import { Clock, TrendingDown, ShieldOff, DollarSign } from 'lucide-react'
 
 interface AgenteOption {
   id: number
@@ -50,99 +54,145 @@ export function HistorialLiquidacionPage() {
   })
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-kyro-text">Liquidacion de Asistencias</h1>
-          <p className="text-sm text-kyro-muted">Tardanzas, deuda y descuentos por agente.</p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Liquidacion de Asistencias"
+        subtitle="Tardanzas, deuda, comodines y descuentos por agente y mes."
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label className="mb-1 block text-xs">Agente</Label>
+            <Select
+              value={agenteId}
+              onChange={(e) => setAgenteId(e.target.value)}
+              className="h-9 w-64"
+            >
+              <option value="">— Selecciona agente —</option>
+              {agentes.map((agente) => (
+                <option key={agente.id} value={agente.id}>
+                  {agente.nombres} ({agente.tienda_base})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label className="mb-1 block text-xs">Mes</Label>
+            <input
+              type="month"
+              value={mes}
+              onChange={(e) => setMes(e.target.value)}
+              className="kyro-input h-9 rounded-kyro px-3 text-sm"
+            />
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[260px_150px]">
-          <select
-            value={agenteId}
-            onChange={(event) => setAgenteId(event.target.value)}
-            className="kyro-input h-10 rounded-kyro px-3 text-sm"
-          >
-            <option value="">Agente</option>
-            {agentes.map((agente) => (
-              <option key={agente.id} value={agente.id}>
-                {agente.nombres} ({agente.tienda_base})
-              </option>
-            ))}
-          </select>
-          <input
-            type="month"
-            value={mes}
-            onChange={(event) => setMes(event.target.value)}
-            className="kyro-input h-10 rounded-kyro px-3 text-sm"
-          />
-        </div>
-      </div>
+      </PageHeader>
 
-      {isLoading && <p className="text-sm text-kyro-muted">Cargando...</p>}
-      {isError && <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-sm text-kyro-danger">No se pudo cargar la liquidacion.</p>}
+      {isLoading && (
+        <div className="flex items-center gap-2 py-6 text-sm text-kyro-muted">
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          Cargando liquidacion...
+        </div>
+      )}
+      {isError && (
+        <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-sm text-kyro-danger">
+          No se pudo cargar la liquidacion.
+        </p>
+      )}
+
+      {!agenteId && !isLoading && (
+        <div className="kyro-card p-8 text-center text-sm text-kyro-muted">
+          Selecciona un agente y mes para ver la liquidacion.
+        </div>
+      )}
 
       {data && (
         <>
-          <section className="kyro-card p-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <section className="kyro-card relative overflow-hidden p-5">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-gold via-kyro-indigo to-transparent" />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-kyro-text">{data.agente.nombre}</p>
                 <p className="text-xs text-kyro-muted">DNI {data.agente.dni}</p>
               </div>
-              <p className="text-sm font-medium text-kyro-muted">{data.mes}</p>
+              <span className="rounded-kyro bg-kyro-elevated px-3 py-1.5 text-sm font-medium text-kyro-body">{data.mes}</span>
             </div>
           </section>
 
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
-              { label: 'Tardanza', value: `${data.resumen.total_tardanzas_min} min` },
-              { label: 'Deuda', value: `${data.resumen.deuda_acumulada_min} min` },
-              { label: 'Comodines', value: data.resumen.comodines_usados },
-              { label: 'Descuento', value: `S/ ${Number(data.resumen.total_descuento_soles).toFixed(2)}` },
-            ].map((item) => (
-              <div key={item.label} className="kyro-card p-4">
-                <p className="text-xl font-bold text-kyro-text">{item.value}</p>
-                <p className="text-xs text-kyro-muted">{item.label}</p>
+              { label: 'Tardanza total', value: `${data.resumen.total_tardanzas_min} min`, Icon: Clock, accent: 'border-l-kyro-warning', text: 'text-kyro-warning' },
+              { label: 'Deuda acumulada', value: `${data.resumen.deuda_acumulada_min} min`, Icon: TrendingDown, accent: 'border-l-kyro-danger', text: 'text-kyro-danger' },
+              { label: 'Comodines usados', value: String(data.resumen.comodines_usados), Icon: ShieldOff, accent: 'border-l-kyro-info', text: 'text-kyro-info' },
+              { label: 'Descuento total', value: `S/ ${Number(data.resumen.total_descuento_soles).toFixed(2)}`, Icon: DollarSign, accent: 'border-l-kyro-danger', text: 'text-kyro-danger' },
+            ].map(({ label, value, Icon, accent, text }) => (
+              <div key={label} className={`kyro-card border-l-4 p-4 ${accent}`}>
+                <div className={`mb-2 flex items-center gap-2 ${text}`}>
+                  <Icon size={14} />
+                  <p className="text-xs">{label}</p>
+                </div>
+                <p className={`text-xl font-bold tabular-nums ${text}`}>{value}</p>
               </div>
             ))}
-          </section>
+          </div>
 
-          <section className="kyro-card overflow-x-auto p-4">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead>
-                <tr className="border-b border-kyro-border text-left text-xs uppercase text-kyro-muted">
-                  <th className="pb-2">Fecha</th>
-                  <th className="pb-2">Estado</th>
-                  <th className="pb-2">Entrada</th>
-                  <th className="pb-2">Salida</th>
-                  <th className="pb-2 text-right">Tardanza</th>
-                  <th className="pb-2 text-right">Deuda</th>
-                  <th className="pb-2">Comodin</th>
-                  <th className="pb-2">Turno</th>
-                  <th className="pb-2 text-right">Descuento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.dias.length === 0 && (
+          <section className="kyro-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead className="kyro-table-head">
                   <tr>
-                    <td colSpan={9} className="py-6 text-center text-kyro-muted">Sin asistencias en el periodo.</td>
+                    {['Fecha', 'Estado', 'Entrada', 'Salida', 'Tardanza', 'Deuda', 'Comodin', 'Turno', 'Descuento'].map((h, i) => (
+                      <th key={h} className={`px-4 py-3 text-xs font-semibold ${['Tardanza', 'Deuda', 'Descuento'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                    ))}
                   </tr>
-                )}
-                {data.dias.map((dia) => (
-                  <tr key={dia.fecha} className="border-b border-kyro-border/70 text-kyro-body last:border-0">
-                    <td className="py-2">{dia.fecha}</td>
-                    <td className="py-2">{dia.estado}</td>
-                    <td className="py-2">{dia.hora_entrada?.slice(0, 5) ?? '-'}</td>
-                    <td className="py-2">{dia.hora_salida?.slice(0, 5) ?? '-'}</td>
-                    <td className="py-2 text-right">{dia.minutos_tardanza}</td>
-                    <td className="py-2 text-right">{dia.minutos_deuda}</td>
-                    <td className="py-2">{dia.uso_comodin ? 'Si' : '-'}</td>
-                    <td className="py-2">{dia.omitio_refrigerio ? 'Corrido' : 'Regular'}</td>
-                    <td className="py-2 text-right">S/ {Number(dia.descuento_soles).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-kyro-border">
+                  {data.dias.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-kyro-muted">Sin asistencias en el periodo.</td>
+                    </tr>
+                  )}
+                  {data.dias.map((dia) => {
+                    const conTardanza = dia.minutos_tardanza > 0
+                    const conDeuda    = dia.minutos_deuda > 0
+                    return (
+                      <tr key={dia.fecha} className={`transition-colors ${conDeuda ? 'bg-kyro-danger/5' : 'hover:bg-kyro-elevated/60'}`}>
+                        <td className="px-4 py-3 font-mono text-xs text-kyro-body">
+                          {new Date(dia.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                            dia.estado === 'FALTA' ? 'bg-kyro-danger/15 text-kyro-danger' :
+                            dia.estado === 'PERMISO' ? 'bg-kyro-info/15 text-kyro-info' :
+                            'bg-kyro-elevated text-kyro-muted'
+                          }`}>{dia.estado}</span>
+                        </td>
+                        <td className="px-4 py-3 text-kyro-body">{dia.hora_entrada?.slice(0, 5) ?? '—'}</td>
+                        <td className="px-4 py-3 text-kyro-body">{dia.hora_salida?.slice(0, 5) ?? '—'}</td>
+                        <td className={`px-4 py-3 text-right font-mono font-bold ${conTardanza ? 'text-kyro-warning' : 'text-kyro-muted'}`}>
+                          {dia.minutos_tardanza} min
+                        </td>
+                        <td className={`px-4 py-3 text-right font-mono font-bold ${conDeuda ? 'text-kyro-danger' : 'text-kyro-muted'}`}>
+                          {dia.minutos_deuda} min
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {dia.uso_comodin
+                            ? <span className="inline-block rounded-full bg-kyro-info/15 px-2 py-0.5 text-xs font-medium text-kyro-info">Si</span>
+                            : <span className="text-kyro-subtle">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {dia.omitio_refrigerio
+                            ? <span className="text-xs text-kyro-warning">Corrido</span>
+                            : <span className="text-xs text-kyro-muted">Regular</span>}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-mono font-bold ${Number(dia.descuento_soles) > 0 ? 'text-kyro-danger' : 'text-kyro-muted'}`}>
+                          S/ {Number(dia.descuento_soles).toFixed(2)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       )}
