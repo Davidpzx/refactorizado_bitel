@@ -1,3 +1,4 @@
+import { Eye, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import {

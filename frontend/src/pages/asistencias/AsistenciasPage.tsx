@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
-import { Download, AlertTriangle, Clock, UserCheck, UserX, AlertCircle, Pencil } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, Download, Pencil, UserCheck, UserX } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
