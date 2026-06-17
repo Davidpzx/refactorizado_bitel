@@ -423,7 +423,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         retiro_bipay: 0, recarga_bipay: 0, pago_servicio: 0,
         pago_krece: 0, pago_payjoy: 0, tickets_tusamy: 0,
         efectivo_entregado: 0, total_salidas: 0,
-        destino_efectivo: 'EN_CAJA', observaciones: '', obs_dia: '',
+        destino_efectivo: 'ENTREGADO', observaciones: '', obs_dia: '',
         ventas: [],
       },
     })
