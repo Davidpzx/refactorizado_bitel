@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { Printer, Trash2 } from 'lucide-react'
+import { Pencil, Printer, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
@@ -126,31 +126,19 @@ function getColumns(
     },
     {
       id: 'acciones',
-      header: 'Acciones',
+      header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="outline" onClick={() => onEditar(row.original)}>
-            Editar
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            title="Reimprimir ticket"
-            onClick={() => onReimprimir(row.original)}
-          >
-            <Printer size={14} />
-          </Button>
+          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar ticket">
+            <Pencil size={13} />
+          </button>
+          <button onClick={() => onReimprimir(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Reimprimir ticket">
+            <Printer size={13} />
+          </button>
           {isAdmin && (
-            <Button
-              size="sm"
-              variant="ghost"
-              title="Anular ticket"
-              disabled={isAnulando}
-              className="text-kyro-danger hover:text-kyro-danger hover:bg-kyro-danger/10"
-              onClick={() => onAnular(row.original)}
-            >
-              <Trash2 size={14} />
-            </Button>
+            <button onClick={() => onAnular(row.original)} disabled={isAnulando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Anular ticket">
+              <Trash2 size={13} />
+            </button>
           )}
         </div>
       ),
@@ -403,7 +391,7 @@ export function TicketsPage() {
   const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin, anular.isPending)
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Tickets"
         description="Gestión de tickets emitidos."

@@ -420,7 +420,7 @@ export function TrasladosPage() {
   )
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Traslados de Equipos/Accesorios"
         description="Gestión de traslados de inventario entre tiendas."
