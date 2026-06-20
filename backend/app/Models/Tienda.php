@@ -14,7 +14,7 @@ class Tienda extends Model
 
     protected $fillable = [
         'codigo', 'nombre', 'direccion', 'telefono',
-        'activo', 'cuenta_bipay_id',
+        'activo', 'cuenta_bipay_id', 'latitud', 'longitud',
     ];
 
     protected $casts = [

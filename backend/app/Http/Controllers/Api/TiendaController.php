@@ -64,6 +64,8 @@ class TiendaController extends Controller
             // 'direccion' => ['nullable', 'string', 'max:200'],
             // 'telefono'  => ['nullable', 'string', 'max:20'],
             'activo'    => ['boolean'],
+            'latitud'   => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'longitud'  => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $tienda->update($data);

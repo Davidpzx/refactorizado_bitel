@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { AlertTriangle, MapPin, Pencil, Plus, Search, Store, Trash2 } from 'lucide-react'
+import { AlertTriangle, LocateFixed, MapPin, Pencil, Plus, Search, Store, Trash2 } from 'lucide-react'
 import {
   sanitizarCodigo,
   sanitizarNombre,
@@ -24,6 +24,8 @@ interface Tienda {
   direccion: string | null
   telefono: string | null
   activo: boolean
+  latitud: number | null
+  longitud: number | null
 }
 
 interface ApiError {
@@ -182,6 +184,7 @@ export function TiendasPage() {
   const [page, setPage]             = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando]     = useState<Tienda | undefined>()
+  const [capturando, setCapturando] = useState<number | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['tiendas', query, page],
@@ -192,6 +195,32 @@ export function TiendasPage() {
     mutationFn: (id: number) => api.delete(`/v1/tiendas/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tiendas'] }),
   })
+
+  const ubicacion = useMutation({
+    mutationFn: ({ id, latitud, longitud }: { id: number; latitud: number; longitud: number }) =>
+      api.put(`/v1/tiendas/${id}`, { latitud, longitud }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tiendas'] }),
+    onError: () => alert('No se pudo guardar la ubicación. Intenta de nuevo.'),
+    onSettled: () => setCapturando(null),
+  })
+
+  const capturarUbicacion = (t: Tienda) => {
+    if (!('geolocation' in navigator)) {
+      alert('Este navegador no soporta geolocalización.')
+      return
+    }
+    setCapturando(t.id)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        ubicacion.mutate({ id: t.id, latitud: pos.coords.latitude, longitud: pos.coords.longitude })
+      },
+      () => {
+        alert('No se pudo obtener tu ubicación. Verifica los permisos del navegador.')
+        setCapturando(null)
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
 
   if (data?.warning) {
     return (
@@ -229,14 +258,14 @@ export function TiendasPage() {
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                {['Código', 'Nombre', 'Dirección', 'Teléfono', 'Estado', 'Acciones'].map(h => (
+                {['Código', 'Nombre', 'Dirección', 'Teléfono', 'Estado', 'Ubicación', 'Acciones'].map(h => (
                   <th key={h} className="kyro-table-head px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-kyro-border">
-              {isLoading && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
-              {!isLoading && tiendas.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
+              {isLoading && <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
+              {!isLoading && tiendas.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
                 <tr key={t.id} className="transition-colors hover:bg-kyro-elevated">
                   <td className="px-4 py-3 font-mono font-bold text-kyro-text">{t.codigo}</td>
@@ -245,6 +274,16 @@ export function TiendasPage() {
                   <td className="px-4 py-3 text-kyro-muted">{t.telefono ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge variant={t.activo ? 'success' : 'warning'}>{t.activo ? 'Activa' : 'Inactiva'}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => capturarUbicacion(t)}
+                      disabled={capturando === t.id}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 disabled:opacity-40 disabled:pointer-events-none dark:hover:text-emerald-400"
+                      title={t.latitud != null && t.longitud != null ? `Ubicación: ${t.latitud}, ${t.longitud} — actualizar` : 'Añadir ubicación'}
+                    >
+                      <LocateFixed size={13} className={capturando === t.id ? 'animate-pulse' : ''} />
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
