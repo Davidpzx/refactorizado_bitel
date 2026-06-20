@@ -104,6 +104,16 @@ html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
+/* ── Iconos de selector de fecha/hora (nativos) ───────────────────────────────
+   Por defecto el navegador los pinta negro/gris y no calzan con el tema.
+   Se tiñen en dorado (kyro-gold) vía filter, que es la única forma soportada
+   de recolorear ::-webkit-calendar-picker-indicator (Chrome/Edge). ────────── */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(76%) sepia(56%) saturate(1396%) hue-rotate(0deg) brightness(103%) contrast(105%);
+}
+
 /* ── Focus ring ────────────────────────────────────────────────────────────── */
 input:focus-visible,
 select:focus-visible,

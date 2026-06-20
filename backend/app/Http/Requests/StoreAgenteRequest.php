@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Agente;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAgenteRequest extends FormRequest
@@ -12,7 +13,12 @@ class StoreAgenteRequest extends FormRequest
     {
         return [
             'dni'           => ['required', 'string', 'size:8', 'regex:/^\d{8}$/', 'unique:agentes,dni'],
-            'nombres'       => ['required', 'string', 'max:200'],
+            'nombres'       => ['required', 'string', 'max:200', function ($attribute, $value, $fail) {
+                $existe = Agente::whereRaw('LOWER(TRIM(nombres)) = ?', [mb_strtolower(trim($value))])->exists();
+                if ($existe) {
+                    $fail('Ya existe un agente registrado con ese nombre (verifica que no sea un duplicado).');
+                }
+            }],
             'tienda_base'   => ['required', 'string', 'max:10'],
             'pin_seguridad' => ['required', 'string', 'digits:4'],
             'sueldo_base'   => ['required', 'numeric', 'min:0'],
@@ -24,7 +30,7 @@ class StoreAgenteRequest extends FormRequest
             'fecha_ingreso' => ['required', 'date'],
             'correo'        => ['nullable', 'email', 'max:120'],
             'telefono'      => ['nullable', 'string', 'max:15'],
-            'direccion'     => ['nullable', 'string', 'max:300'],
+            'direccion'     => ['nullable', 'string', 'max:60'],
             'es_gerencia'   => ['sometimes', 'boolean'],
         ];
     }
@@ -36,6 +42,7 @@ class StoreAgenteRequest extends FormRequest
             'dni.regex'         => 'El DNI debe contener solo dígitos.',
             'dni.unique'        => 'Ya existe un agente registrado con ese DNI.',
             'pin_seguridad.digits' => 'El PIN debe tener exactamente 4 dígitos.',
+            'direccion.max'     => 'Máximo 60 caracteres.',
         ];
     }
 }

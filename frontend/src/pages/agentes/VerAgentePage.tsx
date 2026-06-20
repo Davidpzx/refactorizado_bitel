@@ -11,6 +11,7 @@ import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, Shield
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { formatearFechaCorta } from '../../lib/fechas'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -530,7 +531,7 @@ export function VerAgentePage() {
               )}
               {agente.fecha_ingreso && (
                 <span className="flex items-center gap-1">
-                  <Calendar size={13} /> Ingreso: {new Date(agente.fecha_ingreso + 'T00:00:00').toLocaleDateString('es-PE')}
+                  <Calendar size={13} /> Ingreso: {formatearFechaCorta(agente.fecha_ingreso)}
                 </span>
               )}
             </div>

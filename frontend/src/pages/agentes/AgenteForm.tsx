@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { api } from '../../services/api'
+import { soloFecha } from '../../lib/fechas'
 import type { Agente } from '../../types/agente'
 
 interface TiendaOption {
@@ -51,7 +52,7 @@ const schema = z.object({
   dia_descanso:  z.string().optional().or(z.literal('')),
   correo:        z.string().email('Correo inválido').max(30, 'Máximo 30 caracteres').optional().or(z.literal('')),
   telefono:      z.string().max(15).optional().or(z.literal('')),
-  direccion:     z.string().max(100, 'Máximo 100 caracteres').optional().or(z.literal('')),
+  direccion:     z.string().max(60, 'Máximo 60 caracteres').optional().or(z.literal('')),
   es_gerencia:   z.boolean(),
 })
 
@@ -132,7 +133,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           tienda_base:   agente.tienda_base,
           sueldo_base:   parseFloat(agente.sueldo_base),
           estado:        agente.estado,
-          fecha_ingreso: agente.fecha_ingreso,
+          fecha_ingreso: soloFecha(agente.fecha_ingreso),
           hora_ingreso:  agente.hora_ingreso  ?? '',
           hora_salida:   agente.hora_salida   ?? '',
           dia_descanso:  agente.dia_descanso  ?? '',
@@ -339,7 +340,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="direccion">Dirección</Label>
-            <Input id="direccion" {...register('direccion')} placeholder="Av. Ejemplo 123" maxLength={100} className="mt-1" />
+            <Input id="direccion" {...register('direccion')} placeholder="Av. Ejemplo 123" maxLength={60} className="mt-1" />
             <FieldError>{errors.direccion?.message}</FieldError>
           </div>
           <div className="sm:col-span-2">

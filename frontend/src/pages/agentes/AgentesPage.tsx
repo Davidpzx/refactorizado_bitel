@@ -14,6 +14,7 @@ import type { Agente } from '../../types/agente'
 import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
+import { formatearFechaCorta } from '../../lib/fechas'
 
 type BadgeVariant = 'success' | 'warning' | 'destructive'
 const estadoVariant: Record<Agente['estado'], BadgeVariant> = {
@@ -54,7 +55,7 @@ function getColumns(
       header: 'Ingreso',
       cell: ({ row }) => (
         <span className="text-xs tabular-nums text-kyro-muted">
-          {new Date(`${row.original.fecha_ingreso}T00:00:00`).toLocaleDateString('es-PE')}
+          {formatearFechaCorta(row.original.fecha_ingreso)}
         </span>
       ),
     },

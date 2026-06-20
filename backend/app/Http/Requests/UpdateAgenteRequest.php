@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Agente;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAgenteRequest extends FormRequest
@@ -10,8 +11,18 @@ class UpdateAgenteRequest extends FormRequest
 
     public function rules(): array
     {
+        $agenteActual = $this->route('agente');
+        $idActual     = $agenteActual instanceof Agente ? $agenteActual->id : $agenteActual;
+
         return [
-            'nombres'       => ['sometimes', 'string', 'max:200'],
+            'nombres'       => ['sometimes', 'string', 'max:200', function ($attribute, $value, $fail) use ($idActual) {
+                $existe = Agente::whereRaw('LOWER(TRIM(nombres)) = ?', [mb_strtolower(trim($value))])
+                    ->when($idActual, fn ($q) => $q->where('id', '!=', $idActual))
+                    ->exists();
+                if ($existe) {
+                    $fail('Ya existe un agente registrado con ese nombre (verifica que no sea un duplicado).');
+                }
+            }],
             'tienda_base'   => ['sometimes', 'string', 'max:10'],
             'pin_seguridad' => ['sometimes', 'nullable', 'string', 'digits:4'],
             'sueldo_base'   => ['sometimes', 'numeric', 'min:0'],
@@ -23,7 +34,7 @@ class UpdateAgenteRequest extends FormRequest
             'fecha_ingreso' => ['sometimes', 'date'],
             'correo'        => ['nullable', 'email', 'max:120'],
             'telefono'      => ['nullable', 'string', 'max:15'],
-            'direccion'     => ['nullable', 'string', 'max:300'],
+            'direccion'     => ['nullable', 'string', 'max:60'],
             'es_gerencia'   => ['sometimes', 'boolean'],
             'permiso_largo' => ['sometimes', 'boolean'],
             'fecha_retorno' => ['nullable', 'date'],
@@ -34,6 +45,7 @@ class UpdateAgenteRequest extends FormRequest
     {
         return [
             'pin_seguridad.digits' => 'El PIN debe tener exactamente 4 dígitos.',
+            'direccion.max'        => 'Máximo 60 caracteres.',
         ];
     }
 }
