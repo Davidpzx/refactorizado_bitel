@@ -33,14 +33,17 @@ class UsuarioController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'nombre'    => ['required', 'string', 'max:100'],
-            'email'     => ['required', 'email', 'unique:usuarios,email'],
+            'nombre'    => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
+            'email'     => ['required', 'email', 'max:50', 'unique:usuarios,email'],
             'password'  => ['required', 'string', 'min:6'],
             'rol'       => ['required', Rule::in(['admin', 'tienda'])],
-            'tienda_id' => ['nullable', 'string', 'max:20'],
+            'tienda_id' => ['nullable', 'string', 'max:20', Rule::exists('tiendas', 'codigo')],
             'agente_id' => ['nullable', 'required_if:rol,tienda', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
+        ], [
+            'nombre.regex'    => 'El nombre no debe contener números ni símbolos.',
+            'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
         ]);
 
         $data['password'] = Hash::make($data['password']);
@@ -54,14 +57,17 @@ class UsuarioController extends Controller
     public function update(Request $request, Usuario $usuario): JsonResponse
     {
         $data = $request->validate([
-            'nombre'    => ['sometimes', 'string', 'max:100'],
-            'email'     => ['sometimes', 'email', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
+            'nombre'    => ['sometimes', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
+            'email'     => ['sometimes', 'email', 'max:50', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
             'password'  => ['nullable', 'string', 'min:6'],
             'rol'       => ['sometimes', Rule::in(['admin', 'tienda'])],
-            'tienda_id' => ['nullable', 'string', 'max:20'],
+            'tienda_id' => ['nullable', 'string', 'max:20', Rule::exists('tiendas', 'codigo')],
             'agente_id' => ['nullable', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
+        ], [
+            'nombre.regex'     => 'El nombre no debe contener números ni símbolos.',
+            'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
         ]);
 
         if (!empty($data['password'])) {

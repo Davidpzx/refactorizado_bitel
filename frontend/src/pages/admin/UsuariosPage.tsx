@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
@@ -9,6 +10,12 @@ import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import {
+  sanitizarNombreUsuario,
+  validarUsuario,
+  LIMITES_USUARIO,
+  type ErroresUsuario,
+} from '../../lib/validacionesUsuario'
 
 interface Usuario {
   id: number
@@ -37,10 +44,26 @@ interface UsuariosResponse {
   last_page: number
 }
 
+interface TiendaOption {
+  codigo: string
+  nombre: string
+}
+
 const ROLES = ['admin', 'tienda']
+
+/** Saca el mensaje de error del backend sin importar bajo qué clave venga; nunca devuelve texto vacío. */
+function mensajeErrorUsuario(e: ApiError, camposBackend: Record<string, string[]>): string {
+  const data = e?.response?.data
+  if (data?.message) return data.message
+  const primerCampo = Object.values(camposBackend).flat()[0]
+  if (primerCampo) return primerCampo
+  return 'No se pudo guardar el usuario.'
+}
 
 function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSuccess: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
+  const esEdicion = Boolean(usuario?.id)
+
   const { data: agentesData } = useQuery({
     queryKey: ['agentes-para-usuarios'],
     queryFn: () => api.get<{ data: Array<{ id: number; nombres: string; dni: string; tienda_base: string }> }>('/v1/agentes', {
@@ -48,6 +71,13 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
     }).then(r => r.data),
   })
   const agentes = agentesData?.data ?? []
+
+  const { data: tiendasData } = useQuery({
+    queryKey: ['tiendas-para-usuarios'],
+    queryFn: () => api.get<{ data: TiendaOption[] }>('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data),
+  })
+  const tiendas = tiendasData?.data ?? []
+
   const [form, setForm] = useState({
     nombre:    usuario?.nombre    ?? '',
     email:     usuario?.email     ?? '',
@@ -58,7 +88,13 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
     activo:    usuario?.activo    ?? true,
     tiene_bcp: usuario?.tiene_bcp ?? false,
   })
-  const [err, setErr] = useState('')
+  const [err, setErr]         = useState('')
+  const [errores, setErrores] = useState<ErroresUsuario>({})
+  const errorRef              = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    if (err) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [err])
 
   const save = useMutation({
     mutationFn: (payload: typeof form) => {
@@ -75,14 +111,35 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
       onSuccess()
     },
     onError: (e: ApiError) => {
-      const msg = e?.response?.data?.message ?? Object.values(e?.response?.data?.errors ?? {}).flat().join(' ') ?? 'Error'
-      setErr(String(msg))
+      const camposBackend = e?.response?.data?.errors ?? {}
+      if (Object.keys(camposBackend).length > 0) {
+        setErrores({
+          nombre:    camposBackend.nombre?.[0],
+          email:     camposBackend.email?.[0],
+          password:  camposBackend.password?.[0],
+          tienda_id: camposBackend.tienda_id?.[0],
+          agente_id: camposBackend.agente_id?.[0],
+        })
+      }
+      setErr(mensajeErrorUsuario(e, camposBackend))
     },
   })
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const erroresValidacion = validarUsuario(form, esEdicion)
+    setErrores(erroresValidacion)
+    if (Object.keys(erroresValidacion).length > 0) {
+      setErr('Revisa los campos marcados antes de continuar.')
+      return
+    }
+    setErr('')
+    save.mutate(form)
+  }
+
   return (
-    <form className="space-y-4" onSubmit={e => { e.preventDefault(); save.mutate(form) }}>
-      {err && <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs text-kyro-danger">{err}</p>}
+    <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+      {err && <p ref={errorRef} className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs font-medium text-kyro-danger">{err}</p>}
       <section className="kyro-card p-4">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><UserRound size={15} /></span>
@@ -94,18 +151,39 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="usuario-nombre" className="mb-1 block text-xs text-kyro-muted">Nombre completo</label>
-            <Input id="usuario-nombre" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+            <Input
+              id="usuario-nombre"
+              value={form.nombre}
+              onChange={e => { setForm(f => ({ ...f, nombre: sanitizarNombreUsuario(e.target.value) })); setErrores(er => ({ ...er, nombre: undefined })) }}
+              maxLength={LIMITES_USUARIO.nombre}
+            />
+            {errores.nombre && <p className="mt-1 text-[11px] text-kyro-danger">{errores.nombre}</p>}
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="usuario-email" className="mb-1 block text-xs text-kyro-muted">Email (login)</label>
-            <Input id="usuario-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+            <Input
+              id="usuario-email"
+              type="email"
+              value={form.email}
+              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setErrores(er => ({ ...er, email: undefined })) }}
+              maxLength={LIMITES_USUARIO.email}
+            />
+            {errores.email && <p className="mt-1 text-[11px] text-kyro-danger">{errores.email}</p>}
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="usuario-password" className="mb-1 block text-xs text-kyro-muted">{usuario ? 'Nueva contraseña (vacío = no cambiar)' : 'Contraseña'}</label>
             <div className="relative">
               <KeyRound size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted" />
-              <Input id="usuario-password" className="pl-9" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={!usuario} minLength={6} />
+              <Input
+                id="usuario-password"
+                className="pl-9"
+                type="password"
+                value={form.password}
+                onChange={e => { setForm(f => ({ ...f, password: e.target.value })); setErrores(er => ({ ...er, password: undefined })) }}
+                minLength={6}
+              />
             </div>
+            {errores.password && <p className="mt-1 text-[11px] text-kyro-danger">{errores.password}</p>}
           </div>
         </div>
       </section>
@@ -126,18 +204,33 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
             </Select>
           </div>
           <div>
-            <label htmlFor="usuario-tienda" className="mb-1 block text-xs text-kyro-muted">Tienda ID</label>
-            <Input id="usuario-tienda" value={form.tienda_id ?? ''} onChange={e => setForm(f => ({ ...f, tienda_id: e.target.value.toUpperCase() }))} placeholder="P. ej. PUNDA95" />
+            <label htmlFor="usuario-tienda" className="mb-1 block text-xs text-kyro-muted">Tienda</label>
+            <Select
+              id="usuario-tienda"
+              value={form.tienda_id ?? ''}
+              onChange={e => { setForm(f => ({ ...f, tienda_id: e.target.value })); setErrores(er => ({ ...er, tienda_id: undefined })) }}
+            >
+              <option value="">— Sin tienda asignada —</option>
+              {tiendas.map(t => (
+                <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>
+              ))}
+            </Select>
+            {errores.tienda_id && <p className="mt-1 text-[11px] text-kyro-danger">{errores.tienda_id}</p>}
           </div>
           {form.rol === 'tienda' && (
             <div className="sm:col-span-2">
               <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado</label>
-              <Select id="usuario-agente" value={form.agente_id} onChange={e => setForm(f => ({ ...f, agente_id: e.target.value }))} required>
+              <Select
+                id="usuario-agente"
+                value={form.agente_id}
+                onChange={e => { setForm(f => ({ ...f, agente_id: e.target.value })); setErrores(er => ({ ...er, agente_id: undefined })) }}
+              >
                 <option value="">Selecciona un agente</option>
                 {agentes.map(a => (
                   <option key={a.id} value={a.id}>{a.nombres} · {a.dni} · {a.tienda_base}</option>
                 ))}
               </Select>
+              {errores.agente_id && <p className="mt-1 text-[11px] text-kyro-danger">{errores.agente_id}</p>}
             </div>
           )}
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
