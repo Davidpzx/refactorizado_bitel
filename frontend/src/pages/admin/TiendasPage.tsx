@@ -98,7 +98,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit} noValidate>
       {err && <p ref={errorRef} className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs font-medium text-kyro-danger">{err}</p>}
       <section className="kyro-card p-4">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
