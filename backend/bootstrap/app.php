@@ -37,7 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
                     'url'     => $request->fullUrl(),
                 ]);
                 return response()->json(
-                    ['error' => 'Error interno del servidor. Contacte al administrador.'],
+                    [
+                        'error' => 'Error interno del servidor. Contacte al administrador.',
+                        // TEMPORAL: detalle real solo para depuración, quitar apenas se resuelva el bug.
+                        'debug_temporal' => $e->getMessage(),
+                    ],
                     500
                 );
             }
