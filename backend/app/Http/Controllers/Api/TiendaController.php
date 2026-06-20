@@ -40,7 +40,7 @@ class TiendaController extends Controller
         $data = $request->validate([
             'codigo'    => ['required', 'string', 'max:20', 'unique:tiendas,codigo'],
             'nombre'    => ['required', 'string', 'max:100'],
-            'direccion' => ['nullable', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:200'],
             'telefono'  => ['nullable', 'string', 'max:20'],
             'activo'    => ['boolean'],
         ]);
@@ -55,9 +55,9 @@ class TiendaController extends Controller
     public function update(Request $request, Tienda $tienda): JsonResponse
     {
         $data = $request->validate([
-            'codigo'    => ['sometimes', 'string', 'max:20', Rule::unique('tiendas', 'codigo')->ignore($tienda->id)],
+            'codigo'    => ['sometimes', 'string', 'max:20', Rule::unique('tiendas', 'codigo')->ignore($tienda->codigo, 'codigo')],
             'nombre'    => ['sometimes', 'string', 'max:100'],
-            'direccion' => ['nullable', 'string', 'max:255'],
+            'direccion' => ['nullable', 'string', 'max:200'],
             'telefono'  => ['nullable', 'string', 'max:20'],
             'activo'    => ['boolean'],
         ]);

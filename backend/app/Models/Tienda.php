@@ -8,6 +8,11 @@ class Tienda extends Model
 {
     protected $table = 'tiendas';
 
+    // La tabla real no tiene columna `id`: la clave primaria es `codigo` (string).
+    protected $primaryKey = 'codigo';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
+
     public $timestamps = false;
 
     protected $fillable = [

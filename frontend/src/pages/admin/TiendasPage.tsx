@@ -20,7 +20,6 @@ import {
 } from '../../lib/validacionesTienda'
 
 interface Tienda {
-  id: number
   codigo: string
   nombre: string
   direccion: string | null
@@ -32,9 +31,20 @@ interface ApiError {
   response?: {
     data?: {
       message?: string
+      error?: string
       errors?: Record<string, string[]>
     }
   }
+}
+
+/** Saca el mensaje de error del backend sin importar bajo qué clave venga (message, error, errors). */
+function mensajeErrorTienda(e: ApiError, camposBackend: Record<string, string[]>): string {
+  const data = e?.response?.data
+  if (data?.message) return data.message
+  if (data?.error) return data.error
+  const primerCampo = Object.values(camposBackend).flat()[0]
+  if (primerCampo) return primerCampo
+  return 'No se pudo guardar la tienda.'
 }
 
 interface TiendasResponse {
@@ -64,7 +74,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   const save = useMutation({
     mutationFn: (payload: typeof form) =>
       tienda
-        ? api.put(`/v1/tiendas/${tienda.id}`, payload).then(r => r.data)
+        ? api.put(`/v1/tiendas/${tienda.codigo}`, payload).then(r => r.data)
         : api.post('/v1/tiendas', payload).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tiendas'] })
@@ -80,8 +90,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
           telefono:  camposBackend.telefono?.[0],
         })
       }
-      const msg = e?.response?.data?.message ?? Object.values(camposBackend).flat().join(' ') ?? 'No se pudo guardar la tienda.'
-      setErr(String(msg))
+      setErr(mensajeErrorTienda(e, camposBackend))
     },
   })
 
@@ -202,7 +211,7 @@ export function TiendasPage() {
   })
 
   const eliminar = useMutation({
-    mutationFn: (id: number) => api.delete(`/v1/tiendas/${id}`),
+    mutationFn: (codigo: string) => api.delete(`/v1/tiendas/${codigo}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tiendas'] }),
   })
 
@@ -251,7 +260,7 @@ export function TiendasPage() {
               {isLoading && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
               {!isLoading && tiendas.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
-                <tr key={t.id} className="transition-colors hover:bg-kyro-elevated">
+                <tr key={t.codigo} className="transition-colors hover:bg-kyro-elevated">
                   <td className="px-4 py-3 font-mono font-bold text-kyro-text">{t.codigo}</td>
                   <td className="px-4 py-3 font-medium text-kyro-text">{t.nombre}</td>
                   <td className="px-4 py-3 text-xs text-kyro-muted">{t.direccion ?? '—'}</td>
@@ -262,7 +271,7 @@ export function TiendasPage() {
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button onClick={() => { setEditando(t); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar tienda"><Pencil size={13} /></button>
-                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
+                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.codigo) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
