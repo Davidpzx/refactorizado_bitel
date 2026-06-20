@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
@@ -8,6 +9,15 @@ import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { AlertTriangle, MapPin, Pencil, Phone, Plus, Search, Store, Trash2 } from 'lucide-react'
+import {
+  sanitizarCodigo,
+  sanitizarNombre,
+  sanitizarDireccion,
+  sanitizarTelefono,
+  validarTienda,
+  LIMITES_TIENDA,
+  type ErroresTienda,
+} from '../../lib/validacionesTienda'
 
 interface Tienda {
   id: number
@@ -43,7 +53,8 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
     telefono:  tienda?.telefono  ?? '',
     activo:    tienda?.activo    ?? true,
   })
-  const [err, setErr] = useState('')
+  const [err, setErr]         = useState('')
+  const [errores, setErrores] = useState<ErroresTienda>({})
 
   const save = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -55,13 +66,34 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
       onSuccess()
     },
     onError: (e: ApiError) => {
-      const msg = e?.response?.data?.message ?? Object.values(e?.response?.data?.errors ?? {}).flat().join(' ') ?? 'Error'
+      const camposBackend = e?.response?.data?.errors ?? {}
+      if (Object.keys(camposBackend).length > 0) {
+        setErrores({
+          codigo:    camposBackend.codigo?.[0],
+          nombre:    camposBackend.nombre?.[0],
+          direccion: camposBackend.direccion?.[0],
+          telefono:  camposBackend.telefono?.[0],
+        })
+      }
+      const msg = e?.response?.data?.message ?? Object.values(camposBackend).flat().join(' ') ?? 'No se pudo guardar la tienda.'
       setErr(String(msg))
     },
   })
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const erroresValidacion = validarTienda(form)
+    setErrores(erroresValidacion)
+    if (Object.keys(erroresValidacion).length > 0) {
+      setErr('Revisa los campos marcados antes de continuar.')
+      return
+    }
+    setErr('')
+    save.mutate(form)
+  }
+
   return (
-    <form className="space-y-4" onSubmit={e => { e.preventDefault(); save.mutate(form) }}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {err && <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs text-kyro-danger">{err}</p>}
       <section className="kyro-card p-4">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
@@ -74,11 +106,27 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="tienda-codigo" className="mb-1 block text-xs text-kyro-muted">Código (ID único)</label>
-            <Input id="tienda-codigo" value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value.toUpperCase() }))} required placeholder="PUNDA95" className="font-mono uppercase" />
+            <Input
+              id="tienda-codigo"
+              value={form.codigo}
+              onChange={e => { setForm(f => ({ ...f, codigo: sanitizarCodigo(e.target.value) })); setErrores(er => ({ ...er, codigo: undefined })) }}
+              required
+              placeholder="PUNDA95"
+              maxLength={LIMITES_TIENDA.codigo}
+              className="font-mono uppercase"
+            />
+            {errores.codigo && <p className="mt-1 text-[11px] text-kyro-danger">{errores.codigo}</p>}
           </div>
           <div>
             <label htmlFor="tienda-nombre" className="mb-1 block text-xs text-kyro-muted">Nombre</label>
-            <Input id="tienda-nombre" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+            <Input
+              id="tienda-nombre"
+              value={form.nombre}
+              onChange={e => { setForm(f => ({ ...f, nombre: sanitizarNombre(e.target.value) })); setErrores(er => ({ ...er, nombre: undefined })) }}
+              required
+              maxLength={LIMITES_TIENDA.nombre}
+            />
+            {errores.nombre && <p className="mt-1 text-[11px] text-kyro-danger">{errores.nombre}</p>}
           </div>
         </div>
       </section>
@@ -96,15 +144,30 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
             <label htmlFor="tienda-direccion" className="mb-1 block text-xs text-kyro-muted">Dirección</label>
             <div className="relative">
               <MapPin size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted" />
-              <Input id="tienda-direccion" className="pl-9" value={form.direccion ?? ''} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} />
+              <Input
+                id="tienda-direccion"
+                className="pl-9"
+                value={form.direccion ?? ''}
+                onChange={e => { setForm(f => ({ ...f, direccion: sanitizarDireccion(e.target.value) })); setErrores(er => ({ ...er, direccion: undefined })) }}
+                maxLength={LIMITES_TIENDA.direccion}
+              />
             </div>
+            {errores.direccion && <p className="mt-1 text-[11px] text-kyro-danger">{errores.direccion}</p>}
           </div>
           <div>
             <label htmlFor="tienda-telefono" className="mb-1 block text-xs text-kyro-muted">Teléfono</label>
             <div className="relative">
               <Phone size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted" />
-              <Input id="tienda-telefono" className="pl-9" inputMode="tel" value={form.telefono ?? ''} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+              <Input
+                id="tienda-telefono"
+                className="pl-9"
+                inputMode="tel"
+                value={form.telefono ?? ''}
+                onChange={e => { setForm(f => ({ ...f, telefono: sanitizarTelefono(e.target.value) })); setErrores(er => ({ ...er, telefono: undefined })) }}
+                maxLength={LIMITES_TIENDA.telefono}
+              />
             </div>
+            {errores.telefono && <p className="mt-1 text-[11px] text-kyro-danger">{errores.telefono}</p>}
           </div>
           <label className="flex cursor-pointer items-center gap-2 self-end rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
