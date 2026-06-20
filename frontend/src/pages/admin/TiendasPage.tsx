@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
@@ -55,6 +55,11 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   })
   const [err, setErr]         = useState('')
   const [errores, setErrores] = useState<ErroresTienda>({})
+  const errorRef              = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    if (err) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [err])
 
   const save = useMutation({
     mutationFn: (payload: typeof form) =>
@@ -94,7 +99,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      {err && <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs text-kyro-danger">{err}</p>}
+      {err && <p ref={errorRef} className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs font-medium text-kyro-danger">{err}</p>}
       <section className="kyro-card p-4">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><Store size={15} /></span>
