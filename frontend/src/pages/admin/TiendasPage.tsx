@@ -63,6 +63,8 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
     direccion: tienda?.direccion ?? '',
     telefono:  tienda?.telefono  ?? '',
     activo:    tienda?.activo    ?? true,
+    latitud:   tienda?.latitud  != null ? String(tienda.latitud)  : '',
+    longitud:  tienda?.longitud != null ? String(tienda.longitud) : '',
   })
   const [err, setErr]         = useState('')
   const [errores, setErrores] = useState<ErroresTienda>({})
@@ -73,10 +75,16 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   }, [err])
 
   const save = useMutation({
-    mutationFn: (payload: typeof form) =>
-      tienda
-        ? api.put(`/v1/tiendas/${tienda.id}`, payload).then(r => r.data)
-        : api.post('/v1/tiendas', payload).then(r => r.data),
+    mutationFn: (payload: typeof form) => {
+      const cuerpo = {
+        ...payload,
+        latitud:  payload.latitud  ? Number(payload.latitud)  : null,
+        longitud: payload.longitud ? Number(payload.longitud) : null,
+      }
+      return tienda
+        ? api.put(`/v1/tiendas/${tienda.id}`, cuerpo).then(r => r.data)
+        : api.post('/v1/tiendas', cuerpo).then(r => r.data)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tiendas'] })
       onSuccess()
@@ -89,6 +97,8 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
           nombre:    camposBackend.nombre?.[0],
           direccion: camposBackend.direccion?.[0],
           telefono:  camposBackend.telefono?.[0],
+          latitud:   camposBackend.latitud?.[0],
+          longitud:  camposBackend.longitud?.[0],
         })
       }
       setErr(mensajeErrorTienda(e, camposBackend))
@@ -150,9 +160,10 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><MapPin size={15} /></span>
           <div>
-            <h3 className="text-sm font-semibold text-kyro-text">Estado</h3>
+            <h3 className="text-sm font-semibold text-kyro-text">Ubicación y estado</h3>
             <p className="text-xs text-kyro-muted">
               Dirección y teléfono próximamente — aún no están disponibles en la base de datos.
+              Latitud/longitud son opcionales: también se pueden capturar luego con el botón GPS del listado.
             </p>
           </div>
         </div>
@@ -162,8 +173,32 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
           esas columnas). Backend ya las ignora en TiendaController; esto evita la confusión
           de que el usuario llene un campo que no se va a guardar. Reactivar junto con el backend.
         */}
-        <div className="grid grid-cols-1 gap-3">
-          <label className="flex cursor-pointer items-center gap-2 self-end rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="tienda-latitud" className="mb-1 block text-xs text-kyro-muted">Latitud</label>
+            <Input
+              id="tienda-latitud"
+              type="number"
+              step="any"
+              value={form.latitud}
+              onChange={e => { setForm(f => ({ ...f, latitud: e.target.value })); setErrores(er => ({ ...er, latitud: undefined })) }}
+              placeholder="-12.0464"
+            />
+            {errores.latitud && <p className="mt-1 text-[11px] text-kyro-danger">{errores.latitud}</p>}
+          </div>
+          <div>
+            <label htmlFor="tienda-longitud" className="mb-1 block text-xs text-kyro-muted">Longitud</label>
+            <Input
+              id="tienda-longitud"
+              type="number"
+              step="any"
+              value={form.longitud}
+              onChange={e => { setForm(f => ({ ...f, longitud: e.target.value })); setErrores(er => ({ ...er, longitud: undefined })) }}
+              placeholder="-77.0428"
+            />
+            {errores.longitud && <p className="mt-1 text-[11px] text-kyro-danger">{errores.longitud}</p>}
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
             Tienda activa
           </label>
@@ -276,14 +311,25 @@ export function TiendasPage() {
                     <Badge variant={t.activo ? 'success' : 'warning'}>{t.activo ? 'Activa' : 'Inactiva'}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => capturarUbicacion(t)}
-                      disabled={capturando === t.id}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 disabled:opacity-40 disabled:pointer-events-none dark:hover:text-emerald-400"
-                      title={t.latitud != null && t.longitud != null ? `Ubicación: ${t.latitud}, ${t.longitud} — actualizar` : 'Añadir ubicación'}
-                    >
-                      <LocateFixed size={13} className={capturando === t.id ? 'animate-pulse' : ''} />
-                    </button>
+                    {(() => {
+                      const tieneGps = t.latitud != null && t.longitud != null
+                      return (
+                        <button
+                          onClick={() => capturarUbicacion(t)}
+                          disabled={capturando === t.id}
+                          className={
+                            'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-40 disabled:pointer-events-none ' +
+                            (tieneGps
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
+                              : 'border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400')
+                          }
+                          title={tieneGps ? `Ubicación: ${t.latitud}, ${t.longitud} — actualizar` : 'Añadir ubicación'}
+                        >
+                          <LocateFixed size={13} className={capturando === t.id ? 'animate-pulse' : ''} />
+                          {tieneGps ? 'GPS activo' : 'Sin GPS'}
+                        </button>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">

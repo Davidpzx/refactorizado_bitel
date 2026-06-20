@@ -68,6 +68,8 @@ export interface ErroresTienda {
   nombre?: string
   direccion?: string
   telefono?: string
+  latitud?: string
+  longitud?: string
 }
 
 export interface FormularioTienda {
@@ -75,6 +77,17 @@ export interface FormularioTienda {
   nombre: string
   direccion: string
   telefono: string
+  latitud: string
+  longitud: string
+}
+
+/** Valida una coordenada opcional dada como texto. Vacío es válido (no se manda). */
+function validarCoordenada(valor: string, min: number, max: number): string | undefined {
+  if (!valor.trim()) return undefined
+  const num = Number(valor)
+  if (Number.isNaN(num)) return 'Debe ser un número.'
+  if (num < min || num > max) return `Debe estar entre ${min} y ${max}.`
+  return undefined
 }
 
 /** Valida el formulario completo. Devuelve un objeto vacío si todo está bien. */
@@ -112,6 +125,12 @@ export function validarTienda(form: FormularioTienda): ErroresTienda {
       errores.telefono = `Máximo ${LIMITES_TIENDA.telefono} caracteres.`
     }
   }
+
+  const errorLatitud = validarCoordenada(form.latitud, -90, 90)
+  if (errorLatitud) errores.latitud = errorLatitud
+
+  const errorLongitud = validarCoordenada(form.longitud, -180, 180)
+  if (errorLongitud) errores.longitud = errorLongitud
 
   return errores
 }
