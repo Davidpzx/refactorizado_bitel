@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
 import { BriefcaseBusiness, Clock3, Contact, KeyRound, Loader2, Search, ShieldCheck } from 'lucide-react'
 import { useCrearAgente, useActualizarAgente } from '../../hooks/useAgentes'
 import { Button } from '../../components/ui/button'
@@ -11,25 +12,64 @@ import { Select } from '../../components/ui/select'
 import { api } from '../../services/api'
 import type { Agente } from '../../types/agente'
 
+interface TiendaOption {
+  codigo: string
+  nombre: string
+}
+
+function fechaISO(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+/** Hoy: tope máximo de fecha de ingreso (no se permite ingresar a futuro). */
+function fechaMaxIngreso(): string {
+  return fechaISO(new Date())
+}
+
+/** Hace 5 años: tope mínimo de fecha de ingreso. */
+function fechaMinIngreso(): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 5)
+  return fechaISO(d)
+}
+
 // Un único schema: pin siempre opcional, validado manualmente en create
 const schema = z.object({
   dni:           z.string().regex(/^\d{8}$/, 'DNI debe tener exactamente 8 dígitos'),
-  nombres:       z.string().min(2, 'Nombres requeridos').max(200),
-  tienda_base:   z.string().min(1, 'Tienda requerida').max(10),
+  nombres:       z.string().min(2, 'Nombres requeridos').max(200, 'Máximo 200 caracteres')
+                   .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/, 'El nombre no debe contener números ni símbolos'),
+  tienda_base:   z.string().min(1, 'Selecciona una tienda').max(10),
   sueldo_base:   z.number().min(0, 'El sueldo no puede ser negativo'),
   estado:        z.enum(['ACTIVO', 'INACTIVO', 'BAJA']),
-  fecha_ingreso: z.string().min(1, 'Fecha de ingreso requerida'),
+  fecha_ingreso: z.string().min(1, 'Fecha de ingreso requerida')
+                   .refine(val => val >= fechaMinIngreso() && val <= fechaMaxIngreso(), {
+                     message: 'La fecha debe estar entre hace 5 años y hoy',
+                   }),
   pin_seguridad: z.string().min(4, 'PIN mínimo 4 caracteres').max(8, 'PIN máximo 8 caracteres').optional().or(z.literal('')),
   hora_ingreso:  z.string().optional().or(z.literal('')),
   hora_salida:   z.string().optional().or(z.literal('')),
   dia_descanso:  z.string().optional().or(z.literal('')),
-  correo:        z.string().email('Correo inválido').optional().or(z.literal('')),
+  correo:        z.string().email('Correo inválido').max(30, 'Máximo 30 caracteres').optional().or(z.literal('')),
   telefono:      z.string().max(15).optional().or(z.literal('')),
-  direccion:     z.string().max(300).optional().or(z.literal('')),
+  direccion:     z.string().max(100, 'Máximo 100 caracteres').optional().or(z.literal('')),
   es_gerencia:   z.boolean(),
 })
 
 type FormData = z.infer<typeof schema>
+type CampoFormulario = keyof FormData
+
+/** Mapea los errores 422 de Laravel a cada campo del formulario; devuelve el mensaje general. */
+function aplicarErroresBackend(
+  e: unknown,
+  setError: (campo: CampoFormulario, error: { message: string }) => void,
+): string {
+  const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data
+  const errores = data?.errors ?? {}
+  Object.entries(errores).forEach(([campo, mensajes]) => {
+    setError(campo as CampoFormulario, { message: mensajes[0] })
+  })
+  return data?.message ?? Object.values(errores).flat()[0] ?? 'No se pudo guardar. Verifica los datos.'
+}
 
 interface Props {
   agente?: Agente
@@ -72,8 +112,16 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
   const esEdicion  = Boolean(agente?.id)
   const crear      = useCrearAgente()
   const actualizar = useActualizarAgente()
-  const [dniLoading, setDniLoading] = useState(false)
-  const [dniError,   setDniError]   = useState<string | null>(null)
+  const [dniLoading, setDniLoading]       = useState(false)
+  const [dniError,   setDniError]         = useState<string | null>(null)
+  const [errorGeneral, setErrorGeneral]   = useState('')
+  const errorRef = useRef<HTMLParagraphElement>(null)
+
+  const { data: tiendas = [] } = useQuery({
+    queryKey: ['tiendas-select-agente'],
+    queryFn: () => api.get<{ data: TiendaOption[] }>('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data.data),
+    staleTime: 60_000,
+  })
 
   const { register, handleSubmit, setError, setValue, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -98,6 +146,10 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
   })
 
   const dniValue = useWatch({ control, name: 'dni' }) ?? ''
+
+  useEffect(() => {
+    if (errorGeneral) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [errorGeneral])
 
   const buscarDni = async () => {
     if (!/^\d{8}$/.test(dniValue)) {
@@ -124,6 +176,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
   }
 
   const onSubmit = (data: FormData) => {
+    setErrorGeneral('')
     if (!esEdicion && !data.pin_seguridad) {
       setError('pin_seguridad', { message: 'El PIN es obligatorio para nuevos agentes' })
       return
@@ -136,17 +189,27 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
       const { pin_seguridad: omittedPin, ...rest } = payload
       void omittedPin
       const update = pin ? { ...rest, pin_seguridad: pin } : rest
-      actualizar.mutate({ id: agente.id, data: update }, { onSuccess })
+      actualizar.mutate({ id: agente.id, data: update }, {
+        onSuccess,
+        onError: (e) => setErrorGeneral(aplicarErroresBackend(e, setError)),
+      })
     } else {
-      crear.mutate(payload as FormData & { pin_seguridad: string }, { onSuccess })
+      crear.mutate(payload as FormData & { pin_seguridad: string }, {
+        onSuccess,
+        onError: (e) => setErrorGeneral(aplicarErroresBackend(e, setError)),
+      })
     }
   }
 
   const isPending = crear.isPending || actualizar.isPending
-  const mutError  = (crear.error || actualizar.error) as { response?: { data?: { message?: string } } } | null
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {errorGeneral && (
+        <p ref={errorRef} className="rounded-kyro border border-kyro-danger bg-kyro-danger/10 px-3 py-2 text-sm font-medium text-kyro-danger">
+          {errorGeneral}
+        </p>
+      )}
       <FormSection
         title="Identificación"
         description="Información principal del agente."
@@ -173,7 +236,13 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           )}
           <div>
             <Label htmlFor="nombres">Nombres completos *</Label>
-            <Input id="nombres" {...register('nombres')} placeholder="Juan Pérez García" className="mt-1" />
+            <Input
+              id="nombres"
+              {...register('nombres')}
+              placeholder="Juan Pérez García"
+              onKeyDown={e => { if (/\d/.test(e.key)) e.preventDefault() }}
+              className="mt-1"
+            />
             <FieldError>{errors.nombres?.message}</FieldError>
           </div>
         </div>
@@ -187,7 +256,12 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="tienda_base">Tienda base *</Label>
-            <Input id="tienda_base" {...register('tienda_base')} placeholder="PUNDA11" className="mt-1 uppercase" />
+            <Select id="tienda_base" {...register('tienda_base')} className="mt-1">
+              <option value="">— Selecciona una tienda —</option>
+              {tiendas.map(t => (
+                <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>
+              ))}
+            </Select>
             <FieldError>{errors.tienda_base?.message}</FieldError>
           </div>
           <div>
@@ -205,7 +279,14 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           </div>
           <div>
             <Label htmlFor="fecha_ingreso">Fecha de ingreso *</Label>
-            <Input id="fecha_ingreso" type="date" {...register('fecha_ingreso')} className="mt-1" />
+            <Input
+              id="fecha_ingreso"
+              type="date"
+              min={fechaMinIngreso()}
+              max={fechaMaxIngreso()}
+              {...register('fecha_ingreso')}
+              className="mt-1"
+            />
             <FieldError>{errors.fecha_ingreso?.message}</FieldError>
           </div>
         </div>
@@ -249,7 +330,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="correo">Correo</Label>
-            <Input id="correo" type="email" {...register('correo')} placeholder="agente@empresa.pe" className="mt-1" />
+            <Input id="correo" type="email" {...register('correo')} placeholder="agente@empresa.pe" maxLength={30} className="mt-1" />
             <FieldError>{errors.correo?.message}</FieldError>
           </div>
           <div>
@@ -258,7 +339,8 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="direccion">Dirección</Label>
-            <Input id="direccion" {...register('direccion')} placeholder="Av. Ejemplo 123" className="mt-1" />
+            <Input id="direccion" {...register('direccion')} placeholder="Av. Ejemplo 123" maxLength={100} className="mt-1" />
+            <FieldError>{errors.direccion?.message}</FieldError>
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="pin_seguridad">
@@ -276,12 +358,6 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           </label>
         </div>
       </FormSection>
-
-      {mutError && (
-        <p className="rounded-kyro border border-kyro-danger bg-kyro-danger/10 px-3 py-2 text-sm text-kyro-danger">
-          {mutError.response?.data?.message ?? 'Error al guardar. Verifica los datos.'}
-        </p>
-      )}
 
       <div className="flex flex-col-reverse gap-3 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
