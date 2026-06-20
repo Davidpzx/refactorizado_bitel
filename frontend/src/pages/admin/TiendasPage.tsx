@@ -8,18 +8,17 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { AlertTriangle, MapPin, Pencil, Phone, Plus, Search, Store, Trash2 } from 'lucide-react'
+import { AlertTriangle, MapPin, Pencil, Plus, Search, Store, Trash2 } from 'lucide-react'
 import {
   sanitizarCodigo,
   sanitizarNombre,
-  sanitizarDireccion,
-  sanitizarTelefono,
   validarTienda,
   LIMITES_TIENDA,
   type ErroresTienda,
 } from '../../lib/validacionesTienda'
 
 interface Tienda {
+  id: number
   codigo: string
   nombre: string
   direccion: string | null
@@ -74,7 +73,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   const save = useMutation({
     mutationFn: (payload: typeof form) =>
       tienda
-        ? api.put(`/v1/tiendas/${tienda.codigo}`, payload).then(r => r.data)
+        ? api.put(`/v1/tiendas/${tienda.id}`, payload).then(r => r.data)
         : api.post('/v1/tiendas', payload).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tiendas'] })
@@ -149,40 +148,19 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><MapPin size={15} /></span>
           <div>
-            <h3 className="text-sm font-semibold text-kyro-text">Ubicación y contacto</h3>
-            <p className="text-xs text-kyro-muted">Datos operativos de la tienda.</p>
+            <h3 className="text-sm font-semibold text-kyro-text">Estado</h3>
+            <p className="text-xs text-kyro-muted">
+              Dirección y teléfono próximamente — aún no están disponibles en la base de datos.
+            </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label htmlFor="tienda-direccion" className="mb-1 block text-xs text-kyro-muted">Dirección</label>
-            <div className="relative">
-              <MapPin size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted" />
-              <Input
-                id="tienda-direccion"
-                className="pl-9"
-                value={form.direccion ?? ''}
-                onChange={e => { setForm(f => ({ ...f, direccion: sanitizarDireccion(e.target.value) })); setErrores(er => ({ ...er, direccion: undefined })) }}
-                maxLength={LIMITES_TIENDA.direccion}
-              />
-            </div>
-            {errores.direccion && <p className="mt-1 text-[11px] text-kyro-danger">{errores.direccion}</p>}
-          </div>
-          <div>
-            <label htmlFor="tienda-telefono" className="mb-1 block text-xs text-kyro-muted">Teléfono</label>
-            <div className="relative">
-              <Phone size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted" />
-              <Input
-                id="tienda-telefono"
-                className="pl-9"
-                inputMode="tel"
-                value={form.telefono ?? ''}
-                onChange={e => { setForm(f => ({ ...f, telefono: sanitizarTelefono(e.target.value) })); setErrores(er => ({ ...er, telefono: undefined })) }}
-                maxLength={LIMITES_TIENDA.telefono}
-              />
-            </div>
-            {errores.telefono && <p className="mt-1 text-[11px] text-kyro-danger">{errores.telefono}</p>}
-          </div>
+        {/*
+          TEMPORAL: dirección y teléfono ocultos hasta correr la migración
+          2026_06_20_000001_add_direccion_telefono_to_tiendas (la tabla real todavía no tiene
+          esas columnas). Backend ya las ignora en TiendaController; esto evita la confusión
+          de que el usuario llene un campo que no se va a guardar. Reactivar junto con el backend.
+        */}
+        <div className="grid grid-cols-1 gap-3">
           <label className="flex cursor-pointer items-center gap-2 self-end rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
             Tienda activa
@@ -211,7 +189,7 @@ export function TiendasPage() {
   })
 
   const eliminar = useMutation({
-    mutationFn: (codigo: string) => api.delete(`/v1/tiendas/${codigo}`),
+    mutationFn: (id: number) => api.delete(`/v1/tiendas/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tiendas'] }),
   })
 
@@ -260,7 +238,7 @@ export function TiendasPage() {
               {isLoading && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
               {!isLoading && tiendas.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
-                <tr key={t.codigo} className="transition-colors hover:bg-kyro-elevated">
+                <tr key={t.id} className="transition-colors hover:bg-kyro-elevated">
                   <td className="px-4 py-3 font-mono font-bold text-kyro-text">{t.codigo}</td>
                   <td className="px-4 py-3 font-medium text-kyro-text">{t.nombre}</td>
                   <td className="px-4 py-3 text-xs text-kyro-muted">{t.direccion ?? '—'}</td>
@@ -271,7 +249,7 @@ export function TiendasPage() {
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button onClick={() => { setEditando(t); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar tienda"><Pencil size={13} /></button>
-                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.codigo) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
+                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>

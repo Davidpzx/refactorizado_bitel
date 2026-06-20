@@ -37,11 +37,14 @@ class TiendaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // TEMPORAL: 'direccion' y 'telefono' no existen aún como columnas en la tabla real.
+        // Se omiten de la validación (y por lo tanto del insert) hasta correr la migración
+        // 2026_06_20_000001_add_direccion_telefono_to_tiendas. Reactivar ahí abajo cuando exista.
         $data = $request->validate([
             'codigo'    => ['required', 'string', 'max:20', 'unique:tiendas,codigo'],
             'nombre'    => ['required', 'string', 'max:100'],
-            'direccion' => ['nullable', 'string', 'max:200'],
-            'telefono'  => ['nullable', 'string', 'max:20'],
+            // 'direccion' => ['nullable', 'string', 'max:200'],
+            // 'telefono'  => ['nullable', 'string', 'max:20'],
             'activo'    => ['boolean'],
         ]);
 
@@ -54,11 +57,12 @@ class TiendaController extends Controller
 
     public function update(Request $request, Tienda $tienda): JsonResponse
     {
+        // TEMPORAL: ver nota en store() sobre 'direccion'/'telefono'.
         $data = $request->validate([
-            'codigo'    => ['sometimes', 'string', 'max:20', Rule::unique('tiendas', 'codigo')->ignore($tienda->codigo, 'codigo')],
+            'codigo'    => ['sometimes', 'string', 'max:20', Rule::unique('tiendas', 'codigo')->ignore($tienda->id)],
             'nombre'    => ['sometimes', 'string', 'max:100'],
-            'direccion' => ['nullable', 'string', 'max:200'],
-            'telefono'  => ['nullable', 'string', 'max:20'],
+            // 'direccion' => ['nullable', 'string', 'max:200'],
+            // 'telefono'  => ['nullable', 'string', 'max:20'],
             'activo'    => ['boolean'],
         ]);
 

@@ -8,11 +8,8 @@ class Tienda extends Model
 {
     protected $table = 'tiendas';
 
-    // La tabla real no tiene columna `id`: la clave primaria es `codigo` (string).
-    protected $primaryKey = 'codigo';
-    public $incrementing  = false;
-    protected $keyType    = 'string';
-
+    // Confirmado contra la BD real (information_schema): `id` SÍ es la PK autoincremental.
+    // `codigo` es solo un campo único, no la primary key.
     public $timestamps = false;
 
     protected $fillable = [
