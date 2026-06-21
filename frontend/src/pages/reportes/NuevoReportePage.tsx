@@ -5,7 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -780,18 +780,18 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div className="flex items-center gap-2">
             {esTienda && <ChipStockBadge />}
             {esTienda && borradorDisponible && (
-              <Button variant="glassWarning" type="button"
+              <Button variant="glassWarning" type="button" className="gap-2"
                 onClick={() => restaurarBorrador(borradorDisponible)}>
-                Cargar Borrador
+                <FolderDown size={15} /> Cargar Borrador
               </Button>
             )}
             {esTienda && (
-              <Button variant="gold" type="button" onClick={() => guardarBorrador(false)}>
-                Guardar Borrador
+              <Button variant="gold" type="button" className="gap-2" onClick={() => guardarBorrador(false)}>
+                <Save size={15} /> Guardar Borrador
               </Button>
             )}
             {borradorMsg && <span className="text-xs text-kyro-muted">{borradorMsg}</span>}
-            <Button variant="outline" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')}>Cancelar</Button>
+            <Button variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')}><X size={15} /> Cancelar</Button>
           </div>
         }
       />
@@ -866,7 +866,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div>
 
             <SectionPanel
-              title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />}
+              title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />} number={1}
               count={postpagoRows.length} addLabel="Agregar Postpago"
               subtotal={totalPostpago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' }))}
@@ -885,7 +885,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas Prepago / Chips" accent={ACCENT.prepago} icon={<Cpu size={15} />}
+              title="Ventas Prepago / Chips" accent={ACCENT.prepago} icon={<Cpu size={15} />} number={2}
               count={prepagoRows.length} addLabel="Agregar Prepago"
               subtotal={totalPrepago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'PREPAGO', tipo_alta: 'LN' }))}
@@ -904,7 +904,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} />}
+              title="Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} />} number={3}
               count={equipoRows.length} addLabel="Vender de Stock"
               subtotal={totalEquipos}
               onAdd={() => append(ventaNueva({ tipo_venta: 'EQUIPO' }))}
@@ -929,7 +929,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Otros Ingresos (Flujo)" accent={ACCENT.otros} icon={<Coins size={15} />}
+              title="Otros Ingresos (Flujo)" accent={ACCENT.otros} icon={<Coins size={15} />} number={4}
               count={otrosRows.length} addLabel="Agregar"
               subtotal={totalOtrosFlujo}
               onAdd={() => append(ventaNueva({ tipo_venta: 'OTROS_FLUJO' }))}
@@ -942,7 +942,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo} icon={<Users size={15} />}
+              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo} icon={<Users size={15} />} number={5}
               count={apoyoRows.length} addLabel="Agregar Venta de Apoyo"
               subtotal={totalApoyo}
               onAdd={() => append(ventaNueva({ tipo_venta: 'APOYO', tipo_alta: 'LN' }))}
@@ -1184,11 +1184,12 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
         <div className="flex gap-3 pb-8">
           <Button type="submit" variant="gold" disabled={guardar.isPending || stockInsuficiente}
-            className="flex-1 h-11 text-base font-semibold">
+            className="flex-1 h-11 gap-2 text-base font-semibold">
+            <UploadCloud size={18} />
             {stockInsuficiente ? 'STOCK INSUFICIENTE' : guardar.isPending ? 'Guardando reporte...' : esEdicion ? 'Aplicar Reprocesado Completo' : 'Guardar Reporte Completo'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')} disabled={guardar.isPending}>
-            Cancelar
+          <Button type="button" variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')} disabled={guardar.isPending}>
+            <X size={16} /> Cancelar
           </Button>
         </div>
 

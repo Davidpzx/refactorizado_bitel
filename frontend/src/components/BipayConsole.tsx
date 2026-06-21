@@ -4,6 +4,7 @@ import { bipayCajeroApi } from '../services/bipayCajero.api'
 import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { RefreshCw, Lock } from 'lucide-react'
 
 function fmt(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—'
@@ -130,8 +131,9 @@ export function BipayConsole() {
               <label className="text-[10px] uppercase tracking-wider text-zinc-500">Saldo Anypay</label>
               <Input type="number" step="0.01" min="0" value={anypay} onChange={(e) => setAnypay(e.target.value)} placeholder="0.00" />
             </div>
-            <Button type="button" disabled={enCooldown || tramo.isPending || (bipay === '' && anypay === '')}
+            <Button type="button" className="gap-2" disabled={enCooldown || tramo.isPending || (bipay === '' && anypay === '')}
               onClick={() => { setMsg(null); tramo.mutate() }}>
+              <RefreshCw size={15} />
               {enCooldown ? `Espera ${mmss(cooldown)}` : tramo.isPending ? 'Registrando…' : 'Registrar tramo'}
             </Button>
           </div>
@@ -148,8 +150,9 @@ export function BipayConsole() {
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500">Cierre Anypay</label>
                 <Input type="number" step="0.01" min="0" value={cierreAnypay} onChange={(e) => setCierreAnypay(e.target.value)} placeholder="0.00" />
               </div>
-              <Button type="button" variant="outline" disabled={cierre.isPending || (cierreBipay === '' && cierreAnypay === '')}
+              <Button type="button" variant="outline" className="gap-2" disabled={cierre.isPending || (cierreBipay === '' && cierreAnypay === '')}
                 onClick={() => { setMsg(null); cierre.mutate() }}>
+                <Lock size={15} />
                 {cierre.isPending ? 'Cerrando…' : 'Cerrar jornada'}
               </Button>
             </div>

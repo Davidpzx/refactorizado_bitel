@@ -3,22 +3,26 @@ import { GlassPanel } from './GlassPanel'
 import { AddRowButton } from './AddRowButton'
 
 export function SectionPanel({
-  title, accent, count = 0, addLabel, onAdd, children, subtotal, icon,
+  title, accent, count = 0, addLabel, onAdd, children, subtotal, icon, number,
 }: {
   title: string; accent: string; count?: number
   addLabel?: string; onAdd?: () => void; children: ReactNode; subtotal?: number
-  icon?: ReactNode
+  icon?: ReactNode; number?: number
 }) {
   return (
     <GlassPanel className="mb-4 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b"
-           style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+           style={{
+             borderColor: `color-mix(in srgb, ${accent} 30%, transparent)`,
+             background: `color-mix(in srgb, ${accent} 9%, transparent)`,
+           }}>
         <span className="text-sm font-bold flex items-center gap-2" style={{ color: accent }}>
           {icon}
+          {number !== undefined && <span className="tabular-nums">{number}.</span>}
           {title}
           {count > 0 && (
             <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5"
-                  style={{ background: `${accent}22`, color: accent }}>{count}</span>
+                  style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}>{count}</span>
           )}
         </span>
       </div>
