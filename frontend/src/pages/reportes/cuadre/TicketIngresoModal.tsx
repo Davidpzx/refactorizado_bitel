@@ -3,6 +3,7 @@ import { api } from '../../../services/api'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Button } from '../../../components/ui/button'
+import { AddRowButton } from '../../../components/ui/AddRowButton'
 import { GlassPanel } from '../../../components/ui/GlassPanel'
 
 interface ItemRow { descripcion: string; monto: number }
@@ -85,7 +86,7 @@ export function TicketIngresoModal({
               <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar item" onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))}>×</Button>
             </div>
           ))}
-          <Button type="button" variant="glassInfo" size="sm" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])}>+ Agregar ítem</Button>
+          <AddRowButton label="Agregar ítem" accent="var(--color-kyro-info)" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])} className="mt-1" />
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-kyro-border">

@@ -5,7 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -13,6 +13,7 @@ import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { GlassPanel } from '../../components/ui/GlassPanel'
 import { SectionPanel } from '../../components/ui/SectionPanel'
+import { AddRowButton } from '../../components/ui/AddRowButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { PageHeader } from '../../components/PageHeader'
 import { borradorApi } from '../../services/borrador.api'
@@ -872,7 +873,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div>
 
             <SectionPanel
-              title="Ventas Postpago" accent={ACCENT.postpago}
+              title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />}
               count={postpagoRows.length} addLabel="Agregar Postpago"
               subtotal={totalPostpago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' }))}
@@ -891,7 +892,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas Prepago / Chips" accent={ACCENT.prepago}
+              title="Ventas Prepago / Chips" accent={ACCENT.prepago} icon={<Cpu size={15} />}
               count={prepagoRows.length} addLabel="Agregar Prepago"
               subtotal={totalPrepago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'PREPAGO', tipo_alta: 'LN' }))}
@@ -910,7 +911,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Equipos y Accesorios" accent={ACCENT.equipos}
+              title="Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} />}
               count={equipoRows.length} addLabel="Vender de Stock"
               subtotal={totalEquipos}
               onAdd={() => append(ventaNueva({ tipo_venta: 'EQUIPO' }))}
@@ -929,18 +930,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                       errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} vendedores={vendedores} />
                   ))}
               {equipoRows.length > 0 && (
-                <Button type="button"
-                  variant="glassInfo"
-                  size="sm"
-                  onClick={() => append(ventaNueva({ tipo_venta: 'ACCESORIO' }))}
-                  className="mt-1">
-                  + Agregar Accesorio
-                </Button>
+                <AddRowButton label="Agregar Accesorio" accent="var(--color-kyro-info)"
+                  onClick={() => append(ventaNueva({ tipo_venta: 'ACCESORIO' }))} className="mt-1" />
               )}
             </SectionPanel>
 
             <SectionPanel
-              title="Otros Ingresos (Flujo)" accent={ACCENT.otros}
+              title="Otros Ingresos (Flujo)" accent={ACCENT.otros} icon={<Coins size={15} />}
               count={otrosRows.length} addLabel="Agregar"
               subtotal={totalOtrosFlujo}
               onAdd={() => append(ventaNueva({ tipo_venta: 'OTROS_FLUJO' }))}
@@ -953,7 +949,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo}
+              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo} icon={<Users size={15} />}
               count={apoyoRows.length} addLabel="Agregar Venta de Apoyo"
               subtotal={totalApoyo}
               onAdd={() => append(ventaNueva({ tipo_venta: 'APOYO', tipo_alta: 'LN' }))}
@@ -1060,11 +1056,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </GlassPanel>
 
             <GlassPanel className="kyro-card p-3">
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-2">
                 <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Salidas de Efectivo</p>
-                <Button type="button" variant="glassDanger" size="sm" onClick={agregarSalida}>
-                  + Agregar Salida
-                </Button>
               </div>
               {salidaItems.length === 0
                 ? <p className="text-[11px] text-kyro-muted italic text-center py-1">Sin salidas registradas</p>
@@ -1093,6 +1086,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                   </div>
                 )
               }
+              <AddRowButton label="Agregar Salida" accent="#ef4444" onClick={agregarSalida} className="mt-2" />
             </GlassPanel>
 
             {/* ── Cuadre Final ── */}

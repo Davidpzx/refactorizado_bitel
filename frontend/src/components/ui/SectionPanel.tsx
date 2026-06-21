@@ -1,37 +1,41 @@
 import type { ReactNode } from 'react'
 import { GlassPanel } from './GlassPanel'
+import { AddRowButton } from './AddRowButton'
 
 export function SectionPanel({
-  title, accent, count = 0, addLabel, onAdd, children, subtotal,
+  title, accent, count = 0, addLabel, onAdd, children, subtotal, icon,
 }: {
   title: string; accent: string; count?: number
   addLabel?: string; onAdd?: () => void; children: ReactNode; subtotal?: number
+  icon?: ReactNode
 }) {
   return (
     <GlassPanel className="mb-4 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b"
            style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <span className="text-sm font-bold flex items-center gap-2" style={{ color: accent }}>
+          {icon}
           {title}
           {count > 0 && (
             <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5"
                   style={{ background: `${accent}22`, color: accent }}>{count}</span>
           )}
         </span>
+      </div>
+
+      <div className="px-3 py-2">
+        {children}
         {onAdd && (
-          <button type="button" onClick={onAdd}
-            className="text-xs font-semibold flex items-center gap-1 px-2 py-1 rounded-md transition-colors"
-            style={{ color: accent, background: `${accent}14` }}>
-            <span className="text-base leading-none">+</span> {addLabel}
-          </button>
+          <AddRowButton label={addLabel ?? 'Agregar'} accent={accent} onClick={onAdd} className="mt-2" />
+        )}
+        {subtotal !== undefined && (
+          <div className="mt-2 text-right text-[11px] text-kyro-muted">
+            Cantidad: <b style={{ color: accent }}>{count}</b>
+            {'  ·  '}
+            Subtotal: <b style={{ color: accent }}>S/ {subtotal.toFixed(2)}</b>
+          </div>
         )}
       </div>
-      <div className="px-3 py-2">{children}</div>
-      {subtotal !== undefined && count > 0 && (
-        <div className="text-right text-xs font-semibold px-3 pb-2" style={{ color: accent }}>
-          Subtotal: S/ {subtotal.toFixed(2)}
-        </div>
-      )}
     </GlassPanel>
   )
 }
