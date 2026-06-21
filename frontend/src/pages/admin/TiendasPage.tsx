@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
@@ -206,7 +207,7 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
       </section>
       <div className="flex flex-col-reverse gap-2 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar tienda'}</Button>
+        <Button type="submit" variant="gold" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar tienda'}</Button>
       </div>
     </form>
   )
@@ -272,7 +273,7 @@ export function TiendasPage() {
       <PageHeader
         title="Tiendas"
         description="Catálogo de sucursales registradas en el sistema."
-        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
+        actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
       />
 
       <ListToolbar description="Busca sucursales por código o nombre.">
@@ -284,7 +285,7 @@ export function TiendasPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
+        <Button variant="gold" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1) }}>Limpiar</Button>}
       </ListToolbar>
 
@@ -332,10 +333,10 @@ export function TiendasPage() {
                     })()}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditando(t); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar tienda"><Pencil size={13} /></button>
-                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar tienda"><Trash2 size={13} /></button>
-                    </div>
+                    <TableActions>
+                      <ActionIconButton tone="edit" label="Editar tienda" icon={<Pencil size={15} />} onClick={() => { setEditando(t); setDialogOpen(true) }} />
+                      <ActionIconButton tone="delete" label="Eliminar tienda" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} />
+                    </TableActions>
                   </td>
                 </tr>
               ))}

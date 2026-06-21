@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useAgentes, useEliminarAgente } from '../../hooks/useAgentes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
@@ -24,6 +25,7 @@ const estadoVariant: Record<Agente['estado'], BadgeVariant> = {
 }
 
 function getColumns(
+  onVer: (a: Agente) => void,
   onEditar: (a: Agente) => void,
   onEliminar: (a: Agente) => void,
   eliminando: boolean,
@@ -63,17 +65,11 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <Link to={`/agentes/${row.original.id}`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver perfil">
-            <Eye size={13} />
-          </Link>
-          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar agente">
-            <Pencil size={13} />
-          </button>
-          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar agente">
-            <Trash2 size={13} />
-          </button>
-        </div>
+        <TableActions>
+          <ActionIconButton tone="view" label="Ver perfil" icon={<Eye size={15} />} onClick={() => onVer(row.original)} />
+          <ActionIconButton tone="edit" label="Editar agente" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
+          <ActionIconButton tone="delete" label="Eliminar agente" icon={<Trash2 size={15} />} onClick={() => onEliminar(row.original)} disabled={eliminando} />
+        </TableActions>
       ),
     },
   ]
@@ -91,6 +87,7 @@ async function descargarFicha() {
 
 export function AgentesPage() {
   const { usuario }                 = useAuth()
+  const navigate                    = useNavigate()
   const isAdmin                     = usuario?.rol === 'admin'
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
@@ -126,7 +123,12 @@ export function AgentesPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
-  const columns = getColumns(abrirEditar, handleEliminar, eliminar.isPending)
+  const columns = getColumns(
+    (a) => navigate(`/agentes/${a.id}`),
+    abrirEditar,
+    handleEliminar,
+    eliminar.isPending,
+  )
 
   return (
     <div className="space-y-6">
@@ -136,11 +138,11 @@ export function AgentesPage() {
         actions={
           <div className="flex gap-2">
             {isAdmin && (
-              <Button variant="outline" onClick={descargarFicha}>
+              <Button variant="glassSuccess" onClick={descargarFicha}>
                 <Download size={15} /> Ficha técnica
               </Button>
             )}
-            <Button onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
+            <Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
           </div>
         }
       />
@@ -156,7 +158,7 @@ export function AgentesPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={buscar}><Search size={14} /> Buscar</Button>
+        <Button variant="gold" onClick={buscar}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </ListToolbar>
 

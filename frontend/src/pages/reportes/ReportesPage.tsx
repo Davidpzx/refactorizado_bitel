@@ -1,21 +1,30 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useReportes, useEliminarReporte } from '../../hooks/useReportes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
-import { PageTabs } from '../../components/ui/PageTabs'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Eye, Trash2 } from 'lucide-react'
 import type { Reporte } from '../../types/reporte'
 
 const TIENDAS = [
   'PUNDA50', 'PUNDA11', 'PUNSC01', 'PUNDA23',
   'TACDA13', 'TACDA17', 'TACDA21', 'TACDA25', 'TACDA27', 'TACDA30',
+]
+
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'borrador', label: 'Borrador', tone: 'indigo' as const },
+  { value: 'enviado', label: 'Enviado', tone: 'info' as const },
+  { value: 'editado', label: 'Editado', tone: 'warning' as const },
+  { value: 'aprobado', label: 'Aprobado', tone: 'success' as const },
 ]
 
 type EstadoVariant = 'default' | 'warning' | 'success' | 'outline'
@@ -27,6 +36,7 @@ const estadoVariant: Record<Reporte['estado'], EstadoVariant> = {
 }
 
 function getColumns(
+  onVer: (r: Reporte) => void,
   onEliminar: (r: Reporte) => void,
   eliminando: boolean,
 ): ColumnDef<Reporte>[] {
@@ -75,22 +85,19 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <Link to={`/reportes/${row.original.id}`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver detalle">
-            <Eye size={13} />
-          </Link>
+        <TableActions>
+          <ActionIconButton tone="view" label="Ver detalle" icon={<Eye size={15} />} onClick={() => onVer(row.original)} />
           {row.original.estado !== 'aprobado' && (
-            <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar reporte">
-              <Trash2 size={13} />
-            </button>
+            <ActionIconButton tone="delete" label="Eliminar reporte" icon={<Trash2 size={15} />} onClick={() => onEliminar(row.original)} disabled={eliminando} />
           )}
-        </div>
+        </TableActions>
       ),
     },
   ]
 }
 
 export function ReportesPage() {
+  const navigate                    = useNavigate()
   const [tienda, setTienda]         = useState('')
   const [estado, setEstado]         = useState('')
   const [fechaDesde, setFechaDesde] = useState('')
@@ -123,6 +130,7 @@ export function ReportesPage() {
 
   const hayFiltros = tienda || estado || fechaDesde || fechaHasta
   const columns = getColumns(
+    (r) => navigate(`/reportes/${r.id}`),
     handleEliminar,
     eliminar.isPending,
   )
@@ -135,17 +143,11 @@ export function ReportesPage() {
         actions={<Link to="/reportes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-kyro-gold px-4 text-sm font-semibold text-[#1a1a1a] shadow-sm transition-all hover:opacity-90">+ Nuevo reporte</Link>}
       />
 
-      <PageTabs
-        tabs={[
-          { id: '', label: 'Todos' },
-          { id: 'borrador', label: 'Borrador' },
-          { id: 'enviado', label: 'Enviado' },
-          { id: 'editado', label: 'Editado' },
-          { id: 'aprobado', label: 'Aprobado' },
-        ]}
-        active={estado}
+      <SegmentedToggle
+        ariaLabel="Filtrar reportes por estado"
+        options={ESTADOS}
+        value={estado}
         onChange={(id) => { setEstado(id); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-        className="mb-4"
       />
 
       <ListToolbar description="Acota el historial por tienda o rango de fechas.">

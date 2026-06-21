@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
@@ -245,7 +246,7 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
       </section>
       <div className="flex flex-col-reverse gap-2 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar usuario'}</Button>
+        <Button type="submit" variant="gold" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar usuario'}</Button>
       </div>
     </form>
   )
@@ -276,7 +277,7 @@ export function UsuariosPage() {
       <PageHeader
         title="Usuarios del Sistema"
         description="Gestión de accesos y roles."
-        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nuevo usuario</Button>}
+        actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nuevo usuario</Button>}
       />
 
       <ListToolbar description="Busca cuentas por nombre o correo electrónico.">
@@ -288,7 +289,7 @@ export function UsuariosPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
+        <Button variant="gold" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1) }}>Limpiar</Button>}
       </ListToolbar>
 
@@ -320,10 +321,10 @@ export function UsuariosPage() {
                   </td>
                   <td className="px-4 py-3 text-center text-kyro-body">{u.tiene_bcp ? '✓' : '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditando(u); setDialogOpen(true) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar usuario"><Pencil size={13} /></button>
-                      <button disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar usuario ${u.nombre}?`)) eliminar.mutate(u.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar usuario"><Trash2 size={13} /></button>
-                    </div>
+                    <TableActions>
+                      <ActionIconButton tone="edit" label="Editar usuario" icon={<Pencil size={15} />} onClick={() => { setEditando(u); setDialogOpen(true) }} />
+                      <ActionIconButton tone="delete" label="Eliminar usuario" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar usuario ${u.nombre}?`)) eliminar.mutate(u.id) }} />
+                    </TableActions>
                   </td>
                 </tr>
               ))}

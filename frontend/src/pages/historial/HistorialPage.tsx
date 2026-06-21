@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { historialApi } from '../../services/historial.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle, Pencil } from 'lucide-react'
@@ -29,10 +31,17 @@ function destinoBadgeClass(destino: string) {
   return map[destino] ?? 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300'
 }
 
-const ESTADOS = ['', 'borrador', 'enviado', 'editado', 'aprobado']
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'borrador', label: 'Borrador', tone: 'indigo' as const },
+  { value: 'enviado', label: 'Enviado', tone: 'info' as const },
+  { value: 'editado', label: 'Editado', tone: 'warning' as const },
+  { value: 'aprobado', label: 'Aprobado', tone: 'success' as const },
+]
 
 export function HistorialPage() {
   const { usuario } = useAuth()
+  const navigate = useNavigate()
 
   const [filters, setFilters] = useState({
     fecha_desde: '',
@@ -118,7 +127,7 @@ export function HistorialPage() {
         title="Historial Completo de Reportes"
         description="Audita reportes, diferencias y estados con trazabilidad por período."
         actions={
-          <Button variant="outline" size="sm" onClick={exportarCSV}>
+          <Button variant="glassSuccess" size="sm" onClick={exportarCSV}>
             <Download size={14} /> Exportar CSV
           </Button>
         }
@@ -169,20 +178,16 @@ export function HistorialPage() {
         )}
         <div>
           <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Estado</label>
-          <select
+          <SegmentedToggle
+            ariaLabel="Filtrar historial por estado"
+            size="sm"
+            options={ESTADOS}
             value={filters.estado}
-            onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-            className="kyro-input h-9 w-36"
-          >
-            {ESTADOS.map((e) => (
-              <option key={e} value={e}>
-                {e === '' ? 'Todos' : e}
-              </option>
-            ))}
-          </select>
+            onChange={(estado) => setFilters((f) => ({ ...f, estado }))}
+          />
         </div>
-        <Button onClick={applyFilters}>Buscar</Button>
-        <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
+        <Button variant="gold" onClick={applyFilters}>Buscar</Button>
+        <Button variant="ghost" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
       <div className="kyro-card overflow-hidden">
@@ -263,32 +268,31 @@ export function HistorialPage() {
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Link
-                          to={`/reportes/${r.id}`}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400"
-                          title="Ver detalle"
-                        >
-                          <Eye size={14} />
-                        </Link>
+                      <TableActions>
+                        <ActionIconButton
+                          tone="view"
+                          label="Ver detalle"
+                          icon={<Eye size={15} />}
+                          onClick={() => navigate(`/reportes/${r.id}`)}
+                        />
                         {canEdit ? (
-                          <Link
-                            to={`/reportes/${r.id}/editar`}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
-                            title="Editar reporte"
-                          >
-                            <Pencil size={14} />
-                          </Link>
+                          <ActionIconButton
+                            tone="edit"
+                            label="Editar reporte"
+                            icon={<Pencil size={15} />}
+                            onClick={() => navigate(`/reportes/${r.id}/editar`)}
+                          />
                         ) : editPending ? (
                           <span
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-yellow-300/40 text-yellow-400 opacity-60 cursor-default dark:border-yellow-500/20"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-yellow-300/40 text-yellow-400 opacity-60 cursor-default dark:border-yellow-500/20"
                             title="Solicitud de edición pendiente de aprobación"
                           >
-                            <Pencil size={14} />
+                            <Pencil size={15} />
                           </span>
                         ) : null}
                         {isSolicitado && usuario?.rol === 'admin' && (
                           <Button
+                            variant="gold"
                             size="sm"
                             disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
                             onClick={() => {
@@ -296,12 +300,12 @@ export function HistorialPage() {
                                 aprobarEdicion.mutate(r.id)
                               }
                             }}
-                            className="h-7 gap-1 bg-kyro-success/15 px-2 text-xs text-kyro-success hover:bg-kyro-success/30"
+                            className="h-8 gap-1 px-2 text-xs"
                           >
                             <CheckCircle size={12} /> Aprobar
                           </Button>
                         )}
-                      </div>
+                      </TableActions>
                     </td>
                   </tr>
                 )

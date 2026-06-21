@@ -52,7 +52,8 @@ export function ListToolbar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2.5">{children}</div>
+        {/* Acciones de filtro: "Buscar/Aplicar" debe usar variant="gold"; "Limpiar" variant="ghost". */}
+        <div className="flex flex-wrap items-end gap-2.5 [&_button]:min-h-9 [&_input]:h-9 [&_select]:h-9">{children}</div>
       </div>
     </section>
   )

@@ -10,11 +10,12 @@ import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
-import { PageTabs } from '../../components/ui/PageTabs'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Label } from '../../components/ui/label'
 import { InventarioForm } from './InventarioForm'
 import { useAuth } from '../../hooks/useAuth'
@@ -31,6 +32,20 @@ const TIENDAS = [
   { codigo: 'TACDA25', nombre: 'Tacna — TACDA25' },
   { codigo: 'TACDA27', nombre: 'Tacna — TACDA27' },
   { codigo: 'TACDA30', nombre: 'Tacna — TACDA30' },
+]
+
+const TIPOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'EQUIPO', label: 'Equipos', tone: 'info' as const },
+  { value: 'ACCESORIO', label: 'Accesorios', tone: 'gold' as const },
+  { value: 'CHIP', label: 'Chips', tone: 'success' as const },
+]
+
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'DISPONIBLE', label: 'Disponible', tone: 'success' as const },
+  { value: 'VENDIDO', label: 'Vendido', tone: 'danger' as const },
+  { value: 'TRASLADO', label: 'Traslado', tone: 'warning' as const },
 ]
 
 type EstadoVariant = 'success' | 'destructive' | 'warning'
@@ -91,44 +106,40 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
+        <TableActions>
           {onFijarPrecio ? (
-            <button
+            <ActionIconButton
+              tone="edit"
+              label="Fijar precio de venta"
+              icon={<Tag size={15} />}
               onClick={() => onFijarPrecio(row.original)}
-              title="Fijar precio de venta"
-              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-transparent px-2 text-xs font-medium text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
-            >
-              <Tag size={13} /> Fijar precio
-            </button>
+            />
           ) : (
             <>
-              <button
+              <ActionIconButton
+                tone="edit"
+                label="Editar item"
+                icon={<Pencil size={15} />}
                 onClick={() => onEditar(row.original)}
-                title="Editar item"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
-              >
-                <Pencil size={13} />
-              </button>
+              />
               {onAjustar && (
-                <button
+                <ActionIconButton
+                  tone="view"
+                  label="Ajustar stock fisico"
+                  icon={<SlidersHorizontal size={15} />}
                   onClick={() => onAjustar(row.original)}
-                  title="Ajustar stock físico"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400"
-                >
-                  <SlidersHorizontal size={13} />
-                </button>
+                />
               )}
-              <button
+              <ActionIconButton
+                tone="delete"
+                label="Eliminar item"
+                icon={<Trash2 size={15} />}
                 onClick={() => onEliminar(row.original)}
                 disabled={eliminando}
-                title="Eliminar item"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                <Trash2 size={13} />
-              </button>
+              />
             </>
           )}
-        </div>
+        </TableActions>
       ),
     },
   ]
@@ -219,6 +230,7 @@ function CampanaCostosWidget() {
                   />
                 </div>
                 <Button
+                  variant="gold"
                   size="sm"
                   onClick={() => handleGuardar(item)}
                   disabled={guardando === item.rc_id || !costos[item.rc_id]}
@@ -347,23 +359,18 @@ export function InventarioPage() {
                 <History size={14} /> Bitácora Stock
               </Link>
             )}
-            <Button onClick={abrirCrear}>+ Nuevo item</Button>
+            <Button variant="gold" onClick={abrirCrear}>+ Nuevo item</Button>
           </div>
         }
       />
 
       <CampanaCostosWidget />
 
-      <PageTabs
-        tabs={[
-          { id: '', label: 'Todos' },
-          { id: 'EQUIPO', label: 'Equipos' },
-          { id: 'ACCESORIO', label: 'Accesorios' },
-          { id: 'CHIP', label: 'Chips' },
-        ]}
-        active={tipo}
+      <SegmentedToggle
+        ariaLabel="Filtrar inventario por tipo"
+        options={TIPOS}
+        value={tipo}
         onChange={(id) => { setTipo(id); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
-        className="mb-4"
       />
 
       <ListToolbar description="Busca y segmenta el stock por tienda y estado.">
@@ -374,7 +381,7 @@ export function InventarioPage() {
           onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button variant="outline" onClick={buscar}>Buscar</Button>
+        <Button variant="gold" onClick={buscar}>Buscar</Button>
 
         <Select
           value={tienda}
@@ -390,19 +397,16 @@ export function InventarioPage() {
           ))}
         </Select>
 
-        <Select
+        <SegmentedToggle
+          ariaLabel="Filtrar inventario por estado"
+          size="sm"
+          options={ESTADOS}
           value={estado}
-          onChange={(e) => {
-            setEstado(e.target.value)
+          onChange={(id) => {
+            setEstado(id)
             setPagination((p) => ({ ...p, pageIndex: 0 }))
           }}
-          className="w-36"
-        >
-          <option value="">Todos los estados</option>
-          <option value="DISPONIBLE">Disponible</option>
-          <option value="VENDIDO">Vendido</option>
-          <option value="TRASLADO">Traslado</option>
-        </Select>
+        />
 
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>
@@ -457,6 +461,7 @@ export function InventarioPage() {
             {ajusteError && <p className="text-xs text-kyro-danger">{ajusteError}</p>}
             <div className="flex gap-3">
               <Button
+                variant="gold"
                 className="flex-1"
                 disabled={ajustarStock.isPending || cantidadReal === '' || observacionAjuste.trim().length < 10}
                 onClick={() => ajustarStock.mutate({
@@ -501,7 +506,7 @@ export function InventarioPage() {
             </div>
             {precioErr && <p className="text-xs text-kyro-danger">{precioErr}</p>}
             <div className="flex gap-3 pt-1">
-              <Button className="flex-1"
+              <Button variant="gold" className="flex-1"
                 disabled={fijarPrecio.isPending || !precioVal || Number(precioVal) <= 0 || precioDni.length !== 8}
                 onClick={() => fijarPrecio.mutate({ id: precioItem.id, precio_normal: Number(precioVal), dni_autoriza: precioDni })}>
                 {fijarPrecio.isPending ? 'Guardando...' : 'Fijar precio'}

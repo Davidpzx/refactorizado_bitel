@@ -5,6 +5,7 @@ import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
@@ -61,14 +62,10 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar cliente">
-            <Pencil size={13} />
-          </button>
-          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar cliente">
-            <Trash2 size={13} />
-          </button>
-        </div>
+        <TableActions>
+          <ActionIconButton tone="edit" label="Editar cliente" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
+          <ActionIconButton tone="delete" label="Eliminar cliente" icon={<Trash2 size={15} />} onClick={() => onEliminar(row.original)} disabled={eliminando} />
+        </TableActions>
       ),
     },
   ]
@@ -116,7 +113,7 @@ export function ClientesPage() {
       <PageHeader
         title="Clientes"
         description="Base de clientes del sistema CRM."
-        actions={<Button onClick={abrirCrear}><Plus size={15} /> Nuevo cliente</Button>}
+        actions={<Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo cliente</Button>}
       />
 
       <ListToolbar description="Busca por documento o nombre del cliente.">
@@ -130,7 +127,7 @@ export function ClientesPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" onClick={buscar}><Search size={14} /> Buscar</Button>
+        <Button variant="gold" onClick={buscar}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </ListToolbar>
 
