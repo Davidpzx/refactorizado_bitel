@@ -100,6 +100,14 @@ interface HistorialOperativo {
     hora_salida: string | null
     minutos_tardanza?: number
     estado_asistencia?: string
+    inicio_refrigerio?: string | null
+    fin_refrigerio?: string | null
+    comodin_usado?: number | boolean | null
+    min_comodin?: number | null
+    omitio_refrigerio?: number | boolean | null
+    horas_extras_aprobadas?: number | null
+    minutos_deuda?: number | null
+    minutos_tardanza_refrigerio?: number | null
   }>
   comisiones: Array<{
     fecha: string
@@ -121,17 +129,203 @@ interface HistorialOperativo {
 function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
   if (!data) return null
 
+  const queryClient = useQueryClient()
+  const [procesandoId, setProcesandoId] = useState<number | null>(null)
+
+  const recuperarTardanza = useMutation({
+    mutationFn: ({ asistenciaId, minutos }: { asistenciaId: number; minutos: number }) =>
+      api.post('/v1/asistencias/salvavidas', {
+        asistencia_id: asistenciaId,
+        minutos: minutos,
+      }).then(r => r.data),
+    onSuccess: (r: { success: boolean; mensaje?: string }) => {
+      alert(r.mensaje ?? 'Tardanza recuperada.')
+      queryClient.invalidateQueries({ queryKey: ['mi-historial-operativo'] })
+      queryClient.invalidateQueries({ queryKey: ['mis-tardanzas'] })
+    },
+    onError: (e: any) => {
+      alert(e.response?.data?.mensaje ?? 'Error al recuperar la tardanza.')
+    },
+    onSettled: () => {
+      setProcesandoId(null)
+    }
+  })
+
+  // Monday of current week logic
+  const checkEsEstaSemana = (fechaStr: string) => {
+    const date = new Date(fechaStr + 'T00:00:00')
+    const hoy = new Date()
+    const day = hoy.getDay()
+    const diff = hoy.getDate() - day + (day === 0 ? -6 : 1)
+    const lunes = new Date(hoy.setDate(diff))
+    lunes.setHours(0, 0, 0, 0)
+    return date >= lunes
+  }
+
+  const comodinUsadoEstaSemana = data.asistencias.some(
+    item => checkEsEstaSemana(item.fecha) && (item.comodin_usado === 1 || item.comodin_usado === true)
+  )
+  const comodinDisponible = !comodinUsadoEstaSemana
+
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <section className="kyro-card overflow-hidden">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      {/* Mi Historial de Marcas y Descuentos (Table - 2/3 width) */}
+      <section className="kyro-card overflow-hidden xl:col-span-2">
+        <div className="border-b border-kyro-border p-4">
+          <h3 className="text-sm font-semibold text-kyro-text">Mi Historial de Marcas y Descuentos</h3>
+          <p className="text-xs text-kyro-muted">{data.agente.nombres} · {data.periodo.desde} al {data.periodo.hasta}</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="kyro-table-head">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-kyro-muted">FECHA</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-kyro-muted">ENTRADA</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-kyro-muted">INICIO REFRI</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-kyro-muted">FIN REFRI</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-kyro-muted">SALIDA</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-kyro-muted">DESGLOSE TARDANZA</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-kyro-muted">BALANCE S/</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.asistencias.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-5 text-center text-xs text-kyro-muted">
+                    Sin marcas en el periodo.
+                  </td>
+                </tr>
+              )}
+              {data.asistencias.map(item => {
+                const esEstaSemana = checkEsEstaSemana(item.fecha)
+                const tardanzaTotalBd = item.minutos_tardanza ?? 0
+                const minSalvavidas = (item.comodin_usado === 1 || item.comodin_usado === true) ? (item.min_comodin ?? 0) : 0
+                const tardeRefri = item.minutos_tardanza_refrigerio ?? 0
+                const tardeEntradaBruta = Math.max(0, tardanzaTotalBd - tardeRefri)
+                const tardeEntradaNeta = Math.max(0, tardeEntradaBruta - minSalvavidas)
+                const minutosADescontar = tardeEntradaNeta + tardeRefri
+                const descuentoFinal = minutosADescontar * 1.00
+
+                const hExtraAprob = item.horas_extras_aprobadas ?? 0
+                const minutosDeudaTotal = item.minutos_deuda ?? 0
+                const horasDeudaV = Math.floor(minutosDeudaTotal / 60)
+                const minsDeudaV = minutosDeudaTotal % 60
+                let strDeuda = ""
+                if (horasDeudaV > 0) strDeuda += `${horasDeudaV}h `
+                if (minsDeudaV > 0) strDeuda += `${minsDeudaV}m`
+                strDeuda = strDeuda.trim()
+
+                const puedeMostrarSalvavidas = esEstaSemana
+                  && comodinDisponible
+                  && tardeEntradaBruta > 0
+                  && tardeEntradaBruta <= 30
+                  && !(item.comodin_usado === 1 || item.comodin_usado === true)
+
+                return (
+                  <tr key={item.id} className="border-b border-kyro-border hover:bg-kyro-elevated/60">
+                    <td className="px-4 py-3 text-left">
+                      <div className="font-semibold text-kyro-text">{new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</div>
+                      {(item.omitio_refrigerio === 1 || item.omitio_refrigerio === true) && (
+                        <span className="inline-block px-1.5 py-0.5 mt-1 text-[9px] font-bold rounded bg-kyro-info/10 text-kyro-info">
+                          TURNO CORRIDO
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={tardeEntradaNeta > 0 ? "font-bold text-kyro-danger" : "text-kyro-muted"}>
+                        {item.hora_ingreso?.slice(0, 5) ?? '--:--'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-kyro-muted">
+                      {item.inicio_refrigerio?.slice(0, 5) ?? '--:--'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={tardeRefri > 0 ? "font-bold text-kyro-danger" : "text-kyro-muted"}>
+                        {item.fin_refrigerio?.slice(0, 5) ?? '--:--'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-kyro-muted">
+                      {item.hora_salida?.slice(0, 5) ?? '--:--'}
+                    </td>
+                    <td className="px-4 py-3 text-left text-xs space-y-1">
+                      {item.estado_asistencia === 'FALTA_INJUSTIFICADA' ? (
+                        <span className="font-bold text-kyro-danger">FALTA REGISTRADA</span>
+                      ) : (
+                        <>
+                          {minSalvavidas > 0 && (
+                            <div className="font-bold text-kyro-info">
+                              🛟 Salvavidas Usado: -{minSalvavidas}m de refri
+                            </div>
+                          )}
+                          {tardeEntradaNeta > 0 && (
+                            <div className="text-kyro-danger">
+                              • Tarde Entrada: -{tardeEntradaNeta}m
+                            </div>
+                          )}
+                          {tardeRefri > 0 && (
+                            <div className="text-kyro-danger">
+                              • Tarde Refri: -{tardeRefri}m
+                            </div>
+                          )}
+                          {minutosDeudaTotal > 0 && (
+                            <div className="text-kyro-warning">
+                              • Deuda Jornada: -{strDeuda}
+                            </div>
+                          )}
+                          {hExtraAprob > 0 && (
+                            <div className="font-bold text-kyro-success">
+                              • Hrs Recuperación: +{hExtraAprob}h
+                            </div>
+                          )}
+                          {tardeEntradaNeta === 0 && tardeRefri === 0 && hExtraAprob === 0 && minutosDeudaTotal === 0 && minSalvavidas === 0 && (
+                            <span className="text-kyro-muted">Jornada Correcta</span>
+                          )}
+                          {puedeMostrarSalvavidas && (
+                            <Button
+                              size="sm"
+                              variant="glassSuccess"
+                              className="w-full mt-1 font-bold text-[10px] h-7 gap-1"
+                              disabled={procesandoId === item.id || recuperarTardanza.isPending}
+                              onClick={() => {
+                                if (window.confirm(`¿Recuperar Tardanza?\n\nSe perdonarán tus ${tardeEntradaBruta} minutos de tardanza de este día.\n\n⚠️ Ese tiempo se descontará automáticamente de tu tiempo de refrigerio de HOY.\n\nNota: Solo puedes usar esto 1 vez por semana.`)) {
+                                  setProcesandoId(item.id)
+                                  recuperarTardanza.mutate({ asistenciaId: item.id, minutos: tardeEntradaBruta })
+                                }
+                              }}
+                            >
+                              🛟 RECUPERAR TARDANZA
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold">
+                      {item.estado_asistencia === 'FALTA_INJUSTIFICADA' ? (
+                        <span className="text-kyro-danger">- S/ —</span>
+                      ) : descuentoFinal > 0 ? (
+                        <span className="text-kyro-danger">- {fmt(descuentoFinal)}</span>
+                      ) : (
+                        <span className="text-kyro-muted">S/ 0.00</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Mis Comisiones (Right panel - 1/3 width) */}
+      <section className="kyro-card overflow-hidden xl:col-span-1">
         <div className="flex items-center justify-between border-b border-kyro-border p-4">
           <div>
-            <h3 className="text-sm font-semibold text-kyro-text">Comisiones por dia</h3>
-            <p className="text-xs text-kyro-muted">Ventas atribuidas al agente autenticado.</p>
+            <h3 className="text-sm font-semibold text-kyro-text">Mis Comisiones</h3>
+            <p className="text-xs text-kyro-muted">Ventas atribuidas al agente.</p>
           </div>
           <span className="font-mono font-bold text-kyro-success">{fmt(data.total_comisiones)}</span>
         </div>
-        <div className="max-h-72 divide-y divide-kyro-border overflow-y-auto">
+        <div className="max-h-[500px] divide-y divide-kyro-border overflow-y-auto">
           {data.comisiones.length === 0 && <p className="p-5 text-center text-xs text-kyro-muted">Sin comisiones en el periodo.</p>}
           {data.comisiones.map(item => (
             <Link key={`${item.fecha}-${item.reporte_id}`} to={`/reportes/${item.reporte_id}`} className="flex items-center justify-between p-3 hover:bg-kyro-elevated">
@@ -145,26 +339,9 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
         </div>
       </section>
 
-      <section className="kyro-card overflow-hidden">
-        <div className="border-b border-kyro-border p-4">
-          <h3 className="text-sm font-semibold text-kyro-text">Resumen de asistencia</h3>
-          <p className="text-xs text-kyro-muted">{data.agente.nombres} · {data.periodo.desde} al {data.periodo.hasta}</p>
-        </div>
-        <div className="max-h-72 divide-y divide-kyro-border overflow-y-auto">
-          {data.asistencias.length === 0 && <p className="p-5 text-center text-xs text-kyro-muted">Sin marcas en el periodo.</p>}
-          {data.asistencias.map(item => (
-            <div key={item.id} className="grid grid-cols-4 gap-2 p-3 text-xs">
-              <span className="text-kyro-body">{new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
-              <span className="text-kyro-muted">{item.hora_ingreso?.slice(0, 5) ?? '--:--'} - {item.hora_salida?.slice(0, 5) ?? '--:--'}</span>
-              <span className={(item.minutos_tardanza ?? 0) > 0 ? 'font-bold text-kyro-warning' : 'text-kyro-muted'}>{item.minutos_tardanza ?? 0} min</span>
-              <span className="text-right text-kyro-muted">{item.estado_asistencia ?? 'REGULAR'}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
+      {/* Panel del equipo si es Jefe */}
       {data.agente.es_jefe && (
-        <section className="kyro-card overflow-hidden xl:col-span-2">
+        <section className="kyro-card overflow-hidden xl:col-span-3">
           <div className="border-b border-kyro-border p-4">
             <h3 className="text-sm font-semibold text-kyro-text">Equipo de tienda {data.agente.tienda_base}</h3>
             <p className="text-xs text-kyro-muted">Presencias, faltas y tardanza acumulada del periodo.</p>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, FileText } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
@@ -642,6 +642,16 @@ export function ReporteDetallePage() {
   const qc = useQueryClient()
   const { data: reporte, isLoading, isError } = useReporte(Number(id))
 
+  async function descargar(path: string, filename: string) {
+    const response = await api.get(path, { responseType: 'blob' })
+    const url = URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const aprobarEdicion = useMutation({
     mutationFn: (reporteId: number) =>
       api.post(`/v1/reportes/${reporteId}/aprobar-edicion`).then(r => r.data),
@@ -697,9 +707,19 @@ export function ReporteDetallePage() {
           <ChevronLeft size={16} />
           <span>Reportes</span>
         </Button>
-        <p className="text-xs text-kyro-subtle">
-          Reporte #{reporte.id} · creado {reporte.created_at?.slice(0, 10)}
-        </p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="glassDanger"
+            size="sm"
+            onClick={() => descargar(`/v1/constancias/reporte/${reporte.id}`, `reporte_${reporte.id}.pdf`)}
+            className="gap-2"
+          >
+            <FileText size={15} /> Exportar a PDF
+          </Button>
+          <p className="text-xs text-kyro-subtle">
+            Reporte #{reporte.id} · creado {reporte.created_at?.slice(0, 10)}
+          </p>
+        </div>
       </div>
 
       {/* ── Cabecera del reporte ── */}
