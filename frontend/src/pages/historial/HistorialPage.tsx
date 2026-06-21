@@ -8,7 +8,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, Download, CheckCircle, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, Pencil } from 'lucide-react'
 import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -112,7 +112,7 @@ export function HistorialPage() {
         const burl = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = burl
-        link.download = `historial_${new Date().toISOString().slice(0, 10)}.csv`
+        link.download = `Historial_Global_Bloques_${new Date().toISOString().slice(0, 10)}.xlsx`
         link.click()
         URL.revokeObjectURL(burl)
       })
@@ -127,8 +127,8 @@ export function HistorialPage() {
         title="Historial Completo de Reportes"
         description="Audita reportes, diferencias y estados con trazabilidad por período."
         actions={
-          <Button variant="glassSuccess" size="sm" onClick={exportarCSV}>
-            <Download size={14} /> Exportar CSV
+          <Button variant="glassSuccess" size="sm" onClick={exportarCSV} className="gap-1.5">
+            <FileSpreadsheet size={14} /> Exportar Excel
           </Button>
         }
       />

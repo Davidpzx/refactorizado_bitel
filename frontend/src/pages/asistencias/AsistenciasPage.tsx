@@ -208,7 +208,7 @@ export function AsistenciasPage() {
           <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar excepción de asistencia</h3>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ID Agente</label>
+              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
               <Input type="number" placeholder="Ej. 12" value={exc.agente_id}
                 onChange={e => setExc(s => ({ ...s, agente_id: e.target.value }))} className="kyro-input w-28" />
             </div>
@@ -246,14 +246,14 @@ export function AsistenciasPage() {
       <ListToolbar description="Acota el periodo y el agente que deseas revisar">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Desde</label>
+            <label className="block text-xs text-kyro-muted mb-1">Desde</label>
             <Input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
               className="kyro-input"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+            <label className="block text-xs text-kyro-muted mb-1">Hasta</label>
             <Input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
               className="kyro-input"
@@ -261,14 +261,14 @@ export function AsistenciasPage() {
           </div>
           {usuario?.rol === 'admin' && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ID Agente</label>
+              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
               <Input type="number" placeholder="Todos" value={filters.agente_id}
                 onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))}
                 className="kyro-input w-24"
               />
             </div>
           )}
-          <Button variant="gold" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
+              <Button variant="gold" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
           <Button variant="outline" onClick={() => {
             const reset = { fecha_desde: new Date().toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), agente_id: '' }
             setFilters(reset); setApplied(reset); setPage(1)
@@ -327,28 +327,32 @@ export function AsistenciasPage() {
                   <tr key={a.id}
                     className={`border-b ${esRevision ? 'border-kyro-warning/30 bg-kyro-warning/10' : esTarde ? 'border-kyro-warning/20 bg-kyro-warning/5' : 'border-kyro-border hover:bg-kyro-elevated/50'}`}
                   >
-                    <td className="px-4 py-3 text-gray-700">{fechaObj.toLocaleDateString('es-PE')}</td>
-                    <td className="px-4 py-3 text-xs text-gray-400">{DIAS[fechaObj.getDay()]}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{a.nombres}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-slate-600">{a.tienda_base}</td>
-                    <td className={`px-4 py-3 font-mono ${esTarde ? 'text-amber-700 font-bold' : 'text-gray-700'}`}>
+                    <td className="px-4 py-3 text-kyro-body">{fechaObj.toLocaleDateString('es-PE')}</td>
+                    <td className="px-4 py-3 text-xs text-kyro-subtle">{DIAS[fechaObj.getDay()]}</td>
+                    <td className="px-4 py-3 font-medium text-kyro-text">{a.nombres}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-kyro-muted">{a.tienda_base}</td>
+                    <td className={`px-4 py-3 font-mono ${esTarde ? 'text-kyro-warning font-bold' : 'text-kyro-body'}`}>
                       {a.hora_ingreso ? a.hora_ingreso.slice(0, 5) : <span className="text-red-500">—</span>}
                     </td>
-                    <td className="px-4 py-3 font-mono text-gray-600">{a.hora_salida ? a.hora_salida.slice(0, 5) : '—'}</td>
+                    <td className="px-4 py-3 font-mono text-kyro-muted">{a.hora_salida ? a.hora_salida.slice(0, 5) : '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${a.metodo_marcacion === 'FOTO' ? 'bg-blue-100 text-blue-700' : a.metodo_marcacion === 'QR' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        a.metodo_marcacion === 'FOTO' ? 'bg-kyro-info/10 text-kyro-info' 
+                        : a.metodo_marcacion === 'QR' ? 'bg-kyro-indigo/15 text-kyro-indigo' 
+                        : 'bg-kyro-elevated text-kyro-muted'
+                      }`}>
                         {a.metodo_marcacion ?? 'MANUAL'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {esRevision
-                        ? <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Revisión</span>
+                        ? <span className="text-xs bg-kyro-warning/15 text-kyro-warning px-2 py-0.5 rounded-full font-medium">Revisión</span>
                         : esTarde
-                        ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Tardanza</span>
-                        : <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">OK</span>
+                        ? <span className="text-xs bg-kyro-warning/10 text-kyro-warning px-2 py-0.5 rounded-full">Tardanza</span>
+                        : <span className="text-xs bg-kyro-success/10 text-kyro-success px-2 py-0.5 rounded-full">OK</span>
                       }
                       {(a.minutos_tardanza > 0 || a.minutos_deuda > 0) && (
-                        <p className="mt-1 text-[10px] text-kyro-muted">
+                        <p className="mt-1 text-[10px] text-kyro-subtle">
                           Tardanza {a.minutos_tardanza}m · Deuda {a.minutos_deuda}m
                         </p>
                       )}
@@ -389,7 +393,7 @@ export function AsistenciasPage() {
         {meta && meta.last_page > 1 && (
           <div className="flex items-center justify-between border-t border-kyro-border p-4">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-            <span className="text-xs text-gray-500">{meta.total} registros</span>
+            <span className="text-xs text-kyro-subtle">{meta.total} registros</span>
             <Button variant="outline" size="sm" disabled={page >= meta.last_page} onClick={() => setPage(p => p + 1)}>Siguiente</Button>
           </div>
         )}

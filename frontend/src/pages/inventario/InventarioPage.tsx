@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Pencil, Trash2, SlidersHorizontal, Tag, History } from 'lucide-react'
+import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
@@ -333,6 +333,31 @@ export function InventarioPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
+  const [exportando, setExportando] = useState(false)
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const params = new URLSearchParams()
+      if (tienda) params.set('tienda', tienda)
+      if (tipo)   params.set('tipo', tipo)
+      if (estado) params.set('estado', estado)
+      if (query)  params.set('q', query)
+      const r = await fetch(`${base}/v1/inventario/exportar?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const blob = await r.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `inventario_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } finally {
+      setExportando(false)
+    }
+  }
+
   const hayFiltros = query || tienda || tipo || estado
 
   const columns = getColumns(
@@ -351,13 +376,18 @@ export function InventarioPage() {
         actions={
           <div className="flex items-center gap-2">
             {!esTienda && (
-              <Link
-                to="/bitacora-stock"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-amber-300 hover:text-amber-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300 dark:hover:border-amber-400/40 dark:hover:text-amber-400"
-                title="Historial de movimientos de equipos y accesorios"
-              >
-                <History size={14} /> Bitácora Stock
-              </Link>
+              <>
+                <Button variant="glassSuccess" size="sm" onClick={exportarExcel} disabled={exportando}>
+                  <FileSpreadsheet size={14} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
+                </Button>
+                <Link
+                  to="/bitacora-stock"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
+                  title="Historial de movimientos de equipos y accesorios"
+                >
+                  <History size={14} /> Bitácora Stock
+                </Link>
+              </>
             )}
             <Button variant="gold" onClick={abrirCrear}>+ Nuevo item</Button>
           </div>
