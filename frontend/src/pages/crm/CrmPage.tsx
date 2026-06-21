@@ -147,7 +147,7 @@ function LeadForm({
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" size="sm" disabled={isPending}>
+        <Button type="submit" variant="gold" size="sm" disabled={isPending}>
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar' : 'Crear lead'}
         </Button>
       </div>
@@ -201,7 +201,7 @@ function LeadCard({
       )}
 
       <div className="flex gap-1.5 border-t border-kyro-border pt-2.5">
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-kyro-gold hover:bg-kyro-gold/10" onClick={() => onEditar(lead)}>
+        <Button variant="glassWarning" size="sm" className="h-7 px-2 text-xs" onClick={() => onEditar(lead)}>
           Editar
         </Button>
         <Select
@@ -217,9 +217,9 @@ function LeadCard({
           ))}
         </Select>
         <Button
-          variant="ghost"
+          variant="glassDanger"
           size="sm"
-          className="h-7 px-2 text-xs text-kyro-danger hover:bg-kyro-danger/10"
+          className="h-7 px-2 text-xs"
           onClick={() => { if (confirm('¿Eliminar lead?')) onEliminar(lead.id) }}
         >
           ×
@@ -322,7 +322,7 @@ export function CrmPage() {
           <option value="">Todas las tiendas</option>
           {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
-        <Button size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
+        <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
       </PageHeader>
 
       {/* Métricas del pipeline */}

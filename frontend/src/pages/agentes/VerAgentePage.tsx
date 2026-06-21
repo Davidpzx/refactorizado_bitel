@@ -1,13 +1,14 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import type { Agente } from '../../types/agente'
 import type { Reporte } from '../../types/reporte'
 import type { PaginatedResponse } from '../../types/pagination'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -79,6 +80,7 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
       {msg && <p className={`mt-3 rounded-kyro px-3 py-2 text-xs ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>}
       <div className="mt-3 flex justify-end">
         <Button
+          variant="gold"
           size="sm"
           disabled={mut.isPending}
           onClick={() => {
@@ -199,7 +201,7 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
           <label className="mb-1 block text-xs text-kyro-muted">Motivo</label>
           <Input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Opcional" />
         </div>
-        <Button size="sm" disabled={!monto || Number(monto) <= 0 || registrar.isPending} onClick={() => registrar.mutate()}>
+        <Button size="sm" variant="gold" disabled={!monto || Number(monto) <= 0 || registrar.isPending} onClick={() => registrar.mutate()}>
           {registrar.isPending ? 'Guardando...' : 'Registrar'}
         </Button>
       </div>
@@ -216,11 +218,15 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
               <span className="font-mono text-xs text-kyro-muted">{new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
               <span className="min-w-0 flex-1 truncate text-xs text-kyro-body">{a.motivo || '—'}</span>
               <span className="font-mono font-bold text-kyro-danger">-{fmt(a.monto)}</span>
-              <button
-                className="text-xs text-kyro-muted hover:text-kyro-danger"
+              <Button
+                variant="glassDanger"
+                size="iconSm"
+                aria-label="Eliminar adelanto"
                 disabled={eliminar.isPending}
                 onClick={() => { if (confirm('¿Eliminar este adelanto?')) eliminar.mutate(a.id) }}
-              >✕</button>
+              >
+                <Trash2 size={14} />
+              </Button>
             </div>
           ))}
         </div>
@@ -319,7 +325,7 @@ function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: Pe
           <h3 className="text-sm font-semibold text-kyro-text">Ficha RRHH</h3>
           <p className="text-xs text-kyro-muted">Datos personales, previsionales, familiares y laborales.</p>
         </div>
-        <Button size="sm" disabled={guardar.isPending} onClick={() => guardar.mutate()}>
+        <Button size="sm" variant="gold" disabled={guardar.isPending} onClick={() => guardar.mutate()}>
           <Save size={14} /> {guardar.isPending ? 'Guardando...' : 'Guardar ficha'}
         </Button>
       </div>
@@ -400,11 +406,11 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
               <Badge variant={boleta.estado === 'PAGADO' ? 'success' : 'warning'}>{boleta.estado}</Badge>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => descargar(`/v1/constancias/boleta/${boleta.id}`, `boleta_${nombre}_${boleta.id}.pdf`)}>
+              <Button size="sm" variant="glassInfo" onClick={() => descargar(`/v1/constancias/boleta/${boleta.id}`, `boleta_${nombre}_${boleta.id}.pdf`)}>
                 <Download size={13} /> PDF
               </Button>
-              {boleta.estado === 'PENDIENTE' && <Button size="sm" onClick={() => accion.mutate({ id: boleta.id, accion: 'pagar' })}>Marcar pagado</Button>}
-              <Button size="sm" variant="destructive" onClick={() => confirm('Eliminar esta boleta?') && accion.mutate({ id: boleta.id, accion: 'eliminar' })}>
+              {boleta.estado === 'PENDIENTE' && <Button size="sm" variant="gold" onClick={() => accion.mutate({ id: boleta.id, accion: 'pagar' })}>Marcar pagado</Button>}
+              <Button size="sm" variant="glassDanger" onClick={() => confirm('Eliminar esta boleta?') && accion.mutate({ id: boleta.id, accion: 'eliminar' })}>
                 <Trash2 size={13} />
               </Button>
             </div>
@@ -450,6 +456,7 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
 
 export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
+  const navigate     = useNavigate()
   const { usuario }  = useAuth()
   const isAdmin      = usuario?.rol === 'admin'
   const [page, setPage] = useState(1)
@@ -542,7 +549,7 @@ export function VerAgentePage() {
             {isAdmin && id && (
               <Button
                 size="sm"
-                variant="outline"
+                variant="glassInfo"
                 className="mt-3"
                 onClick={() => descargar(`/v1/constancias/agente/${id}`, `certificado_${agente.nombres.replace(/\s+/g, '_')}.pdf`)}
               >
@@ -636,7 +643,14 @@ export function VerAgentePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link to={`/reportes/${r.id}`} className="text-xs font-medium text-kyro-gold hover:text-kyro-text">Ver</Link>
+                      <TableActions>
+                        <ActionIconButton
+                          tone="view"
+                          label="Ver reporte"
+                          icon={<Eye size={15} />}
+                          onClick={() => navigate(`/reportes/${r.id}`)}
+                        />
+                      </TableActions>
                     </td>
                   </tr>
                 )

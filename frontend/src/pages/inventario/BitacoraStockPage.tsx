@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
-import { Select } from '../../components/ui/select'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store } from 'lucide-react'
 
 interface BitacoraKpis {
@@ -42,6 +42,12 @@ interface BitacoraResponse {
   }
   warning?: string
 }
+
+const ACCIONES = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'SUMA', label: 'Entradas', tone: 'success' as const },
+  { value: 'RESTA', label: 'Salidas', tone: 'danger' as const },
+]
 
 export function BitacoraStockPage() {
   const { usuario } = useAuth()
@@ -155,14 +161,16 @@ export function BitacoraStockPage() {
         )}
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-400">Acción</label>
-          <Select value={filters.accion} onChange={e => setFilters(f => ({ ...f, accion: e.target.value }))}>
-            <option value="">Todos</option>
-            <option value="SUMA">Entradas (SUMA)</option>
-            <option value="RESTA">Salidas (RESTA)</option>
-          </Select>
+          <SegmentedToggle
+            ariaLabel="Filtrar bitacora por accion"
+            size="sm"
+            options={ACCIONES}
+            value={filters.accion}
+            onChange={(accion) => setFilters(f => ({ ...f, accion }))}
+          />
         </div>
-        <Button onClick={applyFilters}>Filtrar</Button>
-        <Button variant="outline" onClick={resetFilters}>Limpiar</Button>
+        <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
+        <Button variant="ghost" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
       {/* Table */}

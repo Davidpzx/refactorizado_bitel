@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react'
 import { format, startOfMonth } from 'date-fns'
-import { FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, RotateCcw } from 'lucide-react'
 import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } from '../../hooks/usePlanilla'
 import { PageHeader } from '../../components/PageHeader'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Dialog } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
 import { api } from '../../services/api'
@@ -238,7 +239,7 @@ function BoletaDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={enviando}>
+            <Button type="submit" variant="gold" disabled={enviando}>
               {enviando ? 'Generando...' : 'Descargar PDF'}
             </Button>
           </div>
@@ -304,40 +305,32 @@ function FilaTabla({
         <td className="px-1 py-2 text-right font-mono font-bold text-red-600 dark:text-red-400">{fmt(fila.total_descuentos)}</td>
         <td className="px-1 py-2 text-right font-mono text-sm font-bold text-cyan-600 dark:text-cyan-400">{fmt(fila.total_pagar)}</td>
         <td className="py-1 px-1 text-center">
-          <div className="flex gap-1 justify-center items-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+          <TableActions className="justify-center">
+            <ActionIconButton
+              tone="view"
+              label={expandida ? 'Ocultar detalle' : 'Ver detalle'}
+              icon={expandida ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
               onClick={() => setExpandida(v => !v)}
-              className="h-7 w-7 text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text"
-              title="Ver detalle"
-            >
-              {expandida ? '▲' : '▼'}
-            </Button>
+            />
             {fila.override_comisiones && (
               <Button
                 type="button"
-                variant="ghost"
-                size="icon"
+                variant="glassWarning"
+                size="iconSm"
+                aria-label="Restaurar comisiones automaticas"
                 onClick={() => onReset(fila.agente_id, mes)}
-                className="h-7 w-7 text-kyro-warning hover:bg-kyro-warning/10"
                 title="Restaurar comisiones automáticas"
               >
-                ↺
+                <RotateCcw size={15} />
               </Button>
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <ActionIconButton
+              tone="excel"
+              label="Generar boleta PDF"
+              icon={<FileText size={15} />}
               onClick={() => setBoletaOpen(true)}
-              className="h-7 w-7 text-kyro-indigo hover:bg-kyro-indigo/10"
-              title="Generar Boleta PDF"
-            >
-              <FileText size={13} />
-            </Button>
-          </div>
+            />
+          </TableActions>
         </td>
       </tr>
       {boletaOpen && (
@@ -438,7 +431,7 @@ export function PlanillaPage() {
             onChange={e => setMes(e.target.value)}
             className="kyro-input w-36"
           />
-          <Button type="button" variant="outline" onClick={exportarExcel} disabled={exportando}>
+          <Button type="button" variant="glassSuccess" onClick={exportarExcel} disabled={exportando}>
             <FileText size={14} className="mr-1" /> {exportando ? 'Generando…' : 'Exportar Excel'}
           </Button>
         </div>

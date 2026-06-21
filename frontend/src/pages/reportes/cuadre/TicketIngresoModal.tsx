@@ -74,7 +74,7 @@ export function TicketIngresoModal({
       <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-md p-4 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-kyro-info">Ticket de Ingreso</h3>
-          <button type="button" onClick={onClose} className="text-kyro-muted hover:text-kyro-text rounded-kyro text-lg leading-none">×</button>
+          <Button type="button" variant="ghost" size="iconSm" aria-label="Cerrar ticket de ingreso" onClick={onClose}>×</Button>
         </div>
 
         <div className="space-y-2">
@@ -82,10 +82,10 @@ export function TicketIngresoModal({
             <div key={i} className="grid grid-cols-[1fr_100px_auto] gap-1.5 items-end">
               <Input value={it.descripcion} onChange={e => setItem(i, 'descripcion', e.target.value)} placeholder="Descripción" className="kyro-input h-8 text-xs" />
               <Input type="number" step="0.01" min="0" value={it.monto || ''} onChange={e => setItem(i, 'monto', parseFloat(e.target.value) || 0)} placeholder="S/" className="kyro-input h-8 text-xs text-right" />
-              <button type="button" onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none">×</button>
+              <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar item" onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))}>×</Button>
             </div>
           ))}
-          <button type="button" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])} className="text-xs font-medium text-kyro-info hover:text-kyro-gold">+ Agregar ítem</button>
+          <Button type="button" variant="glassInfo" size="sm" onClick={() => setItems(prev => [...prev, { descripcion: '', monto: 0 }])}>+ Agregar ítem</Button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-kyro-border">
@@ -112,7 +112,7 @@ export function TicketIngresoModal({
         {error && <p className="text-kyro-danger text-xs mt-2">{error}</p>}
 
         <div className="flex gap-2 mt-4">
-          <Button type="button" onClick={guardar} disabled={guardando} className="flex-1 bg-kyro-gold text-kyro-gold-ink border-kyro-gold hover:brightness-110">
+          <Button type="button" variant="gold" onClick={guardar} disabled={guardando} className="flex-1">
             {guardando ? 'Generando...' : 'Guardar e Imprimir'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>

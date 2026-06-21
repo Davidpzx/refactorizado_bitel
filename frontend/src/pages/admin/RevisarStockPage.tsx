@@ -110,7 +110,7 @@ export function RevisarStockPage() {
                     </td>
                   ))}
                   <td className="px-3 py-1">
-                    <Button type="button" size="sm" disabled={guardar.isPending} onClick={() => onGuardar(item)}>
+                    <Button type="button" variant="gold" size="sm" disabled={guardar.isPending} onClick={() => onGuardar(item)}>
                       {okId === item.id ? '✓' : 'Guardar'}
                     </Button>
                   </td>

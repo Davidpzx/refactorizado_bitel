@@ -7,9 +7,11 @@ import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import type { Ticket, TicketPayload, TicketUpdatePayload } from '../../types/ticket'
 
 const TIENDAS = [
@@ -25,7 +27,15 @@ const TIENDAS = [
   { codigo: 'TACDA30', nombre: 'Tacna — TACDA30' },
 ]
 
-const FORMA_PAGO_OPCIONES = ['EFECTIVO', 'YAPE', 'BIPAY', 'PLIN', 'TRANSFERENCIA', 'MIXTO']
+const FORMA_PAGO_TOGGLE = [
+  { value: '', label: 'Todas', tone: 'indigo' as const },
+  { value: 'EFECTIVO', label: 'Efectivo', tone: 'success' as const },
+  { value: 'YAPE', label: 'Yape', tone: 'indigo' as const },
+  { value: 'BIPAY', label: 'Bipay', tone: 'info' as const },
+  { value: 'PLIN', label: 'Plin', tone: 'warning' as const },
+  { value: 'TRANSFERENCIA', label: 'Transf.', tone: 'info' as const },
+  { value: 'MIXTO', label: 'Mixto', tone: 'gold' as const },
+]
 
 const FORMA_PAGO_COLORS: Record<string, string> = {
   EFECTIVO:      'bg-kyro-success/15 text-kyro-success',
@@ -128,19 +138,21 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => onEditar(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar ticket">
-            <Pencil size={13} />
-          </button>
-          <button onClick={() => onReimprimir(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Reimprimir ticket">
-            <Printer size={13} />
-          </button>
+        <TableActions>
+          <ActionIconButton tone="edit" label="Editar ticket" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
+          <Button
+            variant="glassInfo"
+            size="iconSm"
+            aria-label="Reimprimir ticket"
+            title="Reimprimir ticket"
+            onClick={() => onReimprimir(row.original)}
+          >
+            <Printer size={15} />
+          </Button>
           {isAdmin && (
-            <button onClick={() => onAnular(row.original)} disabled={isAnulando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Anular ticket">
-              <Trash2 size={13} />
-            </button>
+            <ActionIconButton tone="delete" label="Anular ticket" icon={<Trash2 size={15} />} onClick={() => onAnular(row.original)} disabled={isAnulando} />
           )}
-        </div>
+        </TableActions>
       ),
     },
   ]
@@ -269,7 +281,7 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
 
       <div className="flex justify-end gap-2 pt-2 border-t border-kyro-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={crear.isPending}>
+        <Button type="submit" variant="gold" disabled={crear.isPending}>
           {crear.isPending ? 'Guardando...' : 'Crear ticket'}
         </Button>
       </div>
@@ -332,7 +344,7 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
       </div>
       <div className="flex justify-end gap-2 pt-2 border-t border-kyro-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={actualizar.isPending}>
+        <Button type="submit" variant="gold" disabled={actualizar.isPending}>
           {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
         </Button>
       </div>
@@ -395,7 +407,7 @@ export function TicketsPage() {
       <PageHeader
         title="Tickets"
         description="Gestión de tickets emitidos."
-        actions={<Button onClick={abrirNuevo}>+ Nuevo ticket</Button>}
+        actions={<Button variant="gold" onClick={abrirNuevo}>+ Nuevo ticket</Button>}
       />
 
       <ListToolbar description="Combina fechas, tienda, cliente y forma de pago.">
@@ -426,12 +438,13 @@ export function TicketsPage() {
           className="w-36"
           maxLength={20}
         />
-        <Select value={formaPago} onChange={(e) => { setFormaPago(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-40">
-          <option value="">Forma de pago</option>
-          {FORMA_PAGO_OPCIONES.map(fp => (
-            <option key={fp} value={fp}>{fp}</option>
-          ))}
-        </Select>
+        <SegmentedToggle
+          ariaLabel="Filtrar tickets por forma de pago"
+          size="sm"
+          options={FORMA_PAGO_TOGGLE}
+          value={formaPago}
+          onChange={(value) => { setFormaPago(value); setPagination(p => ({ ...p, pageIndex: 0 })) }}
+        />
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>
         )}

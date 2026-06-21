@@ -161,7 +161,7 @@ export function ChipsGestionPage() {
         description="Stock y movimientos de chips por tienda."
         actions={
           isAdmin ? (
-            <Button onClick={() => setAgregarDialog(true)}>+ Agregar Stock</Button>
+            <Button variant="gold" onClick={() => setAgregarDialog(true)}>+ Agregar Stock</Button>
           ) : undefined
         }
       />
@@ -212,7 +212,7 @@ export function ChipsGestionPage() {
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="glassIndigo"
                           onClick={() => {
                             setCambiarDialog(chip)
                             setCodigoDestino('')
@@ -223,7 +223,7 @@ export function ChipsGestionPage() {
                         </Button>
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="glassInfo"
                           onClick={() => setHistorialDialog(chip)}
                         >
                           Ver Historial
@@ -231,7 +231,7 @@ export function ChipsGestionPage() {
                         {isAdmin && (
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="glassWarning"
                             onClick={() => {
                               setAjusteDialog(chip)
                               setCantidadReal(String(chip.stock_actual))
@@ -244,7 +244,7 @@ export function ChipsGestionPage() {
                         {isAdmin && (
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="glassDanger"
                             onClick={() => handleEliminar(chip)}
                             disabled={eliminar.isPending}
                           >
@@ -287,8 +287,9 @@ export function ChipsGestionPage() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setCambiarDialog(null)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setCambiarDialog(null)}>Cancelar</Button>
             <Button
+              variant="gold"
               onClick={handleCambiar}
               disabled={cambiarCodigo.isPending || !codigoDestino || !cantidadCambiar}
             >
@@ -319,8 +320,9 @@ export function ChipsGestionPage() {
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setAjusteDialog(null)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setAjusteDialog(null)}>Cancelar</Button>
             <Button
+              variant="gold"
               disabled={!ajusteDialog || cantidadReal === '' || observacionAjuste.trim().length < 10 || ajustarStock.isPending}
               onClick={() => ajusteDialog && ajustarStock.mutate({
                 id: ajusteDialog.id,
@@ -429,8 +431,9 @@ export function ChipsGestionPage() {
               <p className="mt-1 text-xs text-kyro-muted">Un rango por linea: inicio - fin.</p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setAgregarDialog(false)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => setAgregarDialog(false)}>Cancelar</Button>
               <Button
+                variant="gold"
                 onClick={handleAgregar}
                 disabled={
                   agregarStock.isPending ||

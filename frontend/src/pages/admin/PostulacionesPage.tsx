@@ -11,10 +11,12 @@ import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import type { Postulacion, EstadoPostulacion } from '../../types/postulacion'
 
 type EstadoVariant = 'default' | 'success' | 'destructive' | 'warning' | 'outline'
@@ -24,6 +26,14 @@ const estadoVariant: Record<EstadoPostulacion, EstadoVariant> = {
   APROBADO:    'success',
   RECHAZADO:   'destructive',
 }
+
+const ESTADO_OPTIONS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
+  { value: 'ENTREVISTA', label: 'Entrevista', tone: 'info' as const },
+  { value: 'APROBADO', label: 'Aprobado', tone: 'success' as const },
+  { value: 'RECHAZADO', label: 'Rechazado', tone: 'danger' as const },
+]
 
 function getColumns(
   onVer: (p: Postulacion) => void,
@@ -56,14 +66,10 @@ function getColumns(
       id: 'acciones',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => onVer(row.original)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:hover:text-cyan-400" title="Ver detalles">
-            <Eye size={13} />
-          </button>
-          <button onClick={() => onEliminar(row.original)} disabled={eliminando} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar">
-            <Trash2 size={13} />
-          </button>
-        </div>
+        <TableActions>
+          <ActionIconButton tone="view" label="Ver detalles" icon={<Eye size={15} />} onClick={() => onVer(row.original)} />
+          <ActionIconButton tone="delete" label="Eliminar postulacion" icon={<Trash2 size={15} />} onClick={() => onEliminar(row.original)} disabled={eliminando} />
+        </TableActions>
       ),
     },
   ]
@@ -255,7 +261,7 @@ function DetallePostulacion({
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleGuardar} disabled={actualizar.isPending}>
+            <Button variant="gold" onClick={handleGuardar} disabled={actualizar.isPending}>
               {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </div>
@@ -330,22 +336,18 @@ export function PostulacionesPage() {
           onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button variant="outline" onClick={buscar}>Buscar</Button>
+        <Button variant="gold" onClick={buscar}>Buscar</Button>
 
-        <Select
+        <SegmentedToggle
+          ariaLabel="Filtrar postulaciones por estado"
+          size="sm"
+          options={ESTADO_OPTIONS}
           value={estado}
-          onChange={(e) => {
-            setEstado(e.target.value)
+          onChange={(value) => {
+            setEstado(value)
             setPagination((p) => ({ ...p, pageIndex: 0 }))
           }}
-          className="w-40"
-        >
-          <option value="">Todos los estados</option>
-          <option value="PENDIENTE">Pendiente</option>
-          <option value="ENTREVISTA">Entrevista</option>
-          <option value="APROBADO">Aprobado</option>
-          <option value="RECHAZADO">Rechazado</option>
-        </Select>
+        />
 
         {hayFiltros && (
           <Button variant="ghost" onClick={limpiarFiltros}>Limpiar filtros</Button>

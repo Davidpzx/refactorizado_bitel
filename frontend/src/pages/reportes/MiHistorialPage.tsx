@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
 import type { PaginatedResponse } from '../../types/pagination'
 import type { Reporte } from '../../types/reporte'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Select } from '../../components/ui/select'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, Edit, PenLine } from 'lucide-react'
@@ -20,7 +21,13 @@ function diferenciaClass(val: number) {
   return val < 0 ? 'bg-kyro-danger/15 text-kyro-danger' : 'bg-kyro-warning/15 text-kyro-warning'
 }
 
-const ESTADOS = ['', 'borrador', 'enviado', 'editado', 'aprobado']
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'borrador', label: 'Borrador', tone: 'indigo' as const },
+  { value: 'enviado', label: 'Enviado', tone: 'info' as const },
+  { value: 'editado', label: 'Editado', tone: 'warning' as const },
+  { value: 'aprobado', label: 'Aprobado', tone: 'success' as const },
+]
 
 // Modal solicitar edición
 function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: number; onClose: () => void; onSuccess: () => void }) {
@@ -54,7 +61,7 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button disabled={!motivo.trim() || isPending} onClick={() => mutate()}>
+          <Button variant="gold" disabled={!motivo.trim() || isPending} onClick={() => mutate()}>
             {isPending ? 'Enviando...' : 'Enviar Solicitud'}
           </Button>
         </div>
@@ -221,7 +228,7 @@ function SalvavidasPanel() {
           <Input type="text" inputMode="numeric" maxLength={8} value={dni}
             onChange={e => setDni(e.target.value.replace(/\D/g, ''))} placeholder="8 dígitos" className="w-36" />
         </div>
-        <Button size="sm" disabled={dni.length !== 8 || isFetching} onClick={() => { setMsg(null); setConsultado(dni) }}>
+        <Button variant="gold" size="sm" disabled={dni.length !== 8 || isFetching} onClick={() => { setMsg(null); setConsultado(dni) }}>
           {isFetching ? 'Consultando...' : 'Consultar'}
         </Button>
       </div>
@@ -239,7 +246,7 @@ function SalvavidasPanel() {
               <span className="text-xs text-kyro-muted">{new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</span>
               <span className="text-xs text-kyro-body">Ingreso {t.hora_ingreso?.slice(0, 5) ?? '—'}</span>
               <span className="font-mono text-xs font-bold text-kyro-warning">{t.minutos_tardanza ?? 0} min</span>
-              <Button size="sm" variant="outline" disabled={usado || recuperar.isPending}
+              <Button size="sm" variant="glassSuccess" disabled={usado || recuperar.isPending}
                 onClick={() => { setMsg(null); recuperar.mutate(t) }}>
                 {usado ? 'Ya usado' : 'Recuperar'}
               </Button>
@@ -252,6 +259,7 @@ function SalvavidasPanel() {
 }
 
 export function MiHistorialPage() {
+  const navigate = useNavigate()
   const [filters, setFilters] = useState({ fecha_desde: '', fecha_hasta: '', estado: '' })
   const [page, setPage] = useState(1)
   const [applied, setApplied] = useState({ ...filters, page: 1 })
@@ -343,12 +351,16 @@ export function MiHistorialPage() {
         </div>
         <div>
           <label className="block text-xs text-kyro-muted mb-1">Estado</label>
-          <Select value={filters.estado} onChange={e => setFilters(f => ({ ...f, estado: e.target.value }))}>
-            {ESTADOS.map(e => <option key={e} value={e}>{e === '' ? 'Todos' : e}</option>)}
-          </Select>
+          <SegmentedToggle
+            ariaLabel="Filtrar mi historial por estado"
+            size="sm"
+            options={ESTADOS}
+            value={filters.estado}
+            onChange={(estado) => setFilters(f => ({ ...f, estado }))}
+          />
         </div>
-        <Button onClick={applyFilters}>Buscar</Button>
-        <Button variant="outline" onClick={() => { const r = { fecha_desde: '', fecha_hasta: '', estado: '' }; setFilters(r); setApplied({ ...r, page: 1 }) }}>Limpiar</Button>
+        <Button variant="gold" onClick={applyFilters}>Buscar</Button>
+        <Button variant="ghost" onClick={() => { const r = { fecha_desde: '', fecha_hasta: '', estado: '' }; setFilters(r); setApplied({ ...r, page: 1 }) }}>Limpiar</Button>
       </ListToolbar>
 
       {/* Table */}
@@ -391,13 +403,16 @@ export function MiHistorialPage() {
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link to={`/reportes/${r.id}`} className="inline-flex items-center gap-1 text-xs text-kyro-info hover:text-kyro-gold">
-                          <Eye size={13} /> Ver
-                        </Link>
+                      <TableActions>
+                        <ActionIconButton
+                          tone="view"
+                          label="Ver reporte"
+                          icon={<Eye size={15} />}
+                          onClick={() => navigate(`/reportes/${r.id}`)}
+                        />
                         {puedeEditar && (
-                          <Button size="sm" variant="ghost" onClick={() => setSolicitandoId(r.id)}
-                            className="h-auto px-0 text-kyro-warning hover:text-kyro-gold">
+                          <Button size="sm" variant="glassWarning" onClick={() => setSolicitandoId(r.id)}
+                            className="h-8 gap-1 px-2 text-xs">
                             <Edit size={13} /> Solicitar edición
                           </Button>
                         )}
@@ -405,14 +420,14 @@ export function MiHistorialPage() {
                           <span className="text-xs text-kyro-warning font-medium">Pendiente aprobación</span>
                         )}
                         {r.estado_edicion === 'APROBADO' && (
-                          <Link
-                            to={`/reportes/${r.id}/editar`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-kyro-info hover:text-kyro-gold"
-                          >
-                            <PenLine size={13} /> Editar ahora
-                          </Link>
+                          <ActionIconButton
+                            tone="edit"
+                            label="Editar reporte"
+                            icon={<PenLine size={15} />}
+                            onClick={() => navigate(`/reportes/${r.id}/editar`)}
+                          />
                         )}
-                      </div>
+                      </TableActions>
                     </td>
                   </tr>
                 )

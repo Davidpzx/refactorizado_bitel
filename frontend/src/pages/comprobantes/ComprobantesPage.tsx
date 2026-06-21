@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Send, Trash2, FileCheck, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
-import { Select } from '../../components/ui/select'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import type { PaginatedResponse } from '../../types/pagination'
@@ -66,6 +67,20 @@ const pen = (v: number | string | null | undefined) =>
 
 const TIPO_LABEL: Record<string, string> = { '03': 'Boleta', '01': 'Factura' }
 
+const ESTADOS = [
+  { value: '', label: 'Pendientes', tone: 'indigo' as const },
+  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
+  { value: 'ACEPTADO', label: 'Aceptado', tone: 'success' as const },
+  { value: 'ACEPTADO_OBS', label: 'Obs.', tone: 'info' as const },
+  { value: 'ERROR', label: 'Error', tone: 'danger' as const },
+]
+
+const TIPOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: '03', label: 'Boleta', tone: 'info' as const },
+  { value: '01', label: 'Factura', tone: 'gold' as const },
+]
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function ComprobantesPage() {
@@ -101,7 +116,7 @@ export function ComprobantesPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT">
-        <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ['comprobantes'] })}>
+        <Button variant="glassInfo" onClick={() => qc.invalidateQueries({ queryKey: ['comprobantes'] })}>
           <RefreshCw size={14} className="mr-2" /> Actualizar
         </Button>
       </PageHeader>
@@ -111,29 +126,23 @@ export function ComprobantesPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <label className="shrink-0 text-sm text-kyro-muted">Estado:</label>
-            <Select
+            <SegmentedToggle
+              ariaLabel="Filtrar comprobantes por estado"
+              size="sm"
+              options={ESTADOS}
               value={filtroEstado}
-              onChange={e => { setFiltroEstado(e.target.value); setPage(1) }}
-              className="w-44"
-            >
-              <option value="">Pendientes</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="ACEPTADO">Aceptado</option>
-              <option value="ACEPTADO_OBS">Aceptado c/obs</option>
-              <option value="ERROR">Error</option>
-            </Select>
+              onChange={(value) => { setFiltroEstado(value); setPage(1) }}
+            />
           </div>
           <div className="flex items-center gap-2">
             <label className="shrink-0 text-sm text-kyro-muted">Tipo:</label>
-            <Select
+            <SegmentedToggle
+              ariaLabel="Filtrar comprobantes por tipo"
+              size="sm"
+              options={TIPOS}
               value={filtroTipo}
-              onChange={e => { setFiltroTipo(e.target.value); setPage(1) }}
-              className="w-36"
-            >
-              <option value="">Todos</option>
-              <option value="03">Boleta</option>
-              <option value="01">Factura</option>
-            </Select>
+              onChange={(value) => { setFiltroTipo(value); setPage(1) }}
+            />
           </div>
           <span className="ml-auto text-sm text-kyro-muted">{total} comprobante{total !== 1 ? 's' : ''}</span>
         </div>
@@ -189,45 +198,39 @@ export function ComprobantesPage() {
                     {c.creado_en ? new Date(c.creado_en).toLocaleDateString('es-PE') : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
+                    <TableActions className="justify-center">
                       {c.estado_sunat !== 'ACEPTADO' && (
                         <Button
                           onClick={() => reenviarMutation.mutate(c.id)}
                           disabled={reenviarMutation.isPending}
                           title="Reenviar a SUNAT"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-kyro-muted hover:bg-kyro-info/10 hover:text-kyro-info"
+                          aria-label="Reenviar a SUNAT"
+                          variant="glassInfo"
+                          size="iconSm"
                         >
                           <Send size={13} />
                         </Button>
                       )}
                       {c.estado_sunat !== 'ACEPTADO' && (
-                        <Button
+                        <ActionIconButton
                           onClick={() => {
                             if (window.confirm(`¿Eliminar ${c.nombre_completo}?`)) deleteMutation.mutate(c.id)
                           }}
                           disabled={deleteMutation.isPending}
-                          title="Eliminar"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-kyro-muted hover:bg-kyro-danger/10 hover:text-kyro-danger"
-                        >
-                          <Trash2 size={13} />
-                        </Button>
+                          tone="delete"
+                          label="Eliminar comprobante"
+                          icon={<Trash2 size={15} />}
+                        />
                       )}
                       {c.xml_path && (
-                        <a
-                          href={c.xml_path}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-kyro text-kyro-muted transition-colors hover:bg-kyro-success/10 hover:text-kyro-success"
-                          title="Ver XML"
-                        >
-                          <FileCheck size={13} />
-                        </a>
+                        <ActionIconButton
+                          tone="view"
+                          label="Ver XML"
+                          icon={<FileCheck size={15} />}
+                          onClick={() => window.open(c.xml_path!, '_blank', 'noopener,noreferrer')}
+                        />
                       )}
-                    </div>
+                    </TableActions>
                   </td>
                 </tr>
               ))}

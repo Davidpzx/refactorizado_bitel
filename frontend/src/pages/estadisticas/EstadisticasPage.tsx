@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Download, TrendingUp } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -21,6 +22,13 @@ const COLORS = {
   accesorios: 'var(--color-kyro-success)',
   otros:    'var(--color-kyro-muted)',
 }
+
+const RANK_CATS = [
+  { value: 'todo', label: 'Todas', tone: 'indigo' as const },
+  { value: 'equipos', label: 'Equipos', tone: 'info' as const },
+  { value: 'postpago', label: 'Postpago', tone: 'gold' as const },
+  { value: 'chips', label: 'Chips', tone: 'success' as const },
+]
 
 
 interface Totales {
@@ -160,7 +168,7 @@ export function EstadisticasPage() {
       <PageHeader
         title="Estadísticas de Ventas"
         description="Explora el rendimiento comercial por categoría, tienda, producto y agente."
-        actions={<Button variant="outline" size="sm" onClick={exportarExcel} disabled={exportando}>
+        actions={<Button variant="glassSuccess" size="sm" onClick={exportarExcel} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar'}
         </Button>}
       />
@@ -189,7 +197,7 @@ export function EstadisticasPage() {
               />
             </div>
           )}
-          <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
+          <Button variant="gold" onClick={() => setApplied({ ...filters })}>Buscar</Button>
           <Button variant="outline" onClick={() => {
             const reset = { fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), tienda: '' }
             setFilters(reset); setApplied(reset)
@@ -321,16 +329,13 @@ export function EstadisticasPage() {
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="block text-xs text-kyro-muted mb-1">Categoría</label>
-                <select
+                <SegmentedToggle
+                  ariaLabel="Filtrar ranking por categoria"
+                  size="sm"
+                  options={RANK_CATS}
                   value={rankCat}
-                  onChange={e => { setRankCat(e.target.value as typeof rankCat); setRankSub('') }}
-                  className="kyro-input h-9 w-36"
-                >
-                  <option value="todo">Todas</option>
-                  <option value="equipos">Equipos</option>
-                  <option value="postpago">Postpago</option>
-                  <option value="chips">Chips/Prepago</option>
-                </select>
+                  onChange={(value) => { setRankCat(value as typeof rankCat); setRankSub('') }}
+                />
               </div>
               {rankingFiltrado && (
                 <div>

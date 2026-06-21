@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye } from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
+import { ActionIconButton, TableActions } from '../components/ui/ActionIconButton'
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
 import { apiErrorData } from '../lib/httpError'
@@ -124,7 +125,7 @@ function ModalEditarDestino({
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400/60 to-transparent" />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Modificar Destino Efectivo</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+          <button type="button" aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
         </div>
         <p className="text-xs text-gray-500 dark:text-zinc-400">
           Reporte <span className="font-mono font-semibold">#{String(reporteId).padStart(4, '0')}</span>
@@ -141,7 +142,7 @@ function ModalEditarDestino({
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button disabled={isPending || destino === (current ?? 'TIENDA')} onClick={() => mutate()}>
+          <Button variant="gold" disabled={isPending || destino === (current ?? 'TIENDA')} onClick={() => mutate()}>
             {isPending ? 'Guardando...' : 'Guardar'}
           </Button>
         </div>
@@ -154,6 +155,7 @@ function ModalEditarDestino({
 
 export function DashboardPage() {
   const { usuario } = useAuth()
+  const navigate = useNavigate()
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const [rawFilters, setRawFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr, tienda: '' })
@@ -202,6 +204,7 @@ export function DashboardPage() {
         description="Visión consolidada de caja, canales digitales y reportes operativos."
         actions={usuario?.rol === 'admin' ? (
           <button
+            type="button"
             onClick={() => setShowAnomalias(true)}
             className="relative flex h-9 items-center gap-2 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300"
             title="Reportes con anomalías"
@@ -248,7 +251,7 @@ export function DashboardPage() {
             />
           </div>
         )}
-        <Button onClick={applyFilters}>Filtrar</Button>
+        <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
         <Button variant="outline" onClick={resetToToday}>Hoy</Button>
       </ListToolbar>
 
@@ -345,13 +348,12 @@ export function DashboardPage() {
                           {r.destino_efectivo ?? 'TIENDA'}
                         </span>
                         {usuario?.rol === 'admin' && (
-                          <button
+                          <ActionIconButton
+                            tone="edit"
+                            label="Modificar destino"
+                            icon={<Pencil size={15} />}
                             onClick={() => setEditingDestino({ id: r.id, current: r.destino_efectivo ?? 'TIENDA' })}
-                            className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                            title="Modificar destino"
-                          >
-                            <Pencil size={11} />
-                          </button>
+                          />
                         )}
                       </div>
                     </td>
@@ -359,22 +361,20 @@ export function DashboardPage() {
                       <EstadoBadge estado={r.estado} estadoEdicion={r.estado_edicion} />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Link
-                          to={`/reportes/${r.id}`}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-gray-400 transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-600 dark:text-zinc-500 dark:hover:text-cyan-400"
-                          title="Ver detalle"
-                        >
-                          <Eye size={14} />
-                        </Link>
+                      <TableActions>
+                        <ActionIconButton
+                          tone="view"
+                          label="Ver detalle"
+                          icon={<Eye size={15} />}
+                          onClick={() => navigate(`/reportes/${r.id}`)}
+                        />
                         {canEdit ? (
-                          <Link
-                            to={`/reportes/${r.id}/editar`}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-gray-400 transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:text-zinc-500 dark:hover:text-amber-400"
-                            title="Editar reporte"
-                          >
-                            <Pencil size={14} />
-                          </Link>
+                          <ActionIconButton
+                            tone="edit"
+                            label="Editar reporte"
+                            icon={<Pencil size={15} />}
+                            onClick={() => navigate(`/reportes/${r.id}/editar`)}
+                          />
                         ) : editPending ? (
                           <span
                             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-yellow-300/40 text-yellow-400 opacity-60 cursor-default dark:border-yellow-500/20"
@@ -383,7 +383,7 @@ export function DashboardPage() {
                             <Pencil size={14} />
                           </span>
                         ) : null}
-                      </div>
+                      </TableActions>
                     </td>
                   </tr>
                 )
@@ -417,7 +417,7 @@ export function DashboardPage() {
                   </span>
                 )}
               </h3>
-              <button onClick={() => setShowAnomalias(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
+              <button type="button" aria-label="Cerrar anomalias" onClick={() => setShowAnomalias(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {anomaliasList.length === 0 ? (

@@ -5,6 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
+import { Receipt, X } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -206,7 +207,9 @@ function LineaRow({
           <input type="checkbox" {...register(`ventas.${index}.es_esim`)} className="w-3 h-3" /> eSIM
         </label>
       </div>
-      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
+      <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
+        <X size={14} />
+      </Button>
 
       {up && (
         <div className="col-span-full pl-0 pt-1">
@@ -258,7 +261,9 @@ function ApoyoRow({
       <div>
         <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/ c/u" className="kyro-input h-8 text-xs" />
       </div>
-      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
+      <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
+        <X size={14} />
+      </Button>
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
@@ -323,7 +328,9 @@ function EquipoRow({
         <div>
           <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="Precio S/" className="kyro-input h-8 text-xs" />
         </div>
-        <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none self-center">×</button>
+        <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
+          <X size={14} />
+        </Button>
       </div>
 
       {tipoPago === 'CUOTAS' && (
@@ -378,7 +385,9 @@ function OtroRow({
         <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} placeholder="S/" className="kyro-input h-8 text-xs" />
         {e?.monto_total && <p className="text-kyro-danger text-[10px]">{e.monto_total.message}</p>}
       </div>
-      <button type="button" onClick={onRemove} className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-lg leading-none">×</button>
+      <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove}>
+        <X size={14} />
+      </Button>
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
     </div>
   )
@@ -777,13 +786,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div className="flex items-center gap-2">
             {esTienda && <ChipStockBadge />}
             {esTienda && borradorDisponible && (
-              <Button variant="outline" type="button" className="text-kyro-warning border-kyro-warning/40 hover:bg-kyro-warning/10"
+              <Button variant="glassWarning" type="button"
                 onClick={() => restaurarBorrador(borradorDisponible)}>
                 Cargar Borrador
               </Button>
             )}
             {esTienda && (
-              <Button variant="outline" type="button" onClick={() => guardarBorrador(false)}>
+              <Button variant="gold" type="button" onClick={() => guardarBorrador(false)}>
                 Guardar Borrador
               </Button>
             )}
@@ -920,11 +929,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                       errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} vendedores={vendedores} />
                   ))}
               {equipoRows.length > 0 && (
-                <button type="button"
+                <Button type="button"
+                  variant="glassInfo"
+                  size="sm"
                   onClick={() => append(ventaNueva({ tipo_venta: 'ACCESORIO' }))}
-                  className="text-xs font-medium mt-1 text-kyro-indigo hover:text-kyro-gold">
+                  className="mt-1">
                   + Agregar Accesorio
-                </button>
+                </Button>
               )}
             </SectionPanel>
 
@@ -1032,8 +1043,17 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                   <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
                     className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
                   {esTienda && (
-                    <button type="button" title="Generar ticket de ingreso" onClick={() => setTicketDesc(label)}
-                      className="shrink-0 text-kyro-info hover:text-kyro-gold text-sm leading-none px-1">🧾</button>
+                    <Button
+                      type="button"
+                      title="Generar ticket de ingreso"
+                      aria-label="Generar ticket de ingreso"
+                      variant="glassInfo"
+                      size="iconSm"
+                      onClick={() => setTicketDesc(label)}
+                      className="shrink-0"
+                    >
+                      <Receipt size={14} />
+                    </Button>
                   )}
                 </div>
               ))}
@@ -1042,10 +1062,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             <GlassPanel className="kyro-card p-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Salidas de Efectivo</p>
-                <button type="button" onClick={agregarSalida}
-                  className="text-xs text-kyro-danger border border-kyro-danger/40 rounded-kyro px-2 py-0.5 hover:bg-kyro-danger/10 font-medium">
+                <Button type="button" variant="glassDanger" size="sm" onClick={agregarSalida}>
                   + Agregar Salida
-                </button>
+                </Button>
               </div>
               {salidaItems.length === 0
                 ? <p className="text-[11px] text-kyro-muted italic text-center py-1">Sin salidas registradas</p>
@@ -1063,8 +1082,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                         <input type="text" value={s.motivo}
                           onChange={e => actualizarSalida(s.id, 'motivo', e.target.value)}
                           placeholder="Motivo" className="kyro-input h-7 text-xs px-2" />
-                        <button type="button" onClick={() => eliminarSalida(s.id)}
-                          className="text-kyro-danger hover:bg-kyro-danger/10 rounded-kyro font-bold text-sm leading-none">×</button>
+                        <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar salida" onClick={() => eliminarSalida(s.id)}>
+                          <X size={14} />
+                        </Button>
                       </div>
                     ))}
                     <div className="text-right text-xs font-semibold text-kyro-danger pt-1">
@@ -1176,8 +1196,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         )}
 
         <div className="flex gap-3 pb-8">
-          <Button type="submit" disabled={guardar.isPending || stockInsuficiente}
-            className="flex-1 h-11 text-base font-semibold bg-kyro-gold hover:brightness-110 text-kyro-gold-ink border-kyro-gold">
+          <Button type="submit" variant="gold" disabled={guardar.isPending || stockInsuficiente}
+            className="flex-1 h-11 text-base font-semibold">
             {stockInsuficiente ? 'STOCK INSUFICIENTE' : guardar.isPending ? 'Guardando reporte...' : esEdicion ? 'Aplicar Reprocesado Completo' : 'Guardar Reporte Completo'}
           </Button>
           <Button type="button" variant="outline" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')} disabled={guardar.isPending}>

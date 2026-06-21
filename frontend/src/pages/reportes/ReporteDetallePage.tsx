@@ -505,6 +505,7 @@ function CuadreFinalCard({
               />
               <Button
                 size="sm"
+                variant="gold"
                 className="w-full"
                 disabled={!nuevoDestino || isPendingDestino}
                 onClick={() => {
@@ -742,13 +743,14 @@ export function ReporteDetallePage() {
                   {usuario?.rol === 'admin' && (
                     <Button
                       size="sm"
+                      variant="gold"
                       disabled={aprobarEdicion.isPending}
                       onClick={() => {
                         if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
                           aprobarEdicion.mutate(reporte.id)
                         }
                       }}
-                      className="h-7 gap-1 bg-kyro-success/15 px-2 text-xs text-kyro-success hover:bg-kyro-success/30"
+                      className="h-7 gap-1 px-2 text-xs"
                     >
                       ✓ Aprobar edición
                     </Button>

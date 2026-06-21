@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent } from '../../components/ui/card'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 
 interface TiendaFiltro {
   codigo: string
@@ -52,6 +53,12 @@ const estadoBadge: Record<string, EstadoVariant> = {
   PENDIENTE: 'warning',
   APROBADA:  'success',
 }
+
+const ESTADOS = [
+  { value: 'TODAS', label: 'Todos', tone: 'indigo' as const },
+  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
+  { value: 'APROBADA', label: 'Aprobada', tone: 'success' as const },
+]
 
 function formatMes() {
   const now = new Date()
@@ -157,15 +164,13 @@ export function PanelFinancierasPage() {
           ))}
         </Select>
 
-        <Select
+        <SegmentedToggle
+          ariaLabel="Filtrar financieras por estado"
+          size="sm"
+          options={ESTADOS}
           value={estado}
-          onChange={(e) => setEstado(e.target.value)}
-          className="w-36"
-        >
-          <option value="TODAS">Todos los estados</option>
-          <option value="PENDIENTE">Pendiente</option>
-          <option value="APROBADA">Aprobada</option>
-        </Select>
+          onChange={setEstado}
+        />
       </ListToolbar>
 
       {isLoading ? (
@@ -218,6 +223,7 @@ export function PanelFinancierasPage() {
                       {item.comision_estado === 'PENDIENTE' && (
                         <Button
                           size="sm"
+                          variant="glassSuccess"
                           onClick={() => confirmar.mutate(item.id)}
                           disabled={confirmar.isPending}
                         >
@@ -227,7 +233,7 @@ export function PanelFinancierasPage() {
                       {item.comision_estado === 'APROBADA' && (
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="glassWarning"
                           onClick={() => revertir.mutate(item.id)}
                           disabled={revertir.isPending}
                         >

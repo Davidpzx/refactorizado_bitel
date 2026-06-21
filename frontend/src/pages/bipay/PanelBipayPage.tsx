@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
@@ -266,7 +267,7 @@ export function PanelBipayPage() {
                 className={inputCls}
               />
             </div>
-            <Button onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
+            <Button variant="gold" onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
           </ListToolbar>
 
           <div className="kyro-card overflow-hidden">
@@ -358,6 +359,7 @@ export function PanelBipayPage() {
               />
             </div>
             <Button
+              variant="gold"
               disabled={recarga.isPending || !recargaForm.cuenta_id}
               onClick={() => recarga.mutate({
                 cuenta_id:    Number(recargaForm.cuenta_id),
@@ -403,7 +405,7 @@ export function PanelBipayPage() {
               <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Observación</label>
               <input type="text" value={transForm.observacion} onChange={e => setTransForm(f => ({ ...f, observacion: e.target.value }))} className={inputCls} />
             </div>
-            <Button disabled={transferir.isPending || !transForm.cuenta_origen_id || !transForm.cuenta_destino_id || !transForm.monto}
+            <Button variant="gold" disabled={transferir.isPending || !transForm.cuenta_origen_id || !transForm.cuenta_destino_id || !transForm.monto}
               onClick={() => transferir.mutate({ cuenta_origen_id: Number(transForm.cuenta_origen_id), cuenta_destino_id: Number(transForm.cuenta_destino_id), monto: Number(transForm.monto), observacion: transForm.observacion || undefined })}>
               {transferir.isPending ? 'Transfiriendo…' : 'Transferir'}
             </Button>
@@ -441,7 +443,7 @@ export function PanelBipayPage() {
               <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Motivo del ajuste (obligatorio)</label>
               <input type="text" value={ajusteForm.motivo} onChange={e => setAjusteForm(f => ({ ...f, motivo: e.target.value }))} placeholder="Conteo físico, corrección, etc." className={inputCls} />
             </div>
-            <Button disabled={ajustar.isPending || !ajusteForm.cuenta_id || ajusteForm.motivo.trim().length < 5}
+            <Button variant="gold" disabled={ajustar.isPending || !ajusteForm.cuenta_id || ajusteForm.motivo.trim().length < 5}
               onClick={() => ajustar.mutate({ cuenta_id: Number(ajusteForm.cuenta_id), saldo_bipay: Number(ajusteForm.saldo_bipay || 0), saldo_anypay: Number(ajusteForm.saldo_anypay || 0), motivo: ajusteForm.motivo })}>
               {ajustar.isPending ? 'Ajustando…' : 'Aplicar Ajuste'}
             </Button>
@@ -475,12 +477,21 @@ export function PanelBipayPage() {
                       <td className="px-4 py-3 text-xs uppercase text-kyro-muted">{c.tipo}</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-kyro-text">{pen.format(c.saldo_actual)}</td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setCuentaErr(''); setCuentaMsg(''); setCuentaForm({ id: c.id, alias: c.alias, tipo: c.tipo, numero_cuenta: c.numero_cuenta, nombre_titular: '', cuenta_madre_id: '', saldo_bipay: '', saldo_anypay: '', umbral_alerta: '' }) }}>Editar</Button>
-                          <Button size="sm" variant="outline" className="border-kyro-danger text-kyro-danger hover:bg-kyro-danger/10"
+                        <TableActions>
+                          <ActionIconButton
+                            tone="edit"
+                            label="Editar cuenta"
+                            icon={<Pencil size={15} />}
+                            onClick={() => { setCuentaErr(''); setCuentaMsg(''); setCuentaForm({ id: c.id, alias: c.alias, tipo: c.tipo, numero_cuenta: c.numero_cuenta, nombre_titular: '', cuenta_madre_id: '', saldo_bipay: '', saldo_anypay: '', umbral_alerta: '' }) }}
+                          />
+                          <ActionIconButton
+                            tone="delete"
+                            label="Eliminar cuenta"
+                            icon={<Trash2 size={15} />}
                             disabled={eliminarCuenta.isPending}
-                            onClick={() => { if (confirm(`¿Eliminar la cuenta "${c.alias}"?`)) eliminarCuenta.mutate(c.id) }}>Eliminar</Button>
-                        </div>
+                            onClick={() => { if (confirm(`¿Eliminar la cuenta "${c.alias}"?`)) eliminarCuenta.mutate(c.id) }}
+                          />
+                        </TableActions>
                       </td>
                     </tr>
                   ))}
@@ -540,7 +551,7 @@ export function PanelBipayPage() {
                 </div>
               )}
               <div className="flex gap-2 pt-1">
-                <Button className="flex-1"
+                <Button variant="gold" className="flex-1"
                   disabled={guardarCuenta.isPending || !cuentaForm.alias || !cuentaForm.numero_cuenta || (cuentaForm.tipo === 'HIJO' && !cuentaForm.cuenta_madre_id)}
                   onClick={() => { setCuentaMsg(''); setCuentaErr(''); guardarCuenta.mutate({
                     alias: cuentaForm.alias, tipo: cuentaForm.tipo, numero_cuenta: cuentaForm.numero_cuenta,

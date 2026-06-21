@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Dialog } from '../../components/ui/dialog'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,13 @@ const estadoVariant: Record<KardexRow['estado'], EstadoVariant> = {
   VENDIDO:    'destructive',
   TRASLADO:   'warning',
 }
+
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'DISPONIBLE', label: 'Disponible', tone: 'success' as const },
+  { value: 'VENDIDO', label: 'Vendido', tone: 'danger' as const },
+  { value: 'TRASLADO', label: 'Traslado', tone: 'warning' as const },
+]
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -126,7 +134,7 @@ export function KardexInventarioPage() {
         title="Kardex de Inventario"
         description="Historial completo de movimientos de stock."
         actions={
-          <Button variant="outline" size="sm" onClick={handleExportar} disabled={exportando}>
+          <Button variant="glassSuccess" size="sm" onClick={handleExportar} disabled={exportando}>
             <Download size={14} className="mr-1.5" />
             {exportando ? 'Exportando...' : 'Exportar Excel'}
           </Button>
@@ -147,16 +155,13 @@ export function KardexInventarioPage() {
           ))}
         </Select>
 
-        <Select
+        <SegmentedToggle
+          ariaLabel="Filtrar kardex por estado"
+          size="sm"
+          options={ESTADOS}
           value={estado}
-          onChange={e => setEstado(e.target.value)}
-          className="w-40"
-        >
-          <option value="">Todos los estados</option>
-          <option value="DISPONIBLE">Disponible</option>
-          <option value="VENDIDO">Vendido</option>
-          <option value="TRASLADO">Traslado</option>
-        </Select>
+          onChange={setEstado}
+        />
 
         {(tienda || estado) && (
           <Button variant="ghost" size="sm" onClick={() => { setTienda(''); setEstado('') }}>
@@ -226,7 +231,7 @@ export function KardexInventarioPage() {
                       {row.estado === 'VENDIDO' && (
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="glassWarning"
                           onClick={() => setConfirmRow(row)}
                           title="Restaurar a disponible"
                         >
@@ -253,7 +258,7 @@ export function KardexInventarioPage() {
           ¿Restaurar <strong>{confirmRow?.nombre}</strong>{confirmRow?.imei ? ` (${confirmRow.imei})` : ''} a estado DISPONIBLE?
         </p>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmRow(null)}>
+          <Button variant="ghost" onClick={() => setConfirmRow(null)}>
             Cancelar
           </Button>
           <Button

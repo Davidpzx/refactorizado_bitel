@@ -246,7 +246,7 @@ export function ConfiguracionPage() {
               {(updateMutation.error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al guardar.'}
             </p>
           )}
-          <Button type="submit" disabled={updateMutation.isPending || !isDirty} className="gap-2">
+          <Button type="submit" variant="gold" disabled={updateMutation.isPending || !isDirty} className="gap-2">
             <Save size={15} />
             {updateMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
@@ -267,7 +267,7 @@ export function ConfiguracionPage() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="glassInfo"
                   size="sm"
                   onClick={() => fileRef.current?.click()}
                   disabled={logoMutation.isPending}
@@ -276,7 +276,7 @@ export function ConfiguracionPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="glassDanger"
                   size="sm"
                   onClick={() => deleteLogoMutation.mutate()}
                   disabled={deleteLogoMutation.isPending}
@@ -293,7 +293,7 @@ export function ConfiguracionPage() {
             <p className="text-sm">Sin logo configurado</p>
             <Button
               type="button"
-              variant="outline"
+              variant="gold"
               onClick={() => fileRef.current?.click()}
               disabled={logoMutation.isPending}
             >

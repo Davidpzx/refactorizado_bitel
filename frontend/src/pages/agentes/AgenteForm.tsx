@@ -222,7 +222,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
               <Label htmlFor="dni">DNI *</Label>
               <div className="mt-1 flex gap-2">
                 <Input id="dni" {...register('dni')} placeholder="12345678" maxLength={8} inputMode="numeric" />
-                <Button type="button" variant="outline" size="icon" onClick={buscarDni} disabled={dniLoading} title="Buscar en RENIEC">
+                <Button type="button" variant="outline" size="icon" aria-label="Buscar en RENIEC" onClick={buscarDni} disabled={dniLoading} title="Buscar en RENIEC">
                   {dniLoading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
                 </Button>
               </div>
@@ -364,7 +364,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isPending} className="sm:min-w-40">
+        <Button type="submit" variant="gold" disabled={isPending} className="sm:min-w-40">
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar agente' : 'Registrar agente'}
         </Button>
       </div>

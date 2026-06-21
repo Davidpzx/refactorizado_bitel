@@ -158,6 +158,7 @@ export function ReporteBcpPage() {
               />
             </div>
             <Button
+              variant="gold"
               disabled={enviar.isPending || !form.cantidad_operaciones}
               onClick={() => enviar.mutate({
                 fecha: form.fecha,
@@ -196,7 +197,7 @@ export function ReporteBcpPage() {
                   className="kyro-input w-auto"
                 />
               </div>
-              <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
+              <Button variant="gold" onClick={() => setApplied({ ...filters })}>Buscar</Button>
             </div>
           </ListToolbar>
 

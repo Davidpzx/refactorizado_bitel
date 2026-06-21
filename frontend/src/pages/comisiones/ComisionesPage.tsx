@@ -6,9 +6,11 @@ import { z } from 'zod'
 import { Plus, Pencil, Trash2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 
@@ -84,6 +86,15 @@ const TYPE_COLORS: Record<string, string> = {
   ACCESORIO: 'bg-kyro-warning/15 text-kyro-warning',
   OTROS:     'bg-kyro-elevated text-kyro-muted',
 }
+
+const TIPO_OPTIONS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'POSTPAGO', label: 'Postpago', tone: 'info' as const },
+  { value: 'PREPAGO', label: 'Prepago', tone: 'success' as const },
+  { value: 'EQUIPO', label: 'Equipo', tone: 'gold' as const },
+  { value: 'ACCESORIO', label: 'Accesorio', tone: 'warning' as const },
+  { value: 'OTROS', label: 'Otros', tone: 'indigo' as const },
+]
 
 // ── Plan Form modal ───────────────────────────────────────────────────────────
 
@@ -163,7 +174,7 @@ function PlanForm({ plan, onSuccess, onCancel }: { plan?: ComisionPlan; onSucces
       {err && <p className="text-kyro-danger text-sm">{err.response?.data?.message ?? 'Error al guardar.'}</p>}
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={isPending} className="flex-1">
+        <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
           {isPending ? 'Guardando...' : plan ? 'Actualizar plan' : 'Crear plan'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
@@ -220,7 +231,7 @@ function RecalcularModal({ onClose }: { onClose: () => void }) {
             <Input id="rec_tienda" {...register('tienda_id')} placeholder="PUNDA11" className="mt-1" />
           </div>
 
-          <Button type="submit" disabled={mutation.isPending} className="w-full">
+          <Button type="submit" variant="gold" disabled={mutation.isPending} className="w-full">
             {mutation.isPending ? 'Recalculando...' : 'Ejecutar recálculo'}
           </Button>
         </form>
@@ -331,7 +342,7 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="flex gap-3">
-        <Button className="flex-1" disabled={guardar.isPending} onClick={() => { setMsg(null); guardar.mutate() }}>
+        <Button variant="gold" className="flex-1" disabled={guardar.isPending} onClick={() => { setMsg(null); guardar.mutate() }}>
           {guardar.isPending ? 'Guardando...' : 'Guardar tarifas'}
         </Button>
         <Button variant="outline" onClick={onClose}>Cerrar</Button>
@@ -399,11 +410,11 @@ function RangosOperativosModal({ onClose }: { onClose: () => void }) {
             <Input type="number" min="1" value={r.desde} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, desde: Number(e.target.value) } : x))} placeholder="Desde" />
             <Input type="number" min="1" value={r.hasta} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, hasta: Number(e.target.value) } : x))} placeholder="Hasta" />
             <Input type="number" min="0" step="0.01" value={r.monto} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, monto: Number(e.target.value) } : x))} placeholder="S/" />
-            <Button size="icon" variant="ghost" onClick={() => setRangos(v => v.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+              <Button size="iconSm" variant="glassDanger" aria-label="Eliminar rango" onClick={() => setRangos(v => v.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
           </div>
         ))}
       </div>
-      <Button className="mt-3 w-full" disabled={guardarProductividad.isPending}
+      <Button variant="gold" className="mt-3 w-full" disabled={guardarProductividad.isPending}
         onClick={() => guardarProductividad.mutate({ tipo, rangos })}>
         Guardar {tipo}
       </Button>
@@ -427,11 +438,11 @@ function RangosOperativosModal({ onClose }: { onClose: () => void }) {
               <Input type="number" min="0" step="0.01" value={r.monto_min} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, monto_min: Number(e.target.value) } : x))} placeholder="Mínimo" />
               <Input type="number" min="0" step="0.01" value={r.monto_max ?? ''} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, monto_max: e.target.value === '' ? null : Number(e.target.value) } : x))} placeholder="Sin límite" />
               <Input type="number" min="0" step="0.01" value={r.ganancia} onChange={e => setRangos(rangos.map((x, j) => j === i ? { ...x, ganancia: Number(e.target.value) } : x))} placeholder="Ganancia" />
-              <Button size="icon" variant="ghost" onClick={() => setRangos(rangos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+              <Button size="iconSm" variant="glassDanger" aria-label="Eliminar rango" onClick={() => setRangos(rangos.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
             </div>
           ))}
         </div>
-        <Button className="mt-3 w-full" disabled={guardarServicio.isPending}
+        <Button variant="gold" className="mt-3 w-full" disabled={guardarServicio.isPending}
           onClick={() => guardarServicio.mutate({ tipo_servicio: tipo, rangos })}>
           Guardar {tipo.toUpperCase()}
         </Button>
@@ -464,7 +475,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
       <div className="kyro-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-kyro-border">
           <h3 className="font-semibold text-kyro-text">{title}</h3>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-kyro-subtle hover:text-kyro-text text-xl leading-none">&times;</Button>
+          <Button variant="ghost" size="icon" aria-label="Cerrar modal" onClick={onClose} className="text-kyro-subtle hover:text-kyro-text text-xl leading-none">&times;</Button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -502,16 +513,16 @@ export function ComisionesPage() {
       {/* Header */}
       <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio">
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => setModal('tarifas')}>
+          <Button variant="glassInfo" onClick={() => setModal('tarifas')}>
             <AlertCircle size={15} className="mr-2" /> Tarifas operativas
           </Button>
-          <Button variant="outline" onClick={() => setModal('rangos')}>
+          <Button variant="glassIndigo" onClick={() => setModal('rangos')}>
             <Pencil size={15} className="mr-2" /> Estrategia y rangos
           </Button>
-          <Button variant="outline" onClick={() => setModal('recalcular')}>
+          <Button variant="glassWarning" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
           </Button>
-          <Button onClick={() => setModal('create')}>
+          <Button variant="gold" onClick={() => setModal('create')}>
             <Plus size={15} className="mr-2" /> Nuevo plan
           </Button>
         </div>
@@ -520,20 +531,14 @@ export function ComisionesPage() {
       {/* Filtro */}
       <ListToolbar description="Filtra el catálogo por familia de servicio">
         <div className="flex items-center gap-4">
-          <Label htmlFor="filtro_tipo" className="shrink-0">Filtrar por tipo:</Label>
-          <Select
-            id="filtro_tipo"
+          <Label className="shrink-0">Filtrar por tipo:</Label>
+          <SegmentedToggle
+            ariaLabel="Filtrar comisiones por tipo"
+            size="sm"
+            options={TIPO_OPTIONS}
             value={filtroTipo}
-            onChange={e => setFiltroTipo(e.target.value)}
-            className="w-48"
-          >
-            <option value="">Todos</option>
-            <option value="POSTPAGO">POSTPAGO</option>
-            <option value="PREPAGO">PREPAGO</option>
-            <option value="EQUIPO">EQUIPO</option>
-            <option value="ACCESORIO">ACCESORIO</option>
-            <option value="OTROS">OTROS</option>
-          </Select>
+            onChange={setFiltroTipo}
+          />
           <span className="text-sm text-kyro-muted">{planes.length} planes</span>
         </div>
       </ListToolbar>
@@ -575,27 +580,10 @@ export function ComisionesPage() {
                   <td className="px-4 py-3 text-right font-medium text-kyro-info">{pen(p.comision_ext_n)}</td>
                   <td className="px-4 py-3 text-right text-kyro-info">{pen(p.comision_ext_n3)}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(p)}
-                        className="h-8 w-8 text-kyro-subtle hover:bg-kyro-info/10 hover:text-kyro-info"
-                        title="Editar"
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(p)}
-                        disabled={eliminar.isPending}
-                        className="h-8 w-8 text-kyro-subtle hover:bg-kyro-danger/10 hover:text-kyro-danger"
-                        title="Eliminar"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    <TableActions className="justify-center">
+                      <ActionIconButton tone="edit" label="Editar plan" icon={<Pencil size={15} />} onClick={() => handleEdit(p)} />
+                      <ActionIconButton tone="delete" label="Eliminar plan" icon={<Trash2 size={15} />} onClick={() => handleDelete(p)} disabled={eliminar.isPending} />
+                    </TableActions>
                   </td>
                 </tr>
               ))}

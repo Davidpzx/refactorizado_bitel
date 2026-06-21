@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
@@ -196,7 +197,7 @@ export function AsistenciasPage() {
             <AlertCircle size={14} /> Registrar excepción
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={exportar} disabled={exportando}>
+        <Button variant="glassSuccess" size="sm" onClick={exportar} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
       </PageHeader>
@@ -225,12 +226,13 @@ export function AsistenciasPage() {
               </select>
             </div>
             <Button
+              variant="gold"
               disabled={!exc.agente_id || registrarExcepcion.isPending}
               onClick={() => registrarExcepcion.mutate()}
             >
               {registrarExcepcion.isPending ? 'Guardando...' : 'Registrar'}
             </Button>
-            <Button variant="outline" onClick={() => setShowExc(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setShowExc(false)}>Cancelar</Button>
           </div>
           {registrarExcepcion.isError && (
             <p className="mt-2 text-xs text-kyro-danger">
@@ -266,7 +268,7 @@ export function AsistenciasPage() {
               />
             </div>
           )}
-          <Button onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
+          <Button variant="gold" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
           <Button variant="outline" onClick={() => {
             const reset = { fecha_desde: new Date().toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), agente_id: '' }
             setFilters(reset); setApplied(reset); setPage(1)
@@ -353,13 +355,28 @@ export function AsistenciasPage() {
                     </td>
                     <td className="px-4 py-3">
                       {usuario?.rol === 'admin' && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => abrirEdicion(a)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400" title="Editar asistencia"><Pencil size={13} /></button>
+                        <TableActions>
+                          <ActionIconButton tone="edit" label="Editar asistencia" icon={<Pencil size={15} />} onClick={() => abrirEdicion(a)} />
                           {esRevision && (
-                            <button disabled={aprobar.isPending} onClick={() => aprobar.mutate(a.id)} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-green-500/40 hover:bg-green-500/10 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-40 disabled:pointer-events-none" title="Aprobar"><CheckCircle size={13} /></button>
+                            <Button
+                              variant="glassSuccess"
+                              size="iconSm"
+                              aria-label="Aprobar asistencia"
+                              title="Aprobar"
+                              disabled={aprobar.isPending}
+                              onClick={() => aprobar.mutate(a.id)}
+                            >
+                              <CheckCircle size={15} />
+                            </Button>
                           )}
-                          <button disabled={eliminarRegistro.isPending} onClick={() => { if (confirm("¿Eliminar este registro de asistencia?")) eliminarRegistro.mutate(a.id) }} className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-kyro-muted transition-all hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none" title="Eliminar"><UserX size={13} /></button>
-                        </div>
+                          <ActionIconButton
+                            tone="delete"
+                            label="Eliminar asistencia"
+                            icon={<UserX size={15} />}
+                            disabled={eliminarRegistro.isPending}
+                            onClick={() => { if (confirm("¿Eliminar este registro de asistencia?")) eliminarRegistro.mutate(a.id) }}
+                          />
+                        </TableActions>
                       )}
                     </td>
                   </tr>
@@ -386,7 +403,7 @@ export function AsistenciasPage() {
                 <h3 className="font-semibold text-kyro-text">Editar asistencia de {editando.nombres}</h3>
                 <p className="text-xs text-kyro-muted">Tardanza y deuda se recalculan con el horario oficial.</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => { setEditando(null); setEditForm(null) }}>&times;</Button>
+              <Button variant="ghost" size="icon" aria-label="Cerrar edicion" onClick={() => { setEditando(null); setEditForm(null) }}>&times;</Button>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -438,7 +455,7 @@ export function AsistenciasPage() {
               </p>
             )}
             <div className="mt-5 flex gap-3">
-              <Button className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
+              <Button variant="gold" className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
                 {editarRegistro.isPending ? 'Recalculando...' : 'Guardar y recalcular'}
               </Button>
               <Button variant="outline" onClick={() => { setEditando(null); setEditForm(null) }}>Cancelar</Button>

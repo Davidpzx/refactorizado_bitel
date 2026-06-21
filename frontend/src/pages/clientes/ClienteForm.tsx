@@ -102,6 +102,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
                 type="button"
                 onClick={buscarDni}
                 disabled={dniLoading}
+                aria-label="Buscar en RENIEC"
                 title="Buscar en RENIEC"
                 variant="outline"
                 size="icon"
@@ -149,7 +150,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={isPending} className="flex-1">
+        <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar cliente' : 'Registrar cliente'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>

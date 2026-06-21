@@ -20,6 +20,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import type { TrasladoChip, ChipStock, EstadoTraslado } from '../../types/traslados'
 
 const TIENDAS = [
@@ -36,6 +37,15 @@ const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
   RECHAZADO:             'destructive',
   CANCELADO:             'outline',
 }
+
+const ESTADOS = [
+  { value: '', label: 'Todos', tone: 'indigo' as const },
+  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
+  { value: 'PENDIENTE_APROBACION', label: 'Aprobacion', tone: 'gold' as const },
+  { value: 'CONFIRMADO', label: 'Confirmado', tone: 'success' as const },
+  { value: 'RECHAZADO', label: 'Rechazado', tone: 'danger' as const },
+  { value: 'CANCELADO', label: 'Cancelado', tone: 'danger' as const },
+]
 
 const crearSchema = z.object({
   chip_id:        z.number({ error: 'Requerido' }).int().positive(),
@@ -167,7 +177,7 @@ function CrearChipDialog({
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={crear.isPending} className="flex-1">
+          <Button type="submit" variant="gold" disabled={crear.isPending} className="flex-1">
             {crear.isPending ? 'Creando...' : 'Crear Traslado'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={crear.isPending}>
@@ -239,7 +249,7 @@ function ConfirmarChipDialog({
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={confirmar.isPending} className="flex-1">
+          <Button type="submit" variant="gold" disabled={confirmar.isPending} className="flex-1">
             {confirmar.isPending ? 'Confirmando...' : 'Confirmar Recepción'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={confirmar.isPending}>
@@ -305,12 +315,12 @@ function getTrasladoColumns(
         return (
           <div className="flex items-center gap-2 flex-wrap">
             {esConfirmado && (
-              <Button size="sm" variant="outline" onClick={() => onConstancia(t)}>
+              <Button size="sm" variant="glassInfo" onClick={() => onConstancia(t)}>
                 Constancia
               </Button>
             )}
             {puedeConfirmar && (
-              <Button size="sm" variant="outline" onClick={() => onConfirmar(t)}>
+              <Button size="sm" variant="gold" onClick={() => onConfirmar(t)}>
                 Confirmar
               </Button>
             )}
@@ -318,9 +328,9 @@ function getTrasladoColumns(
               <>
                 <Button
                   size="sm"
+                  variant="gold"
                   onClick={() => onGestionar(t.id, 'aprobar')}
                   disabled={gestionando}
-                  className="bg-kyro-success text-kyro-text hover:brightness-110"
                 >
                   Aprobar
                 </Button>
@@ -337,7 +347,7 @@ function getTrasladoColumns(
             {puedeCancelar && (
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={() => onGestionar(t.id, 'cancelar')}
                 disabled={gestionando}
                 className="text-kyro-muted"
@@ -409,7 +419,7 @@ export function TrasladoChipsPage() {
       <PageHeader
         title="Traslados de Chips"
         description="Stock de chips por tienda y gestión de traslados."
-        actions={<Button onClick={() => setDialogCrear(true)}>+ Trasladar Chips</Button>}
+        actions={<Button variant="gold" onClick={() => setDialogCrear(true)}>+ Trasladar Chips</Button>}
       />
 
       <section>
@@ -432,21 +442,16 @@ export function TrasladoChipsPage() {
           <h2 className="text-sm font-semibold text-kyro-body uppercase tracking-wider">
             Traslados Pendientes
           </h2>
-          <Select
+          <SegmentedToggle
+            ariaLabel="Filtrar traslados de chips por estado"
+            size="sm"
+            options={ESTADOS}
             value={estado}
-            onChange={(e) => {
-              setEstado(e.target.value)
+            onChange={(value) => {
+              setEstado(value)
               setPagination((p) => ({ ...p, pageIndex: 0 }))
             }}
-            className="w-48"
-          >
-            <option value="">Todos los estados</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PENDIENTE_APROBACION">Pendiente Aprobación</option>
-            <option value="CONFIRMADO">Confirmado</option>
-            <option value="RECHAZADO">Rechazado</option>
-            <option value="CANCELADO">Cancelado</option>
-          </Select>
+          />
         </div>
         <DataTable
           data={data?.data ?? []}

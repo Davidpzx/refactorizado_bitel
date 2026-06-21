@@ -4,6 +4,7 @@ import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 
 interface TiendaInfo {
   codigo: string
@@ -25,10 +26,10 @@ interface MatrizResponse {
 
 type TabKey = 'equipos' | 'accesorios' | 'chips'
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'equipos',    label: 'Equipos' },
-  { key: 'accesorios', label: 'Accesorios' },
-  { key: 'chips',      label: 'Chips' },
+const TABS = [
+  { value: 'equipos', label: 'Equipos', tone: 'info' as const },
+  { value: 'accesorios', label: 'Accesorios', tone: 'gold' as const },
+  { value: 'chips', label: 'Chips', tone: 'success' as const },
 ]
 
 export function MatrizInventarioPage() {
@@ -56,34 +57,22 @@ export function MatrizInventarioPage() {
         description="Vista cruzada de stock por tienda y producto."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExportar('EQUIPO')}>
+            <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('EQUIPO')}>
               Exportar Equipos CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExportar('ACCESORIO')}>
+            <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('ACCESORIO')}>
               Exportar Accesorios CSV
             </Button>
           </div>
         }
       />
 
-      <div className="kyro-card flex w-fit max-w-full gap-1 overflow-x-auto p-1.5">
-        {TABS.map(({ key, label }) => (
-          <Button
-            key={key}
-            variant="ghost"
-            size="sm"
-            onClick={() => setTab(key)}
-            className={[
-              'px-4 text-xs font-semibold',
-              tab === key
-                ? 'bg-kyro-gold text-kyro-gold-ink hover:bg-kyro-gold'
-                : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text',
-            ].join(' ')}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      <SegmentedToggle
+        ariaLabel="Cambiar vista de matriz de inventario"
+        options={TABS}
+        value={tab}
+        onChange={(value) => setTab(value as TabKey)}
+      />
 
       {isLoading ? (
         <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">

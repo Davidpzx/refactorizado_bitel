@@ -47,7 +47,7 @@ export function RevisarFotosPage() {
             const busy = accion.isPending && accion.variables?.id === f.id
             return (
               <Card key={f.id} className="kyro-card flex flex-col overflow-hidden">
-                <button onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="relative aspect-square bg-kyro-base">
+                <button type="button" onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="relative aspect-square bg-kyro-base">
                   <img src={srcFoto(f.foto_marcacion)} alt={f.nombres} className="w-full h-full object-cover" />
                   <span className="absolute left-2 top-2 rounded-full bg-kyro-gold px-2 py-0.5 text-[10px] font-bold text-kyro-gold-ink">
                     {f.metodo_marcacion ?? 'FOTO'}
@@ -65,12 +65,12 @@ export function RevisarFotosPage() {
                     <span className="text-xs text-kyro-subtle">Sin coordenadas GPS</span>
                   )}
                   <div className="flex gap-2 mt-2">
-                    <Button type="button" size="sm" disabled={busy} className="flex-1"
+                    <Button type="button" variant="gold" size="sm" disabled={busy} className="flex-1"
                       onClick={() => accion.mutate({ id: f.id, accion: 'aprobar' })}>
                       Aprobar
                     </Button>
-                    <Button type="button" size="sm" variant="outline" disabled={busy}
-                      className="flex-1 border-kyro-danger/30 text-kyro-danger"
+                    <Button type="button" size="sm" variant="glassDanger" disabled={busy}
+                      className="flex-1"
                       onClick={() => accion.mutate({ id: f.id, accion: 'rechazar' })}>
                       Anular
                     </Button>
