@@ -5,7 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -154,7 +154,7 @@ function VendedorSelect({
 // ── Componente: fila compacta para POSTPAGO / PREPAGO ────────────────────────
 
 function LineaRow({
-  index, register, control, errors, tipo, onRemove, planes, vendedores,
+  index, register, control, errors, tipo, onRemove, onPrint, planes, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
@@ -162,52 +162,63 @@ function LineaRow({
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   tipo: 'POSTPAGO' | 'PREPAGO'
   onRemove: () => void
+  onPrint?: () => void
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
   vendedores: VendedorReporte[]
 }) {
   const up = useWatch({ control, name: `ventas.${index}.es_upgrade` })
   const e  = errors.ventas?.[index]
+  const borderColor = tipo === 'POSTPAGO' ? 'rgba(59,130,246,0.3)' : 'rgba(6,182,212,0.3)'
 
   return (
-    <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 items-end py-1.5 border-b border-kyro-border last:border-0">
-      <VendedorSelect index={index} register={register} vendedores={vendedores} />
-      <div>
-        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Celular" maxLength={15} className="kyro-input h-8 text-xs" />
+    <div className="rounded-lg border p-2 mb-2.5" style={{ background: 'rgba(0,0,0,0.05)', borderColor }}>
+      {/* Fila superior: vendedor + DNI + toggles horizontales (paridad legacy) */}
+      <div className="flex items-center gap-2 flex-wrap pb-2 mb-2 border-b border-dashed border-kyro-border">
+        <div className="w-[120px] shrink-0">
+          <VendedorSelect index={index} register={register} vendedores={vendedores} />
+        </div>
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI / Cel" maxLength={15} className="kyro-input h-8 text-xs w-[95px] shrink-0" />
+        <div className="flex items-center gap-3 flex-wrap">
+          <ToggleSwitch label="Extranjero" accent="#a1a1aa" {...register(`ventas.${index}.es_extranjero`)} />
+          {tipo === 'POSTPAGO' && <ToggleSwitch label="Migración" accent="#06b6d4" {...register(`ventas.${index}.es_migracion`)} />}
+          {tipo === 'POSTPAGO' && <ToggleSwitch label="Upgrade" accent="#f59e0b" {...register(`ventas.${index}.es_upgrade`)} />}
+          <ToggleSwitch label="eSIM" accent="#a78bfa" {...register(`ventas.${index}.es_esim`)} />
+        </div>
       </div>
-      <div>
-        <Select {...register(`ventas.${index}.plan_nombre`)} className="kyro-input h-8 text-xs">
-          <option value="">— Plan —</option>
-          {planes.map((p, i) => (
-            <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>
-          ))}
-        </Select>
-        {e?.plan_nombre && <p className="text-kyro-danger text-[10px]">{e.plan_nombre.message}</p>}
-      </div>
-      <div>
-        <Select {...register(`ventas.${index}.tipo_alta`)} className="kyro-input h-8 text-xs">
+
+      {/* Fila inferior: plan + tipo alta + cobrado + acciones */}
+      <div className="flex items-end gap-2">
+        <div className="flex-1 min-w-[140px]">
+          <Select {...register(`ventas.${index}.plan_nombre`)} className="kyro-input h-8 text-xs">
+            <option value="">— Plan —</option>
+            {planes.map((p, i) => (
+              <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>
+            ))}
+          </Select>
+          {e?.plan_nombre && <p className="text-kyro-danger text-[10px]">{e.plan_nombre.message}</p>}
+        </div>
+        <Select {...register(`ventas.${index}.tipo_alta`)} className="kyro-input h-8 text-xs w-[92px] shrink-0">
           {TIPOS_ALTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </Select>
+        <div className="flex items-center gap-1 w-[118px] shrink-0">
+          <span className="text-xs text-kyro-muted">S/</span>
+          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="0.00" className="kyro-input h-8 text-xs text-right" />
+        </div>
+        <div className="flex flex-col gap-1 shrink-0">
+          {onPrint && (
+            <Button type="button" variant="glassInfo" size="iconSm" aria-label="Imprimir ticket" title="Imprimir ticket" onClick={onPrint}>
+              <Printer size={14} />
+            </Button>
+          )}
+          <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove}>
+            <X size={14} />
+          </Button>
+        </div>
       </div>
-      <div>
-        <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/" className="kyro-input h-8 text-xs" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <ToggleSwitch label="Ext" accent="#6366f1" {...register(`ventas.${index}.es_extranjero`)} />
-        {tipo === 'POSTPAGO' && (
-          <ToggleSwitch label="Migr" accent="#06b6d4" {...register(`ventas.${index}.es_migracion`)} />
-        )}
-        {tipo === 'POSTPAGO' && (
-          <ToggleSwitch label="Upg" accent="#f59e0b" {...register(`ventas.${index}.es_upgrade`)} />
-        )}
-        <ToggleSwitch label="eSIM" accent="#8b5cf6" {...register(`ventas.${index}.es_esim`)} />
-      </div>
-      <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
-        <X size={14} />
-      </Button>
 
       {up && (
-        <div className="col-span-full pl-0 pt-1">
-          <Label className="text-[10px] text-kyro-muted">Fee plan anterior (S/) — para calcular comisión de upgrade</Label>
+        <div className="pt-2">
+          <Label className="text-[10px] text-kyro-muted">Fee plan anterior (S/) — para comisión de upgrade</Label>
           <Input type="number" step="0.01" min="0"
             {...register(`ventas.${index}.plan_anterior`, { valueAsNumber: true })}
             className="kyro-input h-7 text-xs w-40 mt-0.5" placeholder="0.00" />
@@ -267,13 +278,14 @@ function ApoyoRow({
 // ── Componente: fila compacta para EQUIPO / ACCESORIO ────────────────────────
 
 function EquipoRow({
-  index, register, control, errors, onRemove, items, setValue, vendedores,
+  index, register, control, errors, onRemove, onPrint, items, setValue, vendedores,
 }: {
   index: number
   register: ReturnType<typeof useForm<FormData>>['register']
   control: ReturnType<typeof useForm<FormData>>['control']
   errors: ReturnType<typeof useForm<FormData>>['formState']['errors']
   onRemove: () => void
+  onPrint?: () => void
   items: InventarioItem[]
   setValue: ReturnType<typeof useForm<FormData>>['setValue']
   vendedores: VendedorReporte[]
@@ -288,10 +300,18 @@ function EquipoRow({
   const reg = register(`ventas.${index}.producto_nombre`)
 
   return (
-    <div className="space-y-1 py-1.5 border-b border-kyro-border last:border-0">
-      <div className="grid grid-cols-[150px_1fr_140px_110px_90px_auto] gap-1.5 items-end">
-        <VendedorSelect index={index} register={register} vendedores={vendedores} />
-        <div>
+    <div className="rounded-lg border p-2 mb-2.5" style={{ background: 'rgba(0,0,0,0.05)', borderColor: 'rgba(245,158,11,0.3)' }}>
+      {/* Fila superior: vendedor + DNI cliente */}
+      <div className="flex items-center gap-2 flex-wrap pb-2 mb-2 border-b border-dashed border-kyro-border">
+        <div className="w-[120px] shrink-0">
+          <VendedorSelect index={index} register={register} vendedores={vendedores} />
+        </div>
+        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI cliente (opcional)" maxLength={15} className="kyro-input h-8 text-xs w-[150px] shrink-0" />
+      </div>
+
+      {/* Fila inferior: producto + imei + pago + precio + acciones */}
+      <div className="flex items-end gap-2 flex-wrap">
+        <div className="flex-1 min-w-[160px]">
           <Input {...reg} list="inv-equipos-datalist"
             placeholder="Producto (nombre o búsqueda)" className="kyro-input h-8 text-xs"
             onChange={(ev) => {
@@ -310,25 +330,29 @@ function EquipoRow({
             </p>
           )}
         </div>
-        <div>
-          <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="kyro-input h-8 text-xs" />
+        <Input {...register(`ventas.${index}.imei_serial`)} placeholder="IMEI / Serie" maxLength={50} className="kyro-input h-8 text-xs w-[130px] shrink-0" />
+        <Select {...register(`ventas.${index}.tipo_pago`)} className="kyro-input h-8 text-xs w-[100px] shrink-0">
+          <option value="CONTADO">Contado</option>
+          <option value="CUOTAS">A cuotas</option>
+        </Select>
+        <div className="flex items-center gap-1 w-[118px] shrink-0">
+          <span className="text-xs text-kyro-muted">S/</span>
+          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="0.00" className="kyro-input h-8 text-xs text-right" />
         </div>
-        <div>
-          <Select {...register(`ventas.${index}.tipo_pago`)} className="kyro-input h-8 text-xs">
-            <option value="CONTADO">Contado</option>
-            <option value="CUOTAS">A cuotas</option>
-          </Select>
+        <div className="flex flex-col gap-1 shrink-0">
+          {onPrint && (
+            <Button type="button" variant="glassInfo" size="iconSm" aria-label="Imprimir ticket" title="Imprimir ticket" onClick={onPrint}>
+              <Printer size={14} />
+            </Button>
+          )}
+          <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove}>
+            <X size={14} />
+          </Button>
         </div>
-        <div>
-          <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.precio_venta`, { valueAsNumber: true })} placeholder="Precio S/" className="kyro-input h-8 text-xs" />
-        </div>
-        <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
-          <X size={14} />
-        </Button>
       </div>
 
       {tipoPago === 'CUOTAS' && (
-        <div className="grid grid-cols-[170px_120px_120px] gap-1.5 pl-2">
+        <div className="grid grid-cols-[170px_120px_120px] gap-1.5 mt-2">
           <div>
             <Label className="text-[10px]">Financiera</Label>
             <Select {...register(`ventas.${index}.financiera`)} className="kyro-input h-7 text-xs mt-0.5">
@@ -346,10 +370,6 @@ function EquipoRow({
           </div>
         </div>
       )}
-
-      <div className="pl-2">
-        <Input {...register(`ventas.${index}.cliente_dni`)} placeholder="DNI cliente (opcional)" maxLength={15} className="kyro-input h-7 text-xs w-48" />
-      </div>
 
       <input type="hidden" {...register(`ventas.${index}.monto_total`, { valueAsNumber: true })} />
       <input type="hidden" {...register(`ventas.${index}.efectivo_inicial`, { valueAsNumber: true })} />
@@ -871,16 +891,12 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               subtotal={totalPostpago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' }))}
             >
-              {postpagoRows.length > 0 && (
-                <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
-                  <span>Vendedor</span><span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
-                </div>
-              )}
               {postpagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : postpagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="POSTPAGO" planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
+                      errors={errors} tipo="POSTPAGO" planes={planesData} vendedores={vendedores}
+                      onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Postpago') : undefined} />
                   ))}
             </SectionPanel>
 
@@ -890,16 +906,12 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               subtotal={totalPrepago}
               onAdd={() => append(ventaNueva({ tipo_venta: 'PREPAGO', tipo_alta: 'LN' }))}
             >
-              {prepagoRows.length > 0 && (
-                <div className="grid grid-cols-[150px_120px_1fr_130px_80px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
-                  <span>Vendedor</span><span>DNI / Cel.</span><span>Plan</span><span>Tipo alta</span><span>Cobrado</span><span>Opciones</span><span />
-                </div>
-              )}
               {prepagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : prepagoRows.map(v => (
                     <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="PREPAGO" planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
+                      errors={errors} tipo="PREPAGO" planes={planesData} vendedores={vendedores}
+                      onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Prepago / Chip') : undefined} />
                   ))}
             </SectionPanel>
 
@@ -920,7 +932,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
                     <EquipoRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} onRemove={() => remove(v.idx)} items={inventarioItems} setValue={setValue} vendedores={vendedores} />
+                      errors={errors} onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Equipo') : undefined}
+                      items={inventarioItems} setValue={setValue} vendedores={vendedores} />
                   ))}
               {equipoRows.length > 0 && (
                 <AddRowButton label="Agregar Accesorio" accent="var(--color-kyro-info)"
