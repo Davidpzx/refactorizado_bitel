@@ -14,6 +14,7 @@ import { Select } from '../../components/ui/select'
 import { GlassPanel } from '../../components/ui/GlassPanel'
 import { SectionPanel } from '../../components/ui/SectionPanel'
 import { AddRowButton } from '../../components/ui/AddRowButton'
+import { ToggleSwitch } from '../../components/ui/ToggleSwitch'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { PageHeader } from '../../components/PageHeader'
 import { borradorApi } from '../../services/borrador.api'
@@ -190,23 +191,15 @@ function LineaRow({
       <div>
         <Input type="number" step="0.01" min="0" {...register(`ventas.${index}.cobrado_unitario`, { valueAsNumber: true })} placeholder="S/" className="kyro-input h-8 text-xs" />
       </div>
-      <div className="flex flex-col gap-0.5 text-[10px]">
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.es_extranjero`)} className="w-3 h-3" /> Ext
-        </label>
+      <div className="flex flex-col gap-1">
+        <ToggleSwitch label="Ext" accent="#6366f1" {...register(`ventas.${index}.es_extranjero`)} />
         {tipo === 'POSTPAGO' && (
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" {...register(`ventas.${index}.es_migracion`)} className="w-3 h-3" /> Migr
-          </label>
+          <ToggleSwitch label="Migr" accent="#06b6d4" {...register(`ventas.${index}.es_migracion`)} />
         )}
         {tipo === 'POSTPAGO' && (
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input type="checkbox" {...register(`ventas.${index}.es_upgrade`)} className="w-3 h-3" /> Upg
-          </label>
+          <ToggleSwitch label="Upg" accent="#f59e0b" {...register(`ventas.${index}.es_upgrade`)} />
         )}
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" {...register(`ventas.${index}.es_esim`)} className="w-3 h-3" /> eSIM
-        </label>
+        <ToggleSwitch label="eSIM" accent="#8b5cf6" {...register(`ventas.${index}.es_esim`)} />
       </div>
       <Button type="button" variant="glassDanger" size="iconSm" aria-label="Eliminar venta" onClick={onRemove} className="self-center">
         <X size={14} />
