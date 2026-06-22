@@ -197,14 +197,13 @@ class TicketController extends Controller
         return response()->json(['success' => true, 'message' => 'Ticket eliminado.']);
     }
 
-    // ── GET /tickets — Listar tickets (admin o filtro por tienda) ─────────────
-    public function index(Request $request): JsonResponse
+    /** Filtros comunes a index() y exportar(): tienda, agente, fechas, búsqueda, cliente y forma de pago. */
+    private function baseQuery(Request $request)
     {
         $user    = Auth::user();
         $esAdmin = $user->rol === 'admin';
 
-        $query = DB::table('tickets_emitidos')
-            ->orderByDesc('creado_en');
+        $query = DB::table('tickets_emitidos');
 
         if (!$esAdmin) {
             $query->where('tienda_id', $user->tienda_id);
@@ -215,7 +214,109 @@ class TicketController extends Controller
         if ($request->filled('desde'))     $query->where('creado_en', '>=', $request->desde);
         if ($request->filled('hasta'))     $query->where('creado_en', '<=', $request->hasta . ' 23:59:59');
 
+        if ($request->filled('q')) {
+            $texto = '%'.trim((string) $request->input('q')).'%';
+            $query->where('descripcion', 'like', $texto);
+        }
+
+        if ($request->filled('dni_cliente')) {
+            $texto = '%'.trim((string) $request->input('dni_cliente')).'%';
+            $query->where(function ($qq) use ($texto) {
+                $qq->where('dni_cliente', 'like', $texto)
+                    ->orWhere('nombre_cliente', 'like', $texto);
+            });
+        }
+
+        // Forma de pago: se deriva de los montos por canal (no del texto libre 'forma_pago'),
+        // para que coincida exactamente con el badge que ya calcula el frontend (detectFormaPago()).
+        if ($request->filled('forma_pago')) {
+            $canales = ['efectivo', 'yape', 'bipay', 'transferencia'];
+            $conteo  = implode(' + ', array_map(fn ($c) => "CASE WHEN {$c} > 0 THEN 1 ELSE 0 END", $canales));
+
+            switch (strtoupper((string) $request->input('forma_pago'))) {
+                case 'EFECTIVO':
+                    $query->where('efectivo', '>', 0)->where('yape', 0)->where('bipay', 0)->where('transferencia', 0);
+                    break;
+                case 'YAPE':
+                    $query->where('yape', '>', 0)->where('efectivo', 0)->where('bipay', 0)->where('transferencia', 0);
+                    break;
+                case 'BIPAY':
+                    $query->where('bipay', '>', 0)->where('efectivo', 0)->where('yape', 0)->where('transferencia', 0);
+                    break;
+                case 'PLIN':
+                case 'TRANSFERENCIA':
+                    $query->where('transferencia', '>', 0)->where('efectivo', 0)->where('yape', 0)->where('bipay', 0);
+                    break;
+                case 'MIXTO':
+                    $query->whereRaw("({$conteo}) > 1");
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    // ── GET /tickets — Listar tickets (admin o filtro por tienda) ─────────────
+    public function index(Request $request): JsonResponse
+    {
         $perPage = min((int)($request->per_page ?? 50), 200);
+        $query   = $this->baseQuery($request)->orderByDesc('creado_en');
+
         return response()->json($query->paginate($perPage));
+    }
+
+    // ── GET /tickets/exportar — Excel real con los mismos filtros que index() ──
+    public function exportar(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $rows = $this->baseQuery($request)->orderByDesc('creado_en')->get();
+
+        $headers = ['Ticket #', 'Fecha', 'Tienda', 'Vendedor', 'Cliente', 'DNI', 'Teléfono', 'Descripción', 'Cantidad', 'Monto S/', 'Efectivo', 'Yape', 'Bipay', 'Transf./Plin', 'Vuelto', 'Forma de pago'];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tickets');
+        $sheet->fromArray($headers, null, 'A1');
+        $ultimaColumna = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
+        ]);
+
+        foreach ($rows as $index => $r) {
+            $sheet->fromArray([
+                '#'.str_pad((string) $r->id, 6, '0', STR_PAD_LEFT),
+                substr((string) $r->creado_en, 0, 10),
+                $r->tienda_id,
+                $r->vendedor,
+                $r->nombre_cliente,
+                $r->dni_cliente,
+                $r->telefono,
+                $r->descripcion,
+                (int) $r->cantidad,
+                (float) $r->monto,
+                (float) $r->efectivo,
+                (float) $r->yape,
+                (float) $r->bipay,
+                (float) $r->transferencia,
+                (float) $r->vuelto,
+                $r->forma_pago,
+            ], null, 'A'.($index + 2));
+        }
+
+        for ($column = 1; $column <= count($headers); $column++) {
+            $sheet->getColumnDimension(
+                \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column)
+            )->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            'tickets_'.date('Y-m-d').'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 }

@@ -9,7 +9,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, XCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
 import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -59,6 +59,11 @@ export function HistorialPage() {
   const aprobarEdicion = useMutation({
     mutationFn: (id: number) =>
       api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['historial'] }),
+  })
+
+  const denegarEdicion = useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo?: string }) => reportesApi.denegarEdicion(id, motivo),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['historial'] }),
   })
 
@@ -388,19 +393,33 @@ export function HistorialPage() {
                           </span>
                         ) : null}
                         {isSolicitado && usuario?.rol === 'admin' && (
-                          <Button
-                            variant="gold"
-                            size="sm"
-                            disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
-                            onClick={() => {
-                              if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
-                                aprobarEdicion.mutate(r.id)
-                              }
-                            }}
-                            className="h-8 gap-1 px-2 text-xs"
-                          >
-                            <CheckCircle size={12} /> Aprobar
-                          </Button>
+                          <>
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
+                              onClick={() => {
+                                if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
+                                  aprobarEdicion.mutate(r.id)
+                                }
+                              }}
+                              className="h-8 gap-1 px-2 text-xs"
+                            >
+                              <CheckCircle size={12} /> Aprobar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={denegarEdicion.isPending && denegarEdicion.variables?.id === r.id}
+                              onClick={() => {
+                                const motivo = prompt('Motivo de la denegación (opcional):') ?? undefined
+                                denegarEdicion.mutate({ id: r.id, motivo })
+                              }}
+                              className="h-8 gap-1 px-2 text-xs text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                            >
+                              <XCircle size={12} /> Denegar
+                            </Button>
+                          </>
                         )}
                         {usuario?.rol === 'admin' && (
                           <ActionIconButton

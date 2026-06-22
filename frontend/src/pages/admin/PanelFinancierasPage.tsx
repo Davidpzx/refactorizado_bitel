@@ -9,6 +9,24 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { Card, CardContent } from '../../components/ui/card'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
+import { AlertTriangle } from 'lucide-react'
+
+const DIAS_ALERTA_AMARILLA = 15
+const DIAS_ALERTA_ROJA     = 30
+
+/** Días transcurridos desde la fecha de venta (para alertar desembolsos pendientes que se estancan). */
+function diasTranscurridos(fecha: string): number {
+  const f = new Date(fecha.slice(0, 10) + 'T00:00:00')
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.round((hoy.getTime() - f.getTime()) / 86_400_000))
+}
+
+function antiguedadVariant(dias: number): 'outline' | 'warning' | 'destructive' {
+  if (dias >= DIAS_ALERTA_ROJA) return 'destructive'
+  if (dias >= DIAS_ALERTA_AMARILLA) return 'warning'
+  return 'outline'
+}
 
 interface TiendaFiltro {
   codigo: string
@@ -99,12 +117,25 @@ export function PanelFinancierasPage() {
   const totales  = data?.totales
   const filtros  = data?.filtros_disponibles
 
+  const pendientesVencidos = items.filter(
+    (it) => it.comision_estado === 'PENDIENTE' && diasTranscurridos(it.fecha) >= DIAS_ALERTA_ROJA,
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Panel de Financieras"
         description="Seguimiento de desembolsos y comisiones por financiera."
       />
+
+      {pendientesVencidos.length > 0 && (
+        <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-danger/30 bg-kyro-danger/10 p-4 text-sm text-kyro-danger shadow-kyro-card">
+          <AlertTriangle size={18} className="shrink-0" />
+          <p>
+            <strong>{pendientesVencidos.length}</strong> desembolso{pendientesVencidos.length > 1 ? 's' : ''} con más de {DIAS_ALERTA_ROJA} días pendiente{pendientesVencidos.length > 1 ? 's' : ''} de cobro. Revisa con la financiera antes de que se acumulen más.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card className="kyro-card border-l-4 border-l-kpi-esperado">
@@ -188,6 +219,7 @@ export function PanelFinancierasPage() {
                 <th className="px-4 py-3 text-left font-semibold">Vendedor</th>
                 <th className="px-4 py-3 text-left font-semibold">Equipo</th>
                 <th className="px-4 py-3 text-center font-semibold">Estado</th>
+                <th className="px-4 py-3 text-center font-semibold">Antigüedad</th>
                 <th className="px-4 py-3 text-right font-semibold">Por cobrar</th>
                 <th className="px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
@@ -195,12 +227,14 @@ export function PanelFinancierasPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-kyro-muted">
+                  <td colSpan={9} className="px-4 py-8 text-center text-kyro-muted">
                     Sin registros para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                items.map((item) => {
+                  const dias = diasTranscurridos(item.fecha)
+                  return (
                   <tr key={item.id} className="transition-colors hover:bg-kyro-elevated [&>td]:border-b [&>td]:border-kyro-border">
                     <td className="whitespace-nowrap px-4 py-3 text-kyro-body">
                       {item.fecha?.slice(0, 10) ?? '—'}
@@ -215,6 +249,15 @@ export function PanelFinancierasPage() {
                       <Badge variant={estadoBadge[item.comision_estado] ?? 'default'}>
                         {item.comision_estado}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {item.comision_estado === 'PENDIENTE' ? (
+                        <Badge variant={antiguedadVariant(dias)}>
+                          {dias} día{dias !== 1 ? 's' : ''}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-kyro-subtle">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-kyro-text">
                       S/ {Number(item.por_cobrar).toFixed(2)}
@@ -242,7 +285,8 @@ export function PanelFinancierasPage() {
                       )}
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>

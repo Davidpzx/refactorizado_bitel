@@ -36,7 +36,13 @@ function destinoBadgeClass(destino: string) {
   return map[destino] ?? 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-300'
 }
 
-const DESTINOS = ['TIENDA', 'BANCO', 'GERENCIA', 'AGENTE']
+const DESTINOS = [
+  { value: 'BANCO',    label: 'Depositado en Banco' },
+  { value: 'GERENCIA', label: 'Entregado a Supervisor/Gerencia' },
+  { value: 'EN_CAJA',  label: 'Guardado en Caja Fuerte Central' },
+  { value: 'AGENTE',   label: 'Usado para Pagos/Gastos (Agente)' },
+  { value: 'TIENDA',   label: '⚠️ Revertir: Sigue en Tienda (no entregado)' },
+]
 
 // ── Sub-components ─────────────────────────────────────────────────────────────────
 
@@ -112,32 +118,53 @@ function ModalEditarDestino({
   reporteId: number; current: string; onClose: () => void
 }) {
   const [destino, setDestino] = useState(current ?? 'TIENDA')
+  const [observacion, setObservacion] = useState('')
   const qc = useQueryClient()
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: () => reportesApi.cambiarDestino(reporteId, destino),
+    mutationFn: () => reportesApi.cambiarDestino(reporteId, destino, observacion || undefined),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dashboard-kpis'] }); onClose() },
   })
+
+  const esRevertir = destino === 'TIENDA'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xs space-y-4 overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:bg-zinc-900/95">
+      <div className="relative w-full max-w-sm space-y-4 overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:bg-zinc-900/95">
         <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400/60 to-transparent" />
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Modificar Destino Efectivo</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Estado del Efectivo</h3>
           <button type="button" aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
         </div>
         <p className="text-xs text-gray-500 dark:text-zinc-400">
           Reporte <span className="font-mono font-semibold">#{String(reporteId).padStart(4, '0')}</span>
         </p>
-        <select
-          value={destino}
-          onChange={(e) => setDestino(e.target.value)}
-          className="w-full border border-gray-300 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {DESTINOS.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-400">Nuevo Destino / Acción</label>
+          <select
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+            className="w-full border border-gray-300 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {DESTINOS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
+          {esRevertir && (
+            <p className="mt-1 text-[0.7rem] text-amber-600 dark:text-amber-400">
+              Marca el efectivo como aún no entregado; vuelve a aparecer pendiente en tienda.
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-400">Observación (opcional)</label>
+          <textarea
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+            rows={2}
+            placeholder="Ej: Recibido conforme por el gerente..."
+            className="w-full resize-none border border-gray-300 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
         {error && (
           <p className="text-xs text-red-600">{apiErrorData(error).error ?? 'Error al actualizar'}</p>
         )}
@@ -167,6 +194,11 @@ export function DashboardPage() {
 
   const aprobarEdicion = useMutation({
     mutationFn: (id: number) => api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard-kpis'] }),
+  })
+
+  const denegarEdicion = useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo?: string }) => reportesApi.denegarEdicion(id, motivo),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard-kpis'] }),
   })
 
@@ -391,19 +423,33 @@ export function DashboardPage() {
                           </span>
                         ) : null}
                         {isSolicitado && usuario?.rol === 'admin' && (
-                          <Button
-                            variant="gold"
-                            size="sm"
-                            disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
-                            onClick={() => {
-                              if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
-                                aprobarEdicion.mutate(r.id)
-                              }
-                            }}
-                            className="h-8 gap-1 px-2 text-xs"
-                          >
-                            <CheckCircle size={12} /> Aprobar
-                          </Button>
+                          <>
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
+                              onClick={() => {
+                                if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
+                                  aprobarEdicion.mutate(r.id)
+                                }
+                              }}
+                              className="h-8 gap-1 px-2 text-xs"
+                            >
+                              <CheckCircle size={12} /> Aprobar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={denegarEdicion.isPending && denegarEdicion.variables?.id === r.id}
+                              onClick={() => {
+                                const motivo = prompt('Motivo de la denegación (opcional):') ?? undefined
+                                denegarEdicion.mutate({ id: r.id, motivo })
+                              }}
+                              className="h-8 gap-1 px-2 text-xs text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                            >
+                              <X size={12} /> Denegar
+                            </Button>
+                          </>
                         )}
                       </TableActions>
                     </td>

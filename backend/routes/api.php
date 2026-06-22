@@ -99,6 +99,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
     Route::post('reportes/{reporte}/aprobar-edicion',        [ReporteController::class, 'aprobarEdicion']);
+    Route::post('reportes/{reporte}/denegar-edicion',         [ReporteController::class, 'denegarEdicion']);
     Route::put('reportes/{reporte}/reprocesar',             [ReporteController::class, 'reprocesar']);
     Route::get('reportes/{reporte}/historial',              [ReporteController::class, 'historial']);
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
@@ -218,6 +219,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Tickets Emitidos ─────────────────────────────────────────────────────
     Route::get('tickets',              [TicketController::class, 'index']);
+    Route::get('tickets/exportar',     [TicketController::class, 'exportar']);
     Route::get('tickets/{id}',         [TicketController::class, 'show']);
     Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
     Route::patch('tickets/{id}',       [TicketController::class, 'update']);

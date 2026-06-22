@@ -409,6 +409,34 @@ class ReporteController extends Controller
         return response()->json($reporte->fresh());
     }
 
+    public function denegarEdicion(Request $request, Reporte $reporte): JsonResponse
+    {
+        abort_unless($request->user()->rol === 'admin', 403);
+
+        if ($reporte->estado_edicion !== 'SOLICITADO') {
+            return response()->json(['error' => 'No hay solicitud de edición pendiente.'], 422);
+        }
+
+        $validated = $request->validate([
+            'motivo' => 'nullable|string|max:500',
+        ]);
+
+        $reporte->update([
+            'estado_edicion' => 'CERRADO',
+            'motivo_edicion' => null,
+        ]);
+
+        HistorialReporte::create([
+            'reporte_id' => $reporte->id,
+            'usuario_id' => auth()->id(),
+            'accion'     => 'edicion_rechazada',
+            'detalle'    => 'Solicitud de edición denegada por administración.'
+                . (! empty($validated['motivo']) ? ' | Motivo: ' . $validated['motivo'] : ''),
+        ]);
+
+        return response()->json($reporte->fresh());
+    }
+
     public function historial(Request $request, Reporte $reporte): JsonResponse
     {
         $this->autorizarPropietarioOAdmin($request, $reporte);

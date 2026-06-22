@@ -54,6 +54,8 @@ const schema = z.object({
   telefono:      z.string().max(15).optional().or(z.literal('')),
   direccion:     z.string().max(60, 'Máximo 60 caracteres').optional().or(z.literal('')),
   es_gerencia:   z.boolean(),
+  permiso_largo: z.boolean().optional(),
+  fecha_retorno: z.string().optional().or(z.literal('')),
 })
 
 type FormData = z.infer<typeof schema>
@@ -141,12 +143,16 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           telefono:      agente.telefono      ?? '',
           direccion:     agente.direccion     ?? '',
           es_gerencia:   agente.es_gerencia,
+          permiso_largo: agente.permiso_largo ?? false,
+          fecha_retorno: soloFecha(agente.fecha_retorno),
           pin_seguridad: '',
         }
       : { estado: 'ACTIVO', es_gerencia: false, sueldo_base: 0 },
   })
 
-  const dniValue = useWatch({ control, name: 'dni' }) ?? ''
+  const dniValue    = useWatch({ control, name: 'dni' }) ?? ''
+  const estadoValue = useWatch({ control, name: 'estado' })
+  const permisoLargoValue = useWatch({ control, name: 'permiso_largo' })
 
   useEffect(() => {
     if (errorGeneral) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -291,6 +297,21 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
             <FieldError>{errors.fecha_ingreso?.message}</FieldError>
           </div>
         </div>
+
+        {esEdicion && estadoValue !== 'ACTIVO' && (
+          <div className="mt-4 grid grid-cols-1 gap-4 rounded-kyro border border-kyro-warning/30 bg-kyro-warning/5 p-3 sm:grid-cols-2">
+            <label className="flex cursor-pointer items-center gap-3 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
+              <input id="permiso_largo" type="checkbox" {...register('permiso_largo')} className="h-4 w-4 rounded border-kyro-border accent-kyro-gold" />
+              Permiso largo (licencia con retorno programado)
+            </label>
+            {permisoLargoValue && (
+              <div className="sm:col-span-2">
+                <Label htmlFor="fecha_retorno">Fecha de retorno prevista</Label>
+                <Input id="fecha_retorno" type="date" {...register('fecha_retorno')} className="mt-1" />
+              </div>
+            )}
+          </div>
+        )}
       </FormSection>
 
       <FormSection

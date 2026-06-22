@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { Pencil, Printer, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, Pencil, Printer, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
+import { api } from '../../services/api'
 import type { Ticket, TicketPayload, TicketUpdatePayload } from '../../types/ticket'
 
 const TIENDAS = [
@@ -367,6 +368,7 @@ export function TicketsPage() {
   const [modoNuevo, setModoNuevo]          = useState(false)
 
   const anular = useActualizarTicket()
+  const [exportando, setExportando] = useState(false)
 
   const { data, isLoading } = useTickets({
     desde:       desde       || undefined,
@@ -402,12 +404,45 @@ export function TicketsPage() {
 
   const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin, anular.isPending)
 
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const params = new URLSearchParams()
+      if (desde)      params.set('desde', desde)
+      if (hasta)      params.set('hasta', hasta)
+      if (tienda_id)  params.set('tienda_id', tienda_id)
+      if (q)          params.set('q', q)
+      if (dniCliente) params.set('dni_cliente', dniCliente)
+      if (formaPago)  params.set('forma_pago', formaPago)
+      const token = localStorage.getItem('auth_token')
+      const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const url = `${base}/v1/tickets/exportar?${params.toString()}`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const blob = await res.blob()
+      const burl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = burl
+      link.download = `tickets_${new Date().toISOString().slice(0, 10)}.xlsx`
+      link.click()
+      URL.revokeObjectURL(burl)
+    } finally {
+      setExportando(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tickets"
         description="Gestión de tickets emitidos."
-        actions={<Button variant="gold" onClick={abrirNuevo}>+ Nuevo ticket</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
+              <FileSpreadsheet size={14} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
+            </Button>
+            <Button variant="gold" onClick={abrirNuevo}>+ Nuevo ticket</Button>
+          </div>
+        }
       />
 
       <ListToolbar description="Combina fechas, tienda, cliente y forma de pago.">
