@@ -6,8 +6,9 @@ import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
+import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store, Users, Search, Download } from 'lucide-react'
 
 interface BitacoraKpis {
   total_mov: number
@@ -25,9 +26,18 @@ interface Movimiento {
   cantidad: number
   motivo: string | null
   observacion: string | null
+  imei_serial: string | null
+  precio_en_ese_momento: string | number | null
+  dni_autorizacion: string | null
   agente_nombre: string
   producto_nombre: string
   producto_tipo: string
+}
+
+interface AgenteOption {
+  id: number
+  nombres: string
+  dni: string
 }
 
 interface BitacoraResponse {
@@ -49,17 +59,29 @@ const ACCIONES = [
   { value: 'RESTA', label: 'Salidas', tone: 'danger' as const },
 ]
 
+const CATEGORIAS = ['CHIP', 'EQUIPO', 'ACCESORIO']
+
 export function BitacoraStockPage() {
   const { usuario } = useAuth()
+  const [exportando, setExportando] = useState(false)
 
   const [filters, setFilters] = useState({
     fecha_desde: '',
     fecha_hasta: '',
     tienda: '',
     accion: '',
+    agente_id: '',
+    categoria: '',
+    q: '',
   })
   const [page, setPage] = useState(1)
   const [applied, setApplied] = useState({ ...filters, page: 1 })
+
+  const { data: agentesData } = useQuery({
+    queryKey: ['agentes-para-bitacora'],
+    queryFn: () => api.get<{ data: AgenteOption[] }>('/v1/agentes', { params: { per_page: 500 } }).then(r => r.data),
+  })
+  const agentes = agentesData?.data ?? []
 
   const { data, isLoading } = useQuery({
     queryKey: ['bitacora-stock', applied],
@@ -72,6 +94,9 @@ export function BitacoraStockPage() {
           fecha_hasta: applied.fecha_hasta || undefined,
           tienda: applied.tienda || undefined,
           accion: applied.accion || undefined,
+          agente_id: applied.agente_id || undefined,
+          categoria: applied.categoria || undefined,
+          q: applied.q || undefined,
         },
       }).then(r => r.data),
   })
@@ -82,10 +107,36 @@ export function BitacoraStockPage() {
 
   function applyFilters() { setPage(1); setApplied({ ...filters, page: 1 }) }
   function resetFilters() {
-    const e = { fecha_desde: '', fecha_hasta: '', tienda: '', accion: '' }
+    const e = { fecha_desde: '', fecha_hasta: '', tienda: '', accion: '', agente_id: '', categoria: '', q: '' }
     setFilters(e); setPage(1); setApplied({ ...e, page: 1 })
   }
   function goToPage(p: number) { setPage(p); setApplied(a => ({ ...a, page: p })) }
+
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const res = await api.get('/v1/bitacora-stock/exportar', {
+        params: {
+          fecha_desde: applied.fecha_desde || undefined,
+          fecha_hasta: applied.fecha_hasta || undefined,
+          tienda: applied.tienda || undefined,
+          accion: applied.accion || undefined,
+          agente_id: applied.agente_id || undefined,
+          categoria: applied.categoria || undefined,
+          q: applied.q || undefined,
+        },
+        responseType: 'blob',
+      })
+      const url = URL.createObjectURL(res.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `bitacora_stock_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportando(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -134,11 +185,25 @@ export function BitacoraStockPage() {
               {(kpis.total_entradas - kpis.total_salidas).toLocaleString()}
             </p>
           </div>
+          <div className="kyro-card border-l-4 border-l-kpi-total p-4 transition-all hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-info"><Store size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tiendas Afectadas</p>
+            </div>
+            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{kpis.tiendas_afectadas.toLocaleString()}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-kyro-indigo p-4 transition-all hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-gold"><Users size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Agentes Involucrados</p>
+            </div>
+            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{kpis.agentes_involucrados.toLocaleString()}</p>
+          </div>
         </div>
       )}
 
       {/* Filters */}
-      <ListToolbar description="Acota el historial por fecha, tienda o tipo de movimiento.">
+      <ListToolbar description="Acota el historial por fecha, tienda, agente, categoría o tipo de movimiento.">
         <div>
           <label className="mb-1 block text-xs font-medium text-kyro-muted">Desde</label>
           <Input type="date" value={filters.fecha_desde}
@@ -160,6 +225,38 @@ export function BitacoraStockPage() {
           </div>
         )}
         <div>
+          <label className="mb-1 block text-xs font-medium text-kyro-muted">Agente</label>
+          <Select value={filters.agente_id} onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))} className="w-44">
+            <option value="">Todos</option>
+            {agentes.map(a => (
+              <option key={a.id} value={a.id}>{a.nombres}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-kyro-muted">Categoría</label>
+          <Select value={filters.categoria} onChange={e => setFilters(f => ({ ...f, categoria: e.target.value }))} className="w-32">
+            <option value="">Todas</option>
+            {CATEGORIAS.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-kyro-muted">Buscar</label>
+          <div className="relative">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-subtle" />
+            <Input
+              type="text"
+              placeholder="Producto, IMEI, agente, observación..."
+              value={filters.q}
+              onChange={e => setFilters(f => ({ ...f, q: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') applyFilters() }}
+              className="w-56 pl-9"
+            />
+          </div>
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-kyro-muted">Acción</label>
           <SegmentedToggle
             ariaLabel="Filtrar bitacora por accion"
@@ -171,6 +268,9 @@ export function BitacoraStockPage() {
         </div>
         <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
         <Button variant="ghost" onClick={resetFilters}>Limpiar</Button>
+        <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
+          <Download size={14} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
+        </Button>
       </ListToolbar>
 
       {/* Table */}
@@ -185,15 +285,15 @@ export function BitacoraStockPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="kyro-table-head">
-                {['Fecha/Hora', 'Tienda', 'Agente', 'Producto', 'Tipo', 'Acción', 'Cant.', 'Motivo'].map(h => (
+                {['Fecha/Hora', 'Tienda', 'Agente', 'Producto', 'Tipo', 'Acción', 'Cant.', 'IMEI/Serie', 'Precio', 'DNI Autoriz.', 'Motivo'].map(h => (
                   <th key={h} className={`px-4 py-3 text-left text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted ${h === 'Cant.' ? 'text-center' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
+              {isLoading && <tr><td colSpan={11} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
               {!isLoading && movimientos.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Sin movimientos en el período seleccionado</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-kyro-muted">Sin movimientos en el período seleccionado</td></tr>
               )}
               {movimientos.map(m => (
                 <tr key={m.id} className={`border-b transition-colors ${m.accion === 'SUMA' ? 'border-emerald-100 bg-emerald-50/20 hover:bg-emerald-50/50 dark:border-emerald-400/10 dark:bg-emerald-400/[0.015] dark:hover:bg-emerald-400/[0.04]' : 'border-red-100 bg-red-50/20 hover:bg-red-50/50 dark:border-red-400/10 dark:bg-red-400/[0.015] dark:hover:bg-red-400/[0.04]'}`}>
@@ -217,6 +317,11 @@ export function BitacoraStockPage() {
                   <td className={`px-4 py-3 text-center font-mono font-bold ${m.accion === 'SUMA' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
                     {m.accion === 'SUMA' ? '+' : '-'}{m.cantidad}
                   </td>
+                  <td className="px-4 py-3 font-mono text-xs text-kyro-muted">{m.imei_serial ?? '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-kyro-body">
+                    {m.precio_en_ese_momento != null ? `S/ ${parseFloat(String(m.precio_en_ese_momento)).toFixed(2)}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-kyro-muted">{m.dni_autorizacion ?? '—'}</td>
                   <td className="max-w-xs truncate px-4 py-3 text-xs text-kyro-subtle">{m.motivo ?? '—'}</td>
                 </tr>
               ))}

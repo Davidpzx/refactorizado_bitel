@@ -8,9 +8,45 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BitacoraStockController extends Controller
 {
+    /** Query base con todos los filtros (fecha, tienda, acción, agente, categoría, búsqueda). Compartida por index() y exportar(). */
+    private function baseQuery(Request $request)
+    {
+        $user = $request->user();
+
+        $base = DB::table('historial_inventario as h')
+            ->leftJoin('agentes as a', 'h.agente_id', '=', 'a.id')
+            ->leftJoin('inventario_tiendas as it', 'h.producto_id', '=', 'it.id')
+            ->when($request->fecha_desde, fn($q, $f) => $q->whereDate('h.fecha_hora', '>=', $f))
+            ->when($request->fecha_hasta, fn($q, $f) => $q->whereDate('h.fecha_hora', '<=', $f))
+            ->when($request->accion,      fn($q, $v) => $q->where('h.accion', $v))
+            ->when($request->agente_id,   fn($q, $v) => $q->where('h.agente_id', $v))
+            ->when($request->categoria,   fn($q, $v) => $q->where('it.tipo', strtoupper($v)))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $texto = '%'.trim((string) $request->input('q')).'%';
+                $q->where(function ($qq) use ($texto) {
+                    $qq->where('it.producto_nombre', 'like', $texto)
+                        ->orWhere('h.observacion', 'like', $texto)
+                        ->orWhere('h.imei_serial', 'like', $texto)
+                        ->orWhere('a.nombres', 'like', $texto);
+                });
+            });
+
+        if ($user->rol === 'tienda') {
+            $base->where('h.tienda_id', $user->tienda_id);
+        } elseif ($request->tienda) {
+            $base->where('h.tienda_id', $request->tienda);
+        }
+
+        return $base;
+    }
+
     public function index(Request $request): JsonResponse
     {
         if (! Schema::hasTable('historial_inventario')) {
@@ -21,22 +57,8 @@ class BitacoraStockController extends Controller
             ]);
         }
 
-        $user    = $request->user();
         $perPage = $request->integer('per_page', 20);
-
-        $base = DB::table('historial_inventario as h')
-            ->leftJoin('agentes as a', 'h.agente_id', '=', 'a.id')
-            ->leftJoin('inventario_tiendas as it', 'h.producto_id', '=', 'it.id')
-            ->when($request->fecha_desde, fn($q, $f) => $q->whereDate('h.fecha_hora', '>=', $f))
-            ->when($request->fecha_hasta, fn($q, $f) => $q->whereDate('h.fecha_hora', '<=', $f))
-            ->when($request->accion,      fn($q, $v) => $q->where('h.accion', $v))
-            ->when($request->agente_id,   fn($q, $v) => $q->where('h.agente_id', $v));
-
-        if ($user->rol === 'tienda') {
-            $base->where('h.tienda_id', $user->tienda_id);
-        } elseif ($request->tienda) {
-            $base->where('h.tienda_id', $request->tienda);
-        }
+        $base    = $this->baseQuery($request);
 
         $kpis = (clone $base)->selectRaw("
             COUNT(*)                                                            AS total_mov,
@@ -49,7 +71,7 @@ class BitacoraStockController extends Controller
         $movimientos = (clone $base)
             ->select([
                 'h.id', 'h.fecha_hora', 'h.tienda_id', 'h.accion', 'h.cantidad',
-                'h.motivo', 'h.observacion',
+                'h.motivo', 'h.observacion', 'h.imei_serial', 'h.precio_en_ese_momento', 'h.dni_autorizacion',
                 DB::raw("COALESCE(a.nombres, 'Sistema') AS agente_nombre"),
                 DB::raw("COALESCE(it.producto_nombre, 'Chip/Otros') AS producto_nombre"),
                 DB::raw("COALESCE(it.tipo, 'CHIP') AS producto_tipo"),
@@ -58,6 +80,65 @@ class BitacoraStockController extends Controller
             ->paginate($perPage);
 
         return response()->json(['kpis' => $kpis, 'movimientos' => $movimientos]);
+    }
+
+    public function exportar(Request $request): StreamedResponse
+    {
+        $rows = $this->baseQuery($request)
+            ->select([
+                'h.fecha_hora', 'h.tienda_id', 'h.accion', 'h.cantidad',
+                'h.motivo', 'h.observacion', 'h.imei_serial', 'h.precio_en_ese_momento', 'h.dni_autorizacion',
+                DB::raw("COALESCE(a.nombres, 'Sistema') AS agente_nombre"),
+                DB::raw("COALESCE(it.producto_nombre, 'Chip/Otros') AS producto_nombre"),
+                DB::raw("COALESCE(it.tipo, 'CHIP') AS producto_tipo"),
+            ])
+            ->orderByDesc('h.fecha_hora')
+            ->get();
+
+        $headers = ['Fecha/Hora', 'Tienda', 'Agente', 'Producto', 'Tipo', 'Acción', 'Cantidad', 'IMEI/Serie', 'Precio S/', 'DNI Autorizante', 'Motivo', 'Observación'];
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Bitácora Stock');
+        $sheet->fromArray($headers, null, 'A1');
+        $ultimaColumna = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
+        ]);
+
+        foreach ($rows as $index => $r) {
+            $sheet->fromArray([
+                $r->fecha_hora,
+                $r->tienda_id,
+                $r->agente_nombre,
+                $r->producto_nombre,
+                $r->producto_tipo,
+                $r->accion,
+                (int) $r->cantidad,
+                $r->imei_serial,
+                $r->precio_en_ese_momento !== null ? (float) $r->precio_en_ese_momento : null,
+                $r->dni_autorizacion,
+                $r->motivo,
+                $r->observacion,
+            ], null, 'A'.($index + 2));
+        }
+
+        for ($column = 1; $column <= count($headers); $column++) {
+            $sheet->getColumnDimension(
+                \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column)
+            )->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            'bitacora_stock_'.date('Y-m-d').'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     public function kpis(Request $request): JsonResponse

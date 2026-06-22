@@ -84,6 +84,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Bitácora de Stock ─────────────────────────────────────────────────────
     Route::get('bitacora-stock',           [BitacoraStockController::class, 'index']);
     Route::get('bitacora-stock/kpis',      [BitacoraStockController::class, 'kpis']);
+    Route::get('bitacora-stock/exportar',  [BitacoraStockController::class, 'exportar']);
     Route::post('bitacora-stock/corregir', [BitacoraStockController::class, 'corregir'])->middleware('role:admin');
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
