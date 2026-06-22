@@ -79,6 +79,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Historial Completo ────────────────────────────────────────────────────
     Route::get('historial',           [HistorialController::class, 'index'])->middleware('role:admin');
+    Route::get('historial/kpis',      [HistorialController::class, 'kpis'])->middleware('role:admin');
     Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware('role:admin');
 
     // ── Bitácora de Stock ─────────────────────────────────────────────────────

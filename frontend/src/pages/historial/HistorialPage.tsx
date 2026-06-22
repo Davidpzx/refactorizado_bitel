@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { historialApi } from '../../services/historial.api'
+import { reportesApi } from '../../services/reportes.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
 import { api } from '../../services/api'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -61,6 +62,40 @@ export function HistorialPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['historial'] }),
   })
 
+  const eliminarReporte = useMutation({
+    mutationFn: (id: number) => reportesApi.eliminar(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['historial'] })
+      qc.invalidateQueries({ queryKey: ['historial-kpis'] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      alert(msg || 'No se pudo eliminar el reporte.')
+    },
+  })
+
+  function handleEliminar(r: { id: number; fecha: string; tienda_id: string }) {
+    const ok = confirm(
+      `¿Eliminar el cuadre #${String(r.id).padStart(4, '0')} (${r.fecha?.slice(0, 10)} - ${r.tienda_id})?\n\n` +
+      'Todo el stock usado (equipos, accesorios, chips) regresará a la tienda y se anularán las comisiones generadas.\n\n' +
+      'Esta acción no se puede deshacer.'
+    )
+    if (ok) eliminarReporte.mutate(r.id)
+  }
+
+  const filtrosQuery = {
+    tienda: applied.tienda || undefined,
+    agente_id: applied.agente_id ? Number(applied.agente_id) : undefined,
+    estado: applied.estado || undefined,
+    fecha_desde: applied.fecha_desde || undefined,
+    fecha_hasta: applied.fecha_hasta || undefined,
+  }
+
+  const { data: kpisData } = useQuery({
+    queryKey: ['historial-kpis', filtrosQuery],
+    queryFn: () => historialApi.kpis(filtrosQuery),
+  })
+
   const { data, isLoading } = useQuery({
     queryKey: ['historial', applied],
     queryFn: () =>
@@ -68,16 +103,13 @@ export function HistorialPage() {
         ...applied,
         page: applied.page,
         per_page: 15,
-        agente_id: applied.agente_id ? Number(applied.agente_id) : undefined,
-        tienda: applied.tienda || undefined,
-        estado: applied.estado || undefined,
-        fecha_desde: applied.fecha_desde || undefined,
-        fecha_hasta: applied.fecha_hasta || undefined,
+        ...filtrosQuery,
       }),
   })
 
   const reportes = data?.data ?? []
   const meta = data
+  const totales = kpisData?.totales
 
   function applyFilters() {
     setPage(1)
@@ -112,7 +144,7 @@ export function HistorialPage() {
         const burl = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = burl
-        link.download = `Historial_Global_Bloques_${new Date().toISOString().slice(0, 10)}.xlsx`
+        link.download = `Historial_Global_${new Date().toISOString().slice(0, 10)}.xlsx`
         link.click()
         URL.revokeObjectURL(burl)
       })
@@ -132,6 +164,71 @@ export function HistorialPage() {
           </Button>
         }
       />
+
+      {totales && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-info"><Wallet size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total General</p>
+            </div>
+            <p className="mt-2 font-mono text-xl font-bold text-kyro-info">{fmt(totales.total_general)}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-kyro-success p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><Scale size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Físico Esperado</p>
+            </div>
+            <p className="mt-2 font-mono text-xl font-bold text-kyro-success">{fmt(totales.fisico_esperado)}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-kpi-neutral p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-muted"><Banknote size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Físico Declarado</p>
+            </div>
+            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{fmt(totales.fisico_declarado)}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-kyro-warning p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-warning"><Scale size={15} /></span>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Diferencia Física</p>
+            </div>
+            <p className={`mt-2 font-mono text-xl font-bold ${Number(totales.diferencia_fisica) === 0 ? 'text-kyro-muted' : Number(totales.diferencia_fisica) < 0 ? 'text-kyro-danger' : 'text-kyro-warning'}`}>
+              {fmt(totales.diferencia_fisica)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {usuario?.rol === 'admin' && kpisData?.ganancia_total != null && (
+        <div className="kyro-card flex items-center justify-between border-l-4 border-l-kyro-success p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><TrendingUp size={18} /></span>
+            <div>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Ganancia Total del Período</p>
+              <p className="text-xs text-kyro-subtle">Suma de comisiones y ganancias registradas con los filtros actuales.</p>
+            </div>
+          </div>
+          <p className="font-mono text-2xl font-bold text-kyro-success">{fmt(kpisData.ganancia_total)}</p>
+        </div>
+      )}
+
+      {totales && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="kyro-card border-l-4 border-l-purple-400 p-4">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Yape</p>
+            <p className="mt-1 font-mono text-lg font-bold text-purple-500">{fmt(totales.total_yape)}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-sky-400 p-4">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Bipay</p>
+            <p className="mt-1 font-mono text-lg font-bold text-sky-500">{fmt(totales.total_bipay)}</p>
+          </div>
+          <div className="kyro-card border-l-4 border-l-emerald-400 p-4">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Transferencia</p>
+            <p className="mt-1 font-mono text-lg font-bold text-emerald-500">{fmt(totales.total_transferencia)}</p>
+          </div>
+        </div>
+      )}
 
       <ListToolbar description="Combina fechas, tienda, agente y estado para localizar reportes específicos.">
         <div>
@@ -304,6 +401,15 @@ export function HistorialPage() {
                           >
                             <CheckCircle size={12} /> Aprobar
                           </Button>
+                        )}
+                        {usuario?.rol === 'admin' && (
+                          <ActionIconButton
+                            tone="delete"
+                            label="Eliminar reporte (revierte stock y comisiones)"
+                            icon={<Trash2 size={15} />}
+                            disabled={eliminarReporte.isPending && eliminarReporte.variables === r.id}
+                            onClick={() => handleEliminar(r)}
+                          />
                         )}
                       </TableActions>
                     </td>
