@@ -10,7 +10,7 @@ import {
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight, Layers,
-  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText,
+  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone,
 } from 'lucide-react'
 
 interface NavItem {
@@ -18,48 +18,59 @@ interface NavItem {
   label: string
   Icon: React.ComponentType<{ size?: number; className?: string }>
   roles: string[]
+  section: string
   soon?: boolean
 }
 
+// Orden y agrupación reorganizados (ver auditoría de sidebar). Cada item declara
+// su `section`; el separador visual se calcula comparando con el item anterior
+// VISIBLE (no por índice fijo), así el agrupado no se rompe según el rol del usuario.
 const NAV_ITEMS: NavItem[] = [
-  { to: '/',               label: 'Dashboard',      Icon: LayoutDashboard, roles: ['admin', 'tienda'] },
-  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin'] },
-  { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda'] },
-  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'] },
-  { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin'] },
-  { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'] },
-  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'] },
-  { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'] },
-  { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'] },
-  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'] },
-  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'] },
-  { to: '/revisar-stock',  label: 'Revisar Stock',   Icon: Package,         roles: ['admin'] },
-  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'] },
-  { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'] },
-  { to: '/inventario',     label: 'Inventario',      Icon: Package,          roles: ['admin', 'tienda'] },
-  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,         roles: ['admin', 'tienda'] },
-  { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,   roles: ['admin', 'tienda'] },
-  { to: '/traslados-chips',  label: 'Traslados Chips',  Icon: Layers,          roles: ['admin', 'tienda'] },
-  { to: '/inventario/matriz',  label: 'Matriz Inventario', Icon: Grid3x3,        roles: ['admin', 'tienda'] },
-  { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText,     roles: ['admin'] },
-  { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,            roles: ['admin', 'tienda'] },
-  { to: '/financieras',      label: 'Financieras',      Icon: Landmark,        roles: ['admin'] },
-  { to: '/diagnostico',      label: 'Diagnóstico',      Icon: Stethoscope,     roles: ['admin'] },
-  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,          roles: ['admin', 'tienda'] },
-  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,           roles: ['admin', 'tienda'] },
-  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'] },
-  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'] },
-  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'] },
-  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'] },
-  { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'] },
-]
+  // ── Operaciones ──────────────────────────────────────────────────────────
+  { to: '/',               label: 'Dashboard',      Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Operaciones' },
+  { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda'],          section: 'Operaciones' },
+  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Operaciones' },
+  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin'],           section: 'Operaciones' },
+  { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin'],           section: 'Operaciones' },
 
-const SECTION_SEPARATORS: Record<number, string> = {
-  0:  'Operaciones',
-  7:  'Personal',
-  12: 'Recursos',
-  18: 'Administración',
-}
+  // ── Pagos digitales ──────────────────────────────────────────────────────
+  { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'],           section: 'Pagos digitales' },
+  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Pagos digitales' },
+
+  // ── Personal ─────────────────────────────────────────────────────────────
+  { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'],           section: 'Personal' },
+  { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Personal' },
+  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'],         section: 'Personal' },
+  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'],           section: 'Personal' },
+
+  // ── Inventario (antes disperso en 2 grupos distintos) ───────────────────
+  { to: '/revisar-stock',  label: 'Revisar Stock',   Icon: Package,         roles: ['admin'],           section: 'Inventario' },
+  { to: '/inventario',     label: 'Inventario',      Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/traslados-chips',  label: 'Traslados Chips',  Icon: Layers,       roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/inventario/matriz',  label: 'Matriz Inventario', Icon: Grid3x3,   roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText, roles: ['admin'],           section: 'Inventario' },
+  { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,        roles: ['admin', 'tienda'], section: 'Inventario' },
+
+  // ── Clientes y Marketing (le da hogar visible al CRM) ───────────────────
+  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Clientes y Marketing' },
+  { to: '/crm',            label: 'CRM',              Icon: Megaphone,       roles: ['admin'],           section: 'Clientes y Marketing' },
+
+  // ── Recursos y Finanzas ──────────────────────────────────────────────────
+  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Recursos y Finanzas' },
+  { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'],           section: 'Recursos y Finanzas' },
+  { to: '/financieras',    label: 'Financieras',     Icon: Landmark,        roles: ['admin'],           section: 'Recursos y Finanzas' },
+  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Recursos y Finanzas' },
+  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Recursos y Finanzas' },
+
+  // ── Administración ───────────────────────────────────────────────────────
+  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
+  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
+  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
+  { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'],           section: 'Administración' },
+  { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
+]
 
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
@@ -94,18 +105,6 @@ export function AppLayout() {
 
   const userRole     = usuario?.rol ?? 'tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
-
-  function buildSeparatorMap() {
-    const map: Record<number, string> = {}
-    let visIdx = 0
-    NAV_ITEMS.forEach((item, realIdx) => {
-      if (!item.roles.includes(userRole)) return
-      if (SECTION_SEPARATORS[realIdx]) map[visIdx] = SECTION_SEPARATORS[realIdx]
-      visIdx++
-    })
-    return map
-  }
-  const separatorMap = buildSeparatorMap()
 
   /* ── Theme-conditional styles ── */
   const mobileBg = isDark
@@ -204,15 +203,15 @@ export function AppLayout() {
 
         {/* Nav ─────────────────────────────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {visibleItems.map(({ to, label, Icon, soon }, idx) => {
-            const sectionLabel = separatorMap[idx]
+          {visibleItems.map(({ to, label, Icon, soon, section }, idx) => {
+            const showSeparator = idx !== 0 && section !== visibleItems[idx - 1].section
 
             return (
               <div key={to}>
-                {sectionLabel && !collapsed && idx !== 0 && (
+                {showSeparator && !collapsed && (
                   <div className="pt-3 pb-1 px-3">
                     <span className="block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide text-kyro-muted">
-                      {sectionLabel}
+                      {section}
                     </span>
                   </div>
                 )}
