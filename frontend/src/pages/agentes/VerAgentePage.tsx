@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye } from 'lucide-react'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -388,12 +388,103 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
     mutationFn: ({ id, accion }: { id: number; accion: 'pagar' | 'eliminar' }) => api.patch(`/v1/constancias/boleta/${id}`, { accion }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-boletas', agenteId] }),
   })
+
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ fecha_inicio: '', fecha_fin: '', sueldo_base: '', bonos: '0', dscto_tardanza: '0', dscto_adelantos: '0' })
+  const totalNeto = Math.max(0,
+    (parseFloat(form.sueldo_base) || 0) +
+    (parseFloat(form.bonos) || 0) -
+    (parseFloat(form.dscto_tardanza) || 0) -
+    (parseFloat(form.dscto_adelantos) || 0)
+  )
+
+  const generarBoleta = useMutation({
+    mutationFn: async () => {
+      const resp = await api.post('/v1/constancias/boleta', {
+        agente_id: Number(agenteId),
+        fecha_inicio: form.fecha_inicio,
+        fecha_fin: form.fecha_fin,
+        sueldo_base: parseFloat(form.sueldo_base) || 0,
+        bonos: parseFloat(form.bonos) || 0,
+        dscto_tardanza: parseFloat(form.dscto_tardanza) || 0,
+        dscto_adelantos: parseFloat(form.dscto_adelantos) || 0,
+        total_neto: totalNeto,
+      }, { responseType: 'blob' })
+      const url = URL.createObjectURL(resp.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `boleta_${nombre}_${form.fecha_inicio}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['agente-boletas', agenteId] })
+      setShowForm(false)
+      setForm({ fecha_inicio: '', fecha_fin: '', sueldo_base: '', bonos: '0', dscto_tardanza: '0', dscto_adelantos: '0' })
+    },
+  })
+
   const boletas = data ?? []
 
   return (
     <section className="kyro-card p-5">
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Boletas</h3>
-      <p className="mb-3 text-xs text-kyro-muted">Liquidaciones generadas para el agente.</p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Boletas</h3>
+          <p className="text-xs text-kyro-muted">Liquidaciones generadas para el agente.</p>
+        </div>
+        <Button size="sm" variant="gold" onClick={() => setShowForm(v => !v)}>
+          <Plus size={13} /> Generar
+        </Button>
+      </div>
+
+      {showForm && (
+        <div className="mb-4 rounded-kyro border border-kyro-border bg-kyro-surface p-4 space-y-3">
+          <p className="text-xs font-semibold text-kyro-text">Nueva boleta de pago</p>
+          <div className="flex flex-wrap gap-3">
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Desde</label>
+              <Input type="date" value={form.fecha_inicio} onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value }))} className="kyro-input" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Hasta</label>
+              <Input type="date" value={form.fecha_fin} onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value }))} className="kyro-input" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Sueldo base (S/)</label>
+              <Input type="number" min="0" step="0.01" value={form.sueldo_base} onChange={e => setForm(f => ({ ...f, sueldo_base: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Bonos (S/)</label>
+              <Input type="number" min="0" step="0.01" value={form.bonos} onChange={e => setForm(f => ({ ...f, bonos: e.target.value }))} className="kyro-input w-24" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Dscto. tardanza</label>
+              <Input type="number" min="0" step="0.01" value={form.dscto_tardanza} onChange={e => setForm(f => ({ ...f, dscto_tardanza: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Dscto. adelantos</label>
+              <Input type="number" min="0" step="0.01" value={form.dscto_adelantos} onChange={e => setForm(f => ({ ...f, dscto_adelantos: e.target.value }))} className="kyro-input w-28" />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-sm font-bold text-kyro-gold">Total neto: {fmt(totalNeto)}</p>
+            <Button size="sm" variant="gold"
+              disabled={!form.fecha_inicio || !form.fecha_fin || !form.sueldo_base || totalNeto <= 0 || generarBoleta.isPending}
+              onClick={() => generarBoleta.mutate()}
+            >
+              {generarBoleta.isPending ? 'Generando...' : 'Generar y Descargar PDF'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+          </div>
+          {generarBoleta.isError && (
+            <p className="text-xs text-kyro-danger">
+              {(generarBoleta.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error al generar la boleta.'}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="max-h-64 divide-y divide-kyro-border overflow-y-auto rounded-kyro border border-kyro-border">
         {boletas.length === 0 && <p className="p-4 text-center text-xs text-kyro-muted">Sin boletas generadas.</p>}
         {boletas.map(boleta => (

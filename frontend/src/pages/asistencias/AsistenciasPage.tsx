@@ -7,7 +7,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Download, Pencil, UserCheck, UserX } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -98,6 +98,36 @@ export function AsistenciasPage() {
   const aprobar = useMutation({
     mutationFn: (id: number) => api.post(`/v1/asistencias/${id}/aprobar`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
+  })
+
+  // ── Asistencia Manual — paridad legacy acciones_asistencia.php (crear_manual) ──
+  const [showManual, setShowManual] = useState(false)
+  const [manual, setManual] = useState({
+    agente_id: '',
+    fecha: new Date().toISOString().slice(0, 10),
+    hora_ingreso: '08:00',
+    hora_salida: '17:00',
+    inicio_refrigerio: '',
+    fin_refrigerio: '',
+    motivo: '',
+  })
+
+  const registrarManual = useMutation({
+    mutationFn: () => api.post('/v1/asistencias', {
+      agente_id: Number(manual.agente_id),
+      fecha: manual.fecha,
+      hora_ingreso: manual.hora_ingreso || null,
+      hora_salida: manual.hora_salida || null,
+      inicio_refrigerio: manual.inicio_refrigerio || null,
+      fin_refrigerio: manual.fin_refrigerio || null,
+      metodo_marcacion: 'MANUAL',
+      motivo: manual.motivo,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['asistencias'] })
+      setShowManual(false)
+      setManual(m => ({ ...m, agente_id: '', motivo: '' }))
+    },
   })
 
   // ── Excepciones (FALTA/PERMISO/PERDONAR) — paridad legacy acciones_asistencia ──
@@ -193,6 +223,11 @@ export function AsistenciasPage() {
     <div className="space-y-6">
       <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes">
         {usuario?.rol === 'admin' && (
+          <Button variant="glassInfo" size="sm" onClick={() => setShowManual(s => !s)}>
+            <ClipboardList size={14} /> Asistencia Manual
+          </Button>
+        )}
+        {usuario?.rol === 'admin' && (
           <Button variant="outline" size="sm" onClick={() => setShowExc(s => !s)}>
             <AlertCircle size={14} /> Registrar excepción
           </Button>
@@ -201,6 +236,65 @@ export function AsistenciasPage() {
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
       </PageHeader>
+
+      {/* Formulario de asistencia manual (admin) */}
+      {showManual && usuario?.rol === 'admin' && (
+        <div className="kyro-card border-l-4 border-l-cyan-500 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar asistencia manual (días pasados)</h3>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
+              <Input type="number" placeholder="Ej. 12" value={manual.agente_id}
+                onChange={e => setManual(m => ({ ...m, agente_id: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Fecha</label>
+              <Input type="date" value={manual.fecha}
+                onChange={e => setManual(m => ({ ...m, fecha: e.target.value }))} className="kyro-input" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Ingreso</label>
+              <Input type="time" value={manual.hora_ingreso}
+                onChange={e => setManual(m => ({ ...m, hora_ingreso: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Salida</label>
+              <Input type="time" value={manual.hora_salida}
+                onChange={e => setManual(m => ({ ...m, hora_salida: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Ini. Refrig.</label>
+              <Input type="time" value={manual.inicio_refrigerio}
+                onChange={e => setManual(m => ({ ...m, inicio_refrigerio: e.target.value }))} className="kyro-input w-28" />
+            </div>
+            <div>
+              <label className="block text-xs text-kyro-muted mb-1">Fin Refrig.</label>
+              <Input type="time" value={manual.fin_refrigerio}
+                onChange={e => setManual(m => ({ ...m, fin_refrigerio: e.target.value }))} className="kyro-input w-28" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className="block text-xs text-kyro-muted mb-1">Motivo (obligatorio)</label>
+            <Input type="text" placeholder="Ej. Agente olvidó marcar al ingresar" value={manual.motivo}
+              onChange={e => setManual(m => ({ ...m, motivo: e.target.value }))} className="kyro-input w-full max-w-lg" />
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button
+              variant="gold"
+              disabled={!manual.agente_id || !manual.motivo || manual.motivo.length < 5 || registrarManual.isPending}
+              onClick={() => registrarManual.mutate()}
+            >
+              {registrarManual.isPending ? 'Registrando...' : 'Registrar'}
+            </Button>
+            <Button variant="ghost" onClick={() => setShowManual(false)}>Cancelar</Button>
+          </div>
+          {registrarManual.isError && (
+            <p className="mt-2 text-xs text-kyro-danger">
+              {(registrarManual.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'No se pudo registrar la asistencia.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Formulario de excepción (admin) */}
       {showExc && usuario?.rol === 'admin' && (

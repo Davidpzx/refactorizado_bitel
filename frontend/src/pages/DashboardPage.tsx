@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye } from 'lucide-react'
+import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle } from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
@@ -10,6 +10,7 @@ import { ActionIconButton, TableActions } from '../components/ui/ActionIconButto
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
 import { apiErrorData } from '../lib/httpError'
+import { api } from '../services/api'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,12 @@ export function DashboardPage() {
   const [appliedFilters, setAppliedFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr })
   const [showAnomalias, setShowAnomalias] = useState(false)
   const [editingDestino, setEditingDestino] = useState<{ id: number; current: string } | null>(null)
+  const qc = useQueryClient()
+
+  const aprobarEdicion = useMutation({
+    mutationFn: (id: number) => api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard-kpis'] }),
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-kpis', appliedFilters],
@@ -383,6 +390,21 @@ export function DashboardPage() {
                             <Pencil size={14} />
                           </span>
                         ) : null}
+                        {isSolicitado && usuario?.rol === 'admin' && (
+                          <Button
+                            variant="gold"
+                            size="sm"
+                            disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
+                            onClick={() => {
+                              if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
+                                aprobarEdicion.mutate(r.id)
+                              }
+                            }}
+                            className="h-8 gap-1 px-2 text-xs"
+                          >
+                            <CheckCircle size={12} /> Aprobar
+                          </Button>
+                        )}
                       </TableActions>
                     </td>
                   </tr>
