@@ -5,7 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer, Plus } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -76,6 +76,7 @@ const ventaSchema = z.object({
   es_esim:              z.boolean(),
   plan_anterior:        z.number().min(0),
   cliente_dni:          z.string().max(15).optional().or(z.literal('')),
+  cliente_nombre:       z.string().optional().or(z.literal('')),
   producto_nombre:      z.string().optional().or(z.literal('')),
   imei_serial:          z.string().optional().or(z.literal('')),
   tipo_pago:            z.enum(['CONTADO','CUOTAS']),
@@ -122,7 +123,7 @@ const VENTA_DEFAULT: VentaFormData = {
   tipo_venta:'POSTPAGO', subtipo:'', monto_total:0, efectivo_inicial:0,
   cross_selling:false, tienda_destino:'', es_remate:false, es_extranjero:false,
   es_migracion:false, es_upgrade:false, es_esim:false, plan_anterior:0,
-  cliente_dni:'', producto_nombre:'', imei_serial:'', tipo_pago:'CONTADO',
+  cliente_dni:'', cliente_nombre:'', producto_nombre:'', imei_serial:'', tipo_pago:'CONTADO',
   financiera:'', precio_venta:0, costo_snap:0, por_cobrar_financiera:0,
   inventario_tienda_id:0, plan_nombre:'', tipo_alta:'MNP', cantidad:1,
   cobrado_unitario:0, comision_unitaria:0,
@@ -407,6 +408,320 @@ function OtroRow({
   )
 }
 
+// ── Modal: Agregar Venta Unificado ────────────────────────────────────────────
+
+type ModalSeccion = 'POSTPAGO' | 'PREPAGO' | 'EQUIPO' | 'ACCESORIO' | 'OTROS_FLUJO' | 'APOYO' | ''
+
+interface ModalVentaState {
+  vendedor_id:           number
+  seccion:               ModalSeccion
+  cliente_dni:           string
+  cliente_nombre:        string
+  es_extranjero:         boolean
+  es_migracion:          boolean
+  es_upgrade:            boolean
+  es_esim:               boolean
+  plan_nombre:           string
+  tipo_alta:             string
+  cobrado_unitario:      number
+  plan_anterior:         number
+  cantidad:              number
+  producto_nombre:       string
+  inventario_tienda_id:  number
+  imei_serial:           string
+  tipo_pago:             'CONTADO' | 'CUOTAS'
+  precio_venta:          number
+  financiera:            string
+  por_cobrar_financiera: number
+  costo_snap:            number
+  subtipo:               string
+  monto_otros:           number
+  tienda_destino:        string
+}
+
+const MODAL_DEFAULT: ModalVentaState = {
+  vendedor_id: 0, seccion: '',
+  cliente_dni: '', cliente_nombre: '',
+  es_extranjero: false, es_migracion: false, es_upgrade: false, es_esim: false,
+  plan_nombre: '', tipo_alta: 'MNP', cobrado_unitario: 0, plan_anterior: 0, cantidad: 1,
+  producto_nombre: '', inventario_tienda_id: 0, imei_serial: '',
+  tipo_pago: 'CONTADO', precio_venta: 0, financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
+  subtipo: '', monto_otros: 0, tienda_destino: '',
+}
+
+const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: string }[] = [
+  { value: 'POSTPAGO',    label: 'Postpago',           color: 'var(--color-kyro-indigo)'  },
+  { value: 'PREPAGO',     label: 'Prepago / Chip',     color: 'var(--color-kyro-info)'    },
+  { value: 'EQUIPO',      label: 'Equipo / Accesorio', color: 'var(--color-kyro-warning)' },
+  { value: 'OTROS_FLUJO', label: 'Otros Ingresos',     color: 'var(--color-kyro-body)'    },
+  { value: 'APOYO',       label: 'Ventas de Apoyo',    color: 'var(--color-kyro-gold)'    },
+]
+
+function AgregarVentaModal({
+  open, onClose, onConfirm, vendedores, planes, inventarioItems,
+}: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (data: ModalVentaState) => void
+  vendedores: VendedorReporte[]
+  planes: Array<{ nombre_plan: string; tipo_alta: string }>
+  inventarioItems: InventarioItem[]
+}) {
+  const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
+
+  useEffect(() => { if (open) setM(MODAL_DEFAULT) }, [open])
+
+  const upd = <K extends keyof ModalVentaState>(k: K, v: ModalVentaState[K]) =>
+    setM(prev => ({ ...prev, [k]: v }))
+
+  const s        = m.seccion
+  const esLinea  = s === 'POSTPAGO' || s === 'PREPAGO'
+  const esEquipo = s === 'EQUIPO' || s === 'ACCESORIO'
+  const esOtros  = s === 'OTROS_FLUJO'
+  const esApoyo  = s === 'APOYO'
+  const haCliente = esLinea || esEquipo
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 kyro-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-kyro-border pb-3">
+          <h2 className="font-semibold text-base text-kyro-text">Agregar Venta</h2>
+          <Button type="button" variant="glassDanger" size="iconSm" onClick={onClose}><X size={14} /></Button>
+        </div>
+
+        {/* 1. Vendedor */}
+        <div>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">1. Vendedor</Label>
+          <Select value={m.vendedor_id} onChange={e => upd('vendedor_id', Number(e.target.value))} className="kyro-input mt-1 h-9 text-sm">
+            <option value={0}>Selecciona el vendedor...</option>
+            {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombres} ({v.tienda_base})</option>)}
+          </Select>
+        </div>
+
+        {/* 2. Sección */}
+        <div>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Sección</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
+            {MODAL_SECCIONES.map(sec => {
+              const active = m.seccion === sec.value
+              return (
+                <button key={sec.value} type="button"
+                  onClick={() => upd('seccion', sec.value)}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold transition-all border"
+                  style={active
+                    ? { background: sec.color, color: '#fff', borderColor: sec.color, boxShadow: `0 0 14px color-mix(in srgb, ${sec.color} 40%, transparent)` }
+                    : { background: 'transparent', color: 'var(--color-kyro-muted)', borderColor: 'var(--color-kyro-border)' }
+                  }
+                >
+                  {sec.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 3. Cliente */}
+        {haCliente && (
+          <div>
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">3. Cliente</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1.5">
+              <div>
+                <Label className="text-[10px] text-kyro-muted">DNI / Celular</Label>
+                <Input value={m.cliente_dni} onChange={e => upd('cliente_dni', e.target.value)} maxLength={15} placeholder="DNI o celular" className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
+                <Input value={m.cliente_nombre} onChange={e => upd('cliente_nombre', e.target.value)} placeholder="Nombre del cliente" className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4a. Postpago / Prepago */}
+        {esLinea && (
+          <div className="space-y-3">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setM(p => ({ ...p, es_extranjero: !p.es_extranjero }))}
+                className="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                style={m.es_extranjero ? { background:'#a1a1aa', color:'#fff', borderColor:'#a1a1aa' } : { background:'transparent', color:'var(--color-kyro-muted)', borderColor:'var(--color-kyro-border)' }}>
+                Extranjero
+              </button>
+              {s === 'POSTPAGO' && (
+                <button type="button" onClick={() => setM(p => ({ ...p, es_migracion: !p.es_migracion }))}
+                  className="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                  style={m.es_migracion ? { background:'#06b6d4', color:'#fff', borderColor:'#06b6d4' } : { background:'transparent', color:'var(--color-kyro-muted)', borderColor:'var(--color-kyro-border)' }}>
+                  Migración
+                </button>
+              )}
+              {s === 'POSTPAGO' && (
+                <button type="button" onClick={() => setM(p => ({ ...p, es_upgrade: !p.es_upgrade }))}
+                  className="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                  style={m.es_upgrade ? { background:'#f59e0b', color:'#fff', borderColor:'#f59e0b' } : { background:'transparent', color:'var(--color-kyro-muted)', borderColor:'var(--color-kyro-border)' }}>
+                  Upgrade
+                </button>
+              )}
+              <button type="button" onClick={() => setM(p => ({ ...p, es_esim: !p.es_esim }))}
+                className="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
+                style={m.es_esim ? { background:'#a78bfa', color:'#fff', borderColor:'#a78bfa' } : { background:'transparent', color:'var(--color-kyro-muted)', borderColor:'var(--color-kyro-border)' }}>
+                eSIM
+              </button>
+            </div>
+            <div className="grid grid-cols-[1fr_130px] gap-2">
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Plan *</Label>
+                <Select value={m.plan_nombre} onChange={e => upd('plan_nombre', e.target.value)} className="kyro-input mt-0.5 h-8 text-xs">
+                  <option value="">— Selecciona plan —</option>
+                  {planes.map((p, i) => <option key={i} value={p.nombre_plan}>{p.nombre_plan} ({p.tipo_alta})</option>)}
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Tipo de alta</Label>
+                <Select value={m.tipo_alta} onChange={e => upd('tipo_alta', e.target.value)} className="kyro-input mt-0.5 h-8 text-xs">
+                  {TIPOS_ALTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-[10px] text-kyro-muted w-24 shrink-0">Cobrado (S/)</Label>
+              <Input type="number" step="0.01" min="0" value={m.cobrado_unitario || ''} onChange={e => upd('cobrado_unitario', parseFloat(e.target.value) || 0)} placeholder="0.00" className="kyro-input h-8 text-xs w-32" />
+            </div>
+            {m.es_upgrade && (
+              <div className="flex items-center gap-2">
+                <Label className="text-[10px] text-kyro-muted w-24 shrink-0">Fee ant. (S/)</Label>
+                <Input type="number" step="0.01" min="0" value={m.plan_anterior || ''} onChange={e => upd('plan_anterior', parseFloat(e.target.value) || 0)} className="kyro-input h-8 text-xs w-32" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4b. Equipo / Accesorio */}
+        {esEquipo && (
+          <div className="space-y-3">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
+            <div>
+              <Label className="text-[10px] text-kyro-muted">Producto *</Label>
+              <Input value={m.producto_nombre} list="modal-inv-datalist" placeholder="Nombre del producto"
+                className="kyro-input mt-0.5 h-8 text-xs"
+                onChange={e => {
+                  const v = e.target.value
+                  const match = inventarioItems.find(it => it.producto_nombre === v)
+                  if (match) {
+                    setM(p => ({ ...p, producto_nombre: v, inventario_tienda_id: match.id, costo_snap: Number(match.precio_costo) || 0, precio_venta: Number(match.precio_normal) || 0 }))
+                  } else {
+                    upd('producto_nombre', v)
+                  }
+                }} />
+              <datalist id="modal-inv-datalist">
+                {inventarioItems.map(it => <option key={it.id} value={it.producto_nombre}>{it.tipo} · S/ {Number(it.precio_normal).toFixed(2)}</option>)}
+              </datalist>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-kyro-muted">IMEI / Serie</Label>
+                <Input value={m.imei_serial} onChange={e => upd('imei_serial', e.target.value)} maxLength={50} placeholder="IMEI o serie" className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Tipo de pago</Label>
+                <Select value={m.tipo_pago} onChange={e => upd('tipo_pago', e.target.value as 'CONTADO' | 'CUOTAS')} className="kyro-input mt-0.5 h-8 text-xs">
+                  <option value="CONTADO">Contado</option>
+                  <option value="CUOTAS">A cuotas</option>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-[10px] text-kyro-muted w-28 shrink-0">Precio venta (S/)</Label>
+              <Input type="number" step="0.01" min="0" value={m.precio_venta || ''} onChange={e => upd('precio_venta', parseFloat(e.target.value) || 0)} className="kyro-input h-8 text-xs w-32" />
+            </div>
+            {m.tipo_pago === 'CUOTAS' && (
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-kyro-border">
+                <div>
+                  <Label className="text-[10px] text-kyro-muted">Financiera</Label>
+                  <Select value={m.financiera} onChange={e => upd('financiera', e.target.value)} className="kyro-input mt-0.5 h-7 text-xs">
+                    <option value="">Ninguna</option>
+                    {FINANCIERAS.map(f => <option key={f}>{f}</option>)}
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-kyro-muted">Por cobrar fin.</Label>
+                  <Input type="number" step="0.01" min="0" value={m.por_cobrar_financiera || ''} onChange={e => upd('por_cobrar_financiera', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-7 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] text-kyro-muted">Costo snap</Label>
+                  <Input type="number" step="0.01" min="0" value={m.costo_snap || ''} onChange={e => upd('costo_snap', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-7 text-xs" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4c. Otros Ingresos */}
+        {esOtros && (
+          <div className="space-y-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Descripción / Motivo *</Label>
+                <Input value={m.subtipo} onChange={e => upd('subtipo', e.target.value)} placeholder="Motivo del ingreso" className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Monto (S/) *</Label>
+                <Input type="number" step="0.01" min="0" value={m.monto_otros || ''} onChange={e => upd('monto_otros', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4d. Ventas de Apoyo */}
+        {esApoyo && (
+          <div className="space-y-3">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
+            <div>
+              <Label className="text-[10px] text-kyro-muted">Tienda *</Label>
+              <Select value={m.tienda_destino} onChange={e => upd('tienda_destino', e.target.value)} className="kyro-input mt-0.5 h-8 text-xs">
+                <option value="">— Selecciona tienda —</option>
+                {TIENDAS.map(t => <option key={t}>{t}</option>)}
+              </Select>
+            </div>
+            <div className="grid grid-cols-[1fr_80px_110px] gap-2">
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Plan *</Label>
+                <Select value={m.plan_nombre} onChange={e => upd('plan_nombre', e.target.value)} className="kyro-input mt-0.5 h-8 text-xs">
+                  <option value="">— Plan —</option>
+                  {planes.map((p, i) => <option key={i} value={p.nombre_plan}>{p.nombre_plan}</option>)}
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Cant.</Label>
+                <Input type="number" step="1" min="1" value={m.cantidad} onChange={e => upd('cantidad', parseInt(e.target.value) || 1)} className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-kyro-muted">Cobrado c/u (S/)</Label>
+                <Input type="number" step="0.01" min="0" value={m.cobrado_unitario || ''} onChange={e => upd('cobrado_unitario', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmar */}
+        <div className="flex gap-2 pt-3 border-t border-kyro-border">
+          <Button type="button" variant="gold" className="flex-1 gap-2 h-10" disabled={!m.vendedor_id || !m.seccion}
+            onClick={() => { onConfirm(m); onClose() }}>
+            <Plus size={15} /> Agregar Venta
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 type NuevoReportePageProps = {
@@ -459,6 +774,29 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }, [esEdicion, usuario, setValue])
 
   const { fields, append, remove } = useFieldArray({ control, name: 'ventas' })
+
+  // ── Modal agregar venta ────────────────────────────────────────────────────
+  const [ventaModalOpen, setVentaModalOpen] = useState(false)
+
+  const handleAgregarVenta = (data: ModalVentaState) => {
+    const base = { vendedor_id: data.vendedor_id, cliente_dni: data.cliente_dni, cliente_nombre: data.cliente_nombre }
+    switch (data.seccion) {
+      case 'POSTPAGO':
+      case 'PREPAGO':
+        append(ventaNueva({ ...base, tipo_venta: data.seccion, es_extranjero: data.es_extranjero, es_migracion: data.es_migracion, es_upgrade: data.es_upgrade, es_esim: data.es_esim, plan_nombre: data.plan_nombre, tipo_alta: data.tipo_alta, cobrado_unitario: data.cobrado_unitario, plan_anterior: data.plan_anterior }))
+        break
+      case 'EQUIPO':
+      case 'ACCESORIO':
+        append(ventaNueva({ ...base, tipo_venta: data.seccion, producto_nombre: data.producto_nombre, inventario_tienda_id: data.inventario_tienda_id, imei_serial: data.imei_serial, tipo_pago: data.tipo_pago, precio_venta: data.precio_venta, financiera: data.financiera, por_cobrar_financiera: data.por_cobrar_financiera, costo_snap: data.costo_snap }))
+        break
+      case 'OTROS_FLUJO':
+        append(ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'OTROS_FLUJO', subtipo: data.subtipo, monto_total: data.monto_otros }))
+        break
+      case 'APOYO':
+        append(ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'APOYO', tienda_destino: data.tienda_destino, plan_nombre: data.plan_nombre, cantidad: data.cantidad, cobrado_unitario: data.cobrado_unitario, tipo_alta: 'LN' }))
+        break
+    }
+  }
 
   // ── Salidas de efectivo (estado local) ─────────────────────────────────────
   const [salidaItems, setSalidaItems] = useState<SalidaItem[]>([])
@@ -885,11 +1223,19 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           {/* ═══════════ COLUMNA IZQUIERDA: Ventas ═══════════ */}
           <div>
 
+            {/* Botón unificado de agregar venta */}
+            <button
+              type="button"
+              onClick={() => setVentaModalOpen(true)}
+              className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all"
+              style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
+            >
+              <Plus size={18} /> Agregar Venta
+            </button>
+
             <SectionPanel
               title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />} number={1}
-              count={postpagoRows.length} addLabel="Agregar Postpago"
-              subtotal={totalPostpago}
-              onAdd={() => append(ventaNueva({ tipo_venta: 'POSTPAGO', tipo_alta: 'MNP' }))}
+              count={postpagoRows.length} subtotal={totalPostpago}
             >
               {postpagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
@@ -902,9 +1248,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
             <SectionPanel
               title="Ventas Prepago / Chips" accent={ACCENT.prepago} icon={<Cpu size={15} />} number={2}
-              count={prepagoRows.length} addLabel="Agregar Prepago"
-              subtotal={totalPrepago}
-              onAdd={() => append(ventaNueva({ tipo_venta: 'PREPAGO', tipo_alta: 'LN' }))}
+              count={prepagoRows.length} subtotal={totalPrepago}
             >
               {prepagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
@@ -917,9 +1261,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
             <SectionPanel
               title="Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} />} number={3}
-              count={equipoRows.length} addLabel="Vender de Stock"
-              subtotal={totalEquipos}
-              onAdd={() => append(ventaNueva({ tipo_venta: 'EQUIPO' }))}
+              count={equipoRows.length} subtotal={totalEquipos}
             >
               <datalist id="inv-equipos-datalist">
                 {inventarioItems.map(it => (
@@ -935,17 +1277,11 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                       errors={errors} onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Equipo') : undefined}
                       items={inventarioItems} setValue={setValue} vendedores={vendedores} />
                   ))}
-              {equipoRows.length > 0 && (
-                <AddRowButton label="Agregar Accesorio" accent="var(--color-kyro-info)"
-                  onClick={() => append(ventaNueva({ tipo_venta: 'ACCESORIO' }))} className="mt-1" />
-              )}
             </SectionPanel>
 
             <SectionPanel
               title="Otros Ingresos (Flujo)" accent={ACCENT.otros} icon={<Coins size={15} />} number={4}
-              count={otrosRows.length} addLabel="Agregar"
-              subtotal={totalOtrosFlujo}
-              onAdd={() => append(ventaNueva({ tipo_venta: 'OTROS_FLUJO' }))}
+              count={otrosRows.length} subtotal={totalOtrosFlujo}
             >
               {otrosRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
@@ -956,9 +1292,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
             <SectionPanel
               title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo} icon={<Users size={15} />} number={5}
-              count={apoyoRows.length} addLabel="Agregar Venta de Apoyo"
-              subtotal={totalApoyo}
-              onAdd={() => append(ventaNueva({ tipo_venta: 'APOYO', tipo_alta: 'LN' }))}
+              count={apoyoRows.length} subtotal={totalApoyo}
             >
               {apoyoRows.length > 0 && (
                 <div className="grid grid-cols-[150px_130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
@@ -1218,6 +1552,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           vendedor={usuario?.nombre ?? ''}
         />
       )}
+
+      <AgregarVentaModal
+        open={ventaModalOpen}
+        onClose={() => setVentaModalOpen(false)}
+        onConfirm={handleAgregarVenta}
+        vendedores={vendedores}
+        planes={planesData}
+        inventarioItems={inventarioItems}
+      />
     </div>
   )
 }

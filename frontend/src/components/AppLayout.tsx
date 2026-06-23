@@ -28,7 +28,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   // ── Operaciones ──────────────────────────────────────────────────────────
   { to: '/',               label: 'Dashboard',      Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Operaciones' },
-  { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda'],          section: 'Operaciones' },
+  { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Operaciones' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin'],           section: 'Operaciones' },
   { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin'],           section: 'Operaciones' },
