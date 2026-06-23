@@ -380,7 +380,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="estado" tick={{ fontSize: 11 }} width={80}
-                    tickFormatter={v => ({ NUEVO:'Nuevo', CONTACTADO:'Contactado', INTERESADO:'Interesado', CONVERTIDO:'Convertido', PERDIDO:'Perdido' }[v] ?? v)} />
+                    tickFormatter={v => ({ NUEVO:'Nuevo', CONTACTADO:'Contactado', INTERESADO:'Interesado', CONVERTIDO:'Convertido', PERDIDO:'Perdido' } as Record<string,string>)[v as string] ?? String(v)} />
                   <Tooltip formatter={(v) => [Number(v), 'Leads']} />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                     {pipeline.map((p, i) => {
@@ -400,7 +400,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
                 <BarChart data={porFuente} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
                   <XAxis dataKey="fuente" tick={{ fontSize: 11 }}
-                    tickFormatter={v => ({ PRESENCIAL:'Presencial', WHATSAPP:'WhatsApp', REFERIDO:'Referido', LLAMADA:'Llamada' }[v] ?? v)} />
+                    tickFormatter={v => ({ PRESENCIAL:'Presencial', WHATSAPP:'WhatsApp', REFERIDO:'Referido', LLAMADA:'Llamada' } as Record<string,string>)[v as string] ?? String(v)} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v) => [Number(v), 'Leads']} />
                   <Bar dataKey="total" radius={[4, 4, 0, 0]}>
