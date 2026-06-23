@@ -96,6 +96,107 @@ class LeadController extends Controller
         return response()->json($interaccion, 201);
     }
 
+    // ── Dashboard CRM analítico (KPIs + tendencia + ranking) ───────────────────
+
+    public function dashboard(Request $request): JsonResponse
+    {
+        $tiendaId = $request->input('tienda_id');
+        $desde    = $request->input('desde', now()->subDays(30)->toDateString());
+        $hasta    = $request->input('hasta', now()->toDateString());
+
+        $buildBase = fn () => Lead::query()
+            ->when($tiendaId, fn ($q) => $q->where('tienda_id', $tiendaId))
+            ->whereBetween('creado_en', [$desde, $hasta . ' 23:59:59']);
+
+        // Pipeline del período ─────────────────────────────────────────────────
+        $porEstado = $buildBase()
+            ->selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
+        $estados  = ['NUEVO', 'CONTACTADO', 'INTERESADO', 'CONVERTIDO', 'PERDIDO'];
+        $pipeline = array_map(
+            fn ($e) => ['estado' => $e, 'total' => (int) ($porEstado[$e] ?? 0)],
+            $estados
+        );
+        $totalLeads  = array_sum(array_column($pipeline, 'total'));
+        $convertidos = (int) ($porEstado['CONVERTIDO'] ?? 0);
+        $perdidos    = (int) ($porEstado['PERDIDO']    ?? 0);
+        $tasa        = $totalLeads > 0 ? round(($convertidos / $totalLeads) * 100, 1) : 0.0;
+
+        // Por fuente ───────────────────────────────────────────────────────────
+        $porFuente = $buildBase()
+            ->selectRaw('fuente, COUNT(*) as total')
+            ->groupBy('fuente')
+            ->pluck('total', 'fuente');
+
+        $fuentes    = ['PRESENCIAL', 'WHATSAPP', 'REFERIDO', 'LLAMADA'];
+        $por_fuente = array_map(
+            fn ($f) => ['fuente' => $f, 'total' => (int) ($porFuente[$f] ?? 0)],
+            $fuentes
+        );
+
+        // Tendencia diaria ─────────────────────────────────────────────────────
+        $tendencia = $buildBase()
+            ->selectRaw("DATE(creado_en) as dia, COUNT(*) as leads, SUM(estado = 'CONVERTIDO') as convertidos")
+            ->groupBy('dia')
+            ->orderBy('dia')
+            ->get()
+            ->map(fn ($r) => [
+                'dia'         => $r->dia,
+                'leads'       => (int) $r->leads,
+                'convertidos' => (int) $r->convertidos,
+            ]);
+
+        // Ranking agentes CRM (JOIN agentes para nombre) ───────────────────────
+        $ranking = $buildBase()
+            ->join('agentes as ag', 'ag.id', '=', 'leads.agente_id')
+            ->selectRaw("leads.agente_id, ag.nombres, ag.tienda_id as tienda_base, COUNT(*) as total_leads, SUM(leads.estado = 'CONVERTIDO') as conv")
+            ->groupBy('leads.agente_id', 'ag.nombres', 'ag.tienda_id')
+            ->orderByDesc('total_leads')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => [
+                'agente_id'   => $r->agente_id,
+                'nombres'     => $r->nombres,
+                'tienda_id'   => $r->tienda_base,
+                'total_leads' => (int) $r->total_leads,
+                'convertidos' => (int) $r->conv,
+                'tasa'        => $r->total_leads > 0
+                    ? round(($r->conv / $r->total_leads) * 100, 1)
+                    : 0.0,
+            ]);
+
+        // Actividad reciente ───────────────────────────────────────────────────
+        $actividad = \App\Models\InteraccionCrm::query()
+            ->join('agentes as ag', 'ag.id', '=', 'interacciones_crm.agente_id')
+            ->leftJoin('leads as l', 'l.id', '=', 'interacciones_crm.lead_id')
+            ->leftJoin('clientes as c', 'c.id', '=', 'l.cliente_id')
+            ->select([
+                'interacciones_crm.id',
+                'interacciones_crm.tipo',
+                'interacciones_crm.detalle',
+                'interacciones_crm.fecha',
+                'ag.nombres as agente_nombres',
+                'c.nombre as cliente_nombre',
+            ])
+            ->orderByDesc('interacciones_crm.fecha')
+            ->limit(8)
+            ->get();
+
+        return response()->json([
+            'total_leads'        => $totalLeads,
+            'tasa_conversion'    => $tasa,
+            'convertidos'        => $convertidos,
+            'perdidos'           => $perdidos,
+            'pipeline'           => $pipeline,
+            'por_fuente'         => $por_fuente,
+            'tendencia'          => $tendencia,
+            'ranking_agentes'    => $ranking,
+            'actividad_reciente' => $actividad,
+        ]);
+    }
+
     // ── Resumen del pipeline (métricas para dashboard) ──────────────────────────
 
     public function pipeline(Request $request): JsonResponse

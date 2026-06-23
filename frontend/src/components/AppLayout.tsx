@@ -10,7 +10,7 @@ import {
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight, Layers,
-  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone,
+  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal,
 } from 'lucide-react'
 
 interface NavItem {
@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   // ── Clientes y Marketing (le da hogar visible al CRM) ───────────────────
   { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Clientes y Marketing' },
   { to: '/crm',            label: 'CRM',              Icon: Megaphone,       roles: ['admin'],           section: 'Clientes y Marketing' },
+  { to: '/postpago',       label: 'Monitor Postpago', Icon: Signal,          roles: ['admin'],           section: 'Clientes y Marketing' },
 
   // ── Recursos y Finanzas ──────────────────────────────────────────────────
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Recursos y Finanzas' },

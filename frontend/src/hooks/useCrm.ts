@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { crmApi } from '../services/crm.api'
-import type { InteraccionCrm, LeadFormData } from '../types/crm'
+import type { CrmDashboardFilters, InteraccionCrm, LeadFormData } from '../types/crm'
 
 export function useLeads(params?: Record<string, string | number>) {
   return useQuery({
@@ -73,5 +73,13 @@ export function useAgregarInteraccion() {
     mutationFn: ({ leadId, ...data }: { leadId: number; agente_id: number; tipo: InteraccionCrm['tipo']; detalle?: string }) =>
       crmApi.interacciones.create(leadId, data),
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['interacciones', vars.leadId] }),
+  })
+}
+
+export function useCrmDashboard(params?: CrmDashboardFilters) {
+  return useQuery({
+    queryKey: ['crm-dashboard', params],
+    queryFn: () => crmApi.dashboard(params),
+    staleTime: 60_000,
   })
 }

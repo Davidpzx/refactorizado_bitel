@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useLeads, usePipeline, useCrearLead, useActualizarLead, useEliminarLead } from '../../hooks/useCrm'
+import {
+  useLeads, usePipeline, useCrearLead, useActualizarLead, useEliminarLead, useCrmDashboard,
+} from '../../hooks/useCrm'
 import { PageHeader } from '../../components/PageHeader'
+import { PageTabs } from '../../components/ui/PageTabs'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -11,7 +14,13 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
 import { Dialog } from '../../components/ui/dialog'
-import type { Lead, LeadFormData } from '../../types/crm'
+import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare } from 'lucide-react'
+import {
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, Cell,
+} from 'recharts'
+import type { CrmDashboardFilters, Lead, LeadFormData } from '../../types/crm'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -266,12 +275,256 @@ function KanbanColumna({
   )
 }
 
+// ── CRM Analytics Dashboard ───────────────────────────────────────────────────
+
+const FUENTE_COLORS: Record<string, string> = {
+  PRESENCIAL: 'var(--color-kpi-total)',
+  WHATSAPP:   'var(--color-kyro-success)',
+  REFERIDO:   'var(--color-kyro-gold)',
+  LLAMADA:    'var(--color-kyro-warning)',
+}
+
+const TIPO_ICON: Record<string, string> = {
+  LLAMADA:   '📞',
+  VISITA:    '🏪',
+  WHATSAPP:  '💬',
+  VENTA:     '✅',
+  POSTVENTA: '🔄',
+}
+
+function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
+  const hoy  = new Date().toISOString().slice(0, 10)
+  const mes1 = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+
+  const [filters, setFilters] = useState<CrmDashboardFilters>({
+    desde: mes1,
+    hasta: hoy,
+    tienda_id: tiendaId || undefined,
+  })
+  const [applied, setApplied] = useState<CrmDashboardFilters>({ ...filters, tienda_id: tiendaId || undefined })
+
+  const { data, isLoading } = useCrmDashboard(applied)
+
+  const pipeline        = data?.pipeline ?? []
+  const porFuente       = data?.por_fuente ?? []
+  const tendencia       = data?.tendencia ?? []
+  const ranking         = data?.ranking_agentes ?? []
+  const actividad       = data?.actividad_reciente ?? []
+  const totalActividad  = tendencia.reduce((s, d) => s + d.leads, 0)
+
+  const kpis = [
+    { label: 'Leads en período',   value: data?.total_leads   ?? 0, icon: <Users size={16} />,        color: 'border-l-kpi-total',      text: 'text-kyro-text' },
+    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, icon: <TrendingUp size={16} />, color: 'border-l-kyro-success', text: 'text-kyro-success' },
+    { label: 'Convertidos',        value: data?.convertidos   ?? 0, icon: <CheckCircle size={16} />,  color: 'border-l-kyro-success',   text: 'text-kyro-success' },
+    { label: 'Perdidos',           value: data?.perdidos      ?? 0, icon: <XCircle size={16} />,      color: 'border-l-kyro-danger',    text: 'text-kyro-danger' },
+    { label: 'Interacciones',      value: totalActividad,           icon: <MessageSquare size={16} />, color: 'border-l-kyro-indigo',   text: 'text-kyro-body' },
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros de fecha */}
+      <div className="kyro-card flex flex-wrap items-end gap-3 p-3">
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Desde</label>
+          <input
+            type="date"
+            value={filters.desde}
+            onChange={e => setFilters(f => ({ ...f, desde: e.target.value }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Hasta</label>
+          <input
+            type="date"
+            value={filters.hasta}
+            onChange={e => setFilters(f => ({ ...f, hasta: e.target.value }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+        <Button variant="gold" size="sm" onClick={() => setApplied({ ...filters, tienda_id: tiendaId || undefined })}>
+          Aplicar
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => {
+          const r: CrmDashboardFilters = { desde: mes1, hasta: hoy, tienda_id: tiendaId || undefined }
+          setFilters(r); setApplied(r)
+        }}>
+          Este mes
+        </Button>
+      </div>
+
+      {isLoading && <div className="py-16 text-center text-sm text-kyro-muted">Cargando analytics...</div>}
+
+      {!isLoading && (
+        <>
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {kpis.map(k => (
+              <Card key={k.label} className={`kyro-card border-l-4 px-4 py-3 ${k.color}`}>
+                <div className={`mb-1 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted`}>
+                  {k.icon}{k.label}
+                </div>
+                <p className={`text-2xl font-bold tracking-tight ${k.text}`}>{k.value}</p>
+              </Card>
+            ))}
+          </div>
+
+          {/* Gráficos fila 1: funnel + fuente */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Pipeline funnel */}
+            <div className="kyro-card p-4">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
+              <h3 className="mb-4 text-sm font-semibold text-kyro-text">Embudo por Estado</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={pipeline} layout="vertical" margin={{ left: 16, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="estado" tick={{ fontSize: 11 }} width={80}
+                    tickFormatter={v => ({ NUEVO:'Nuevo', CONTACTADO:'Contactado', INTERESADO:'Interesado', CONVERTIDO:'Convertido', PERDIDO:'Perdido' }[v] ?? v)} />
+                  <Tooltip formatter={(v) => [Number(v), 'Leads']} />
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+                    {pipeline.map((p, i) => {
+                      const fill = ['var(--color-kyro-info)','var(--color-kyro-warning)','var(--color-kpi-total)','var(--color-kyro-success)','var(--color-kyro-danger)'][i] ?? 'var(--color-kyro-muted)'
+                      return <Cell key={p.estado} fill={fill} />
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Por fuente */}
+            <div className="kyro-card p-4">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
+              <h3 className="mb-4 text-sm font-semibold text-kyro-text">Leads por Canal de Captación</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={porFuente} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
+                  <XAxis dataKey="fuente" tick={{ fontSize: 11 }}
+                    tickFormatter={v => ({ PRESENCIAL:'Presencial', WHATSAPP:'WhatsApp', REFERIDO:'Referido', LLAMADA:'Llamada' }[v] ?? v)} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v) => [Number(v), 'Leads']} />
+                  <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                    {porFuente.map(f => (
+                      <Cell key={f.fuente} fill={FUENTE_COLORS[f.fuente] ?? 'var(--color-kyro-muted)'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Tendencia diaria */}
+          {tendencia.length > 0 && (
+            <div className="kyro-card p-4">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-green-500/50 to-transparent" />
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text">
+                <TrendingUp size={15} className="text-kyro-success" />Tendencia de Captación Diaria
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={tendencia} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
+                  <XAxis dataKey="dia" tick={{ fontSize: 10 }} tickFormatter={v => v.slice(5)} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip labelFormatter={v => `Día: ${v}`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="leads" stroke="var(--color-kpi-total)" strokeWidth={2} dot={false} name="Nuevos leads" />
+                  <Line type="monotone" dataKey="convertidos" stroke="var(--color-kyro-success)" strokeWidth={2} dot={false} name="Convertidos" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Fila inferior: ranking + actividad reciente */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Ranking agentes CRM */}
+            <div className="kyro-card overflow-hidden">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/40 to-transparent" />
+              <div className="border-b border-kyro-border p-4">
+                <h3 className="text-sm font-semibold text-kyro-text">Ranking Agentes — Captación CRM</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="kyro-table-head">
+                      {['#', 'Agente', 'Tienda', 'Leads', 'Conv.', 'Tasa'].map(h => (
+                        <th key={h} className="px-3 py-2.5 text-left text-xs">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ranking.map((a, i) => (
+                      <tr key={a.agente_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-gold/5' : 'hover:bg-kyro-gold/5'}`}>
+                        <td className="px-3 py-2.5 text-xs text-kyro-muted">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium text-kyro-text">{a.nombres}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-kyro-subtle">{a.tienda_id}</td>
+                        <td className="px-3 py-2.5 font-bold text-kyro-text">{a.total_leads}</td>
+                        <td className="px-3 py-2.5 font-bold text-kyro-success">{a.convertidos}</td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant={a.tasa >= 50 ? 'success' : a.tasa >= 25 ? 'warning' : 'outline'}>
+                            {a.tasa}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                    {ranking.length === 0 && (
+                      <tr><td colSpan={6} className="px-3 py-10 text-center text-kyro-muted text-sm">Sin datos en el período</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Actividad reciente */}
+            <div className="kyro-card overflow-hidden">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/50 to-transparent" />
+              <div className="border-b border-kyro-border p-4">
+                <h3 className="text-sm font-semibold text-kyro-text">Actividad Reciente</h3>
+              </div>
+              <div className="divide-y divide-kyro-border">
+                {actividad.map(act => (
+                  <div key={act.id} className="px-4 py-3 text-xs transition-colors hover:bg-kyro-gold/5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium text-kyro-text">
+                        {TIPO_ICON[act.tipo] ?? '•'} {act.agente_nombres}
+                      </span>
+                      <span className="shrink-0 text-[0.65rem] text-kyro-muted">
+                        {act.fecha.slice(0, 10)}
+                      </span>
+                    </div>
+                    {act.cliente_nombre && (
+                      <p className="mt-0.5 text-kyro-subtle">Cliente: {act.cliente_nombre}</p>
+                    )}
+                    {act.detalle && (
+                      <p className="mt-1 line-clamp-2 italic text-kyro-muted">{act.detalle}</p>
+                    )}
+                  </div>
+                ))}
+                {actividad.length === 0 && (
+                  <p className="py-10 text-center text-sm text-kyro-muted">Sin interacciones registradas</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
+
+const CRM_TABS = [
+  { id: 'pipeline',  label: 'Pipeline Kanban' },
+  { id: 'analytics', label: 'Analytics' },
+] as const
 
 export function CrmPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
+  const [tab, setTab] = useState<'pipeline' | 'analytics'>('pipeline')
 
   const params: Record<string, string | number> = filtroTienda
     ? { tienda_id: filtroTienda, per_page: 200 }
@@ -322,47 +575,64 @@ export function CrmPage() {
           <option value="">Todas las tiendas</option>
           {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
-        <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
+        {tab === 'pipeline' && (
+          <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
+        )}
       </PageHeader>
 
-      {/* Métricas del pipeline */}
-      {pipeline && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {pipeline.pipeline.map(p => {
-            const cfg = ESTADOS.find(e => e.value === p.estado)!
-            return (
-              <Card key={p.estado} className="kyro-card relative overflow-hidden border-l-4 border-l-kpi-total px-4 py-3 text-center">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">{cfg.label}</p>
-                <p className={`mt-1 text-xl font-bold tracking-tight ${cfg.color}`}>{p.total}</p>
+      {/* Tabs */}
+      <PageTabs
+        tabs={CRM_TABS.map(t => ({ id: t.id, label: t.label }))}
+        active={tab}
+        onChange={(id) => setTab(id as typeof tab)}
+      />
+
+      {/* ── Tab Pipeline ─────────────────────────────────────────────────── */}
+      {tab === 'pipeline' && (
+        <>
+          {/* Métricas del pipeline */}
+          {pipeline && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {pipeline.pipeline.map(p => {
+                const cfg = ESTADOS.find(e => e.value === p.estado)!
+                return (
+                  <Card key={p.estado} className="kyro-card relative overflow-hidden border-l-4 border-l-kpi-total px-4 py-3 text-center">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">{cfg.label}</p>
+                    <p className={`mt-1 text-xl font-bold tracking-tight ${cfg.color}`}>{p.total}</p>
+                  </Card>
+                )
+              })}
+              <Card className="kyro-card relative overflow-hidden border-l-4 border-l-kyro-success px-4 py-3 text-center">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tasa conversión</p>
+                <p className="mt-1 text-xl font-bold tracking-tight text-kyro-success">{pipeline?.tasa_conversion ?? 0}%</p>
               </Card>
-            )
-          })}
-          <Card className="kyro-card relative overflow-hidden border-l-4 border-l-kyro-success px-4 py-3 text-center">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tasa conversión</p>
-            <p className="mt-1 text-xl font-bold tracking-tight text-kyro-success">{pipeline.tasa_conversion}%</p>
-          </Card>
-        </div>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="kyro-card py-16 text-center text-sm text-kyro-muted">Cargando leads...</div>
+          )}
+
+          {/* Tablero Kanban */}
+          {!isLoading && (
+            <div className="kyro-glass flex min-h-[400px] gap-4 overflow-x-auto rounded-kyro-xl p-3 pb-5">
+              {ESTADOS.map(config => (
+                <KanbanColumna
+                  key={config.value}
+                  config={config}
+                  leads={leadsPorEstado[config.value] ?? []}
+                  onEditar={abrirEdicion}
+                  onCambiarEstado={cambiarEstado}
+                  onEliminar={eliminarLead}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {isLoading && (
-        <div className="kyro-card py-16 text-center text-sm text-kyro-muted">Cargando leads...</div>
-      )}
-
-      {/* Tablero Kanban */}
-      {!isLoading && (
-        <div className="kyro-glass flex min-h-[400px] gap-4 overflow-x-auto rounded-kyro-xl p-3 pb-5">
-          {ESTADOS.map(config => (
-            <KanbanColumna
-              key={config.value}
-              config={config}
-              leads={leadsPorEstado[config.value] ?? []}
-              onEditar={abrirEdicion}
-              onCambiarEstado={cambiarEstado}
-              onEliminar={eliminarLead}
-            />
-          ))}
-        </div>
-      )}
+      {/* ── Tab Analytics ─────────────────────────────────────────────────── */}
+      {tab === 'analytics' && <CrmAnalytics tiendaId={filtroTienda} />}
 
       {/* Dialog nuevo/editar lead */}
       <Dialog

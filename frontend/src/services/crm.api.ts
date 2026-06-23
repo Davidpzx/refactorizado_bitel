@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { InteraccionCrm, Lead, LeadFormData, PipelineResponse } from '../types/crm'
+import type { CrmDashboardData, CrmDashboardFilters, InteraccionCrm, Lead, LeadFormData, PipelineResponse } from '../types/crm'
 
 export const crmApi = {
   leads: {
@@ -29,4 +29,7 @@ export const crmApi = {
 
   pipeline: (params?: Record<string, string | number>): Promise<PipelineResponse> =>
     api.get('/v1/crm/pipeline', { params }).then(r => r.data),
+
+  dashboard: (params?: CrmDashboardFilters): Promise<CrmDashboardData> =>
+    api.get('/v1/crm/dashboard', { params }).then(r => r.data),
 }

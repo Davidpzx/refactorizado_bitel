@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\TrasladoController;
 use App\Http\Controllers\Api\ConstanciaController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VentaController;
+use App\Http\Controllers\Api\PostpagoController;
 use Illuminate\Support\Facades\Route;
 
 // ── Health (público) ─────────────────────────────────────────────────────────
@@ -180,7 +181,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste'])->middleware('role:admin');
     Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones'])->middleware('role:admin');
 
+    // ── Monitor Postpago ─────────────────────────────────────────────────────
+    Route::get('postpago/resumen',   [PostpagoController::class, 'resumen'])->middleware('role:admin');
+    Route::get('postpago/ventas',    [PostpagoController::class, 'ventas'])->middleware('role:admin');
+    Route::get('postpago/exportar',  [PostpagoController::class, 'exportar'])->middleware('role:admin');
+
     // ── CRM ──────────────────────────────────────────────────────────────────
+    Route::get('crm/dashboard',              [LeadController::class, 'dashboard']);
     Route::get('crm/pipeline',               [LeadController::class, 'pipeline']);
     Route::apiResource('leads',              LeadController::class);
     Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);

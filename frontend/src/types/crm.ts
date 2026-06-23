@@ -44,3 +44,52 @@ export interface PipelineResponse {
   total_leads: number
   tasa_conversion: number
 }
+
+// ── CRM Dashboard analítico ───────────────────────────────────────────────────
+
+export interface CrmDashboardFilters {
+  tienda_id?: string
+  desde?: string
+  hasta?: string
+}
+
+export interface CrmFuenteStat {
+  fuente: Lead['fuente']
+  total: number
+}
+
+export interface CrmTendenciaDia {
+  dia: string
+  leads: number
+  convertidos: number
+}
+
+export interface CrmRankingAgente {
+  agente_id: number
+  nombres: string
+  tienda_id: string
+  total_leads: number
+  convertidos: number
+  tasa: number
+}
+
+export interface CrmActividadItem {
+  id: number
+  tipo: InteraccionCrm['tipo']
+  detalle: string | null
+  fecha: string
+  agente_nombres: string
+  cliente_nombre: string | null
+}
+
+export interface CrmDashboardData {
+  total_leads: number
+  tasa_conversion: number
+  convertidos: number
+  perdidos: number
+  pipeline: PipelineEstado[]
+  por_fuente: CrmFuenteStat[]
+  tendencia: CrmTendenciaDia[]
+  ranking_agentes: CrmRankingAgente[]
+  actividad_reciente: CrmActividadItem[]
+}
