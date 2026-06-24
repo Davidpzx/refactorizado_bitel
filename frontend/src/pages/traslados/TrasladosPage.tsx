@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
+import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -73,7 +76,7 @@ function CrearTrasladoDialog({
   const { agentes } = useAgentesSelect()
   const { data: inventarioData } = useQuery({
     queryKey: ['inventario-disponible'],
-    queryFn: () => import('../../services/api').then(m => m.api.get('/v1/inventario', { params: { estado: 'DISPONIBLE', per_page: 500 } }).then(r => r.data)),
+    queryFn: () => api.get('/v1/inventario', { params: { estado: 'DISPONIBLE', per_page: 500 } }).then(r => r.data),
     enabled: open,
     staleTime: 60_000,
   })
@@ -368,6 +371,7 @@ function getColumns(
 
 export function TrasladosPage() {
   const { usuario } = useAuth()
+  const { tiendas: tiendasFiltro } = useTiendasSelect()
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
   const [estado, setEstado]         = useState('')
   const [origen, setOrigen]         = useState('')
@@ -459,8 +463,8 @@ export function TrasladosPage() {
           className="w-44"
         >
           <option value="">Todas las tiendas origen</option>
-          {TIENDAS.map((t) => (
-            <option key={t} value={t}>{t}</option>
+          {tiendasFiltro.map(t => (
+            <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
           ))}
         </Select>
 
@@ -473,8 +477,8 @@ export function TrasladosPage() {
           className="w-44"
         >
           <option value="">Todas las tiendas destino</option>
-          {TIENDAS.map((t) => (
-            <option key={t} value={t}>{t}</option>
+          {tiendasFiltro.map(t => (
+            <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
           ))}
         </Select>
 
