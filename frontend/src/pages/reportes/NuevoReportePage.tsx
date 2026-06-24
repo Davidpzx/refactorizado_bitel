@@ -5,7 +5,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer, Plus } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer, Plus, Pencil } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -408,6 +408,105 @@ function OtroRow({
   )
 }
 
+// ── Lista compacta de ventas ──────────────────────────────────────────────────
+
+function VentaFila({
+  venta, index, vendedores, onEdit, onRemove, onPrint,
+}: {
+  venta: VentaFormData
+  index: number
+  vendedores: VendedorReporte[]
+  onEdit: () => void
+  onRemove: () => void
+  onPrint?: () => void
+}) {
+  const vendedor = vendedores.find(v => v.id === venta.vendedor_id)
+  const vNombre  = vendedor?.nombres ?? `Vendedor #${venta.vendedor_id}`
+  const t        = venta.tipo_venta
+  const isLinea  = t === 'POSTPAGO' || t === 'PREPAGO'
+  const isEquipo = t === 'EQUIPO'   || t === 'ACCESORIO'
+
+  const monto = isLinea
+    ? (venta.cobrado_unitario || 0) * (venta.cantidad || 1)
+    : isEquipo ? venta.precio_venta || 0 : venta.monto_total || 0
+
+  const flags: { label: string; color: string }[] = [
+    ...(venta.es_extranjero ? [{ label: 'EXT',  color: '#a1a1aa' }] : []),
+    ...(venta.es_migracion  ? [{ label: 'MIG',  color: '#06b6d4' }] : []),
+    ...(venta.es_upgrade    ? [{ label: 'UPG',  color: '#f59e0b' }] : []),
+    ...(venta.es_esim       ? [{ label: 'eSIM', color: '#a78bfa' }] : []),
+  ]
+
+  return (
+    <div className="flex items-start gap-2 py-2 px-2.5 rounded-lg border border-kyro-border bg-kyro-elevated/40 mb-1.5">
+      <span className="text-[10px] text-kyro-muted w-5 shrink-0 pt-0.5 text-center font-mono">{index + 1}</span>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs font-semibold text-kyro-text">{vNombre}</span>
+          {venta.cliente_dni    && <span className="text-[10px] text-kyro-muted">· {venta.cliente_dni}</span>}
+          {venta.cliente_nombre && <span className="text-[10px] text-kyro-muted">· {venta.cliente_nombre}</span>}
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+          {isLinea && venta.plan_nombre && (
+            <span className="text-[10px] text-kyro-body font-medium">{venta.plan_nombre}</span>
+          )}
+          {isLinea && venta.tipo_alta && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(99,102,241,0.15)', color: 'var(--color-kyro-indigo)' }}>
+              {venta.tipo_alta}
+            </span>
+          )}
+          {isEquipo && venta.producto_nombre && (
+            <span className="text-[10px] text-kyro-body">{venta.producto_nombre}</span>
+          )}
+          {isEquipo && venta.imei_serial && (
+            <span className="text-[10px] text-kyro-muted">· {venta.imei_serial}</span>
+          )}
+          {isEquipo && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+              style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--color-kyro-warning)' }}>
+              {venta.tipo_pago === 'CUOTAS' ? 'Cuotas' : 'Contado'}
+            </span>
+          )}
+          {t === 'OTROS_FLUJO' && venta.subtipo && (
+            <span className="text-[10px] text-kyro-body">{venta.subtipo}</span>
+          )}
+          {t === 'APOYO' && (
+            <>
+              {venta.tienda_destino && <span className="text-[10px] font-medium text-kyro-body">{venta.tienda_destino}</span>}
+              {venta.plan_nombre    && <span className="text-[10px] text-kyro-muted">· {venta.plan_nombre}</span>}
+              {venta.cantidad > 1   && <span className="text-[10px] text-kyro-muted">× {venta.cantidad}</span>}
+            </>
+          )}
+          {flags.map(f => (
+            <span key={f.label} className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+              style={{ background: `color-mix(in srgb, ${f.color} 20%, transparent)`, color: f.color }}>
+              {f.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <span className="text-xs font-semibold text-kyro-text shrink-0 pt-0.5 tabular-nums">S/ {monto.toFixed(2)}</span>
+
+      <div className="flex gap-1 shrink-0">
+        {onPrint && (
+          <Button type="button" variant="glassInfo" size="iconSm" title="Imprimir ticket" onClick={onPrint}>
+            <Printer size={13} />
+          </Button>
+        )}
+        <Button type="button" variant="outline" size="iconSm" title="Editar" onClick={onEdit}>
+          <Pencil size={13} />
+        </Button>
+        <Button type="button" variant="glassDanger" size="iconSm" title="Eliminar" onClick={onRemove}>
+          <X size={13} />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal: Agregar Venta Unificado ────────────────────────────────────────────
 
 type ModalSeccion = 'POSTPAGO' | 'PREPAGO' | 'EQUIPO' | 'ACCESORIO' | 'OTROS_FLUJO' | 'APOYO' | ''
@@ -458,7 +557,7 @@ const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: 
 ]
 
 function AgregarVentaModal({
-  open, onClose, onConfirm, vendedores, planes, inventarioItems,
+  open, onClose, onConfirm, vendedores, planes, inventarioItems, initialData, isEdit,
 }: {
   open: boolean
   onClose: () => void
@@ -466,10 +565,12 @@ function AgregarVentaModal({
   vendedores: VendedorReporte[]
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
   inventarioItems: InventarioItem[]
+  initialData?: ModalVentaState
+  isEdit?: boolean
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
 
-  useEffect(() => { if (open) setM(MODAL_DEFAULT) }, [open])
+  useEffect(() => { if (open) setM(initialData ?? MODAL_DEFAULT) }, [open, initialData])
 
   const upd = <K extends keyof ModalVentaState>(k: K, v: ModalVentaState[K]) =>
     setM(prev => ({ ...prev, [k]: v }))
@@ -712,7 +813,7 @@ function AgregarVentaModal({
         <div className="flex gap-2 pt-3 border-t border-kyro-border">
           <Button type="button" variant="gold" className="flex-1 gap-2 h-10" disabled={!m.vendedor_id || !m.seccion}
             onClick={() => { onConfirm(m); onClose() }}>
-            <Plus size={15} /> Agregar Venta
+            {isEdit ? <><Pencil size={15} /> Guardar Cambios</> : <><Plus size={15} /> Agregar Venta</>}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
         </div>
@@ -773,29 +874,74 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     }
   }, [esEdicion, usuario, setValue])
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'ventas' })
+  const { fields, append, remove, update } = useFieldArray({ control, name: 'ventas' })
 
-  // ── Modal agregar venta ────────────────────────────────────────────────────
+  // ── Modal agregar / editar venta ───────────────────────────────────────────
   const [ventaModalOpen, setVentaModalOpen] = useState(false)
+  const [editIndex,      setEditIndex]      = useState<number | null>(null)
+  const [editData,       setEditData]       = useState<ModalVentaState | undefined>(undefined)
 
-  const handleAgregarVenta = (data: ModalVentaState) => {
+  const openEdit = (idx: number) => {
+    const v = ventas[idx]
+    const seccion = v.tipo_venta as Exclude<ModalSeccion, ''>
+    setEditData({
+      ...MODAL_DEFAULT,
+      vendedor_id: v.vendedor_id,
+      seccion,
+      cliente_dni:  v.cliente_dni  ?? '',
+      cliente_nombre: v.cliente_nombre ?? '',
+      es_extranjero: !!v.es_extranjero,
+      es_migracion:  !!v.es_migracion,
+      es_upgrade:    !!v.es_upgrade,
+      es_esim:       !!v.es_esim,
+      plan_nombre:   v.plan_nombre  ?? '',
+      tipo_alta:     v.tipo_alta    ?? 'MNP',
+      cobrado_unitario: v.cobrado_unitario,
+      plan_anterior:    v.plan_anterior,
+      cantidad:         v.cantidad,
+      producto_nombre:  v.producto_nombre  ?? '',
+      inventario_tienda_id: v.inventario_tienda_id,
+      imei_serial:  v.imei_serial  ?? '',
+      tipo_pago:    v.tipo_pago,
+      precio_venta: v.precio_venta,
+      financiera:   v.financiera   ?? '',
+      por_cobrar_financiera: v.por_cobrar_financiera,
+      costo_snap:   v.costo_snap,
+      subtipo:      v.subtipo      ?? '',
+      monto_otros:  v.monto_total,
+      tienda_destino: v.tienda_destino ?? '',
+    })
+    setEditIndex(idx)
+    setVentaModalOpen(true)
+  }
+
+  const buildVenta = (data: ModalVentaState): VentaFormData => {
     const base = { vendedor_id: data.vendedor_id, cliente_dni: data.cliente_dni, cliente_nombre: data.cliente_nombre }
     switch (data.seccion) {
       case 'POSTPAGO':
       case 'PREPAGO':
-        append(ventaNueva({ ...base, tipo_venta: data.seccion, es_extranjero: data.es_extranjero, es_migracion: data.es_migracion, es_upgrade: data.es_upgrade, es_esim: data.es_esim, plan_nombre: data.plan_nombre, tipo_alta: data.tipo_alta, cobrado_unitario: data.cobrado_unitario, plan_anterior: data.plan_anterior }))
-        break
+        return ventaNueva({ ...base, tipo_venta: data.seccion, es_extranjero: data.es_extranjero, es_migracion: data.es_migracion, es_upgrade: data.es_upgrade, es_esim: data.es_esim, plan_nombre: data.plan_nombre, tipo_alta: data.tipo_alta, cobrado_unitario: data.cobrado_unitario, plan_anterior: data.plan_anterior })
       case 'EQUIPO':
       case 'ACCESORIO':
-        append(ventaNueva({ ...base, tipo_venta: data.seccion, producto_nombre: data.producto_nombre, inventario_tienda_id: data.inventario_tienda_id, imei_serial: data.imei_serial, tipo_pago: data.tipo_pago, precio_venta: data.precio_venta, financiera: data.financiera, por_cobrar_financiera: data.por_cobrar_financiera, costo_snap: data.costo_snap }))
-        break
+        return ventaNueva({ ...base, tipo_venta: data.seccion, producto_nombre: data.producto_nombre, inventario_tienda_id: data.inventario_tienda_id, imei_serial: data.imei_serial, tipo_pago: data.tipo_pago, precio_venta: data.precio_venta, financiera: data.financiera, por_cobrar_financiera: data.por_cobrar_financiera, costo_snap: data.costo_snap })
       case 'OTROS_FLUJO':
-        append(ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'OTROS_FLUJO', subtipo: data.subtipo, monto_total: data.monto_otros }))
-        break
+        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'OTROS_FLUJO', subtipo: data.subtipo, monto_total: data.monto_otros })
       case 'APOYO':
-        append(ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'APOYO', tienda_destino: data.tienda_destino, plan_nombre: data.plan_nombre, cantidad: data.cantidad, cobrado_unitario: data.cobrado_unitario, tipo_alta: 'LN' }))
-        break
+        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'APOYO', tienda_destino: data.tienda_destino, plan_nombre: data.plan_nombre, cantidad: data.cantidad, cobrado_unitario: data.cobrado_unitario, tipo_alta: 'LN' })
+      default:
+        return ventaNueva({ vendedor_id: data.vendedor_id })
     }
+  }
+
+  const handleVentaConfirm = (data: ModalVentaState) => {
+    const v = buildVenta(data)
+    if (editIndex !== null) {
+      update(editIndex, v)
+    } else {
+      append(v)
+    }
+    setEditIndex(null)
+    setEditData(undefined)
   }
 
   // ── Salidas de efectivo (estado local) ─────────────────────────────────────
@@ -1240,9 +1386,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               {postpagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : postpagoRows.map(v => (
-                    <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="POSTPAGO" planes={planesData} vendedores={vendedores}
-                      onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Postpago') : undefined} />
+                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onPrint={esTienda ? () => setTicketDesc('Venta Postpago') : undefined} />
                   ))}
             </SectionPanel>
 
@@ -1253,9 +1399,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               {prepagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : prepagoRows.map(v => (
-                    <LineaRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} tipo="PREPAGO" planes={planesData} vendedores={vendedores}
-                      onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Prepago / Chip') : undefined} />
+                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onPrint={esTienda ? () => setTicketDesc('Venta Prepago / Chip') : undefined} />
                   ))}
             </SectionPanel>
 
@@ -1273,9 +1419,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               {equipoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
-                    <EquipoRow key={v.id} index={v.idx} register={register} control={control}
-                      errors={errors} onRemove={() => remove(v.idx)} onPrint={esTienda ? () => setTicketDesc('Venta Equipo') : undefined}
-                      items={inventarioItems} setValue={setValue} vendedores={vendedores} />
+                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onPrint={esTienda ? () => setTicketDesc('Venta Equipo') : undefined} />
                   ))}
             </SectionPanel>
 
@@ -1286,7 +1432,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               {otrosRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : otrosRows.map(v => (
-                    <OtroRow key={v.id} index={v.idx} register={register} errors={errors} vendedores={vendedores} onRemove={() => remove(v.idx)} />
+                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -1302,8 +1449,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               {apoyoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin ventas de apoyo.</p>
                 : apoyoRows.map(v => (
-                    <ApoyoRow key={v.id} index={v.idx} register={register} errors={errors}
-                      planes={planesData} vendedores={vendedores} onRemove={() => remove(v.idx)} />
+                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -1555,11 +1702,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
       <AgregarVentaModal
         open={ventaModalOpen}
-        onClose={() => setVentaModalOpen(false)}
-        onConfirm={handleAgregarVenta}
+        onClose={() => { setVentaModalOpen(false); setEditIndex(null); setEditData(undefined) }}
+        onConfirm={handleVentaConfirm}
         vendedores={vendedores}
         planes={planesData}
         inventarioItems={inventarioItems}
+        initialData={editData}
+        isEdit={editIndex !== null}
       />
     </div>
   )
