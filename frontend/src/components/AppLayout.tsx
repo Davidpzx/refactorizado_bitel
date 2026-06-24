@@ -10,7 +10,7 @@ import {
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight, Layers,
-  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal,
+  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
 } from 'lucide-react'
 
 interface NavItem {
@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Operaciones' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin'],           section: 'Operaciones' },
   { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin'],           section: 'Operaciones' },
+  { to: '/mapa-calor',    label: 'Mapa de Calor',   Icon: Activity,        roles: ['admin'],           section: 'Operaciones' },
 
   // ── Pagos digitales ──────────────────────────────────────────────────────
   { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'],           section: 'Pagos digitales' },

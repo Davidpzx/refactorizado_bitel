@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\ConstanciaController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VentaController;
 use App\Http\Controllers\Api\PostpagoController;
+use App\Http\Controllers\Api\MapaCalorController;
 use Illuminate\Support\Facades\Route;
 
 // ── Health (público) ─────────────────────────────────────────────────────────
@@ -279,6 +280,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('constancias/boleta/{id}',   [ConstanciaController::class, 'boleta']);
     Route::post('constancias/boleta',       [ConstanciaController::class, 'crearBoleta']);
     Route::patch('constancias/boleta/{id}', [ConstanciaController::class, 'accionBoleta']);
+
+    // ── Mapa de Calor (admin) ─────────────────────────────────────────────────
+    Route::get('heatmap/calendario', [MapaCalorController::class, 'calendario'])->middleware('role:admin');
+    Route::get('heatmap/geografico', [MapaCalorController::class, 'geografico'])->middleware('role:admin');
+    Route::get('heatmap/horario',    [MapaCalorController::class, 'horario'])->middleware('role:admin');
 
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
     Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');
