@@ -538,7 +538,6 @@ export default function MapaCalorPage() {
       <PageHeader
         title="Mapa de Calor"
         subtitle="Análisis de actividad por tiempo y ubicación"
-        icon={<CalendarDays size={22} />}
       />
 
       <GlassPanel className="kyro-card p-4">
