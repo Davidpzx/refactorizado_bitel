@@ -150,7 +150,7 @@ export function KardexInventarioPage() {
           <option value="">Todas las tiendas</option>
           {tiendas.map(t => (
             <option key={t.codigo} value={t.codigo}>
-              {t.nombre ?? t.codigo}
+              {t.codigo} — {t.nombre ?? t.codigo}
             </option>
           ))}
         </Select>
@@ -201,8 +201,9 @@ export function KardexInventarioPage() {
             <tbody>
               {rows.map(row => (
                 <tr key={row.id} className="text-xs text-kyro-body transition-colors hover:bg-kyro-elevated/50 [&>td]:border-b [&>td]:border-kyro-border">
-                  <td className="py-1.5 px-3 text-muted-foreground/80 whitespace-nowrap">
-                    {row.tienda_nombre ?? row.tienda}
+                  <td className="py-1.5 px-3 whitespace-nowrap">
+                    <span className="font-mono text-[10px] text-kyro-muted">{row.tienda}</span>
+                    {row.tienda_nombre && <span className="ml-1 text-xs text-muted-foreground/80">{row.tienda_nombre}</span>}
                   </td>
                   <td className="py-1.5 px-3 font-medium whitespace-nowrap">{row.nombre}</td>
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{row.imei ?? '—'}</td>

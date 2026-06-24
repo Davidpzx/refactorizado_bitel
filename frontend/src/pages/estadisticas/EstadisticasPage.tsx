@@ -12,6 +12,8 @@ import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Download, TrendingUp } from 'lucide-react'
+import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
@@ -79,6 +81,7 @@ interface AgentRank {
 
 export function EstadisticasPage() {
   const { usuario } = useAuth()
+  const { tiendas } = useTiendasSelect()
 
   const [filters, setFilters] = useState({
     fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
@@ -191,10 +194,10 @@ export function EstadisticasPage() {
           {usuario?.rol === 'admin' && (
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
-              <input type="text" placeholder="Todas" value={filters.tienda}
-                onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))}
-                className="kyro-input h-9 w-32"
-              />
+              <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="h-9 w-44">
+                <option value="">Todas</option>
+                {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+              </Select>
             </div>
           )}
           <Button variant="gold" onClick={() => setApplied({ ...filters })}>Buscar</Button>

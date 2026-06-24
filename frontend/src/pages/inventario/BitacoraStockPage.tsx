@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store, Users, Search, Download } from 'lucide-react'
 
@@ -63,6 +64,7 @@ const CATEGORIAS = ['CHIP', 'EQUIPO', 'ACCESORIO']
 
 export function BitacoraStockPage() {
   const { usuario } = useAuth()
+  const { tiendas } = useTiendasSelect()
   const [exportando, setExportando] = useState(false)
 
   const [filters, setFilters] = useState({
@@ -219,9 +221,10 @@ export function BitacoraStockPage() {
         {usuario?.rol === 'admin' && (
           <div>
             <label className="mb-1 block text-xs font-medium text-kyro-muted">Tienda</label>
-            <Input type="text" placeholder="Todas" value={filters.tienda}
-              onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))}
-              className="w-28" />
+            <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="w-44">
+              <option value="">Todas</option>
+              {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+            </Select>
           </div>
         )}
         <div>

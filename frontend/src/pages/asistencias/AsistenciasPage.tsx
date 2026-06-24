@@ -7,6 +7,8 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Input } from '../../components/ui/input'
+import { Select } from '../../components/ui/select'
+import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { AlertCircle, AlertTriangle, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -70,6 +72,7 @@ interface AsistenciaData {
 
 export function AsistenciasPage() {
   const { usuario } = useAuth()
+  const { agentes: agentesLista } = useAgentesSelect()
   const qc = useQueryClient()
 
   const [filters, setFilters] = useState({
@@ -243,9 +246,11 @@ export function AsistenciasPage() {
           <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar asistencia manual (días pasados)</h3>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
-              <Input type="number" placeholder="Ej. 12" value={manual.agente_id}
-                onChange={e => setManual(m => ({ ...m, agente_id: e.target.value }))} className="kyro-input w-28" />
+              <label className="block text-xs text-kyro-muted mb-1">Agente</label>
+              <Select value={manual.agente_id} onChange={e => setManual(m => ({ ...m, agente_id: e.target.value }))} className="w-full">
+                <option value="">Selecciona agente</option>
+                {agentesLista.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+              </Select>
             </div>
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Fecha</label>
@@ -302,9 +307,11 @@ export function AsistenciasPage() {
           <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar excepción de asistencia</h3>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
-              <Input type="number" placeholder="Ej. 12" value={exc.agente_id}
-                onChange={e => setExc(s => ({ ...s, agente_id: e.target.value }))} className="kyro-input w-28" />
+              <label className="block text-xs text-kyro-muted mb-1">Agente</label>
+              <Select value={exc.agente_id} onChange={e => setExc(s => ({ ...s, agente_id: e.target.value }))} className="w-full">
+                <option value="">Selecciona agente</option>
+                {agentesLista.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+              </Select>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Fecha</label>
@@ -355,11 +362,11 @@ export function AsistenciasPage() {
           </div>
           {usuario?.rol === 'admin' && (
             <div>
-              <label className="block text-xs text-kyro-muted mb-1">ID Agente</label>
-              <Input type="number" placeholder="Todos" value={filters.agente_id}
-                onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))}
-                className="kyro-input w-24"
-              />
+              <label className="block text-xs text-kyro-muted mb-1">Agente</label>
+              <Select value={filters.agente_id} onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))} className="w-44">
+                <option value="">Todos</option>
+                {agentesLista.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+              </Select>
             </div>
           )}
               <Button variant="gold" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>

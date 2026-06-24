@@ -10,6 +10,8 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { Dialog } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
 import { api } from '../../services/api'
+import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import type { FilaPlanilla } from '../../types/planilla'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -378,6 +380,8 @@ function FilaTabla({
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export function PlanillaPage() {
+  const [tiendaFiltro, setTiendaFiltro] = useState('')
+  const { tiendas } = useTiendasSelect()
   const [mes, setMes] = useState(mesActual)
 
   const { data, isLoading, isError } = usePlanilla(mes)
@@ -418,6 +422,8 @@ export function PlanillaPage() {
 
   const t = data?.totales
 
+  const agentesVisibles = tiendaFiltro && data ? data.agentes.filter(a => a.tienda_base === tiendaFiltro) : (data?.agentes ?? [])
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -425,6 +431,10 @@ export function PlanillaPage() {
         subtitle={`Cálculo mensual de remuneraciones y comisiones`}
       >
         <div className="flex items-center gap-2">
+          <Select value={tiendaFiltro} onChange={e => setTiendaFiltro(e.target.value)} className="h-9 w-44">
+            <option value="">Todas las tiendas</option>
+            {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+          </Select>
           <Input
             type="month"
             value={mes}
@@ -440,7 +450,7 @@ export function PlanillaPage() {
       {/* KPIs */}
       {t && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-          <KpiCard label="Agentes" valor={String(data.agentes.length)} color="text-kyro-text" border="border-l-kpi-neutral" />
+          <KpiCard label="Agentes" valor={tiendaFiltro ? `${agentesVisibles.length} / ${data.agentes.length}` : String(data.agentes.length)} color="text-kyro-text" border="border-l-kpi-neutral" />
           <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-kyro-gold" border="border-l-kpi-total" />
           <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-kyro-info" border="border-l-kpi-ganancia" />
           <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-kyro-info" border="border-l-kpi-ganancia" />
@@ -485,7 +495,7 @@ export function PlanillaPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.agentes.map(fila => (
+                {agentesVisibles.map(fila => (
                   <FilaTabla
                     key={fila.agente_id}
                     fila={fila}
@@ -514,7 +524,7 @@ export function PlanillaPage() {
         </div>
       )}
 
-      {data && data.agentes.length === 0 && (
+      {data && agentesVisibles.length === 0 && (
         <div className="rounded-kyro-lg border border-dashed border-kyro-border bg-kyro-panel py-16 text-center text-kyro-muted shadow-kyro-card">
           No hay agentes activos para el mes seleccionado.
         </div>

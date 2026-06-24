@@ -13,6 +13,8 @@ import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
 import type { Agente } from '../../types/agente'
 import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
+import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
 import { formatearFechaCorta } from '../../lib/fechas'
@@ -92,11 +94,14 @@ export function AgentesPage() {
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
+  const [tiendaFiltro, setTiendaFiltro] = useState('')
+  const { tiendas } = useTiendasSelect()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando]     = useState<Agente | undefined>()
 
   const { data, isLoading } = useAgentes({
     q:        query || undefined,
+    tienda:   tiendaFiltro || undefined,
     page:     pagination.pageIndex + 1,
     per_page: pagination.pageSize,
   })
@@ -120,6 +125,7 @@ export function AgentesPage() {
   const limpiar = () => {
     setSearch('')
     setQuery('')
+    setTiendaFiltro('')
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
@@ -147,7 +153,7 @@ export function AgentesPage() {
         }
       />
 
-      <ListToolbar description="Busca por documento o nombre del agente.">
+      <ListToolbar description="Busca por documento, nombre o filtra por tienda.">
         <div className="relative w-full sm:max-w-xs">
           <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-subtle" />
           <Input
@@ -158,8 +164,12 @@ export function AgentesPage() {
             className="pl-9"
           />
         </div>
+        <Select value={tiendaFiltro} onChange={e => { setTiendaFiltro(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="h-9 w-44">
+          <option value="">Todas las tiendas</option>
+          {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+        </Select>
         <Button variant="gold" onClick={buscar}><Search size={14} /> Buscar</Button>
-        {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
+        {(query || tiendaFiltro) && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </ListToolbar>
 
       <DataTable

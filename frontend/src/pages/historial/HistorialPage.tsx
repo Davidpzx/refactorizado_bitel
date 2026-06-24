@@ -11,6 +11,9 @@ import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, XCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
 import { api } from '../../services/api'
+import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
+import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -42,6 +45,8 @@ const ESTADOS = [
 
 export function HistorialPage() {
   const { usuario } = useAuth()
+  const { tiendas } = useTiendasSelect()
+  const { agentes } = useAgentesSelect()
   const navigate = useNavigate()
 
   const [filters, setFilters] = useState({
@@ -258,23 +263,17 @@ export function HistorialPage() {
           <>
             <div>
               <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
-              <input
-                type="text"
-                placeholder="Todas"
-                value={filters.tienda}
-                onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))}
-                className="kyro-input h-9 w-32"
-              />
+              <Select value={filters.tienda} onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))} className="h-9 w-44">
+                <option value="">Todas</option>
+                {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+              </Select>
             </div>
             <div>
               <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">ID Agente</label>
-              <input
-                type="number"
-                placeholder="Todos"
-                value={filters.agente_id}
-                onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))}
-                className="kyro-input h-9 w-28"
-              />
+              <Select value={filters.agente_id} onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))} className="h-9 w-44">
+                <option value="">Todos</option>
+                {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+              </Select>
             </div>
           </>
         )}

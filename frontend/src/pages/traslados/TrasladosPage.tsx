@@ -24,11 +24,6 @@ import { Badge } from '../../components/ui/badge'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import type { Traslado, EstadoTraslado } from '../../types/traslados'
 
-const TIENDAS = [
-  'PUNDA50', 'PUNDA11', 'PUNSC01', 'PUNDA23',
-  'TACDA13', 'TACDA17', 'TACDA21', 'TACDA25', 'TACDA27', 'TACDA30',
-]
-
 type BadgeVariant = 'default' | 'warning' | 'success' | 'destructive' | 'outline'
 
 const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
@@ -74,6 +69,16 @@ function CrearTrasladoDialog({
   onClose: () => void
 }) {
   const crear = useCrearTraslado()
+  const { tiendas } = useTiendasSelect()
+  const { agentes } = useAgentesSelect()
+  const { data: inventarioData } = useQuery({
+    queryKey: ['inventario-disponible'],
+    queryFn: () => import('../../services/api').then(m => m.api.get('/v1/inventario', { params: { estado: 'DISPONIBLE', per_page: 500 } }).then(r => r.data)),
+    enabled: open,
+    staleTime: 60_000,
+  })
+  const inventario: Array<{ id: number; nombre: string; tipo: string; imei: string | null; cantidad: number }> =
+    Array.isArray(inventarioData) ? inventarioData : (inventarioData?.data ?? [])
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CrearForm>({
     resolver: zodResolver(crearSchema),
     defaultValues: { cantidad: 1 },
@@ -100,21 +105,22 @@ function CrearTrasladoDialog({
             <Label htmlFor="tienda_destino">Tienda destino *</Label>
             <Select id="tienda_destino" {...register('tienda_destino')} className="mt-1">
               <option value="">Selecciona tienda</option>
-              {TIENDAS.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {tiendas.map(t => (
+                <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
               ))}
             </Select>
             {errors.tienda_destino && <p className="text-kyro-danger text-xs mt-1">{errors.tienda_destino.message}</p>}
           </div>
           <div>
-            <Label htmlFor="producto_id">ID Producto *</Label>
-            <Input
-              id="producto_id"
-              type="number"
-              min="1"
-              {...register('producto_id', { valueAsNumber: true })}
-              className="mt-1"
-            />
+            <Label htmlFor="producto_id">Producto *</Label>
+            <Select id="producto_id" {...register('producto_id', { valueAsNumber: true })} className="mt-1">
+              <option value="">Selecciona producto</option>
+              {inventario.map(p => (
+                <option key={p.id} value={p.id}>
+                  [{p.tipo}] {p.nombre}{p.imei ? ` — ${p.imei}` : ` ×${p.cantidad}`}
+                </option>
+              ))}
+            </Select>
             {errors.producto_id && <p className="text-kyro-danger text-xs mt-1">{errors.producto_id.message}</p>}
           </div>
         </div>
@@ -153,14 +159,11 @@ function CrearTrasladoDialog({
             {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
           <div>
-            <Label htmlFor="auth_agente_id">ID Agente autoriza</Label>
-            <Input
-              id="auth_agente_id"
-              type="number"
-              min="1"
-              {...register('auth_agente_id', { valueAsNumber: true })}
-              className="mt-1"
-            />
+            <Label htmlFor="auth_agente_id">Agente autoriza</Label>
+            <Select id="auth_agente_id" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
+              <option value="">Ninguno</option>
+              {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+            </Select>
           </div>
         </div>
 
@@ -194,6 +197,7 @@ function ConfirmarDialog({
 }) {
   const confirmar = useConfirmarTraslado()
   const confirmarLote = useConfirmarLoteTraslado()
+  const { agentes } = useAgentesSelect()
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ConfirmarForm>({
     resolver: zodResolver(confirmarSchema),
   })
@@ -236,14 +240,11 @@ function ConfirmarDialog({
             {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
           <div>
-            <Label htmlFor="c_agente">ID Agente</Label>
-            <Input
-              id="c_agente"
-              type="number"
-              min="1"
-              {...register('auth_agente_id', { valueAsNumber: true })}
-              className="mt-1"
-            />
+            <Label htmlFor="c_agente">Agente</Label>
+            <Select id="c_agente" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
+              <option value="">Ninguno</option>
+              {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+            </Select>
           </div>
         </div>
 

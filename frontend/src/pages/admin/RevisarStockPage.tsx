@@ -6,16 +6,23 @@ import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
 type Edits = Record<number, { precio_costo: string; precio_minimo: string; precio_normal: string }>
 
 const num = (v: number | string | null) => (v === null || v === '' ? '' : String(v))
 
+const TIPOS = ['EQUIPO', 'ACCESORIO', 'CHIP'] as const
+
 export function RevisarStockPage() {
   const qc = useQueryClient()
-  const [tienda, setTienda] = useState('')
-  const [edits, setEdits] = useState<Edits>({})
-  const [okId, setOkId] = useState<number | null>(null)
+  const { tiendas } = useTiendasSelect()
+  const [tienda, setTienda]             = useState('')
+  const [tipo, setTipo]                 = useState('')
+  const [cantMax, setCantMax]           = useState('')
+  const [soloSinStock, setSoloSinStock] = useState(false)
+  const [edits, setEdits]               = useState<Edits>({})
+  const [okId, setOkId]                 = useState<number | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['precios-pendientes', tienda],
@@ -41,7 +48,7 @@ export function RevisarStockPage() {
     setEdits((prev) => ({
       ...prev,
       [id]: {
-        precio_costo: prev[id]?.precio_costo ?? num(item.precio_costo),
+        precio_costo:  prev[id]?.precio_costo  ?? num(item.precio_costo),
         precio_minimo: prev[id]?.precio_minimo ?? num(item.precio_minimo),
         precio_normal: prev[id]?.precio_normal ?? num(item.precio_normal),
         [campo]: v,
@@ -53,39 +60,88 @@ export function RevisarStockPage() {
     guardar.mutate({
       id: item.id,
       precios: {
-        precio_costo: Number(valor(item, 'precio_costo')) || 0,
+        precio_costo:  Number(valor(item, 'precio_costo'))  || 0,
         precio_minimo: Number(valor(item, 'precio_minimo')) || 0,
         precio_normal: Number(valor(item, 'precio_normal')) || 0,
       },
     })
   }
 
-  const items = data?.data ?? []
+  // Client-side filters
+  let items = data?.data ?? []
+  if (tipo)         items = items.filter(i => i.tipo === tipo)
+  if (soloSinStock) items = items.filter(i => (i.cantidad ?? 0) === 0)
+  if (cantMax !== '') items = items.filter(i => (i.cantidad ?? 0) <= Number(cantMax))
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <PageHeader
         title="Revisar Stock · Precios pendientes"
         description="Configura el costo, precio mínimo y precio de venta del stock disponible sin precio."
-        actions={
-          <Select value={tienda} onChange={(e) => setTienda(e.target.value)}>
-            <option value="">Todas las tiendas</option>
-            {data?.tiendas.map((t) => <option key={t} value={t}>{t}</option>)}
-          </Select>
-        }
       />
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
+          <Select value={tienda} onChange={e => setTienda(e.target.value)} className="h-9 w-48">
+            <option value="">Todas</option>
+            {tiendas.map(t => (
+              <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-kyro-muted mb-1">Tipo</label>
+          <Select value={tipo} onChange={e => setTipo(e.target.value)} className="h-9 w-36">
+            <option value="">Todos</option>
+            {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-kyro-muted mb-1">Cant. máx.</label>
+          <Input
+            type="number"
+            min="0"
+            placeholder="Sin límite"
+            value={cantMax}
+            onChange={e => setCantMax(e.target.value)}
+            className="h-9 w-28"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer h-9 text-sm text-kyro-body">
+          <input
+            type="checkbox"
+            checked={soloSinStock}
+            onChange={e => setSoloSinStock(e.target.checked)}
+            className="h-4 w-4 rounded accent-kyro-gold"
+          />
+          Solo sin stock
+        </label>
+
+        {(tienda || tipo || cantMax || soloSinStock) && (
+          <Button variant="ghost" size="sm" onClick={() => { setTienda(''); setTipo(''); setCantMax(''); setSoloSinStock(false) }}>
+            Limpiar
+          </Button>
+        )}
+      </div>
 
       <Card className="kyro-card overflow-x-auto p-0">
         {isLoading ? (
           <p className="p-6 text-sm text-kyro-muted">Cargando…</p>
         ) : items.length === 0 ? (
-          <p className="p-6 text-sm text-kyro-success">✓ Todo el stock disponible tiene precios configurados.</p>
+          <p className="p-6 text-sm text-kyro-success">✓ Sin resultados para los filtros seleccionados.</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="kyro-table-head">
               <tr className="text-left text-[11px] uppercase tracking-wider">
                 <th className="px-3 py-2">Tienda</th>
                 <th className="px-3 py-2">Producto</th>
+                <th className="px-3 py-2">Tipo</th>
+                <th className="px-3 py-2 text-center">Cant.</th>
                 <th className="px-3 py-2">IMEI/Serial</th>
                 <th className="px-3 py-2 w-28">Costo</th>
                 <th className="px-3 py-2 w-28">Mínimo</th>
@@ -97,9 +153,12 @@ export function RevisarStockPage() {
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-kyro-border text-kyro-body hover:bg-kyro-elevated">
                   <td className="px-3 py-2 font-semibold text-kyro-text">{item.tienda_id}</td>
-                  <td className="px-3 py-2 text-kyro-body">
-                    {item.producto_nombre}
-                    <span className="ml-1 text-[10px] text-kyro-subtle">{item.tipo}</span>
+                  <td className="px-3 py-2 text-kyro-body">{item.producto_nombre}</td>
+                  <td className="px-3 py-2 text-[10px] text-kyro-muted">{item.tipo}</td>
+                  <td className="px-3 py-2 text-center font-mono text-xs">
+                    <span className={(item.cantidad ?? 0) === 0 ? 'text-kyro-danger font-bold' : 'text-kyro-text'}>
+                      {item.cantidad ?? 0}
+                    </span>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-kyro-muted">{item.imei_serial ?? '—'}</td>
                   {(['precio_costo', 'precio_minimo', 'precio_normal'] as const).map((campo) => (
