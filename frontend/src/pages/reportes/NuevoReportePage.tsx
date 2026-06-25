@@ -347,7 +347,6 @@ function AgregarRegistroModal({
   const esEquipo = s === 'EQUIPO' || s === 'ACCESORIO'
   const esOtros  = s === 'OTROS_FLUJO'
   const esApoyo  = s === 'APOYO'
-  const haCliente = esLinea || esEquipo
 
   if (!open) return null
 
