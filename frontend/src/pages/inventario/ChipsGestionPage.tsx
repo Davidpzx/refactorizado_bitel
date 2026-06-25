@@ -113,8 +113,9 @@ export function ChipsGestionPage() {
       setAgregarForm({ tienda_id: '', tienda_origen: '', tipo_chip: 'FÍSICO', cantidad: '' })
     },
     onError: (e: unknown) => {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setAgregarError(msg ?? 'Error al agregar chips.')
+      const err = e as { response?: { data?: { message?: string; error?: string } }; message?: string }
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? JSON.stringify(err?.response?.data)
+      setAgregarError(msg ?? 'Error desconocido.')
     },
   })
 
