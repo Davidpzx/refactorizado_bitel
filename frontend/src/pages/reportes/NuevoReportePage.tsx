@@ -1089,10 +1089,18 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     return <div className="flex h-64 items-center justify-center text-sm text-kyro-muted">Cargando reporte...</div>
   }
 
-  if (esEdicion && (!reporteEditar || reporteEditar.estado_edicion !== 'APROBADO' || usuario?.rol !== 'admin')) {
+  if (esEdicion && usuario?.rol !== 'admin') {
     return (
       <div className="kyro-card mx-auto max-w-xl p-6 text-center text-sm text-kyro-warning">
-        El reprocesado completo requiere una edición aprobada y una cuenta administradora.
+        El reprocesado completo requiere una cuenta administradora.
+      </div>
+    )
+  }
+
+  if (esEdicion && reporteEditar && reporteEditar.estado !== 'borrador' && reporteEditar.estado_edicion !== 'APROBADO') {
+    return (
+      <div className="kyro-card mx-auto max-w-xl p-6 text-center text-sm text-kyro-warning">
+        El reprocesado completo requiere que la edición haya sido aprobada.
       </div>
     )
   }

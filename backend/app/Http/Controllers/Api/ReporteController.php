@@ -743,7 +743,8 @@ class ReporteController extends Controller
     {
         abort_unless($request->user()->rol === 'admin', 403);
 
-        if ($reporte->estado_edicion !== 'APROBADO') {
+        // Borradores: el admin puede editar directamente sin aprobación previa
+        if ($reporte->estado !== 'borrador' && $reporte->estado_edicion !== 'APROBADO') {
             return response()->json(['error' => 'La edición no fue autorizada por administración.'], 422);
         }
 
