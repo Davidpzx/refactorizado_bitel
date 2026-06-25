@@ -22,8 +22,19 @@ class InventarioChip extends Model
     protected $casts = [
         'stock_actual' => 'integer',
         'tienda_id'    => 'integer',
-        'series_info'  => 'array',
+        // series_info se maneja con accessor para evitar JsonException con datos legacy
     ];
+
+    public function getSeriesInfoAttribute(mixed $value): ?array
+    {
+        if ($value === null || $value === '') return null;
+        if (is_array($value)) return $value;
+        try {
+            return json_decode((string) $value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+    }
 
     public function tienda()
     {

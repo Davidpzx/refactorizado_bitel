@@ -78,7 +78,7 @@ export function ChipsGestionPage() {
   const [cantidadReal, setCantidadReal] = useState('')
   const [observacionAjuste, setObservacionAjuste] = useState('')
 
-  const { data, isLoading } = useQuery<{ data: Chip[] }>({
+  const { data, isLoading, isError, error } = useQuery<{ data: Chip[] }>({
     queryKey: ['chips'],
     queryFn:  () => api.get<{ data: Chip[] }>('/v1/chips').then((r) => r.data),
   })
@@ -175,6 +175,16 @@ export function ChipsGestionPage() {
           ) : undefined
         }
       />
+
+      {isError && (
+        <div className="kyro-card p-4 text-sm text-kyro-danger">
+          Error al cargar chips: {(error as { response?: { data?: { error?: string; debug_temporal?: string; message?: string } }; message?: string })?.response?.data?.debug_temporal
+            ?? (error as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.error
+            ?? (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+            ?? (error as { message?: string })?.message
+            ?? 'Error desconocido'}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="kyro-card flex h-48 items-center justify-center text-sm text-kyro-muted">
