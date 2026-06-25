@@ -309,6 +309,22 @@ function AgregarRegistroModal({
   const upd = <K extends keyof ModalVentaState>(k: K, v: ModalVentaState[K]) =>
     setM(prev => ({ ...prev, [k]: v }))
 
+  const cambiarTipo = (tipo: 'VENTA' | 'CONSULTA') => {
+    if (tipo === 'CONSULTA') {
+      setM(prev => ({
+        ...prev, tipo_registro: 'CONSULTA',
+        seccion: '', plan_nombre: '', tipo_alta: 'MNP', cobrado_unitario: 0,
+        precio_venta: 0, costo_snap: 0, cantidad: 1, monto_otros: 0,
+        financiera: '', subtipo: '', tienda_destino: '', inventario_tienda_id: 0,
+        imei_serial: '', producto_nombre: '', por_cobrar_financiera: 0,
+        plan_anterior: 0, es_extranjero: false, es_migracion: false,
+        es_upgrade: false, es_esim: false, tipo_pago: 'CONTADO',
+      }))
+    } else {
+      setM(prev => ({ ...prev, tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '' }))
+    }
+  }
+
   const s        = m.seccion
   const esLinea  = s === 'POSTPAGO' || s === 'PREPAGO'
   const esEquipo = s === 'EQUIPO' || s === 'ACCESORIO'
@@ -338,13 +354,29 @@ function AgregarRegistroModal({
           </Select>
         </div>
 
-        {/* 2. Tipo de registro */}
+        {/* 2. DNI / Cliente — siempre visible */}
+        <div>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Cliente <span className="text-kyro-danger">*</span></Label>
+          <div className="grid grid-cols-2 gap-2 mt-1.5">
+            <div>
+              <Label className="text-[10px] text-kyro-muted">DNI / Celular <span className="text-kyro-danger">*</span></Label>
+              <Input value={m.cliente_dni} onChange={e => upd('cliente_dni', e.target.value)} maxLength={15} placeholder="DNI o celular" className="kyro-input mt-0.5 h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
+              <Input value={m.cliente_nombre} onChange={e => upd('cliente_nombre', e.target.value)} placeholder="Nombre del cliente" className="kyro-input mt-0.5 h-8 text-xs" />
+            </div>
+          </div>
+          {!m.cliente_dni && <p className="mt-1 text-[10px] text-kyro-danger">Ingresa el DNI para poder continuar y cerrar</p>}
+        </div>
+
+        {/* 3. Tipo de registro */}
         <div>
           <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Tipo de registro</Label>
           <div className="flex gap-2 mt-1.5">
             {(['VENTA','CONSULTA'] as const).map(tipo => (
               <button key={tipo} type="button"
-                onClick={() => upd('tipo_registro', tipo)}
+                onClick={() => cambiarTipo(tipo)}
                 className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all border"
                 style={m.tipo_registro === tipo
                   ? { background: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)', color: '#fff', borderColor: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)' }
@@ -356,7 +388,7 @@ function AgregarRegistroModal({
 
         {/* 2b. Sección — solo si VENTA */}
         {m.tipo_registro === 'VENTA' && <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">3. Sección</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Sección</Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
             {MODAL_SECCIONES.map(sec => {
               const active = m.seccion === sec.value
@@ -376,22 +408,7 @@ function AgregarRegistroModal({
           </div>
         </div>}
 
-        {/* 3. Cliente — mostrar siempre */}
-        {haCliente && (
-          <div>
-            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">DNI / Cliente</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1.5">
-              <div>
-                <Label className="text-[10px] text-kyro-muted">DNI / Celular</Label>
-                <Input value={m.cliente_dni} onChange={e => upd('cliente_dni', e.target.value)} maxLength={15} placeholder="DNI o celular" className="kyro-input mt-0.5 h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
-                <Input value={m.cliente_nombre} onChange={e => upd('cliente_nombre', e.target.value)} placeholder="Nombre del cliente" className="kyro-input mt-0.5 h-8 text-xs" />
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Campos consulta */}
         {m.tipo_registro === 'CONSULTA' && (
