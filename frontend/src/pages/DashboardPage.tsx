@@ -11,6 +11,8 @@ import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
 import { apiErrorData } from '../lib/httpError'
 import { api } from '../services/api'
+import { Select } from '../components/ui/select'
+import { useTiendasSelect } from '../hooks/useTiendasSelect'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ function KpiCard({
 }) {
   return (
     <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
-      <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${highlight ? 'bg-gradient-to-r from-emerald-400 via-emerald-300/40 to-transparent' : 'bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent'}`} />
+
       <div aria-hidden className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]" />
       <p className="relative text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{title}</p>
       <p className={`relative mt-2 text-xl font-bold tracking-tight ${colorClass}`}>
@@ -80,7 +82,7 @@ function KpiCardDiferencia({ value }: { value: number | string | null | undefine
 
   return (
     <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
-      <div aria-hidden className={`absolute inset-x-0 top-0 h-px ${num < 0 ? 'bg-gradient-to-r from-red-500/80 to-transparent' : 'bg-gradient-to-r from-amber-400/80 to-transparent'}`} />
+
       <p className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">Diferencia Física</p>
       <div className="mt-2 flex items-center gap-2">
         {value !== null && <Icon size={18} className={colorClass} />}
@@ -132,7 +134,7 @@ function ModalEditarDestino({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-sm space-y-4 overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:bg-zinc-900/95">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500 via-amber-400/60 to-transparent" />
+
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Estado del Efectivo</h3>
           <button type="button" aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
@@ -183,6 +185,7 @@ function ModalEditarDestino({
 
 export function DashboardPage() {
   const { usuario } = useAuth()
+  const { tiendas } = useTiendasSelect()
   const navigate = useNavigate()
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -280,14 +283,15 @@ export function DashboardPage() {
         </div>
         {usuario?.rol === 'admin' && (
           <div>
-            <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda (código)</label>
-            <input
-              type="text"
-              placeholder="Todas"
+            <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
+            <Select
               value={rawFilters.tienda}
               onChange={(e) => setRawFilters((f) => ({ ...f, tienda: e.target.value }))}
-              className="h-9 w-32 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
-            />
+              className="h-9 w-44"
+            >
+              <option value="">Todas</option>
+              {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+            </Select>
           </div>
         )}
         <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
@@ -320,7 +324,7 @@ export function DashboardPage() {
 
       {/* Tabla últimos reportes */}
       <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/35 to-transparent" />
+
         <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
           <h2 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Últimos Reportes del Período</h2>
           <span className="text-xs text-gray-400">
