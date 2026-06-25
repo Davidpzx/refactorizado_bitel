@@ -16,7 +16,7 @@ export function useAgentesSelect() {
   const { data, isLoading } = useQuery<AgenteOption[]>({
     queryKey: ['agentes-select'],
     queryFn: () =>
-      api.get('/v1/agentes', { params: { per_page: 500 } }).then(r => {
+      api.get('/v1/agentes/select').then(r => {
         const raw = r.data
         return Array.isArray(raw) ? raw : (raw?.data ?? [])
       }),

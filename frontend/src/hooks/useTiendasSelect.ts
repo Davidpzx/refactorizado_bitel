@@ -15,9 +15,8 @@ export function useTiendasSelect() {
   const { data, isLoading } = useQuery<TiendaOption[]>({
     queryKey: ['tiendas-select'],
     queryFn: () =>
-      api.get('/v1/tiendas').then(r => {
+      api.get('/v1/tiendas/select').then(r => {
         const raw = r.data
-        // El endpoint puede devolver array directo o { data: [...] }
         return Array.isArray(raw) ? raw : (raw?.data ?? [])
       }),
     staleTime: 10 * 60_000,

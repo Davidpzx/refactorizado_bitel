@@ -114,6 +114,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Otros recursos ────────────────────────────────────────────────────────
     // Custom agentes routes BEFORE apiResource to avoid {agente} wildcard conflict
+    // Endpoint ligero accesible a todos los autenticados (para selects/dropdowns)
+    Route::get('agentes/select', fn() => response()->json(
+        \App\Models\Agente::where('estado', 'ACTIVO')->orderBy('nombres')->get(['id', 'nombres', 'dni'])
+    ));
     Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes'])->middleware('role:admin');
     Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica'])->middleware('role:admin');
     Route::apiResource('agentes', AgenteController::class)->middleware('role:admin');
@@ -210,6 +214,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('usuarios', UsuarioController::class)->middleware('role:admin');
 
     // ── Tiendas ───────────────────────────────────────────────────────────────
+    // Endpoint ligero accesible a todos los autenticados (para selects/dropdowns)
+    Route::get('tiendas/select', fn() => response()->json(
+        \App\Models\Tienda::where('activo', true)->orderBy('nombre')->get(['id', 'codigo', 'nombre'])
+    ));
     Route::apiResource('tiendas', TiendaController::class)->middleware('role:admin');
 
     // ── Bipay ─────────────────────────────────────────────────────────────────

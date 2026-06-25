@@ -80,7 +80,7 @@ function CrearTrasladoDialog({
     enabled: open,
     staleTime: 60_000,
   })
-  const inventario: Array<{ id: number; nombre: string; tipo: string; imei: string | null; cantidad: number }> =
+  const inventario: Array<{ id: number; producto_nombre: string; tipo: string; imei_serial: string | null; cantidad: number }> =
     Array.isArray(inventarioData) ? inventarioData : (inventarioData?.data ?? [])
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CrearForm>({
     resolver: zodResolver(crearSchema),
@@ -120,7 +120,7 @@ function CrearTrasladoDialog({
               <option value="">Selecciona producto</option>
               {inventario.map(p => (
                 <option key={p.id} value={p.id}>
-                  [{p.tipo}] {p.nombre}{p.imei ? ` — ${p.imei}` : ` ×${p.cantidad}`}
+                  [{p.tipo}] {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : ` ×${p.cantidad}`}
                 </option>
               ))}
             </Select>
