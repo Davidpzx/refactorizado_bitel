@@ -41,6 +41,14 @@ const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
   CANCELADO:             'outline',
 }
 
+const estadoLabel: Record<EstadoTraslado, string> = {
+  PENDIENTE:             'Pendiente',
+  PENDIENTE_APROBACION:  'Enviado',
+  CONFIRMADO:            'Confirmado',
+  RECHAZADO:             'Rechazado',
+  CANCELADO:             'Cancelado',
+}
+
 const ESTADOS = [
   { value: '', label: 'Todos', tone: 'indigo' as const },
   { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
@@ -194,7 +202,7 @@ function CrearTrasladoDialog({
                 <option value="">Selecciona producto</option>
                 {inventario.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : p.cantidad > 1 ? ` (×${p.cantidad})` : ''}
+                    {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : p.cantidad > 1 ? ` stock${p.cantidad}` : ''}
                   </option>
                 ))}
               </Select>
@@ -212,7 +220,7 @@ function CrearTrasladoDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="auth_dni">DNI autorización *</Label>
+              <Label htmlFor="auth_dni">Tu DNI *</Label>
               <Input id="auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
               {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
             </div>
@@ -268,7 +276,7 @@ function CrearTrasladoDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>DNI autorización *</Label>
+              <Label>Tu DNI *</Label>
               <Input placeholder="12345678" className="mt-1" value={chipForm.auth_dni}
                 onChange={e => setChipForm(f => ({ ...f, auth_dni: e.target.value }))} />
             </div>
@@ -443,7 +451,7 @@ function getEquiposColumns(
       accessorKey: 'estado',
       header: 'Estado',
       cell: ({ row }) => (
-        <Badge variant={estadoBadge[row.original.estado]}>{row.original.estado}</Badge>
+        <Badge variant={estadoBadge[row.original.estado]}>{estadoLabel[row.original.estado]}</Badge>
       ),
     },
     {
@@ -517,7 +525,7 @@ function getChipsColumns(
       accessorKey: 'estado',
       header: 'Estado',
       cell: ({ row }) => (
-        <Badge variant={estadoBadge[row.original.estado]}>{row.original.estado}</Badge>
+        <Badge variant={estadoBadge[row.original.estado]}>{estadoLabel[row.original.estado]}</Badge>
       ),
     },
     {
