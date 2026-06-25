@@ -9,7 +9,7 @@ import {
   LayoutDashboard, History, BarChart2, CreditCard, FileText,
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight, Layers,
+  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight,
   Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
 } from 'lucide-react'
 
@@ -49,7 +49,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/inventario',     label: 'Inventario',      Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: ['admin', 'tienda'], section: 'Inventario' },
-  { to: '/traslados-chips',  label: 'Traslados Chips',  Icon: Layers,       roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/inventario/matriz',  label: 'Matriz Inventario', Icon: Grid3x3,   roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText, roles: ['admin'],           section: 'Inventario' },
   { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,        roles: ['admin', 'tienda'], section: 'Inventario' },

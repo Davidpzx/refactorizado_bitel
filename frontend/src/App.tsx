@@ -34,7 +34,6 @@ const ComprobantesPage   = lazy(() => import('./pages/comprobantes/ComprobantesP
 const TerminalAsistenciaPage = lazy(() => import('./pages/asistencias/TerminalAsistenciaPage').then(m => ({ default: m.TerminalAsistenciaPage })))
 const QrDisplayPage      = lazy(() => import('./pages/asistencias/QrDisplayPage').then(m => ({ default: m.QrDisplayPage })))
 const TrasladosPage      = lazy(() => import('./pages/traslados/TrasladosPage').then(m => ({ default: m.TrasladosPage })))
-const TrasladoChipsPage  = lazy(() => import('./pages/traslados/TrasladoChipsPage').then(m => ({ default: m.TrasladoChipsPage })))
 const MatrizInventarioPage = lazy(() => import('./pages/inventario/MatrizInventarioPage').then(m => ({ default: m.MatrizInventarioPage })))
 const ChipsGestionPage   = lazy(() => import('./pages/inventario/ChipsGestionPage').then(m => ({ default: m.ChipsGestionPage })))
 const KardexInventarioPage = lazy(() => import('./pages/inventario/KardexInventarioPage').then(m => ({ default: m.KardexInventarioPage })))
@@ -84,7 +83,7 @@ export default function App() {
               <Route path="/clientes"            element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
               <Route path="/inventario"          element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
               <Route path="/traslados"           element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
-              <Route path="/traslados-chips"     element={<Suspense fallback={<PageLoader />}><TrasladoChipsPage /></Suspense>} />
+              <Route path="/traslados-chips"     element={<Navigate to="/traslados" replace />} />
               <Route path="/inventario/matriz"   element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
               <Route path="/chips-gestion"       element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
               <Route path="/bitacora-stock"      element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
