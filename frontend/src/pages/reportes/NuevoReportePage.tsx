@@ -303,8 +303,25 @@ function AgregarRegistroModal({
   isEdit?: boolean
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
+  const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
 
-  useEffect(() => { if (open) setM(initialData ?? MODAL_DEFAULT) }, [open, initialData])
+  useEffect(() => { if (open) { setM(initialData ?? MODAL_DEFAULT); setDniStatus('idle') } }, [open, initialData])
+
+  // Auto-lookup cuando DNI tiene exactamente 8 dígitos
+  useEffect(() => {
+    if (!/^\d{8}$/.test(m.cliente_dni)) { setDniStatus('idle'); return }
+    setDniStatus('loading')
+    api.get<{ nombres?: string; apellido_paterno?: string; apellido_materno?: string; nombre_completo?: string }>(`/v1/dni/${m.cliente_dni}`)
+      .then(res => {
+        const d = res.data
+        const nombre = d.nombre_completo ?? [d.nombres, d.apellido_paterno, d.apellido_materno].filter(Boolean).join(' ')
+        if (nombre) {
+          setM(prev => ({ ...prev, cliente_nombre: nombre }))
+          setDniStatus('found')
+        } else { setDniStatus('notfound') }
+      })
+      .catch(() => setDniStatus('notfound'))
+  }, [m.cliente_dni])
 
   const upd = <K extends keyof ModalVentaState>(k: K, v: ModalVentaState[K]) =>
     setM(prev => ({ ...prev, [k]: v }))
@@ -359,8 +376,13 @@ function AgregarRegistroModal({
           <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Cliente <span className="text-kyro-danger">*</span></Label>
           <div className="grid grid-cols-2 gap-2 mt-1.5">
             <div>
-              <Label className="text-[10px] text-kyro-muted">DNI / Celular <span className="text-kyro-danger">*</span></Label>
-              <Input value={m.cliente_dni} onChange={e => upd('cliente_dni', e.target.value)} maxLength={15} placeholder="DNI o celular" className="kyro-input mt-0.5 h-8 text-xs" />
+              <Label className="text-[10px] text-kyro-muted flex items-center gap-1">
+                DNI / Celular <span className="text-kyro-danger">*</span>
+                {dniStatus === 'loading' && <span className="text-kyro-muted animate-pulse">buscando…</span>}
+                {dniStatus === 'found'   && <span className="text-kyro-success text-[9px]">✓ encontrado</span>}
+                {dniStatus === 'notfound'&& <span className="text-kyro-danger text-[9px]">no encontrado</span>}
+              </Label>
+              <Input value={m.cliente_dni} onChange={e => { upd('cliente_dni', e.target.value); setDniStatus('idle') }} maxLength={15} placeholder="DNI (8 dígitos) o celular" className="kyro-input mt-0.5 h-8 text-xs font-mono" />
             </div>
             <div>
               <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
