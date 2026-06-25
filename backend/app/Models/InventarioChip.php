@@ -8,6 +8,9 @@ class InventarioChip extends Model
 {
     protected $table = 'inventario_chips';
 
+    // La tabla real solo tiene updated_at, no created_at
+    const CREATED_AT = null;
+
     protected $fillable = [
         'tienda_id',
         'tienda_origen',
