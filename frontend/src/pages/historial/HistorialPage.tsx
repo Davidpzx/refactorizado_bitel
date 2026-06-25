@@ -339,7 +339,7 @@ export function HistorialPage() {
                   ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/40 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
                   : 'border-b border-kyro-border transition-colors hover:bg-kyro-gold/5'
 
-                const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO'
+                const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO' || r.estado === 'borrador'
                 const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'
 
                 return (
