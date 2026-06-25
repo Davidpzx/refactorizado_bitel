@@ -84,6 +84,9 @@ const ventaSchema = z.object({
   costo_snap:           z.number().min(0),
   por_cobrar_financiera:z.number().min(0),
   inventario_tienda_id: z.number().int().min(0),
+  tipo_registro:        z.enum(['VENTA','CONSULTA']).optional(),
+  que_le_intereso:      z.string().optional().or(z.literal('')),
+  motivo_no_compra:     z.string().optional().or(z.literal('')),
   plan_nombre:          z.string().optional().or(z.literal('')),
   tipo_alta:            z.string().optional().or(z.literal('')),
   cantidad:             z.number().int().min(1),
@@ -126,6 +129,7 @@ const VENTA_DEFAULT: VentaFormData = {
   financiera:'', precio_venta:0, costo_snap:0, por_cobrar_financiera:0,
   inventario_tienda_id:0, plan_nombre:'', tipo_alta:'MNP', cantidad:1,
   cobrado_unitario:0, comision_unitaria:0,
+  tipo_registro:'VENTA', que_le_intereso:'', motivo_no_compra:'',
 }
 
 // ── Salidas detalladas ────────────────────────────────────────────────────────
@@ -233,7 +237,7 @@ function VentaFila({
   )
 }
 
-// ── Modal: Agregar Venta Unificado ────────────────────────────────────────────
+// ── Modal: Agregar Registro (Venta o Consulta) ──────────────────────────────────
 
 type ModalSeccion = 'POSTPAGO' | 'PREPAGO' | 'EQUIPO' | 'ACCESORIO' | 'OTROS_FLUJO' | 'APOYO' | ''
 
@@ -262,6 +266,9 @@ interface ModalVentaState {
   subtipo:               string
   monto_otros:           number
   tienda_destino:        string
+  tipo_registro:         'VENTA' | 'CONSULTA'
+  que_le_intereso:       string
+  motivo_no_compra:      string
 }
 
 const MODAL_DEFAULT: ModalVentaState = {
@@ -272,6 +279,7 @@ const MODAL_DEFAULT: ModalVentaState = {
   producto_nombre: '', inventario_tienda_id: 0, imei_serial: '',
   tipo_pago: 'CONTADO', precio_venta: 0, financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
   subtipo: '', monto_otros: 0, tienda_destino: '',
+  tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '',
 }
 
 const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: string }[] = [
@@ -282,7 +290,7 @@ const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: 
   { value: 'APOYO',       label: 'Ventas de Apoyo',    color: 'var(--color-kyro-gold)'    },
 ]
 
-function AgregarVentaModal({
+function AgregarRegistroModal({
   open, onClose, onConfirm, vendedores, planes, inventarioItems, initialData, isEdit,
 }: {
   open: boolean
@@ -312,13 +320,13 @@ function AgregarVentaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative z-10 kyro-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-kyro-border pb-3">
-          <h2 className="font-semibold text-base text-kyro-text">Agregar Venta</h2>
-          <Button type="button" variant="glassDanger" size="iconSm" onClick={onClose}><X size={14} /></Button>
+          <h2 className="font-semibold text-base text-kyro-text">Agregar Registro</h2>
+          {m.cliente_dni && <Button type="button" variant="glassDanger" size="iconSm" onClick={onClose}><X size={14} /></Button>}
         </div>
 
         {/* 1. Vendedor */}
@@ -330,9 +338,25 @@ function AgregarVentaModal({
           </Select>
         </div>
 
-        {/* 2. Sección */}
+        {/* 2. Tipo de registro */}
         <div>
-          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Sección</Label>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Tipo de registro</Label>
+          <div className="flex gap-2 mt-1.5">
+            {(['VENTA','CONSULTA'] as const).map(tipo => (
+              <button key={tipo} type="button"
+                onClick={() => upd('tipo_registro', tipo)}
+                className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all border"
+                style={m.tipo_registro === tipo
+                  ? { background: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)', color: '#fff', borderColor: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)' }
+                  : { background: 'transparent', color: 'var(--color-kyro-muted)', borderColor: 'var(--color-kyro-border)' }}
+              >{tipo === 'VENTA' ? '🛒 Venta' : '💬 Consulta'}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 2b. Sección — solo si VENTA */}
+        {m.tipo_registro === 'VENTA' && <div>
+          <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">3. Sección</Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
             {MODAL_SECCIONES.map(sec => {
               const active = m.seccion === sec.value
@@ -350,12 +374,12 @@ function AgregarVentaModal({
               )
             })}
           </div>
-        </div>
+        </div>}
 
-        {/* 3. Cliente */}
+        {/* 3. Cliente — mostrar siempre */}
         {haCliente && (
           <div>
-            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">3. Cliente</Label>
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">DNI / Cliente</Label>
             <div className="grid grid-cols-2 gap-2 mt-1.5">
               <div>
                 <Label className="text-[10px] text-kyro-muted">DNI / Celular</Label>
@@ -369,8 +393,33 @@ function AgregarVentaModal({
           </div>
         )}
 
-        {/* 4a. Postpago / Prepago */}
-        {esLinea && (
+        {/* Campos consulta */}
+        {m.tipo_registro === 'CONSULTA' && (
+          <div className="space-y-3 rounded-lg border border-kyro-border p-3 bg-kyro-elevated/40">
+            <p className="text-[10px] text-kyro-muted font-semibold uppercase tracking-wide">Detalle de consulta</p>
+            <div>
+              <Label className="text-[10px] text-kyro-muted">¿Qué le interesó? *</Label>
+              <Input
+                value={m.que_le_intereso}
+                onChange={e => upd('que_le_intereso', e.target.value)}
+                placeholder="Ej: Postpago familiar, equipo Samsung A15..."
+                className="kyro-input mt-0.5 h-8 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-kyro-muted">Motivo / ¿Por qué no compró?</Label>
+              <textarea
+                value={m.motivo_no_compra}
+                onChange={e => upd('motivo_no_compra', e.target.value)}
+                placeholder="Ej: Precio alto, necesita pensarlo, ya tiene contrato..."
+                rows={2}
+                className="kyro-input mt-0.5 w-full text-xs"
+              />
+            </div>
+          </div>
+        )}
+
+        {m.tipo_registro === 'VENTA' && esLinea && (
           <div className="space-y-3">
             <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
             <div className="flex flex-wrap gap-2">
@@ -427,8 +476,7 @@ function AgregarVentaModal({
           </div>
         )}
 
-        {/* 4b. Equipo / Accesorio */}
-        {esEquipo && (
+        {m.tipo_registro === 'VENTA' && esEquipo && (
           <div className="space-y-3">
             <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
             <div>
@@ -537,11 +585,12 @@ function AgregarVentaModal({
 
         {/* Confirmar */}
         <div className="flex gap-2 pt-3 border-t border-kyro-border">
-          <Button type="button" variant="gold" className="flex-1 gap-2 h-10" disabled={!m.vendedor_id || !m.seccion}
+          <Button type="button" variant="gold" className="flex-1 gap-2 h-10"
+            disabled={!m.cliente_dni || !m.vendedor_id || (m.tipo_registro === 'VENTA' && !m.seccion)}
             onClick={() => { onConfirm(m); onClose() }}>
-            {isEdit ? <><Pencil size={15} /> Guardar Cambios</> : <><Plus size={15} /> Agregar Venta</>}
+            {isEdit ? <><Pencil size={15} /> Guardar Cambios</> : <><Plus size={15} /> Guardar Registro</>}
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          {m.cliente_dni && <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>}
         </div>
 
       </div>
@@ -1095,14 +1144,14 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           {/* ═══════════ COLUMNA IZQUIERDA: Ventas ═══════════ */}
           <div>
 
-            {/* Botón unificado de agregar venta */}
+            {/* Botón agregar registro */}
             <button
               type="button"
               onClick={() => setVentaModalOpen(true)}
               className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all"
               style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
             >
-              <Plus size={18} /> Agregar Venta
+              <Plus size={18} /> Agregar Registro
             </button>
 
             <SectionPanel
@@ -1426,7 +1475,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         />
       )}
 
-      <AgregarVentaModal
+      <AgregarRegistroModal
         open={ventaModalOpen}
         onClose={() => { setVentaModalOpen(false); setEditIndex(null); setEditData(undefined) }}
         onConfirm={handleVentaConfirm}
