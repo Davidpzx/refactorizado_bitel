@@ -380,15 +380,17 @@ function AgregarRegistroModal({
         {/* 2. DNI / Cliente — siempre visible */}
         <div>
           <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">2. Cliente <span className="text-kyro-danger">*</span></Label>
-          <div className="grid grid-cols-2 gap-2 mt-1.5">
+          <div className="grid grid-cols-2 gap-2 mt-1.5 items-start">
             <div>
-              <Label className="text-[10px] text-kyro-muted flex items-center gap-1">
+              <Label className="text-[10px] text-kyro-muted">
                 DNI / Celular <span className="text-kyro-danger">*</span>
-                {dniStatus === 'loading' && <span className="text-kyro-muted animate-pulse">buscando…</span>}
-                {dniStatus === 'found'   && <span className="text-kyro-success text-[9px]">✓ encontrado</span>}
-                {dniStatus === 'notfound'&& <span className="text-kyro-danger text-[9px]">no encontrado</span>}
               </Label>
               <Input value={m.cliente_dni} onChange={e => { upd('cliente_dni', e.target.value); setDniStatus('idle') }} maxLength={15} placeholder="DNI (8 dígitos) o celular" className="kyro-input mt-0.5 h-8 text-xs font-mono" />
+              <p className="mt-0.5 text-[9px] h-3 leading-3">
+                {dniStatus === 'loading'  && <span className="text-kyro-muted animate-pulse">buscando…</span>}
+                {dniStatus === 'found'    && <span className="text-kyro-success">✓ encontrado</span>}
+                {dniStatus === 'notfound' && <span className="text-kyro-danger">no encontrado</span>}
+              </p>
             </div>
             <div>
               <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
