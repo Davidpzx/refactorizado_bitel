@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { useAuth } from '../../hooks/useAuth'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
 interface ChipTienda {
   codigo: string
@@ -51,6 +52,7 @@ export function ChipsGestionPage() {
   const qc = useQueryClient()
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
+  const { tiendas } = useTiendasSelect()
 
   const [cambiarDialog, setCambiarDialog]   = useState<Chip | null>(null)
   const [historialDialog, setHistorialDialog] = useState<Chip | null>(null)
@@ -385,13 +387,20 @@ export function ChipsGestionPage() {
         >
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-kyro-body">Tienda ID</label>
-              <Input
-                type="number"
+              <label className="mb-1 block text-sm font-medium text-kyro-body">Tienda</label>
+              <select
+                className="kyro-input w-full"
                 value={agregarForm.tienda_id}
-                onChange={(e) => setAgregarForm((f) => ({ ...f, tienda_id: e.target.value }))}
-                placeholder="1"
-              />
+                onChange={(e) => {
+                  const t = tiendas.find(t => String(t.id) === e.target.value)
+                  setAgregarForm((f) => ({ ...f, tienda_id: e.target.value, tienda_origen: t?.codigo ?? f.tienda_origen }))
+                }}
+              >
+                <option value="">Selecciona tienda…</option>
+                {tiendas.map(t => (
+                  <option key={t.id} value={String(t.id)}>{t.codigo} — {t.nombre}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-kyro-body">Código Origen</label>
