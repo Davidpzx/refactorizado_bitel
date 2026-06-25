@@ -101,13 +101,20 @@ export function ChipsGestionPage() {
     },
   })
 
+  const [agregarError, setAgregarError] = useState('')
+
   const agregarStock = useMutation({
     mutationFn: (body: { tienda_id: number; tienda_origen: string; tipo_chip: string; cantidad: number; series: Array<{ inicio: string; fin: string | null }> }) =>
       api.post('/v1/chips', body).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chips'] })
       setAgregarDialog(false)
+      setAgregarError('')
       setAgregarForm({ tienda_id: '', tienda_origen: '', tipo_chip: 'FÍSICO', cantidad: '' })
+    },
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setAgregarError(msg ?? 'Error al agregar chips.')
     },
   })
 
@@ -454,6 +461,7 @@ export function ChipsGestionPage() {
                 {agregarStock.isPending ? 'Guardando...' : 'Agregar'}
               </Button>
             </div>
+            {agregarError && <p className="text-xs text-kyro-danger pt-1">{agregarError}</p>}
           </div>
         </Dialog>
       )}
