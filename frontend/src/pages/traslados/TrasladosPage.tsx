@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { useForm } from 'react-hook-form'
@@ -64,6 +64,14 @@ const confirmarSchema = z.object({
 type CrearForm = z.infer<typeof crearSchema>
 type ConfirmarForm = z.infer<typeof confirmarSchema>
 
+interface ChipOption {
+  id: number
+  tienda_origen: string
+  tipo_chip: string
+  stock_actual: number
+  tienda?: { codigo: string; nombre: string } | null
+}
+
 function CrearTrasladoDialog({
   open,
   onClose,
@@ -74,6 +82,9 @@ function CrearTrasladoDialog({
   const crear = useCrearTraslado()
   const { tiendas } = useTiendasSelect()
   const { agentes } = useAgentesSelect()
+  const [tipoItem, setTipoItem] = useState<'inventario' | 'chip'>('inventario')
+
+  // ── Inventario (equipos/accesorios) ──────────────────────────────────────
   const { data: inventarioData } = useQuery({
     queryKey: ['inventario-disponible'],
     queryFn: () => api.get('/v1/inventario', { params: { estado: 'DISPONIBLE', per_page: 500 } }).then(r => r.data),
@@ -82,109 +93,193 @@ function CrearTrasladoDialog({
   })
   const inventario: Array<{ id: number; producto_nombre: string; tipo: string; imei_serial: string | null; cantidad: number }> =
     Array.isArray(inventarioData) ? inventarioData : (inventarioData?.data ?? [])
+
+  // ── Chips ─────────────────────────────────────────────────────────────────
+  const { data: chipsData } = useQuery<{ data: ChipOption[] }>({
+    queryKey: ['chips'],
+    queryFn: () => api.get<{ data: ChipOption[] }>('\/v1\/chips').then(r => r.data),
+    enabled: open && tipoItem === 'chip',
+    staleTime: 60_000,
+  })
+  const chips = chipsData?.data ?? []
+
+  // ── Form inventario ───────────────────────────────────────────────────────
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CrearForm>({
     resolver: zodResolver(crearSchema),
     defaultValues: { cantidad: 1 },
   })
 
-  const onSubmit = (data: CrearForm) => {
-    const payload = {
-      ...data,
-      auth_agente_id: data.auth_agente_id || undefined,
-      notas: data.notas || undefined,
-    }
-    crear.mutate(payload, {
-      onSuccess: () => { reset(); onClose() },
+  // ── Form chip (estado simple) ─────────────────────────────────────────────
+  const [chipForm, setChipForm] = useState({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '', auth_agente_id: '' })
+  const [chipError, setChipError] = useState('')
+  const crearChip = useMutation({
+    mutationFn: (body: object) => api.post('/v1/traslados-chips', body).then(r => r.data),
+    onSuccess: () => { resetAll(); onClose() },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { message?: string } } }
+      setChipError(err?.response?.data?.message ?? 'Error al crear traslado de chips.')
+    },
+  })
+
+  const resetAll = () => {
+    reset()
+    setChipForm({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '', auth_agente_id: '' })
+    setChipError('')
+    setTipoItem('inventario')
+  }
+
+  const onSubmitInventario = (data: CrearForm) => {
+    crear.mutate(
+      { ...data, auth_agente_id: data.auth_agente_id || undefined, notas: data.notas || undefined },
+      { onSuccess: () => { resetAll(); onClose() } },
+    )
+  }
+
+  const handleSubmitChip = () => {
+    setChipError('')
+    if (!chipForm.chip_id)       return setChipError('Selecciona un lote de chips.')
+    if (!chipForm.tienda_destino) return setChipError('Selecciona tienda destino.')
+    if (Number(chipForm.cantidad) < 1) return setChipError('Cantidad inválida.')
+    if (!chipForm.auth_dni)      return setChipError('DNI de autorización requerido.')
+    const chip = chips.find(c => String(c.id) === chipForm.chip_id)
+    crearChip.mutate({
+      chip_id:        Number(chipForm.chip_id),
+      tienda_origen:  chip?.tienda?.codigo ?? '',
+      tienda_destino: chipForm.tienda_destino,
+      cantidad:       Number(chipForm.cantidad),
+      notas:          chipForm.notas || undefined,
+      auth_dni:       chipForm.auth_dni,
+      auth_agente_id: chipForm.auth_agente_id ? Number(chipForm.auth_agente_id) : undefined,
     })
   }
 
   const mutError = crear.error as { response?: { data?: { message?: string } } } | null
 
   return (
-    <Dialog open={open} onClose={onClose} title="Nuevo Traslado" maxWidth="md">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="tienda_destino">Tienda destino *</Label>
-            <Select id="tienda_destino" {...register('tienda_destino')} className="mt-1">
-              <option value="">Selecciona tienda</option>
-              {tiendas.map(t => (
-                <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
-              ))}
-            </Select>
-            {errors.tienda_destino && <p className="text-kyro-danger text-xs mt-1">{errors.tienda_destino.message}</p>}
+    <Dialog open={open} onClose={() => { resetAll(); onClose() }} title="Nuevo Traslado" maxWidth="md">
+      {/* Toggle tipo */}
+      <div className="flex gap-2 mb-5">
+        <Button type="button" size="sm" variant={tipoItem === 'inventario' ? 'gold' : 'outline'} onClick={() => setTipoItem('inventario')}>
+          Equipo / Accesorio
+        </Button>
+        <Button type="button" size="sm" variant={tipoItem === 'chip' ? 'gold' : 'outline'} onClick={() => setTipoItem('chip')}>
+          Chips
+        </Button>
+      </div>
+
+      {tipoItem === 'inventario' ? (
+        <form onSubmit={handleSubmit(onSubmitInventario)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="tienda_destino">Tienda destino *</Label>
+              <Select id="tienda_destino" {...register('tienda_destino')} className="mt-1">
+                <option value="">Selecciona tienda</option>
+                {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+              </Select>
+              {errors.tienda_destino && <p className="text-kyro-danger text-xs mt-1">{errors.tienda_destino.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="producto_id">Producto *</Label>
+              <Select id="producto_id" {...register('producto_id', { valueAsNumber: true })} className="mt-1">
+                <option value="">Selecciona producto</option>
+                {inventario.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : p.cantidad > 1 ? ` (×${p.cantidad})` : ''}
+                  </option>
+                ))}
+              </Select>
+              {errors.producto_id && <p className="text-kyro-danger text-xs mt-1">{errors.producto_id.message}</p>}
+            </div>
           </div>
           <div>
-            <Label htmlFor="producto_id">Producto *</Label>
-            <Select id="producto_id" {...register('producto_id', { valueAsNumber: true })} className="mt-1">
-              <option value="">Selecciona producto</option>
-              {inventario.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : p.cantidad > 1 ? ` (×${p.cantidad})` : ''}
-                </option>
-              ))}
-            </Select>
-            {errors.producto_id && <p className="text-kyro-danger text-xs mt-1">{errors.producto_id.message}</p>}
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="cantidad">Cantidad *</Label>
-          <Input
-            id="cantidad"
-            type="number"
-            min="1"
-            {...register('cantidad', { valueAsNumber: true })}
-            className="mt-1"
-          />
-          {errors.cantidad && <p className="text-kyro-danger text-xs mt-1">{errors.cantidad.message}</p>}
-        </div>
-
-        <div>
-          <Label htmlFor="notas">Notas</Label>
-          <textarea
-            id="notas"
-            {...register('notas')}
-            rows={2}
-            className="kyro-input mt-1 w-full"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="auth_dni">DNI autorización *</Label>
-            <Input
-              id="auth_dni"
-              {...register('auth_dni')}
-              placeholder="12345678"
-              className="mt-1"
-            />
-            {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
+            <Label htmlFor="cantidad">Cantidad *</Label>
+            <Input id="cantidad" type="number" min="1" {...register('cantidad', { valueAsNumber: true })} className="mt-1" />
+            {errors.cantidad && <p className="text-kyro-danger text-xs mt-1">{errors.cantidad.message}</p>}
           </div>
           <div>
-            <Label htmlFor="auth_agente_id">Agente autoriza</Label>
-            <Select id="auth_agente_id" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
-              <option value="">Ninguno</option>
-              {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
-            </Select>
+            <Label htmlFor="notas">Notas</Label>
+            <textarea id="notas" {...register('notas')} rows={2} className="kyro-input mt-1 w-full" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="auth_dni">DNI autorización *</Label>
+              <Input id="auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
+              {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="auth_agente_id">Agente autoriza</Label>
+              <Select id="auth_agente_id" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
+                <option value="">Ninguno</option>
+                {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
+              </Select>
+            </div>
+          </div>
+          {mutError && <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al crear traslado.'}</p>}
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" variant="gold" disabled={crear.isPending} className="flex-1">
+              {crear.isPending ? 'Creando...' : 'Crear Traslado'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => { resetAll(); onClose() }} disabled={crear.isPending}>Cancelar</Button>
+          </div>
+        </form>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Tienda destino *</Label>
+              <Select className="mt-1" value={chipForm.tienda_destino}
+                onChange={e => setChipForm(f => ({ ...f, tienda_destino: e.target.value }))}>
+                <option value="">Selecciona tienda</option>
+                {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>Lote de chips *</Label>
+              <Select className="mt-1" value={chipForm.chip_id}
+                onChange={e => setChipForm(f => ({ ...f, chip_id: e.target.value }))}>
+                <option value="">Selecciona lote</option>
+                {chips.map(c => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.tienda_origen} — {c.tipo_chip} (stock: {c.stock_actual})
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Cantidad *</Label>
+            <Input type="number" min="1" className="mt-1" value={chipForm.cantidad}
+              onChange={e => setChipForm(f => ({ ...f, cantidad: e.target.value }))} />
+          </div>
+          <div>
+            <Label>Notas</Label>
+            <textarea rows={2} className="kyro-input mt-1 w-full" value={chipForm.notas}
+              onChange={e => setChipForm(f => ({ ...f, notas: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>DNI autorización *</Label>
+              <Input placeholder="12345678" className="mt-1" value={chipForm.auth_dni}
+                onChange={e => setChipForm(f => ({ ...f, auth_dni: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Agente autoriza</Label>
+              <Select className="mt-1" value={chipForm.auth_agente_id}
+                onChange={e => setChipForm(f => ({ ...f, auth_agente_id: e.target.value }))}>
+                <option value="">Ninguno</option>
+                {agentes.map(a => <option key={a.id} value={String(a.id)}>{a.nombres}</option>)}
+              </Select>
+            </div>
+          </div>
+          {chipError && <p className="text-kyro-danger text-sm">{chipError}</p>}
+          <div className="flex gap-3 pt-2">
+            <Button variant="gold" onClick={handleSubmitChip} disabled={crearChip.isPending} className="flex-1">
+              {crearChip.isPending ? 'Creando...' : 'Crear Traslado'}
+            </Button>
+            <Button variant="outline" onClick={() => { resetAll(); onClose() }} disabled={crearChip.isPending}>Cancelar</Button>
           </div>
         </div>
-
-        {mutError && (
-          <p className="text-kyro-danger text-sm">
-            {mutError.response?.data?.message ?? 'Error al crear traslado.'}
-          </p>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" variant="gold" disabled={crear.isPending} className="flex-1">
-            {crear.isPending ? 'Creando...' : 'Crear Traslado'}
-          </Button>
-          <Button type="button" variant="outline" onClick={onClose} disabled={crear.isPending}>
-            Cancelar
-          </Button>
-        </div>
-      </form>
+      )}
     </Dialog>
   )
 }
