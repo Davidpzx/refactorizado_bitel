@@ -346,7 +346,7 @@ export function HistorialPage() {
                   <tr key={r.id} className={rowCls}>
                     <td className="px-4 py-3 font-mono text-xs text-kyro-muted">#{String(r.id).padStart(4, '0')}</td>
                     <td className="px-4 py-3 text-kyro-body">
-                      {new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
+                      {r.fecha ? new Date(r.fecha.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-PE') : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-kyro-text">{r.agente_nombre ?? '—'}</div>
