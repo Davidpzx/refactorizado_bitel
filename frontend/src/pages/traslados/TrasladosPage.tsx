@@ -120,7 +120,7 @@ function CrearTrasladoDialog({
               <option value="">Selecciona producto</option>
               {inventario.map(p => (
                 <option key={p.id} value={p.id}>
-                  [{p.tipo}] {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : ` ×${p.cantidad}`}
+                  {p.producto_nombre}{p.imei_serial ? ` — ${p.imei_serial}` : p.cantidad > 1 ? ` (×${p.cantidad})` : ''}
                 </option>
               ))}
             </Select>
