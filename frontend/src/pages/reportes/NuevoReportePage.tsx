@@ -311,10 +311,17 @@ function AgregarRegistroModal({
   useEffect(() => {
     if (!/^\d{8}$/.test(m.cliente_dni)) { setDniStatus('idle'); return }
     setDniStatus('loading')
-    api.get<{ nombres?: string; apellido_paterno?: string; apellido_materno?: string; nombre_completo?: string }>(`/v1/dni/${m.cliente_dni}`)
+    api.get<Record<string, string | undefined>>(`/v1/dni/${m.cliente_dni}`)
       .then(res => {
         const d = res.data
-        const nombre = d.nombre_completo ?? [d.nombres, d.apellido_paterno, d.apellido_materno].filter(Boolean).join(' ')
+        // La API puede devolver camelCase (apellidoPaterno) o snake_case (apellido_paterno)
+        const nombre = d.nombre_completo
+          ?? d.nombreCompleto
+          ?? [
+              d.nombres,
+              d.apellidoPaterno  ?? d.apellido_paterno,
+              d.apellidoMaterno  ?? d.apellido_materno,
+            ].filter(Boolean).join(' ')
         if (nombre) {
           setM(prev => ({ ...prev, cliente_nombre: nombre }))
           setDniStatus('found')
