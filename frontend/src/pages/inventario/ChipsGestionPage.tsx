@@ -206,8 +206,8 @@ export function ChipsGestionPage() {
                 chips.map((chip) => (
                   <tr key={chip.id} className="group transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-400/[0.035]">
                     <td className="border-b border-kyro-border px-4 py-3 text-kyro-text">
-                      <span className="font-semibold">{chip.tienda.codigo}</span>
-                      <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">{chip.tienda.nombre}</span>
+                      <span className="font-semibold">{chip.tienda?.codigo ?? '—'}</span>
+                      <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">{chip.tienda?.nombre ?? ''}</span>
                     </td>
                     <td className="border-b border-kyro-border px-4 py-3 font-mono text-kyro-body">{chip.tienda_origen}</td>
                     <td className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
