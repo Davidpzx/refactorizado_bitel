@@ -299,7 +299,6 @@ interface ModalVentaState {
   tipo_registro:         'VENTA' | 'CONSULTA'
   que_le_intereso:       string
   motivo_no_compra:      string
-  resultado_consulta:    'SIN_COMPRA' | 'VENTA' | 'REGRESA'
 }
 
 const MODAL_DEFAULT: ModalVentaState = {
@@ -310,12 +309,12 @@ const MODAL_DEFAULT: ModalVentaState = {
   producto_nombre: '', inventario_tienda_id: 0, imei_serial: '',
   tipo_pago: 'CONTADO', precio_venta: 0, financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
   subtipo: '', monto_otros: 0, tienda_destino: '',
-  tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '', resultado_consulta: 'SIN_COMPRA',
+  tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '',
 }
 
-const MOTIVOS_NO_COMPRA: { grupo: string; emoji: string; opciones: string[] }[] = [
+const MOTIVOS_NO_COMPRA: { grupo: string; opciones: string[] }[] = [
   {
-    grupo: 'Rechazo del Sistema / Crédito', emoji: '🔴',
+    grupo: 'Rechazo del Sistema / Crédito',
     opciones: [
       'Error de sistema (BITEL)',
       'No aprobó evaluación crediticia',
@@ -323,15 +322,16 @@ const MOTIVOS_NO_COMPRA: { grupo: string; emoji: string; opciones: string[] }[] 
     ],
   },
   {
-    grupo: 'Precio / Condiciones', emoji: '💰',
+    grupo: 'Precio / Condiciones',
     opciones: [
       'Monto del plan muy alto',
       'Precio del equipo muy alto',
       'Cliente indeciso / necesita pensarlo',
+      'Regresará después',
     ],
   },
   {
-    grupo: 'Stock / Disponibilidad', emoji: '📦',
+    grupo: 'Stock / Disponibilidad',
     opciones: [
       'Sin stock del equipo solicitado',
       'Sin stock del accesorio',
@@ -339,16 +339,16 @@ const MOTIVOS_NO_COMPRA: { grupo: string; emoji: string; opciones: string[] }[] 
     ],
   },
   {
-    grupo: 'Cobertura / Servicio', emoji: '📶',
+    grupo: 'Cobertura / Servicio',
     opciones: [
       'Mala cobertura en su zona',
       'Ya es cliente Bitel',
     ],
   },
   {
-    grupo: 'Pasó a Venta', emoji: '✅',
+    grupo: 'Pasó a Venta',
     opciones: [
-      'Se concretó en VENTA (promover)',
+      'Se concretó en VENTA',
     ],
   },
 ]
@@ -433,10 +433,10 @@ function AgregarRegistroModal({
         imei_serial: '', producto_nombre: '', por_cobrar_financiera: 0,
         plan_anterior: 0, es_extranjero: false, es_migracion: false,
         es_upgrade: false, es_esim: false, tipo_pago: 'CONTADO',
-        que_le_intereso: '', motivo_no_compra: '', resultado_consulta: 'SIN_COMPRA',
+        que_le_intereso: '', motivo_no_compra: '',
       }))
     } else {
-      setM(prev => ({ ...prev, tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '', resultado_consulta: 'SIN_COMPRA' }))
+      setM(prev => ({ ...prev, tipo_registro: 'VENTA', que_le_intereso: '', motivo_no_compra: '' }))
     }
   }
 
@@ -533,10 +533,8 @@ function AgregarRegistroModal({
 
         {/* Campos consulta */}
         {m.tipo_registro === 'CONSULTA' && (
-          <div className="space-y-3 rounded-lg border border-kyro-border p-3 bg-kyro-elevated/40">
+          <div className="space-y-2.5 rounded-lg border border-kyro-border p-3 bg-kyro-elevated/40">
             <p className="text-[10px] text-kyro-muted font-semibold uppercase tracking-wide">Detalle de consulta</p>
-
-            {/* Qué le interesó */}
             <div>
               <Label className="text-[10px] text-kyro-muted">¿Qué le interesó? *</Label>
               <Input
@@ -546,57 +544,22 @@ function AgregarRegistroModal({
                 className="kyro-input mt-0.5 h-8 text-xs"
               />
             </div>
-
-            {/* Motivo no compra — select agrupado */}
             <div>
-              <Label className="text-[10px] text-kyro-muted">Motivo / ¿Por qué no compró?</Label>
+              <Label className="text-[10px] text-kyro-muted">¿Por qué no compró?</Label>
               <select
                 value={m.motivo_no_compra}
-                onChange={e => {
-                  const val = e.target.value
-                  upd('motivo_no_compra', val)
-                  // Si elige "pasó a venta" → resultado automático
-                  if (val === 'Se concretó en VENTA (promover)') {
-                    upd('resultado_consulta', 'VENTA')
-                  } else if (m.resultado_consulta === 'VENTA') {
-                    upd('resultado_consulta', 'SIN_COMPRA')
-                  }
-                }}
+                onChange={e => upd('motivo_no_compra', e.target.value)}
                 className="kyro-input mt-0.5 h-8 text-xs w-full"
               >
-                <option value="">— Se irá sin comprar (no definido aún) —</option>
+                <option value="">— Sin definir —</option>
                 {MOTIVOS_NO_COMPRA.map(g => (
-                  <optgroup key={g.grupo} label={`${g.emoji} ${g.grupo}`}>
+                  <optgroup key={g.grupo} label={g.grupo}>
                     {g.opciones.map(op => (
                       <option key={op} value={op}>{op}</option>
                     ))}
                   </optgroup>
                 ))}
               </select>
-            </div>
-
-            {/* Resultado */}
-            <div>
-              <Label className="text-[10px] text-kyro-muted">Resultado</Label>
-              <div className="flex gap-2 mt-1">
-                {([
-                  { value: 'SIN_COMPRA', label: 'Se fue sin comprar', color: 'var(--color-kyro-danger)' },
-                  { value: 'REGRESA',    label: 'Regresa después',    color: 'var(--color-kyro-warning)' },
-                  { value: 'VENTA',      label: '✅ Pasó a Venta',    color: 'var(--color-kyro-success)' },
-                ] as const).map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => upd('resultado_consulta', opt.value)}
-                    className="flex-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold border transition-all"
-                    style={m.resultado_consulta === opt.value
-                      ? { background: opt.color, color: '#fff', borderColor: opt.color }
-                      : { background: 'transparent', color: 'var(--color-kyro-muted)', borderColor: 'var(--color-kyro-border)' }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         )}
@@ -979,18 +942,14 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
     // Guardar consultas directo al CRM (no tocan el cuadre)
     consultaItems.forEach(d => {
-      const resultadoLabel = d.resultado_consulta === 'VENTA' ? 'Pasó a Venta'
-        : d.resultado_consulta === 'REGRESA' ? 'Regresa después'
-        : 'Se fue sin comprar'
       const notas = [
         d.cliente_dni    && `DNI: ${d.cliente_dni}`,
         d.cliente_nombre && `Nombre: ${d.cliente_nombre}`,
-        d.que_le_intereso   && `Le interesó: ${d.que_le_intereso}`,
-        d.motivo_no_compra  && `Motivo: ${d.motivo_no_compra}`,
-        `Resultado: ${resultadoLabel}`,
+        d.que_le_intereso  && `Le interesó: ${d.que_le_intereso}`,
+        d.motivo_no_compra && `Motivo: ${d.motivo_no_compra}`,
       ].filter(Boolean).join('\n')
-      const estadoCrm = d.resultado_consulta === 'VENTA' ? 'CONVERTIDO'
-        : d.resultado_consulta === 'REGRESA' ? 'INTERESADO'
+      const estadoCrm = d.motivo_no_compra === 'Se concretó en VENTA' ? 'CONVERTIDO'
+        : d.motivo_no_compra === 'Regresará después' ? 'INTERESADO'
         : 'NUEVO'
       crmApi.leads.create({
         agente_id: d.vendedor_id,
