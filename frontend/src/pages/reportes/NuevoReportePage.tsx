@@ -865,7 +865,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }
 
   const handleVentaConfirm = (items: ModalVentaState[]) => {
-    items.forEach((data, i) => {
+    items.forEach((data) => {
       const v = buildVenta(data)
       if (editIndex !== null && items.length === 1) {
         update(editIndex, v)
