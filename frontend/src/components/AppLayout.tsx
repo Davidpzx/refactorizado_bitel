@@ -233,7 +233,7 @@ export function AppLayout() {
                 ) : (
                   <NavLink
                     to={to}
-                    end={to === '/'}
+                    end={to === '/' || NAV_ITEMS.some(other => other.to !== to && other.to.startsWith(to + '/'))}
                     title={collapsed ? label : undefined}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
