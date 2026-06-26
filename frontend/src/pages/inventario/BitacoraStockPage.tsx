@@ -22,7 +22,9 @@ interface BitacoraKpis {
 interface Movimiento {
   id: number
   fecha_hora: string
-  tienda_id: string
+  tienda_id: number
+  tienda_codigo: string
+  tienda_nombre: string
   accion: 'SUMA' | 'RESTA'
   cantidad: number
   motivo: string | null
@@ -304,7 +306,8 @@ export function BitacoraStockPage() {
                     {new Date(m.fecha_hora).toLocaleString('es-PE')}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-md border border-kyro-border bg-kyro-elevated px-2 py-1 font-mono text-xs text-kyro-body">{m.tienda_id}</span>
+                    <span className="rounded-md border border-kyro-border bg-kyro-elevated px-2 py-1 font-mono text-xs text-kyro-body">{m.tienda_codigo}</span>
+                    {m.tienda_nombre && <span className="ml-1 text-[0.67rem] text-kyro-muted">{m.tienda_nombre}</span>}
                   </td>
                   <td className="px-4 py-3 text-sm text-kyro-body">{m.agente_nombre}</td>
                   <td className="px-4 py-3 text-sm font-medium text-kyro-text">{m.producto_nombre}</td>

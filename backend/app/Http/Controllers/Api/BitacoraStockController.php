@@ -23,6 +23,7 @@ class BitacoraStockController extends Controller
         $base = DB::table('historial_inventario as h')
             ->leftJoin('agentes as a', 'h.agente_id', '=', 'a.id')
             ->leftJoin('inventario_tiendas as it', 'h.producto_id', '=', 'it.id')
+            ->leftJoin('tiendas as t', 'h.tienda_id', '=', 't.id')
             ->when($request->fecha_desde, fn($q, $f) => $q->whereDate('h.fecha_hora', '>=', $f))
             ->when($request->fecha_hasta, fn($q, $f) => $q->whereDate('h.fecha_hora', '<=', $f))
             ->when($request->accion,      fn($q, $v) => $q->where('h.accion', $v))
@@ -39,9 +40,16 @@ class BitacoraStockController extends Controller
             });
 
         if ($user->rol === 'tienda') {
-            $base->where('h.tienda_id', $user->tienda_id);
-        } elseif ($request->tienda) {
-            $base->where('h.tienda_id', $request->tienda);
+            // $user->tienda_id es el código string (e.g. 'PUNDA50') → resolvemos a int
+            $tiendaIntId = DB::table('tiendas')->where('codigo', $user->tienda_id)->value('id');
+            if ($tiendaIntId) {
+                $base->where('h.tienda_id', $tiendaIntId);
+            }
+        } elseif ($request->filled('tienda')) {
+            $tiendaIntId = DB::table('tiendas')->where('codigo', $request->tienda)->value('id');
+            if ($tiendaIntId) {
+                $base->where('h.tienda_id', $tiendaIntId);
+            }
         }
 
         return $base;
@@ -72,6 +80,8 @@ class BitacoraStockController extends Controller
             ->select([
                 'h.id', 'h.fecha_hora', 'h.tienda_id', 'h.accion', 'h.cantidad',
                 'h.motivo', 'h.observacion', 'h.imei_serial', 'h.precio_en_ese_momento', 'h.dni_autorizacion',
+                DB::raw("COALESCE(t.codigo, CAST(h.tienda_id AS CHAR)) AS tienda_codigo"),
+                DB::raw("COALESCE(t.nombre, '') AS tienda_nombre"),
                 DB::raw("COALESCE(a.nombres, 'Sistema') AS agente_nombre"),
                 DB::raw("COALESCE(it.producto_nombre, 'Chip/Otros') AS producto_nombre"),
                 DB::raw("COALESCE(it.tipo, 'CHIP') AS producto_tipo"),
@@ -88,6 +98,8 @@ class BitacoraStockController extends Controller
             ->select([
                 'h.fecha_hora', 'h.tienda_id', 'h.accion', 'h.cantidad',
                 'h.motivo', 'h.observacion', 'h.imei_serial', 'h.precio_en_ese_momento', 'h.dni_autorizacion',
+                DB::raw("COALESCE(t.codigo, CAST(h.tienda_id AS CHAR)) AS tienda_codigo"),
+                DB::raw("COALESCE(t.nombre, '') AS tienda_nombre"),
                 DB::raw("COALESCE(a.nombres, 'Sistema') AS agente_nombre"),
                 DB::raw("COALESCE(it.producto_nombre, 'Chip/Otros') AS producto_nombre"),
                 DB::raw("COALESCE(it.tipo, 'CHIP') AS producto_tipo"),
@@ -110,7 +122,7 @@ class BitacoraStockController extends Controller
         foreach ($rows as $index => $r) {
             $sheet->fromArray([
                 $r->fecha_hora,
-                $r->tienda_id,
+                $r->tienda_codigo,
                 $r->agente_nombre,
                 $r->producto_nombre,
                 $r->producto_tipo,
