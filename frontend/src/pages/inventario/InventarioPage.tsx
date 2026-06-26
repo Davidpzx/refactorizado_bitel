@@ -30,18 +30,6 @@ interface ChipItem {
   tienda?: { codigo: string; nombre: string } | null
 }
 
-const TIENDAS = [
-  { codigo: 'PUNDA50', nombre: 'Puno — PUNDA50' },
-  { codigo: 'PUNDA11', nombre: 'Puno — PUNDA11' },
-  { codigo: 'PUNSC01', nombre: 'Puno — PUNSC01' },
-  { codigo: 'PUNDA23', nombre: 'Puno — PUNDA23' },
-  { codigo: 'TACDA13', nombre: 'Tacna — TACDA13' },
-  { codigo: 'TACDA17', nombre: 'Tacna — TACDA17' },
-  { codigo: 'TACDA21', nombre: 'Tacna — TACDA21' },
-  { codigo: 'TACDA25', nombre: 'Tacna — TACDA25' },
-  { codigo: 'TACDA27', nombre: 'Tacna — TACDA27' },
-  { codigo: 'TACDA30', nombre: 'Tacna — TACDA30' },
-]
 
 const TIPOS = [
   { value: '', label: 'Todos', tone: 'indigo' as const },
@@ -308,6 +296,13 @@ export function InventarioPage() {
     setAjusteError('')
   }
 
+  const { data: tiendasData } = useQuery<{ data: { codigo: string; nombre: string }[] }>({
+    queryKey: ['tiendas-inventario'],
+    queryFn: () => api.get('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data),
+    staleTime: 5 * 60_000,
+  })
+  const tiendas = tiendasData?.data ?? []
+
   const { data: chipsData, isLoading: chipsLoading } = useQuery<{ data: ChipItem[] }>({
     queryKey: ['chips'],
     queryFn: () => api.get<{ data: ChipItem[] }>('/v1/chips').then(r => r.data),
@@ -437,8 +432,8 @@ export function InventarioPage() {
           className="w-44"
         >
           <option value="">Todas las tiendas</option>
-          {TIENDAS.map((t) => (
-            <option key={t.codigo} value={t.codigo}>{t.nombre}</option>
+          {tiendas.map((t) => (
+            <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>
           ))}
         </Select>
 
