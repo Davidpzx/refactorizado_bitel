@@ -311,7 +311,7 @@ export function InventarioPage() {
   const { data: chipsData, isLoading: chipsLoading } = useQuery<{ data: ChipItem[] }>({
     queryKey: ['chips'],
     queryFn: () => api.get<{ data: ChipItem[] }>('/v1/chips').then(r => r.data),
-    enabled: tipo === 'CHIP',
+    enabled: tipo === 'CHIP' || tipo === '',
   })
 
   const { data, isLoading } = useInventario({
@@ -497,15 +497,60 @@ export function InventarioPage() {
           </table>
         </div>
       ) : (
-        <DataTable
-          data={data?.data ?? []}
-          columns={columns}
-          pageCount={data?.last_page ?? 0}
-          pagination={pagination}
-          onPaginationChange={setPagination}
-          isLoading={isLoading}
-          total={data?.total}
-        />
+        <>
+          <DataTable
+            data={data?.data ?? []}
+            columns={columns}
+            pageCount={data?.last_page ?? 0}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            isLoading={isLoading}
+            total={data?.total}
+          />
+
+          {tipo === '' && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-kyro-muted">Chips en inventario</p>
+              <div className="kyro-card overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-0 text-sm">
+                  <thead>
+                    <tr>
+                      <th className="kyro-table-head px-4 py-3 text-left">Tienda</th>
+                      <th className="kyro-table-head px-4 py-3 text-left">Código Origen</th>
+                      <th className="kyro-table-head px-4 py-3 text-left">Tipo</th>
+                      <th className="kyro-table-head px-4 py-3 text-center">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chipsLoading ? (
+                      <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">Cargando chips...</td></tr>
+                    ) : (chipsData?.data ?? []).length === 0 ? (
+                      <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">Sin chips registrados</td></tr>
+                    ) : (
+                      (chipsData?.data ?? []).map(chip => (
+                        <tr key={chip.id} className="group transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-400/[0.035]">
+                          <td className="border-b border-kyro-border px-4 py-3 text-kyro-text">
+                            <span className="font-semibold">{chip.tienda?.codigo ?? '—'}</span>
+                            <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">{chip.tienda?.nombre ?? ''}</span>
+                          </td>
+                          <td className="border-b border-kyro-border px-4 py-3 font-mono text-kyro-body">{chip.tienda_origen}</td>
+                          <td className="border-b border-kyro-border px-4 py-3">
+                            <Badge variant="outline">{chip.tipo_chip}</Badge>
+                          </td>
+                          <td className="border-b border-kyro-border px-4 py-3 text-center">
+                            <span className={chip.stock_actual > 0 ? 'font-mono font-bold text-emerald-600 dark:text-emerald-400' : 'font-mono text-gray-400 dark:text-zinc-600'}>
+                              {chip.stock_actual}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Dialog
