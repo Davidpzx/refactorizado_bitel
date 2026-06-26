@@ -21,6 +21,7 @@ import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
 import { calcularCuadre, calcularComision, validarStock } from '../../lib/cuadre'
 import { api } from '../../services/api'
+import { crmApi } from '../../services/crm.api'
 import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
 import { reportesApi } from '../../services/reportes.api'
@@ -867,19 +868,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }
 
   const buildVenta = (data: ModalVentaState): VentaFormData => {
-    // Consultas: no tienen sección ni monto, se guardan aparte
-    if (data.tipo_registro === 'CONSULTA') {
-      return ventaNueva({
-        vendedor_id:   data.vendedor_id,
-        tipo_venta:    'OTROS_FLUJO',
-        tipo_registro: 'CONSULTA',
-        cliente_dni:   data.cliente_dni,
-        cliente_nombre: data.cliente_nombre,
-        que_le_intereso: data.que_le_intereso,
-        motivo_no_compra: data.motivo_no_compra,
-        monto_total: 0, efectivo_inicial: 0,
-      })
-    }
     const base = { vendedor_id: data.vendedor_id, cliente_dni: data.cliente_dni, cliente_nombre: data.cliente_nombre }
     switch (data.seccion) {
       case 'POSTPAGO':
@@ -897,10 +885,39 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     }
   }
 
+  const [crmMsg, setCrmMsg] = useState('')
+
   const handleVentaConfirm = (items: ModalVentaState[]) => {
-    items.forEach((data) => {
+    const consultaItems = items.filter(d => d.tipo_registro === 'CONSULTA')
+    const ventaItems    = items.filter(d => d.tipo_registro !== 'CONSULTA')
+
+    // Guardar consultas directo al CRM (no tocan el cuadre)
+    consultaItems.forEach(d => {
+      const notas = [
+        d.cliente_dni    && `DNI: ${d.cliente_dni}`,
+        d.cliente_nombre && `Nombre: ${d.cliente_nombre}`,
+        d.que_le_intereso   && `Le interesó: ${d.que_le_intereso}`,
+        d.motivo_no_compra  && `Motivo: ${d.motivo_no_compra}`,
+      ].filter(Boolean).join('\n')
+      crmApi.leads.create({
+        agente_id: d.vendedor_id,
+        tienda_id: tiendaSeleccionada,
+        estado: 'NUEVO',
+        fuente: 'PRESENCIAL',
+        notas,
+      }).then(() => {
+        setCrmMsg(`Lead CRM guardado · DNI ${d.cliente_dni}`)
+        setTimeout(() => setCrmMsg(''), 3500)
+      }).catch(() => {
+        setCrmMsg('Error al guardar consulta en CRM')
+        setTimeout(() => setCrmMsg(''), 3500)
+      })
+    })
+
+    // Agregar ventas reales al cuadre
+    ventaItems.forEach((data) => {
       const v = buildVenta(data)
-      if (editIndex !== null && items.length === 1) {
+      if (editIndex !== null && ventaItems.length === 1) {
         update(editIndex, v)
       } else {
         append(v)
@@ -1154,9 +1171,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const postpagoRows      = ventasMap.filter(v => v.tipo === 'POSTPAGO')
   const prepagoRows       = ventasMap.filter(v => v.tipo === 'PREPAGO')
   const equipoRows        = ventasMap.filter(v => v.tipo === 'EQUIPO' || v.tipo === 'ACCESORIO')
-  const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO' && ventas[v.idx]?.tipo_registro !== 'CONSULTA')
+  const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO')
   const apoyoRows         = ventasMap.filter(v => v.tipo === 'APOYO')
-  const consultasRows     = ventasMap.filter(v => ventas[v.idx]?.tipo_registro === 'CONSULTA')
 
   const sub = (t: VentaFormData['tipo_venta'] | VentaFormData['tipo_venta'][]) => {
     const tipos = Array.isArray(t) ? t : [t]
@@ -1270,6 +1286,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               </Button>
             )}
             {borradorMsg && <span className="text-xs text-kyro-muted">{borradorMsg}</span>}
+            {crmMsg && <span className="text-xs text-kyro-info">{crmMsg}</span>}
             <Button variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')}><X size={15} /> Cancelar</Button>
           </div>
         }
@@ -1435,18 +1452,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                   ))}
             </SectionPanel>
 
-            {/* ── Consultas (no afectan al cuadre) ── */}
-            {consultasRows.length > 0 && (
-              <SectionPanel
-                title="Consultas del Día" accent="var(--color-kyro-info)" icon={<FileText size={15} />} number={6}
-                count={consultasRows.length}
-              >
-                {consultasRows.map(v => (
-                  <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                    onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
-                ))}
-              </SectionPanel>
-            )}
 
             {/* ── Consolidado de ventas (Total Sistema) ── */}
             <GlassPanel className="kyro-card p-3 bg-kyro-info/10 border-l-4 border-l-kpi-total">
