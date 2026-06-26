@@ -170,13 +170,15 @@ function VentaFila({
 }) {
   const vendedor = vendedores.find(v => v.id === venta.vendedor_id)
   const vNombre  = vendedor?.nombres ?? `Vendedor #${venta.vendedor_id}`
-  const t        = venta.tipo_venta
-  const isLinea  = t === 'POSTPAGO' || t === 'PREPAGO'
-  const isEquipo = t === 'EQUIPO'   || t === 'ACCESORIO'
+  const t          = venta.tipo_venta
+  const isConsulta = venta.tipo_registro === 'CONSULTA'
+  const isLinea    = !isConsulta && (t === 'POSTPAGO' || t === 'PREPAGO')
+  const isEquipo   = !isConsulta && (t === 'EQUIPO'   || t === 'ACCESORIO')
 
-  const monto = isLinea
-    ? (venta.cobrado_unitario || 0) * (venta.cantidad || 1)
-    : isEquipo ? venta.precio_venta || 0 : venta.monto_total || 0
+  const monto = isConsulta ? null
+    : isLinea  ? (venta.cobrado_unitario || 0) * (venta.cantidad || 1)
+    : isEquipo ? venta.precio_venta || 0
+    : venta.monto_total || 0
 
   const flags: { label: string; color: string }[] = [
     ...(venta.es_extranjero ? [{ label: 'EXT',  color: '#a1a1aa' }] : []),
@@ -204,6 +206,12 @@ function VentaFila({
               style={{ background: 'rgba(99,102,241,0.15)', color: 'var(--color-kyro-indigo)' }}>
               {venta.tipo_alta}
             </span>
+          )}
+          {isConsulta && venta.que_le_intereso && (
+            <span className="text-[10px] text-kyro-info">💬 {venta.que_le_intereso}</span>
+          )}
+          {isConsulta && venta.motivo_no_compra && (
+            <span className="text-[10px] text-kyro-muted">· {venta.motivo_no_compra}</span>
           )}
           {isEquipo && venta.producto_nombre && (
             <span className="text-[10px] text-kyro-body">{venta.producto_nombre}</span>
@@ -236,7 +244,10 @@ function VentaFila({
         </div>
       </div>
 
-      <span className="text-xs font-semibold text-kyro-text shrink-0 pt-0.5 tabular-nums">S/ {monto.toFixed(2)}</span>
+      {monto !== null
+        ? <span className="text-xs font-semibold text-kyro-text shrink-0 pt-0.5 tabular-nums">S/ {monto.toFixed(2)}</span>
+        : <span className="text-[10px] text-kyro-muted shrink-0 pt-0.5">consulta</span>
+      }
 
       <div className="flex gap-1 shrink-0">
         {onPrint && (
@@ -799,9 +810,14 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     })
 
   useEffect(() => {
-    if (usuario && !esEdicion && usuario.rol !== 'admin') {
-      setValue('agente_id', usuario.agente_id ?? 0)
-      setValue('tienda_id', usuario.tienda_id)
+    if (usuario && !esEdicion) {
+      if (usuario.rol !== 'admin') {
+        setValue('agente_id', usuario.agente_id ?? 0)
+        setValue('tienda_id', usuario.tienda_id)
+      } else {
+        // Admin siempre empieza sin tienda seleccionada
+        setValue('tienda_id', '')
+      }
     }
   }, [esEdicion, usuario, setValue])
 
@@ -814,11 +830,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   const openEdit = (idx: number) => {
     const v = ventas[idx]
-    const seccion = v.tipo_venta as Exclude<ModalSeccion, ''>
+    const esConsulta = v.tipo_registro === 'CONSULTA'
+    const seccion = esConsulta ? '' : (v.tipo_venta as Exclude<ModalSeccion, ''>)
     setEditData({
       ...MODAL_DEFAULT,
       vendedor_id: v.vendedor_id,
       seccion,
+      tipo_registro: v.tipo_registro ?? 'VENTA',
+      que_le_intereso:  v.que_le_intereso  ?? '',
+      motivo_no_compra: v.motivo_no_compra ?? '',
       cliente_dni:  v.cliente_dni  ?? '',
       cliente_nombre: v.cliente_nombre ?? '',
       es_extranjero: !!v.es_extranjero,
@@ -847,6 +867,19 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }
 
   const buildVenta = (data: ModalVentaState): VentaFormData => {
+    // Consultas: no tienen sección ni monto, se guardan aparte
+    if (data.tipo_registro === 'CONSULTA') {
+      return ventaNueva({
+        vendedor_id:   data.vendedor_id,
+        tipo_venta:    'OTROS_FLUJO',
+        tipo_registro: 'CONSULTA',
+        cliente_dni:   data.cliente_dni,
+        cliente_nombre: data.cliente_nombre,
+        que_le_intereso: data.que_le_intereso,
+        motivo_no_compra: data.motivo_no_compra,
+        monto_total: 0, efectivo_inicial: 0,
+      })
+    }
     const base = { vendedor_id: data.vendedor_id, cliente_dni: data.cliente_dni, cliente_nombre: data.cliente_nombre }
     switch (data.seccion) {
       case 'POSTPAGO':
@@ -1121,8 +1154,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const postpagoRows      = ventasMap.filter(v => v.tipo === 'POSTPAGO')
   const prepagoRows       = ventasMap.filter(v => v.tipo === 'PREPAGO')
   const equipoRows        = ventasMap.filter(v => v.tipo === 'EQUIPO' || v.tipo === 'ACCESORIO')
-  const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO')
+  const otrosRows         = ventasMap.filter(v => v.tipo === 'OTROS_FLUJO' && ventas[v.idx]?.tipo_registro !== 'CONSULTA')
   const apoyoRows         = ventasMap.filter(v => v.tipo === 'APOYO')
+  const consultasRows     = ventasMap.filter(v => ventas[v.idx]?.tipo_registro === 'CONSULTA')
 
   const sub = (t: VentaFormData['tipo_venta'] | VentaFormData['tipo_venta'][]) => {
     const tipos = Array.isArray(t) ? t : [t]
@@ -1400,6 +1434,19 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                       onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
                   ))}
             </SectionPanel>
+
+            {/* ── Consultas (no afectan al cuadre) ── */}
+            {consultasRows.length > 0 && (
+              <SectionPanel
+                title="Consultas del Día" accent="var(--color-kyro-info)" icon={<FileText size={15} />} number={6}
+                count={consultasRows.length}
+              >
+                {consultasRows.map(v => (
+                  <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                    onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
+                ))}
+              </SectionPanel>
+            )}
 
             {/* ── Consolidado de ventas (Total Sistema) ── */}
             <GlassPanel className="kyro-card p-3 bg-kyro-info/10 border-l-4 border-l-kpi-total">
