@@ -96,7 +96,7 @@ class TrasladoController extends Controller
 
             DB::transaction(function () use (
                 $ids, $tiendaDestino, $estadoTraslado, $user, $esAdmin, $notas,
-                $codigoLote, $enviadoPorId, &$ok, &$skip
+                $codigoLote, $enviadoPorId, $authDni, &$ok, &$skip
             ) {
                 foreach ($ids as $pid) {
                     $item = InventarioTienda::where('id', $pid)
@@ -151,7 +151,7 @@ class TrasladoController extends Controller
 
         $result = DB::transaction(function () use (
             $productoId, $tiendaDestino, $cantidad, $estadoTraslado,
-            $user, $esAdmin, $notas, $enviadoPorId
+            $user, $esAdmin, $notas, $enviadoPorId, $authDni
         ) {
             $origen = InventarioTienda::where('id', $productoId)
                 ->where('estado', 'DISPONIBLE')
