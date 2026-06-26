@@ -10,7 +10,7 @@ import {
   Users, Clock, DollarSign, Package, BookOpen, Settings,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight,
-  Grid3x3, Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
+  Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
 } from 'lucide-react'
 
 interface NavItem {
