@@ -66,7 +66,6 @@ const crearSchema = z.object({
   cantidad:       z.number({ error: 'Requerido' }).int().min(1),
   notas:          z.string().optional(),
   auth_dni:       z.string().min(1, 'Requerido'),
-  auth_agente_id: z.number().int().positive().optional(),
 })
 
 const confirmarSchema = z.object({
@@ -122,13 +121,18 @@ function CrearTrasladoDialog({
   const chips = chipsData?.data ?? []
 
   // ── Form inventario ───────────────────────────────────────────────────────
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CrearForm>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<CrearForm>({
     resolver: zodResolver(crearSchema),
     defaultValues: { cantidad: 1 },
   })
 
+  const authDniWatch = watch('auth_dni') ?? ''
+  const nombreAgente = agentes.find(
+    a => a.dni?.trim().toUpperCase() === authDniWatch.trim().toUpperCase()
+  )?.nombres ?? ''
+
   // ── Form chip (estado simple) ─────────────────────────────────────────────
-  const [chipForm, setChipForm] = useState({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '', auth_agente_id: '' })
+  const [chipForm, setChipForm] = useState({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '' })
   const [chipError, setChipError] = useState('')
   const crearChip = useMutation({
     mutationFn: (body: object) => api.post('/v1/traslados-chips', body).then(r => r.data),
@@ -141,14 +145,14 @@ function CrearTrasladoDialog({
 
   const resetAll = () => {
     reset()
-    setChipForm({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '', auth_agente_id: '' })
+    setChipForm({ chip_id: '', tienda_destino: '', cantidad: '1', notas: '', auth_dni: '' })
     setChipError('')
     setTipoItem(defaultTipo)
   }
 
   const onSubmitInventario = (data: CrearForm) => {
     crear.mutate(
-      { ...data, auth_agente_id: data.auth_agente_id || undefined, notas: data.notas || undefined },
+      { ...data, notas: data.notas || undefined },
       { onSuccess: () => { resetAll(); onClose() } },
     )
   }
@@ -158,7 +162,7 @@ function CrearTrasladoDialog({
     if (!chipForm.chip_id)        return setChipError('Selecciona un lote de chips.')
     if (!chipForm.tienda_destino) return setChipError('Selecciona tienda destino.')
     if (Number(chipForm.cantidad) < 1) return setChipError('Cantidad inválida.')
-    if (!chipForm.auth_dni)       return setChipError('DNI de autorización requerido.')
+    if (!chipForm.auth_dni)       return setChipError('DNI requerido.')
     const chip = chips.find(c => String(c.id) === chipForm.chip_id)
     crearChip.mutate({
       chip_id:        Number(chipForm.chip_id),
@@ -167,7 +171,6 @@ function CrearTrasladoDialog({
       cantidad:       Number(chipForm.cantidad),
       notas:          chipForm.notas || undefined,
       auth_dni:       chipForm.auth_dni,
-      auth_agente_id: chipForm.auth_agente_id ? Number(chipForm.auth_agente_id) : undefined,
     })
   }
 
@@ -224,13 +227,17 @@ function CrearTrasladoDialog({
               <Input id="auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
               {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
             </div>
-            <div>
-              <Label htmlFor="auth_agente_id">Agente autoriza</Label>
-              <Select id="auth_agente_id" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
-                <option value="">Ninguno</option>
-                {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
-              </Select>
-            </div>
+            {authDniWatch.trim() && (
+              <div>
+                <Label>Nombre</Label>
+                <Input
+                  value={nombreAgente}
+                  readOnly
+                  placeholder="No encontrado en el sistema"
+                  className="mt-1 bg-kyro-surface/50 text-kyro-muted cursor-default"
+                />
+              </div>
+            )}
           </div>
           {mutError && <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al crear traslado.'}</p>}
           <div className="flex gap-3 pt-2">
@@ -280,14 +287,17 @@ function CrearTrasladoDialog({
               <Input placeholder="12345678" className="mt-1" value={chipForm.auth_dni}
                 onChange={e => setChipForm(f => ({ ...f, auth_dni: e.target.value }))} />
             </div>
-            <div>
-              <Label>Agente autoriza</Label>
-              <Select className="mt-1" value={chipForm.auth_agente_id}
-                onChange={e => setChipForm(f => ({ ...f, auth_agente_id: e.target.value }))}>
-                <option value="">Ninguno</option>
-                {agentes.map(a => <option key={a.id} value={String(a.id)}>{a.nombres}</option>)}
-              </Select>
-            </div>
+            {chipForm.auth_dni.trim() && (
+              <div>
+                <Label>Nombre</Label>
+                <Input
+                  value={agentes.find(a => a.dni?.trim().toUpperCase() === chipForm.auth_dni.trim().toUpperCase())?.nombres ?? ''}
+                  readOnly
+                  placeholder="No encontrado en el sistema"
+                  className="mt-1 bg-kyro-surface/50 text-kyro-muted cursor-default"
+                />
+              </div>
+            )}
           </div>
           {chipError && <p className="text-kyro-danger text-sm">{chipError}</p>}
           <div className="flex gap-3 pt-2">
