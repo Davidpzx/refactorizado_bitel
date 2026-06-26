@@ -204,7 +204,7 @@ function ConfirmarChipDialog({
   const onSubmit = (data: ConfirmarForm) => {
     if (!traslado) return
     confirmar.mutate(
-      { id: traslado.id, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
+      { id: traslado.id, data },
       { onSuccess: () => { reset(); onClose() } },
     )
   }
