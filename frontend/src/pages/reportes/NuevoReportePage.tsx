@@ -136,7 +136,25 @@ const VENTA_DEFAULT: VentaFormData = {
 
 type SalidaItem = { id: string; tipo: string; monto: number; motivo: string }
 
+interface CarritoEquipoItem {
+  id: string
+  inventario_tienda_id: number
+  producto_nombre: string
+  imei_serial: string
+  tipo_venta: 'EQUIPO' | 'ACCESORIO'
+  tipo_pago: 'CONTADO' | 'CUOTAS'
+  precio_venta: number
+  financiera: string
+  por_cobrar_financiera: number
+  costo_snap: number
+}
 
+const newCarritoItem = (): CarritoEquipoItem => ({
+  id: crypto.randomUUID(),
+  inventario_tienda_id: 0, producto_nombre: '', imei_serial: '',
+  tipo_venta: 'EQUIPO', tipo_pago: 'CONTADO', precio_venta: 0,
+  financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
+})
 
 // ── Lista compacta de ventas ──────────────────────────────────────────────────
 
@@ -295,7 +313,7 @@ function AgregarRegistroModal({
 }: {
   open: boolean
   onClose: () => void
-  onConfirm: (data: ModalVentaState) => void
+  onConfirm: (data: ModalVentaState[]) => void
   vendedores: VendedorReporte[]
   planes: Array<{ nombre_plan: string; tipo_alta: string }>
   inventarioItems: InventarioItem[]
@@ -304,8 +322,27 @@ function AgregarRegistroModal({
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
   const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [carrito, setCarrito] = useState<CarritoEquipoItem[]>([newCarritoItem()])
 
-  useEffect(() => { if (open) { setM(initialData ?? MODAL_DEFAULT); setDniStatus('idle') } }, [open, initialData])
+  useEffect(() => {
+    if (open) {
+      setM(initialData ?? MODAL_DEFAULT)
+      setDniStatus('idle')
+      setCarrito([newCarritoItem()])
+    }
+  }, [open, initialData])
+
+  // Resetear carrito al cambiar de sección
+  useEffect(() => {
+    if (m.seccion === 'EQUIPO' || m.seccion === 'ACCESORIO') {
+      setCarrito([newCarritoItem()])
+    }
+  }, [m.seccion])
+
+  const updCarrito = (id: string, changes: Partial<CarritoEquipoItem>) =>
+    setCarrito(prev => prev.map(it => it.id === id ? { ...it, ...changes } : it))
+  const addCarritoItem  = () => setCarrito(prev => [...prev, newCarritoItem()])
+  const removeCarritoItem = (id: string) => setCarrito(prev => prev.filter(it => it.id !== id))
 
   // Auto-lookup cuando DNI tiene exactamente 8 dígitos
   useEffect(() => {
@@ -524,59 +561,108 @@ function AgregarRegistroModal({
         )}
 
         {m.tipo_registro === 'VENTA' && esEquipo && (
-          <div className="space-y-3">
-            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Detalle</Label>
-            <div>
-              <Label className="text-[10px] text-kyro-muted">Producto *</Label>
-              <Input value={m.producto_nombre} list="modal-inv-datalist" placeholder="Nombre del producto"
-                className="kyro-input mt-0.5 h-8 text-xs"
-                onChange={e => {
-                  const v = e.target.value
-                  const match = inventarioItems.find(it => it.producto_nombre === v)
-                  if (match) {
-                    setM(p => ({ ...p, producto_nombre: v, inventario_tienda_id: match.id, costo_snap: Number(match.precio_costo) || 0, precio_venta: Number(match.precio_normal) || 0 }))
-                  } else {
-                    upd('producto_nombre', v)
-                  }
-                }} />
-              <datalist id="modal-inv-datalist">
-                {inventarioItems.map(it => <option key={it.id} value={it.producto_nombre}>{it.tipo} · S/ {Number(it.precio_normal).toFixed(2)}</option>)}
-              </datalist>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] text-kyro-muted">IMEI / Serie</Label>
-                <Input value={m.imei_serial} onChange={e => upd('imei_serial', e.target.value)} maxLength={50} placeholder="IMEI o serie" className="kyro-input mt-0.5 h-8 text-xs" />
+          <div className="space-y-2">
+            <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Productos</Label>
+
+            {carrito.map((item, idx) => (
+              <div key={item.id} className="rounded-lg border border-kyro-border bg-kyro-elevated/30 p-2.5 space-y-2">
+                {/* Selector de producto */}
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-[10px] text-kyro-muted">Producto #{idx + 1} *</Label>
+                    <Select
+                      value={item.inventario_tienda_id}
+                      onChange={e => {
+                        const id = Number(e.target.value)
+                        const found = inventarioItems.find(it => it.id === id)
+                        updCarrito(item.id, {
+                          inventario_tienda_id: id,
+                          producto_nombre: found?.producto_nombre ?? '',
+                          precio_venta: found ? Number(found.precio_normal) : 0,
+                          costo_snap: found ? Number(found.precio_costo) : 0,
+                          imei_serial: found?.imei_serial ?? '',
+                          tipo_venta: (found?.tipo === 'ACCESORIO' ? 'ACCESORIO' : 'EQUIPO'),
+                        })
+                      }}
+                      className="kyro-input mt-0.5 h-8 text-xs"
+                    >
+                      <option value={0}>— Selecciona producto —</option>
+                      {inventarioItems.map(it => (
+                        <option key={it.id} value={it.id}>
+                          {it.producto_nombre} · {it.tipo} · S/ {Number(it.precio_normal).toFixed(2)}
+                          {it.cantidad > 1 ? ` (×${it.cantidad})` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {carrito.length > 1 && (
+                    <Button type="button" variant="glassDanger" size="iconSm" onClick={() => removeCarritoItem(item.id)}>
+                      <X size={13} />
+                    </Button>
+                  )}
+                </div>
+
+                {/* IMEI + tipo pago + precio */}
+                <div className="grid grid-cols-[1fr_100px_90px] gap-2">
+                  <div>
+                    <Label className="text-[10px] text-kyro-muted">IMEI / Serie</Label>
+                    <Input value={item.imei_serial} onChange={e => updCarrito(item.id, { imei_serial: e.target.value })}
+                      maxLength={50} placeholder="Opcional" className="kyro-input mt-0.5 h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-kyro-muted">Tipo pago</Label>
+                    <Select value={item.tipo_pago} onChange={e => updCarrito(item.id, { tipo_pago: e.target.value as 'CONTADO' | 'CUOTAS' })}
+                      className="kyro-input mt-0.5 h-7 text-xs">
+                      <option value="CONTADO">Contado</option>
+                      <option value="CUOTAS">Cuotas</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-kyro-muted">Precio S/</Label>
+                    <Input type="number" step="0.01" min="0" value={item.precio_venta || ''}
+                      onChange={e => updCarrito(item.id, { precio_venta: parseFloat(e.target.value) || 0 })}
+                      className="kyro-input mt-0.5 h-7 text-xs text-right" />
+                  </div>
+                </div>
+
+                {/* Financiera (solo cuotas) */}
+                {item.tipo_pago === 'CUOTAS' && (
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-kyro-border">
+                    <div>
+                      <Label className="text-[10px] text-kyro-muted">Financiera</Label>
+                      <Select value={item.financiera} onChange={e => updCarrito(item.id, { financiera: e.target.value })}
+                        className="kyro-input mt-0.5 h-7 text-xs">
+                        <option value="">Ninguna</option>
+                        {FINANCIERAS.map(f => <option key={f}>{f}</option>)}
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-kyro-muted">Por cobrar fin.</Label>
+                      <Input type="number" step="0.01" min="0" value={item.por_cobrar_financiera || ''}
+                        onChange={e => updCarrito(item.id, { por_cobrar_financiera: parseFloat(e.target.value) || 0 })}
+                        className="kyro-input mt-0.5 h-7 text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-kyro-muted">Costo snap</Label>
+                      <Input type="number" step="0.01" min="0" value={item.costo_snap || ''}
+                        onChange={e => updCarrito(item.id, { costo_snap: parseFloat(e.target.value) || 0 })}
+                        className="kyro-input mt-0.5 h-7 text-xs" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <Label className="text-[10px] text-kyro-muted">Tipo de pago</Label>
-                <Select value={m.tipo_pago} onChange={e => upd('tipo_pago', e.target.value as 'CONTADO' | 'CUOTAS')} className="kyro-input mt-0.5 h-8 text-xs">
-                  <option value="CONTADO">Contado</option>
-                  <option value="CUOTAS">A cuotas</option>
-                </Select>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-[10px] text-kyro-muted w-28 shrink-0">Precio venta (S/)</Label>
-              <Input type="number" step="0.01" min="0" value={m.precio_venta || ''} onChange={e => upd('precio_venta', parseFloat(e.target.value) || 0)} className="kyro-input h-8 text-xs w-32" />
-            </div>
-            {m.tipo_pago === 'CUOTAS' && (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-kyro-border">
-                <div>
-                  <Label className="text-[10px] text-kyro-muted">Financiera</Label>
-                  <Select value={m.financiera} onChange={e => upd('financiera', e.target.value)} className="kyro-input mt-0.5 h-7 text-xs">
-                    <option value="">Ninguna</option>
-                    {FINANCIERAS.map(f => <option key={f}>{f}</option>)}
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-[10px] text-kyro-muted">Por cobrar fin.</Label>
-                  <Input type="number" step="0.01" min="0" value={m.por_cobrar_financiera || ''} onChange={e => upd('por_cobrar_financiera', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-7 text-xs" />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-kyro-muted">Costo snap</Label>
-                  <Input type="number" step="0.01" min="0" value={m.costo_snap || ''} onChange={e => upd('costo_snap', parseFloat(e.target.value) || 0)} className="kyro-input mt-0.5 h-7 text-xs" />
-                </div>
+            ))}
+
+            {/* Agregar otro producto */}
+            <button type="button" onClick={addCarritoItem}
+              className="w-full text-xs text-kyro-muted border border-dashed border-kyro-border rounded-lg py-2 hover:border-kyro-gold hover:text-kyro-gold transition-colors">
+              + Agregar otro producto
+            </button>
+
+            {/* Total carrito */}
+            {carrito.length > 1 && (
+              <div className="text-right text-xs font-semibold text-kyro-body">
+                Total: S/ {carrito.reduce((a, it) => a + (it.precio_venta || 0), 0).toFixed(2)}
               </div>
             )}
           </div>
@@ -633,9 +719,32 @@ function AgregarRegistroModal({
         {/* Confirmar */}
         <div className="flex gap-2 pt-3 border-t border-kyro-border">
           <Button type="button" variant="gold" className="flex-1 gap-2 h-10"
-            disabled={!m.cliente_dni || !m.vendedor_id || (m.tipo_registro === 'VENTA' && !m.seccion)}
-            onClick={() => { onConfirm(m); onClose() }}>
-            {isEdit ? <><Pencil size={15} /> Guardar Cambios</> : <><Plus size={15} /> Guardar Registro</>}
+            disabled={
+              !m.cliente_dni || !m.vendedor_id ||
+              (m.tipo_registro === 'VENTA' && !m.seccion) ||
+              (m.tipo_registro === 'VENTA' && esEquipo && !carrito.some(it => it.producto_nombre && it.precio_venta > 0))
+            }
+            onClick={() => {
+              if (m.tipo_registro === 'VENTA' && esEquipo) {
+                const validos = carrito.filter(it => it.producto_nombre && it.precio_venta > 0)
+                onConfirm(validos.map(item => ({
+                  ...m,
+                  seccion: item.tipo_venta as ModalSeccion,
+                  producto_nombre: item.producto_nombre,
+                  inventario_tienda_id: item.inventario_tienda_id,
+                  imei_serial: item.imei_serial,
+                  tipo_pago: item.tipo_pago,
+                  precio_venta: item.precio_venta,
+                  financiera: item.financiera,
+                  por_cobrar_financiera: item.por_cobrar_financiera,
+                  costo_snap: item.costo_snap,
+                })))
+              } else {
+                onConfirm([m])
+              }
+              onClose()
+            }}>
+            {isEdit ? <><Pencil size={15} /> Guardar Cambios</> : <><Plus size={15} /> Guardar Registro{esEquipo && carrito.filter(it => it.precio_venta > 0).length > 1 ? ` (${carrito.filter(it => it.precio_venta > 0).length})` : ''}</>}
           </Button>
           {m.cliente_dni && <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>}
         </div>
@@ -755,13 +864,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     }
   }
 
-  const handleVentaConfirm = (data: ModalVentaState) => {
-    const v = buildVenta(data)
-    if (editIndex !== null) {
-      update(editIndex, v)
-    } else {
-      append(v)
-    }
+  const handleVentaConfirm = (items: ModalVentaState[]) => {
+    items.forEach((data, i) => {
+      const v = buildVenta(data)
+      if (editIndex !== null && items.length === 1) {
+        update(editIndex, v)
+      } else {
+        append(v)
+      }
+    })
     setEditIndex(null)
     setEditData(undefined)
   }
@@ -1200,14 +1311,20 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div>
 
             {/* Botón agregar registro */}
-            <button
-              type="button"
-              onClick={() => setVentaModalOpen(true)}
-              className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all"
-              style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
-            >
-              <Plus size={18} /> Agregar Registro
-            </button>
+            {!tiendaSeleccionada ? (
+              <div className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg border border-dashed border-kyro-warning/40 bg-kyro-warning/5 text-xs font-medium text-kyro-warning">
+                Selecciona una tienda arriba para agregar registros
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setVentaModalOpen(true)}
+                className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all"
+                style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
+              >
+                <Plus size={18} /> Agregar Registro
+              </button>
+            )}
 
             <SectionPanel
               title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />} number={1}
