@@ -39,7 +39,6 @@ export interface CrearTrasladoPayload {
 
 export interface ConfirmarTrasladoPayload {
   observacion?: string
-  auth_agente_id?: number
   auth_dni: string
 }
 

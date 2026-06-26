@@ -69,9 +69,8 @@ const crearSchema = z.object({
 })
 
 const confirmarSchema = z.object({
-  observacion:    z.string().optional(),
-  auth_dni:       z.string().min(1, 'Requerido'),
-  auth_agente_id: z.number().int().positive().optional(),
+  observacion: z.string().optional(),
+  auth_dni:    z.string().min(1, 'Requerido'),
 })
 
 type CrearForm = z.infer<typeof crearSchema>
@@ -326,21 +325,26 @@ function ConfirmarDialog({
   const confirmar = useConfirmarTraslado()
   const confirmarLote = useConfirmarLoteTraslado()
   const { agentes } = useAgentesSelect()
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ConfirmarForm>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<ConfirmarForm>({
     resolver: zodResolver(confirmarSchema),
   })
+
+  const dniWatch = watch('auth_dni') ?? ''
+  const nombreConfirma = agentes.find(
+    a => a.dni?.trim().toUpperCase() === dniWatch.trim().toUpperCase()
+  )?.nombres ?? ''
 
   const onSubmit = (data: ConfirmarForm) => {
     if (!traslado) return
     if (lote && traslado.codigo_lote) {
       confirmarLote.mutate(
-        { codigoLote: traslado.codigo_lote, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
+        { codigoLote: traslado.codigo_lote, data },
         { onSuccess: () => { reset(); onClose() } },
       )
       return
     }
     confirmar.mutate(
-      { id: traslado.id, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
+      { id: traslado.id, data },
       { onSuccess: () => { reset(); onClose() } },
     )
   }
@@ -357,17 +361,21 @@ function ConfirmarDialog({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="c_auth_dni">DNI *</Label>
-            <Input id="c_auth_dni" {...register('auth_dni')} className="mt-1" />
+            <Label htmlFor="c_auth_dni">Tu DNI *</Label>
+            <Input id="c_auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
             {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
-          <div>
-            <Label htmlFor="c_agente">Agente</Label>
-            <Select id="c_agente" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1">
-              <option value="">Ninguno</option>
-              {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
-            </Select>
-          </div>
+          {dniWatch.trim() && (
+            <div>
+              <Label>Nombre</Label>
+              <Input
+                value={nombreConfirma}
+                readOnly
+                placeholder="No encontrado en el sistema"
+                className="mt-1 bg-kyro-surface/50 text-kyro-muted cursor-default"
+              />
+            </div>
+          )}
         </div>
         {mutError && (
           <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al confirmar.'}</p>
@@ -393,14 +401,20 @@ function ConfirmarChipDialog({
   onClose: () => void
 }) {
   const confirmar = useConfirmarTrasladoChip()
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ConfirmarForm>({
+  const { agentes } = useAgentesSelect()
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<ConfirmarForm>({
     resolver: zodResolver(confirmarSchema),
   })
+
+  const dniWatch = watch('auth_dni') ?? ''
+  const nombreConfirma = agentes.find(
+    a => a.dni?.trim().toUpperCase() === dniWatch.trim().toUpperCase()
+  )?.nombres ?? ''
 
   const onSubmit = (data: ConfirmarForm) => {
     if (!traslado) return
     confirmar.mutate(
-      { id: traslado.id, data: { ...data, auth_agente_id: data.auth_agente_id || undefined } },
+      { id: traslado.id, data },
       { onSuccess: () => { reset(); onClose() } },
     )
   }
@@ -416,14 +430,21 @@ function ConfirmarChipDialog({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="cc_auth_dni">DNI *</Label>
-            <Input id="cc_auth_dni" {...register('auth_dni')} className="mt-1" />
+            <Label htmlFor="cc_auth_dni">Tu DNI *</Label>
+            <Input id="cc_auth_dni" {...register('auth_dni')} placeholder="12345678" className="mt-1" />
             {errors.auth_dni && <p className="text-kyro-danger text-xs mt-1">{errors.auth_dni.message}</p>}
           </div>
-          <div>
-            <Label htmlFor="cc_agente">ID Agente</Label>
-            <Input id="cc_agente" type="number" min="1" {...register('auth_agente_id', { valueAsNumber: true })} className="mt-1" />
-          </div>
+          {dniWatch.trim() && (
+            <div>
+              <Label>Nombre</Label>
+              <Input
+                value={nombreConfirma}
+                readOnly
+                placeholder="No encontrado en el sistema"
+                className="mt-1 bg-kyro-surface/50 text-kyro-muted cursor-default"
+              />
+            </div>
+          )}
         </div>
         {mutError && (
           <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al confirmar.'}</p>

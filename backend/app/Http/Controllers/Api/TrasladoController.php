@@ -226,30 +226,12 @@ class TrasladoController extends Controller
         $user    = Auth::user();
         $esAdmin = $user->rol === 'admin';
 
-        $observacion   = substr(trim($request->input('observacion', '')), 0, 200);
-        $authAgenteId  = (int) $request->input('auth_agente_id', 0);
-        $authDni       = trim($request->input('auth_dni', ''));
-
+        $observacion     = substr(trim($request->input('observacion', '')), 0, 200);
+        $authDni         = trim($request->input('auth_dni', ''));
         $confirmadoPorId = null;
-        if (!$esAdmin) {
-            if (!$authAgenteId || !$authDni) {
-                return response()->json(['success' => false, 'message' => 'Credenciales de autorización requeridas.'], 422);
-            }
-            $agente = Agente::where('id', $authAgenteId)
-                ->whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
-                ->where('estado', 'ACTIVO')
-                ->first();
-            if (!$agente) {
-                return response()->json(['success' => false, 'message' => 'Credenciales inválidas o agente no activo.'], 403);
-            }
-            $confirmadoPorId = $authAgenteId;
-        } else {
-            if (empty($authDni)) {
-                $usuarioDni = Schema::hasColumn('usuarios', 'dni')
-                    ? DB::table('usuarios')->where('id', $user->id)->value('dni')
-                    : null;
-                $authDni    = $usuarioDni ?? '';
-            }
+
+        if (!$authDni) {
+            return response()->json(['success' => false, 'message' => 'Tu DNI es requerido.'], 422);
         }
 
         $result = DB::transaction(function () use ($id, $user, $esAdmin, $observacion, $confirmadoPorId, $authDni) {
