@@ -34,6 +34,7 @@ export interface CrearTrasladoPayload {
   tienda_destino: string
   cantidad?: number
   notas?: string
+  auth_dni?: string
 }
 
 export interface ConfirmarTrasladoPayload {
@@ -83,4 +84,5 @@ export interface CrearTrasladoChipPayload {
   tienda_destino: string
   cantidad: number
   notas?: string
+  auth_dni?: string
 }

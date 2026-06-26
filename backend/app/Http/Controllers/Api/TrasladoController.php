@@ -65,6 +65,7 @@ class TrasladoController extends Controller
         // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
         $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
         $enviadoPorId   = null;
+        $authDni        = trim($request->input('auth_dni', '')) ?: null;
 
         $tiendaDestino = trim($request->input('tienda_destino', ''));
         $notas         = substr(trim($request->input('notas', '')), 0, 200);
@@ -121,7 +122,7 @@ class TrasladoController extends Controller
                         'notas'          => $notas ?: null,
                         'codigo_lote'    => $codigoLote,
                         'enviado_por_id' => $enviadoPorId,
-                        'enviado_dni'    => null,
+                        'enviado_dni'    => $authDni,
                     ]);
 
                     $ok++;
@@ -193,7 +194,7 @@ class TrasladoController extends Controller
                 'creado_por'         => $user->id,
                 'notas'              => $notas ?: null,
                 'enviado_por_id'     => $enviadoPorId,
-                'enviado_dni'        => null,
+                'enviado_dni'        => $authDni,
                 'producto_nombre_snap' => $origen->producto_nombre,
                 'imei_serial_snap'   => $origen->imei_serial,
             ]);

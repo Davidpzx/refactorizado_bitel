@@ -70,6 +70,7 @@ class TrasladoChipsController extends Controller
         // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
         $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
         $enviadoPorId   = null;
+        $authDni        = trim($request->input('auth_dni', '')) ?: null;
 
         $chip = InventarioChip::find($chipId);
         if (!$chip) {
@@ -96,7 +97,7 @@ class TrasladoChipsController extends Controller
             'creado_por'     => $user->id,
             'notas'          => $notas ?: null,
             'enviado_por_id' => $enviadoPorId,
-            'enviado_dni'    => null,
+            'enviado_dni'    => $authDni,
         ]);
 
         $updated = InventarioChip::where('id', $chipId)
