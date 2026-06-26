@@ -83,7 +83,7 @@ function CrearChipDialog({
 
   const onSubmit = (data: CrearForm) => {
     crear.mutate(
-      { ...data, auth_agente_id: data.auth_agente_id || undefined, notas: data.notas || undefined },
+      { ...data, notas: data.notas || undefined },
       { onSuccess: () => { reset(); onClose() } },
     )
   }
