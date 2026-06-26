@@ -55,8 +55,6 @@ class TrasladoChipsController extends Controller
         $tiendaDestino = trim($request->input('tienda_destino', ''));
         $cantidad      = (int) $request->input('cantidad', 0);
         $notas         = substr(trim($request->input('notas', '')), 0, 200);
-        $authAgenteId  = (int) $request->input('auth_agente_id', 0);
-        $authDni       = trim($request->input('auth_dni', ''));
 
         if (!$chipId || !$tiendaDestino || $cantidad <= 0) {
             return response()->json(['success' => false, 'message' => 'Datos inválidos o incompletos.'], 422);
@@ -64,37 +62,14 @@ class TrasladoChipsController extends Controller
         if ($tiendaOrigen === $tiendaDestino) {
             return response()->json(['success' => false, 'message' => 'Tienda destino igual a tienda origen.'], 422);
         }
-        if (!$authDni) {
-            return response()->json(['success' => false, 'message' => 'Credenciales de autorización requeridas.'], 422);
-        }
-
-        $enviadoPorId = null;
-        if ($authAgenteId) {
-            $agente = Agente::where('id', $authAgenteId)
-                ->whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
-                ->where('estado', 'ACTIVO')
-                ->first();
-            if ($agente) {
-                $enviadoPorId = $authAgenteId;
-            } elseif (!$esAdmin) {
-                return response()->json(['success' => false, 'message' => 'Credenciales inválidas o agente no activo.'], 403);
-            }
-        } elseif (!$esAdmin) {
-            return response()->json(['success' => false, 'message' => 'Credenciales de autorización inválidas.'], 403);
-        }
 
         if (!$esAdmin && $tiendaOrigen !== $user->tienda_id) {
             return response()->json(['success' => false, 'message' => 'Solo puedes trasladar chips de tu propia tienda.'], 403);
         }
 
-        $isAuthorizedByAdmin = $esAdmin;
-        if (!$isAuthorizedByAdmin && $authDni) {
-            $isAuthorizedByAdmin = Agente::where('dni', $authDni)
-                ->where('estado', 'ACTIVO')
-                ->where('es_gerencia', 1)
-                ->exists();
-        }
-        $estadoTraslado = $isAuthorizedByAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
+        $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        $enviadoPorId   = null;
 
         $chip = InventarioChip::find($chipId);
         if (!$chip) {
@@ -121,7 +96,7 @@ class TrasladoChipsController extends Controller
             'creado_por'     => $user->id,
             'notas'          => $notas ?: null,
             'enviado_por_id' => $enviadoPorId,
-            'enviado_dni'    => $authDni ?: null,
+            'enviado_dni'    => null,
         ]);
 
         $updated = InventarioChip::where('id', $chipId)
@@ -133,7 +108,7 @@ class TrasladoChipsController extends Controller
             return response()->json(['success' => false, 'message' => 'Stock insuficiente. Intenta de nuevo.'], 422);
         }
 
-        $msg = $isAuthorizedByAdmin
+        $msg = $esAdmin
             ? "{$cantidad} chip(s) enviados a {$tiendaDestino} EN TRÁNSITO."
             : "{$cantidad} chip(s) PENDIENTES DE APROBACIÓN.";
 

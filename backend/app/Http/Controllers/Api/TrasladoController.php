@@ -62,36 +62,9 @@ class TrasladoController extends Controller
         $user    = Auth::user();
         $esAdmin = $user->rol === 'admin';
 
-        $authDni     = trim($request->input('auth_dni', ''));
-        $authAgenteId = (int) $request->input('auth_agente_id', 0);
-
-        if (!$authDni) {
-            return response()->json(['success' => false, 'message' => 'Credenciales de autorización requeridas.'], 422);
-        }
-
-        $enviadoPorId = null;
-        if ($authAgenteId) {
-            $agente = Agente::where('id', $authAgenteId)
-                ->whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
-                ->where('estado', 'ACTIVO')
-                ->first();
-            if ($agente) {
-                $enviadoPorId = $authAgenteId;
-            } elseif (!$esAdmin) {
-                return response()->json(['success' => false, 'message' => 'Credenciales inválidas o agente no activo.'], 403);
-            }
-        } elseif (!$esAdmin) {
-            return response()->json(['success' => false, 'message' => 'Credenciales de autorización inválidas.'], 403);
-        }
-
-        $isAuthorizedByAdmin = $esAdmin;
-        if (!$isAuthorizedByAdmin && $authDni) {
-            $isAuthorizedByAdmin = Agente::where('dni', $authDni)
-                ->where('estado', 'ACTIVO')
-                ->where('es_gerencia', 1)
-                ->exists();
-        }
-        $estadoTraslado = $isAuthorizedByAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
+        $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        $enviadoPorId   = null;
 
         $tiendaDestino = trim($request->input('tienda_destino', ''));
         $notas         = substr(trim($request->input('notas', '')), 0, 200);
@@ -122,7 +95,7 @@ class TrasladoController extends Controller
 
             DB::transaction(function () use (
                 $ids, $tiendaDestino, $estadoTraslado, $user, $esAdmin, $notas,
-                $codigoLote, $enviadoPorId, $authDni, &$ok, &$skip
+                $codigoLote, $enviadoPorId, &$ok, &$skip
             ) {
                 foreach ($ids as $pid) {
                     $item = InventarioTienda::where('id', $pid)
@@ -148,14 +121,14 @@ class TrasladoController extends Controller
                         'notas'          => $notas ?: null,
                         'codigo_lote'    => $codigoLote,
                         'enviado_por_id' => $enviadoPorId,
-                        'enviado_dni'    => $authDni ?: null,
+                        'enviado_dni'    => null,
                     ]);
 
                     $ok++;
                 }
             });
 
-            $msg = $isAuthorizedByAdmin
+            $msg = $esAdmin
                 ? "{$ok} item(s) enviado(s) a {$tiendaDestino} EN TRÁNSITO."
                 : "{$ok} item(s) PENDIENTES DE APROBACIÓN.";
             if (!empty($skip)) $msg .= ' Omitidos: ' . implode('; ', $skip);
@@ -177,7 +150,7 @@ class TrasladoController extends Controller
 
         $result = DB::transaction(function () use (
             $productoId, $tiendaDestino, $cantidad, $estadoTraslado,
-            $user, $esAdmin, $notas, $enviadoPorId, $authDni, $isAuthorizedByAdmin
+            $user, $esAdmin, $notas, $enviadoPorId
         ) {
             $origen = InventarioTienda::where('id', $productoId)
                 ->where('estado', 'DISPONIBLE')
@@ -220,7 +193,7 @@ class TrasladoController extends Controller
                 'creado_por'         => $user->id,
                 'notas'              => $notas ?: null,
                 'enviado_por_id'     => $enviadoPorId,
-                'enviado_dni'        => $authDni ?: null,
+                'enviado_dni'        => null,
                 'producto_nombre_snap' => $origen->producto_nombre,
                 'imei_serial_snap'   => $origen->imei_serial,
             ]);
@@ -235,7 +208,7 @@ class TrasladoController extends Controller
             return response()->json(['success' => false, 'message' => $result['error']], 422);
         }
 
-        $msg = $isAuthorizedByAdmin
+        $msg = $esAdmin
             ? "\"{$result['producto_nombre']}\" ({$cantidad} ud.) enviado a {$tiendaDestino} EN TRÁNSITO."
             : "\"{$result['producto_nombre']}\" ({$cantidad} ud.) PENDIENTE DE APROBACIÓN.";
 
