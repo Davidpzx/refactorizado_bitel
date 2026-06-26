@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History } from 'lucide-react'
+import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History, LayoutGrid } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
@@ -399,6 +399,12 @@ export function InventarioPage() {
                 </Link>
               </>
             )}
+            <Link
+              to="/inventario/matriz"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-600 shadow-sm transition-all hover:bg-emerald-500/20 dark:text-emerald-400"
+            >
+              <LayoutGrid size={14} /> Ver Matriz
+            </Link>
             <Button variant="gold" onClick={abrirCrear}>+ Nuevo item</Button>
           </div>
         }

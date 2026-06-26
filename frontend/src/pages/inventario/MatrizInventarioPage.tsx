@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
+import { ArrowLeft } from 'lucide-react'
 
 interface TiendaInfo {
   codigo: string
@@ -57,6 +59,12 @@ export function MatrizInventarioPage() {
         description="Vista cruzada de stock por tienda y producto."
         actions={
           <div className="flex gap-2">
+            <Link
+              to="/inventario"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
+            >
+              <ArrowLeft size={14} /> Volver
+            </Link>
             <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('EQUIPO')}>
               Exportar Equipos CSV
             </Button>
