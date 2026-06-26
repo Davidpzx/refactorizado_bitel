@@ -22,7 +22,7 @@ class InventarioController extends Controller
         $items = InventarioTienda::query()
             ->when($request->q,      fn($q, $t) => $q->buscar($t))
             ->when($user->rol !== 'admin', fn($q) => $q->porTienda($user->tienda_id))
-            ->when($user->rol === 'admin' && $request->tienda, fn($q, $t) => $q->porTienda($t))
+            ->when($user->rol === 'admin' && $request->filled('tienda'), fn($q) => $q->porTienda($request->tienda))
             ->when($request->tipo,   fn($q, $t) => $q->porTipo($t))
             ->when($request->estado, fn($q, $e) => $q->porEstado($e))
             ->orderByDesc('fecha_registro')
