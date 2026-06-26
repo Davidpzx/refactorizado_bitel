@@ -206,27 +206,35 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
           </div>
           <div>
             <label htmlFor="usuario-tienda" className="mb-1 block text-xs text-kyro-muted">Tienda</label>
-            <Select
-              id="usuario-tienda"
-              value={form.tienda_id ?? ''}
-              onChange={e => { setForm(f => ({ ...f, tienda_id: e.target.value })); setErrores(er => ({ ...er, tienda_id: undefined })) }}
-            >
-              <option value="">— Sin tienda asignada —</option>
-              {tiendas.map(t => (
-                <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>
-              ))}
-            </Select>
-            {errores.tienda_id && <p className="mt-1 text-[11px] text-kyro-danger">{errores.tienda_id}</p>}
+            {form.rol === 'admin' ? (
+              <div className="flex h-9 items-center rounded-kyro border border-kyro-border bg-kyro-elevated px-3 text-xs text-kyro-muted">
+                Acceso a todas las tiendas
+              </div>
+            ) : (
+              <>
+                <Select
+                  id="usuario-tienda"
+                  value={form.tienda_id ?? ''}
+                  onChange={e => { setForm(f => ({ ...f, tienda_id: e.target.value })); setErrores(er => ({ ...er, tienda_id: undefined })) }}
+                >
+                  <option value="">— Sin tienda asignada —</option>
+                  {tiendas.map(t => (
+                    <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>
+                  ))}
+                </Select>
+                {errores.tienda_id && <p className="mt-1 text-[11px] text-kyro-danger">{errores.tienda_id}</p>}
+              </>
+            )}
           </div>
           {form.rol === 'tienda' && (
             <div className="sm:col-span-2">
-              <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado</label>
+              <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado <span className="text-kyro-muted">(opcional)</span></label>
               <Select
                 id="usuario-agente"
                 value={form.agente_id}
                 onChange={e => { setForm(f => ({ ...f, agente_id: e.target.value })); setErrores(er => ({ ...er, agente_id: undefined })) }}
               >
-                <option value="">Selecciona un agente</option>
+                <option value="">— Sin agente vinculado —</option>
                 {agentes.map(a => (
                   <option key={a.id} value={a.id}>{a.nombres} · {a.dni} · {a.tienda_base}</option>
                 ))}

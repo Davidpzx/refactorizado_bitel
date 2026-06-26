@@ -59,9 +59,5 @@ export function validarUsuario(form: FormularioUsuario, esEdicion: boolean): Err
     errores.password = 'Mínimo 6 caracteres.'
   }
 
-  if (form.rol === 'tienda' && !form.agente_id) {
-    errores.agente_id = 'Selecciona el agente vinculado a este usuario de tienda.'
-  }
-
   return errores
 }
