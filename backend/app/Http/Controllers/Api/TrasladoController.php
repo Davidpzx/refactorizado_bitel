@@ -234,6 +234,16 @@ class TrasladoController extends Controller
             return response()->json(['success' => false, 'message' => 'Tu DNI es requerido.'], 422);
         }
 
+        $agente = Agente::whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
+            ->where('estado', 'ACTIVO')
+            ->first();
+
+        if (!$agente) {
+            return response()->json(['success' => false, 'message' => 'DNI no corresponde a un agente activo.'], 403);
+        }
+
+        $confirmadoPorId = $agente->id;
+
         $result = DB::transaction(function () use ($id, $user, $esAdmin, $observacion, $confirmadoPorId, $authDni) {
             $traslado = TrasladoStock::where('id', $id)
                 ->where('estado', 'PENDIENTE')
