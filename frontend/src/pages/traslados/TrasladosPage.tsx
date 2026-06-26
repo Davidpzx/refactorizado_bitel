@@ -42,18 +42,18 @@ const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
 }
 
 const estadoLabel: Record<EstadoTraslado, string> = {
-  PENDIENTE:             'Pendiente',
-  PENDIENTE_APROBACION:  'Enviado',
-  CONFIRMADO:            'Confirmado',
+  PENDIENTE:             'Enviado',
+  PENDIENTE_APROBACION:  'Pendiente de Envío',
+  CONFIRMADO:            'Recibido',
   RECHAZADO:             'Rechazado',
   CANCELADO:             'Cancelado',
 }
 
 const ESTADOS = [
   { value: '', label: 'Todos', tone: 'indigo' as const },
-  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
-  { value: 'PENDIENTE_APROBACION', label: 'Aprobacion', tone: 'gold' as const },
-  { value: 'CONFIRMADO', label: 'Confirmado', tone: 'success' as const },
+  { value: 'PENDIENTE_APROBACION', label: 'Pend. Envío', tone: 'warning' as const },
+  { value: 'PENDIENTE', label: 'Enviado', tone: 'gold' as const },
+  { value: 'CONFIRMADO', label: 'Recibido', tone: 'success' as const },
   { value: 'RECHAZADO', label: 'Rechazado', tone: 'danger' as const },
   { value: 'CANCELADO', label: 'Cancelado', tone: 'danger' as const },
 ]
