@@ -1131,6 +1131,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     },
     onSuccess: (reporte) => {
       setSavedReporteId(reporte.id)
+      // Actualiza la URL sin remontar el componente — así el refresh recarga el cuadre guardado
+      window.history.replaceState(null, '', `/reportes/${reporte.id}/editar`)
       setBorradorMsg('✓ Reporte guardado')
       setTimeout(() => setBorradorMsg(''), 3000)
     },
