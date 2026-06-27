@@ -26,6 +26,7 @@ import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
 import { reportesApi } from '../../services/reportes.api'
 import type { VendedorReporte } from '../../types/reporte'
+import { ticketsApi } from '../../services/tickets.api'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
@@ -834,7 +835,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
-  const inicializadoRef = useRef(false)
+  const inicializadoRef        = useRef(false)
+  const pendingTicketVentas    = useRef<VentaFormData[]>([])
+  const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
 
   const { data: reporteEditar, isLoading: cargandoReporte } = useQuery({
     queryKey: ['reporte', reporteId],
@@ -936,6 +939,48 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   const [crmMsg, setCrmMsg] = useState('')
 
+  // ── Ticket de venta ────────────────────────────────────────────────────────
+  // openPrint=true → abre ventana de impresión directamente (para submit final)
+  // openPrint=false → acumula IDs en el panel flotante (para borrador)
+  const crearTicketsVentas = async (lista: VentaFormData[], openPrint = false) => {
+    const ids: number[] = []
+    for (const v of lista) {
+      const isLinea  = v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO'
+      const isEquipo = v.tipo_venta === 'EQUIPO'   || v.tipo_venta === 'ACCESORIO'
+      const monto    = isLinea  ? (v.cobrado_unitario || 0) * (v.cantidad || 1)
+                     : isEquipo ? (v.precio_venta || 0)
+                     : (v.monto_total || 0)
+      if (monto <= 0) continue
+
+      const desc = isLinea
+        ? `${v.tipo_venta === 'POSTPAGO' ? 'Postpago' : 'Prepago'} · ${[v.plan_nombre, v.tipo_alta].filter(Boolean).join(' · ')}`
+        : isEquipo
+        ? `${v.tipo_venta} · ${v.producto_nombre || ''}${v.imei_serial ? ' · ' + v.imei_serial : ''}`
+        : v.tipo_venta === 'APOYO'
+        ? `Apoyo ${v.tienda_destino || ''} · ${v.plan_nombre || ''}`
+        : v.subtipo || v.tipo_venta
+
+      const vendedorObj = vendedores.find(vv => vv.id === v.vendedor_id)
+      try {
+        const ticket = await ticketsApi.crear({
+          tienda_id:      tiendaSeleccionada,
+          agente_id:      usuario?.agente_id ?? undefined,
+          vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
+          descripcion:    desc.trim(),
+          monto,
+          cantidad:       v.cantidad || 1,
+          nombre_cliente: v.cliente_nombre || '',
+          dni_cliente:    v.cliente_dni    || '',
+        })
+        ids.push(ticket.id)
+        if (openPrint) {
+          window.open(`/tickets/imprimir/${ticket.id}?print=1`, '_blank', 'width=420,height=680')
+        }
+      } catch { /* silent */ }
+    }
+    if (!openPrint && ids.length > 0) setPendingPrintIds(prev => [...prev, ...ids])
+  }
+
   const handleVentaConfirm = (items: ModalVentaState[]) => {
     const consultaItems = items.filter(d => d.tipo_registro === 'CONSULTA')
     const ventaItems    = items.filter(d => d.tipo_registro !== 'CONSULTA')
@@ -973,6 +1018,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         update(editIndex, v)
       } else {
         append(v)
+        pendingTicketVentas.current.push(v) // Se imprimirán al guardar borrador
       }
     })
     setEditIndex(null)
@@ -1108,14 +1154,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     const payload = { form: getValues(), salidaItems, timestamp: Date.now() }
     try {
       await borradorApi.guardar(payload as unknown as Record<string, unknown>)
-      // Espejo local para rescate por timestamp si luego se cae la conexión
       try { localStorage.setItem(LS_KEY, JSON.stringify(payload)) } catch { /* quota */ }
       if (!silencioso) { setBorradorMsg('Guardado en la nube ☁️'); setTimeout(() => setBorradorMsg(''), 2000) }
     } catch {
-      // Sin conexión: fallback a localStorage
       try { localStorage.setItem(LS_KEY, JSON.stringify(payload)) } catch { /* quota */ }
       if (!silencioso) { setBorradorMsg('Sin conexión — guardado local'); setTimeout(() => setBorradorMsg(''), 2500) }
     }
+    // Generar tickets para ventas nuevas desde el último guardado
+    const toTicket = pendingTicketVentas.current.splice(0)
+    if (toTicket.length > 0) crearTicketsVentas(toTicket)
   }
 
   function restaurarBorrador(data: Record<string, unknown>) {
@@ -1295,6 +1342,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   })
 
   const onSubmit = (data: FormData) => {
+    // Tickets de ventas pendientes que no pasaron por borrador
+    const toTicket = pendingTicketVentas.current.splice(0)
+    if (toTicket.length > 0) crearTicketsVentas(toTicket, true)
     guardar.mutate(data)
   }
 
@@ -1749,6 +1799,29 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           agenteId={usuario?.agente_id ?? 0}
           vendedor={usuario?.nombre ?? ''}
         />
+      )}
+
+      {/* ── Panel flotante: tickets generados para imprimir ── */}
+      {pendingPrintIds.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 kyro-card p-3 w-64 shadow-2xl border border-kyro-success/40">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-kyro-success">
+              <Printer size={12} className="inline mr-1" />
+              {pendingPrintIds.length} ticket{pendingPrintIds.length > 1 ? 's' : ''} listo{pendingPrintIds.length > 1 ? 's' : ''}
+            </p>
+            <button onClick={() => setPendingPrintIds([])} className="text-kyro-muted hover:text-kyro-body text-xs">✕</button>
+          </div>
+          <div className="flex flex-col gap-1">
+            {pendingPrintIds.map(id => (
+              <button key={id}
+                onClick={() => window.open(`/tickets/imprimir/${id}?print=1`, '_blank', 'width=420,height=680')}
+                className="w-full text-left text-[11px] px-2 py-1.5 rounded border border-kyro-success/30 text-kyro-success hover:bg-kyro-success/10 transition-colors flex items-center gap-1.5">
+                <Printer size={11} />
+                Ticket #{String(id).padStart(6, '0')}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <AgregarRegistroModal
