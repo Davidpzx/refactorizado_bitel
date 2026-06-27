@@ -834,9 +834,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
-  // ID del reporte después de guardar por primera vez (modo crear → pasa a editar sin navegar)
-  const [savedReporteId, setSavedReporteId] = useState<number | null>(null)
-  const efectivoReporteId = savedReporteId ?? (esEdicion ? reporteId : null)
   const inicializadoRef        = useRef(false)
   const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
   const cerrarCajaRef          = useRef(false)   // true → tras guardar, limpiar para cuadre nuevo
@@ -1126,21 +1123,17 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             observacion: salida.motivo,
           })),
       }
-      return efectivoReporteId
-        ? reportesApi.reprocesar(efectivoReporteId, payload)
+      return esEdicion
+        ? reportesApi.reprocesar(reporteId, payload)
         : reportesApi.crear(payload)
     },
     onSuccess: (reporte) => {
       if (cerrarCajaRef.current) {
-        // Cerrar caja → navegar a nuevo cuadre limpio
         cerrarCajaRef.current = false
         navigate('/reportes/nuevo')
       } else {
-        // Guardar normal → quedarse en la misma página
-        setSavedReporteId(reporte.id)
-        window.history.replaceState(null, '', `/reportes/${reporte.id}/editar`)
-        setBorradorMsg('✓ Reporte guardado')
-        setTimeout(() => setBorradorMsg(''), 3000)
+        // replace:true → no queda la página en blanco en el historial
+        navigate(`/reportes/${reporte.id}/editar`, { replace: true })
       }
     },
   })
