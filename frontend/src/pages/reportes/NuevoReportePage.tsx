@@ -839,6 +839,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const efectivoReporteId = savedReporteId ?? (esEdicion ? reporteId : null)
   const inicializadoRef        = useRef(false)
   const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
+  const cerrarCajaRef          = useRef(false)   // true → tras guardar, limpiar para cuadre nuevo
   const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
 
   const { data: reporteEditar, isLoading: cargandoReporte } = useQuery({
@@ -1130,11 +1131,17 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         : reportesApi.crear(payload)
     },
     onSuccess: (reporte) => {
-      setSavedReporteId(reporte.id)
-      // Actualiza la URL sin remontar el componente — así el refresh recarga el cuadre guardado
-      window.history.replaceState(null, '', `/reportes/${reporte.id}/editar`)
-      setBorradorMsg('✓ Reporte guardado')
-      setTimeout(() => setBorradorMsg(''), 3000)
+      if (cerrarCajaRef.current) {
+        // Cerrar caja → navegar a nuevo cuadre limpio
+        cerrarCajaRef.current = false
+        navigate('/reportes/nuevo')
+      } else {
+        // Guardar normal → quedarse en la misma página
+        setSavedReporteId(reporte.id)
+        window.history.replaceState(null, '', `/reportes/${reporte.id}/editar`)
+        setBorradorMsg('✓ Reporte guardado')
+        setTimeout(() => setBorradorMsg(''), 3000)
+      }
     },
   })
 
@@ -1355,6 +1362,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   const onSubmit = (data: FormData) => {
     // Crear tickets para TODAS las ventas del reporte (abre impresión directa)
+    const todasVentas = data.ventas ?? []
+    if (todasVentas.length > 0) crearTicketsVentas(todasVentas, true)
+    guardar.mutate(data)
+  }
+
+  const onSubmitYNuevo = (data: FormData) => {
+    cerrarCajaRef.current = true
     const todasVentas = data.ventas ?? []
     if (todasVentas.length > 0) crearTicketsVentas(todasVentas, true)
     guardar.mutate(data)
@@ -1789,7 +1803,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           </p>
         )}
 
-        <div className="flex gap-3 pb-8">
+        <div className="flex gap-3">
           <Button type="submit" variant="gold" disabled={guardar.isPending || stockInsuficiente}
             className="flex-1 h-11 gap-2 text-base font-semibold">
             <UploadCloud size={18} />
@@ -1799,6 +1813,21 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             <X size={16} /> Cancelar
           </Button>
         </div>
+
+        {!esEdicion && (
+          <div className="pb-8">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={guardar.isPending || stockInsuficiente}
+              onClick={handleSubmit(onSubmitYNuevo)}
+              className="w-full h-12 gap-2 text-base font-semibold border-2 border-kyro-indigo/50 text-kyro-indigo hover:bg-kyro-indigo/10"
+            >
+              <Receipt size={18} />
+              {guardar.isPending ? 'Guardando...' : 'Guardar y Cerrar Caja · Empezar Nuevo'}
+            </Button>
+          </div>
+        )}
 
       </form>
 
