@@ -26,7 +26,6 @@ import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
 import { reportesApi } from '../../services/reportes.api'
 import type { VendedorReporte } from '../../types/reporte'
-import { ticketsApi } from '../../services/tickets.api'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
