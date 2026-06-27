@@ -836,7 +836,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
   const inicializadoRef        = useRef(false)
-  const pendingTicketVentas    = useRef<VentaFormData[]>([])
+  const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
   const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
 
   const { data: reporteEditar, isLoading: cargandoReporte } = useQuery({
@@ -940,9 +940,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const [crmMsg, setCrmMsg] = useState('')
 
   // ── Ticket de venta ────────────────────────────────────────────────────────
-  // openPrint=true → abre ventana de impresión directamente (para submit final)
-  // openPrint=false → acumula IDs en el panel flotante (para borrador)
   const crearTicketsVentas = async (lista: VentaFormData[], openPrint = false) => {
+    if (lista.length === 0) return
     const ids: number[] = []
     for (const v of lista) {
       const isLinea  = v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO'
@@ -962,7 +961,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
       const vendedorObj = vendedores.find(vv => vv.id === v.vendedor_id)
       try {
-        const ticket = await ticketsApi.crear({
+        const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', {
           tienda_id:      tiendaSeleccionada,
           agente_id:      usuario?.agente_id ?? undefined,
           vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
@@ -972,11 +971,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           nombre_cliente: v.cliente_nombre || '',
           dni_cliente:    v.cliente_dni    || '',
         })
-        ids.push(ticket.id)
-        if (openPrint) {
-          window.open(`/tickets/imprimir/${ticket.id}?print=1`, '_blank', 'width=420,height=680')
+        if (res.data?.ok && res.data?.id) {
+          ids.push(res.data.id)
+          if (openPrint) {
+            window.open(`/tickets/imprimir/${res.data.id}?print=1`, '_blank', 'width=420,height=680')
+          }
         }
-      } catch { /* silent */ }
+      } catch (err) {
+        console.error('[ticket] Error al crear ticket de venta:', err)
+      }
     }
     if (!openPrint && ids.length > 0) setPendingPrintIds(prev => [...prev, ...ids])
   }
@@ -1018,7 +1021,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         update(editIndex, v)
       } else {
         append(v)
-        pendingTicketVentas.current.push(v) // Se imprimirán al guardar borrador
       }
     })
     setEditIndex(null)
@@ -1160,9 +1162,11 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       try { localStorage.setItem(LS_KEY, JSON.stringify(payload)) } catch { /* quota */ }
       if (!silencioso) { setBorradorMsg('Sin conexión — guardado local'); setTimeout(() => setBorradorMsg(''), 2500) }
     }
-    // Generar tickets para ventas nuevas desde el último guardado
-    const toTicket = pendingTicketVentas.current.splice(0)
-    if (toTicket.length > 0) crearTicketsVentas(toTicket)
+    // Tickets solo para las ventas agregadas desde el último borrador guardado
+    const todasVentas = getValues('ventas') ?? []
+    const nuevas = todasVentas.slice(lastTicketedCount.current)
+    lastTicketedCount.current = todasVentas.length
+    if (nuevas.length > 0) crearTicketsVentas(nuevas)
   }
 
   function restaurarBorrador(data: Record<string, unknown>) {
@@ -1342,9 +1346,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   })
 
   const onSubmit = (data: FormData) => {
-    // Tickets de ventas pendientes que no pasaron por borrador
-    const toTicket = pendingTicketVentas.current.splice(0)
-    if (toTicket.length > 0) crearTicketsVentas(toTicket, true)
+    // Crear tickets para TODAS las ventas del reporte (abre impresión directa)
+    const todasVentas = data.ventas ?? []
+    if (todasVentas.length > 0) crearTicketsVentas(todasVentas, true)
     guardar.mutate(data)
   }
 
