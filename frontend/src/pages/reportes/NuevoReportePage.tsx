@@ -834,6 +834,9 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
+  // ID del reporte después de guardar por primera vez (modo crear → pasa a editar sin navegar)
+  const [savedReporteId, setSavedReporteId] = useState<number | null>(null)
+  const efectivoReporteId = savedReporteId ?? (esEdicion ? reporteId : null)
   const inicializadoRef        = useRef(false)
   const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
   const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
@@ -1122,11 +1125,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             observacion: salida.motivo,
           })),
       }
-      return esEdicion
-        ? reportesApi.reprocesar(reporteId, payload)
+      return efectivoReporteId
+        ? reportesApi.reprocesar(efectivoReporteId, payload)
         : reportesApi.crear(payload)
     },
-    onSuccess: (reporte) => navigate(`/reportes/${reporte.id}/editar`),
+    onSuccess: (reporte) => {
+      setSavedReporteId(reporte.id)
+      setBorradorMsg('✓ Reporte guardado')
+      setTimeout(() => setBorradorMsg(''), 3000)
+    },
   })
 
   const agregarSalida = () =>
