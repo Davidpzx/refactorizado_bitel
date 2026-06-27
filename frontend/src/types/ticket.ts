@@ -9,7 +9,8 @@ export interface Ticket {
   efectivo: string | null
   yape: string | null
   bipay: string | null
-  plin: string | null
+  plin: string | null         // alias enviado al crear (payload)
+  transferencia: string | null // nombre real en la BD (respuesta del backend)
   nombre_cliente: string | null
   dni_cliente: string | null
   telefono: string | null

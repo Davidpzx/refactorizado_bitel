@@ -3,6 +3,7 @@ import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { FileSpreadsheet, Pencil, Printer, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
@@ -15,18 +16,6 @@ import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { api } from '../../services/api'
 import type { Ticket, TicketPayload, TicketUpdatePayload } from '../../types/ticket'
 
-const TIENDAS = [
-  { codigo: 'PUNDA50', nombre: 'Puno — PUNDA50' },
-  { codigo: 'PUNDA11', nombre: 'Puno — PUNDA11' },
-  { codigo: 'PUNSC01', nombre: 'Puno — PUNSC01' },
-  { codigo: 'PUNDA23', nombre: 'Puno — PUNDA23' },
-  { codigo: 'TACDA13', nombre: 'Tacna — TACDA13' },
-  { codigo: 'TACDA17', nombre: 'Tacna — TACDA17' },
-  { codigo: 'TACDA21', nombre: 'Tacna — TACDA21' },
-  { codigo: 'TACDA25', nombre: 'Tacna — TACDA25' },
-  { codigo: 'TACDA27', nombre: 'Tacna — TACDA27' },
-  { codigo: 'TACDA30', nombre: 'Tacna — TACDA30' },
-]
 
 const FORMA_PAGO_TOGGLE = [
   { value: '', label: 'Todas', tone: 'indigo' as const },
@@ -51,22 +40,26 @@ function padTicket(id: number) {
   return String(id).padStart(6, '0')
 }
 
+function getPlin(t: Ticket): string | null { return t.plin ?? t.transferencia ?? null }
+
 function detectFormaPago(t: Ticket): string {
-  const activos = [t.efectivo, t.yape, t.bipay, t.plin].filter(v => v && parseFloat(v) > 0)
+  const plin = getPlin(t)
+  const activos = [t.efectivo, t.yape, t.bipay, plin].filter(v => v && parseFloat(v) > 0)
   if (activos.length > 1) return 'MIXTO'
   if (t.efectivo && parseFloat(t.efectivo) > 0) return 'EFECTIVO'
   if (t.yape     && parseFloat(t.yape)     > 0) return 'YAPE'
   if (t.bipay    && parseFloat(t.bipay)    > 0) return 'BIPAY'
-  if (t.plin     && parseFloat(t.plin)     > 0) return 'PLIN'
+  if (plin       && parseFloat(plin)       > 0) return 'PLIN'
   return '—'
 }
 
 function formaPagoDetalle(t: Ticket) {
+  const plin = getPlin(t)
   const partes: string[] = []
   if (t.efectivo && parseFloat(t.efectivo) > 0) partes.push(`Efect. S/${parseFloat(t.efectivo).toFixed(2)}`)
   if (t.yape     && parseFloat(t.yape)     > 0) partes.push(`Yape S/${parseFloat(t.yape).toFixed(2)}`)
   if (t.bipay    && parseFloat(t.bipay)    > 0) partes.push(`Bipay S/${parseFloat(t.bipay).toFixed(2)}`)
-  if (t.plin     && parseFloat(t.plin)     > 0) partes.push(`Plin S/${parseFloat(t.plin).toFixed(2)}`)
+  if (plin       && parseFloat(plin)       > 0) partes.push(`Plin S/${parseFloat(plin).toFixed(2)}`)
   return partes.length ? partes.join(' + ') : '—'
 }
 
@@ -161,6 +154,7 @@ function getColumns(
 
 function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const crear = useCrearTicket()
+  const { tiendas } = useTiendasSelect()
 
   const [tienda_id, setTiendaId]           = useState('')
   const [vendedor, setVendedor]            = useState('')
@@ -208,8 +202,8 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
           <label className="block text-xs text-kyro-muted mb-1">Tienda *</label>
           <Select value={tienda_id} onChange={(e) => setTiendaId(e.target.value)} required>
             <option value="">Seleccionar tienda</option>
-            {TIENDAS.map((t) => (
-              <option key={t.codigo} value={t.codigo}>{t.nombre}</option>
+            {tiendas.map((t) => (
+              <option key={t.codigo} value={t.codigo}>{t.nombre} — {t.codigo}</option>
             ))}
           </Select>
         </div>
@@ -356,6 +350,7 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
 export function TicketsPage() {
   const { usuario }                        = useAuth()
   const isAdmin                            = usuario?.rol === 'admin'
+  const { tiendas }                        = useTiendasSelect()
   const [desde, setDesde]                  = useState('')
   const [hasta, setHasta]                  = useState('')
   const [tienda_id, setTiendaId]           = useState('')
@@ -456,8 +451,8 @@ export function TicketsPage() {
         </div>
         <Select value={tienda_id} onChange={(e) => { setTiendaId(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-44">
           <option value="">Todas las tiendas</option>
-          {TIENDAS.map((t) => (
-            <option key={t.codigo} value={t.codigo}>{t.nombre}</option>
+          {tiendas.map((t) => (
+            <option key={t.codigo} value={t.codigo}>{t.nombre} — {t.codigo}</option>
           ))}
         </Select>
         <Input

@@ -962,7 +962,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       try {
         const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', {
           tienda_id:      tiendaSeleccionada,
-          agente_id:      usuario?.agente_id ?? undefined,
+          agente_id:      getValues('agente_id') || usuario?.agente_id || undefined,
           vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
           descripcion:    desc.trim(),
           monto,
