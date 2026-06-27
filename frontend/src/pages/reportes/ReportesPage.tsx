@@ -98,10 +98,11 @@ function getColumns(
 
 export function ReportesPage() {
   const navigate                    = useNavigate()
+  const hoy = new Date().toISOString().slice(0, 10)
   const [tienda, setTienda]         = useState('')
   const [estado, setEstado]         = useState('')
-  const [fechaDesde, setFechaDesde] = useState('')
-  const [fechaHasta, setFechaHasta] = useState('')
+  const [fechaDesde, setFechaDesde] = useState(hoy)
+  const [fechaHasta, setFechaHasta] = useState(hoy)
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
 
   const { data, isLoading } = useReportes({

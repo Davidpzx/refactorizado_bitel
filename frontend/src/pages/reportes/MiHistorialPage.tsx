@@ -437,9 +437,10 @@ function SalvavidasPanel() {
 
 export function MiHistorialPage() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState({ fecha_desde: '', fecha_hasta: '', estado: '' })
+  const hoy = new Date().toISOString().slice(0, 10)
+  const [filters, setFilters] = useState({ fecha_desde: hoy, fecha_hasta: hoy, estado: '' })
   const [page, setPage] = useState(1)
-  const [applied, setApplied] = useState({ ...filters, page: 1 })
+  const [applied, setApplied] = useState({ fecha_desde: hoy, fecha_hasta: hoy, estado: '', page: 1 })
   const [solicitandoId, setSolicitandoId] = useState<number | null>(null)
 
   const { data, isLoading } = useQuery({

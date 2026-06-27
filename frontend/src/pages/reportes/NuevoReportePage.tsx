@@ -1126,7 +1126,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         ? reportesApi.reprocesar(reporteId, payload)
         : reportesApi.crear(payload)
     },
-    onSuccess: () => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial'),
+    onSuccess: (reporte) => navigate(`/reportes/${reporte.id}/editar`),
   })
 
   const agregarSalida = () =>
