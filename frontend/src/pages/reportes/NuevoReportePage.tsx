@@ -1126,6 +1126,11 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
     setVentaSaving(true)
     try {
+      // IDs conocidos antes del loop para detectar ventas nuevas
+      const idsConocidos = new Set(ventas.map(v => v.venta_id).filter(Boolean) as number[])
+      const nuevosIds: number[] = []
+      let lastReporte: ReporteConVentas | null = null
+
       for (const data of ventaItems) {
         const payload = buildVenta(data) as unknown as Record<string, unknown>
         const currentReporteId = esEdicion ? reporteId : savedReporteId
@@ -1170,16 +1175,16 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           reporte = await reportesApi.agregarVenta(currentReporteId, payload)
         }
 
+        // Detectar el ID de la venta recién creada
+        const nuevoId = reporte.ventas.find(v => !idsConocidos.has(v.id))?.id
+        if (nuevoId) { nuevosIds.push(nuevoId); idsConocidos.add(nuevoId) }
+
+        lastReporte = reporte
         syncVentasDesdeReporte(reporte)
       }
 
       // Crear tickets vinculados a sus ventas
-      if (esTienda || !!tiendaSeleccionada) {
-        // Detectar IDs de ventas recién creadas comparando con las conocidas antes del loop
-        const idsConocidos = new Set(ventas.map(v => v.venta_id).filter(Boolean) as number[])
-        const nuevosIds = reporte.ventas
-          .map(v => v.id)
-          .filter(id => !idsConocidos.has(id))
+      if ((esTienda || !!tiendaSeleccionada) && lastReporte) {
         crearTicketsVentas(ventaItems.map(d => buildVenta(d)), nuevosIds)
       }
 
