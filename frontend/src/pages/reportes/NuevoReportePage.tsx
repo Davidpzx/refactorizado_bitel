@@ -902,17 +902,10 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     }
   }, [esEdicion, usuario, setValue])
 
-  const { fields, append, remove, update, replace } = useFieldArray({ control, name: 'ventas' })
+  const { fields, remove, replace } = useFieldArray({ control, name: 'ventas' })
 
   // ── Sincronizar ventas del form con la respuesta del servidor ───────────────
-  const syncVentasDesdeReporte = (reporte: { ventas: Array<{
-    id: number; vendedor_id: number; tipo_venta: string; subtipo: string | null;
-    monto_total: string | number; efectivo_inicial: string | number; cross_selling: boolean;
-    tienda_destino: string | null; es_remate: boolean; es_extranjero: boolean;
-    linea?: { plan_nombre_snap?: string; es_esim?: boolean; tipo_alta?: string; cantidad?: number; cobrado_unitario?: string | number; comision_unitaria?: string | number } | null;
-    equipo?: { inventario_tienda_id?: number; producto_nombre_snap?: string; imei_serial_snap?: string; tipo_pago?: string; financiera?: string; precio_venta?: string | number; costo_snap?: string | number; por_cobrar_financiera?: string | number } | null;
-    cliente?: { dni_ruc?: string } | null;
-  }> }) => {
+  const syncVentasDesdeReporte = (reporte: ReporteConVentas) => {
     const ventasSync: VentaFormData[] = reporte.ventas.map(venta => {
       const nombrePlan = venta.linea?.plan_nombre_snap ?? ''
       const tipoPago = venta.equipo?.tipo_pago === 'CUOTAS' ? 'CUOTAS' : 'CONTADO'
