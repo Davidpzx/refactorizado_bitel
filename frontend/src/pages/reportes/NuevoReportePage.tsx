@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -836,9 +836,10 @@ interface TiendaOption {
 }
 
 export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
-  const navigate    = useNavigate()
-  const { id }      = useParams<{ id: string }>()
-  const { usuario } = useAuth()
+  const navigate     = useNavigate()
+  const queryClient  = useQueryClient()
+  const { id }       = useParams<{ id: string }>()
+  const { usuario }  = useAuth()
   const { data: planesData = [] } = usePlanesComisiones()
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
@@ -915,6 +916,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   // ── Sincronizar ventas del form con la respuesta del servidor ───────────────
   const syncVentasDesdeReporte = (reporte: ReporteConVentas) => {
+    // Actualizar cache de React Query para que al volver a la pestaña los datos sean correctos
+    queryClient.setQueryData(['reporte-activo', reporte.id], reporte)
     const ventasSync: VentaFormData[] = reporte.ventas.map(venta => {
       const nombrePlan = venta.linea?.plan_nombre_snap ?? ''
       const tipoPago = venta.equipo?.tipo_pago === 'CUOTAS' ? 'CUOTAS' : 'CONTADO'
@@ -1001,15 +1004,31 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     const base = { vendedor_id: data.vendedor_id, cliente_dni: data.cliente_dni, cliente_nombre: data.cliente_nombre }
     switch (data.seccion) {
       case 'POSTPAGO':
-      case 'PREPAGO':
-        return ventaNueva({ ...base, tipo_venta: data.seccion, es_extranjero: data.es_extranjero, es_migracion: data.es_migracion, es_upgrade: data.es_upgrade, es_esim: data.es_esim, plan_nombre: data.plan_nombre, tipo_alta: data.tipo_alta, cobrado_unitario: data.cobrado_unitario, plan_anterior: data.plan_anterior })
+      case 'PREPAGO': {
+        const monto = (data.cobrado_unitario || 0) * (data.cantidad || 1)
+        return ventaNueva({ ...base, tipo_venta: data.seccion, monto_total: monto, efectivo_inicial: monto,
+          es_extranjero: data.es_extranjero, es_migracion: data.es_migracion, es_upgrade: data.es_upgrade, es_esim: data.es_esim,
+          plan_nombre: data.plan_nombre, tipo_alta: data.tipo_alta, cobrado_unitario: data.cobrado_unitario,
+          plan_anterior: data.plan_anterior, cantidad: data.cantidad })
+      }
       case 'EQUIPO':
-      case 'ACCESORIO':
-        return ventaNueva({ ...base, tipo_venta: data.seccion, producto_nombre: data.producto_nombre, inventario_tienda_id: data.inventario_tienda_id, imei_serial: data.imei_serial, tipo_pago: data.tipo_pago, precio_venta: data.precio_venta, financiera: data.financiera, por_cobrar_financiera: data.por_cobrar_financiera, costo_snap: data.costo_snap })
+      case 'ACCESORIO': {
+        const monto = data.precio_venta || 0
+        const efectivo = data.tipo_pago === 'CUOTAS' ? (data.por_cobrar_financiera || 0) : monto
+        return ventaNueva({ ...base, tipo_venta: data.seccion, monto_total: monto, efectivo_inicial: efectivo,
+          producto_nombre: data.producto_nombre, inventario_tienda_id: data.inventario_tienda_id,
+          imei_serial: data.imei_serial, tipo_pago: data.tipo_pago, precio_venta: monto,
+          financiera: data.financiera, por_cobrar_financiera: data.por_cobrar_financiera, costo_snap: data.costo_snap })
+      }
       case 'OTROS_FLUJO':
-        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'OTROS_FLUJO', subtipo: data.subtipo, monto_total: data.monto_otros })
-      case 'APOYO':
-        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'APOYO', tienda_destino: data.tienda_destino, plan_nombre: data.plan_nombre, cantidad: data.cantidad, cobrado_unitario: data.cobrado_unitario, tipo_alta: 'LN' })
+        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'OTROS_FLUJO', subtipo: data.subtipo,
+          monto_total: data.monto_otros, efectivo_inicial: data.monto_otros })
+      case 'APOYO': {
+        const monto = (data.cobrado_unitario || 0) * (data.cantidad || 1)
+        return ventaNueva({ vendedor_id: data.vendedor_id, tipo_venta: 'APOYO', monto_total: monto, efectivo_inicial: monto,
+          tienda_destino: data.tienda_destino, plan_nombre: data.plan_nombre,
+          cantidad: data.cantidad, cobrado_unitario: data.cobrado_unitario, tipo_alta: 'LN' })
+      }
       default:
         return ventaNueva({ vendedor_id: data.vendedor_id })
     }
@@ -1196,6 +1215,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       setTimeout(() => setBorradorMsg(''), 3000)
       return
     }
+    const ok = window.confirm('¿Seguro que quieres guardar y cerrar la caja para empezar una nueva?')
+    if (!ok) return
     setCerrandoCaja(true)
     const fv = getValues()
     try {
@@ -1225,7 +1246,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         cerrar: true,
       })
       if (ACTIVO_LS_KEY) localStorage.removeItem(ACTIVO_LS_KEY)
-      navigate('/reportes/nuevo')
+      window.location.reload()
     } catch (err) {
       console.error('[caja] Error al cerrar:', err)
       setBorradorMsg('Error al cerrar la caja')
