@@ -1038,7 +1038,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   // ── Ticket de venta ────────────────────────────────────────────────────────
   const crearTicketsVentas = async (lista: VentaFormData[], openPrint = false) => {
-    if (lista.length === 0) return
+    if (lista.length === 0) { console.warn('[ticket] lista vacía'); return }
     const ids: number[] = []
     for (const v of lista) {
       const isLinea  = v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO'
@@ -1046,7 +1046,10 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       const monto    = isLinea  ? (v.cobrado_unitario || 0) * (v.cantidad || 1)
                      : isEquipo ? (v.precio_venta || 0)
                      : (v.monto_total || 0)
-      if (monto <= 0) continue
+
+      console.log('[ticket] procesando:', { tipo_venta: v.tipo_venta, monto, precio_venta: v.precio_venta, cobrado_unitario: v.cobrado_unitario })
+
+      if (monto <= 0) { console.warn('[ticket] monto <= 0, se omite'); continue }
 
       const desc = isLinea
         ? `${v.tipo_venta === 'POSTPAGO' ? 'Postpago' : 'Prepago'} · ${[v.plan_nombre, v.tipo_alta].filter(Boolean).join(' · ')}`
@@ -1056,26 +1059,35 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         ? `Apoyo ${v.tienda_destino || ''} · ${v.plan_nombre || ''}`
         : v.subtipo || v.tipo_venta
 
+      const agenteId = getValues('agente_id') || usuario?.agente_id || undefined
       const vendedorObj = vendedores.find(vv => vv.id === v.vendedor_id)
+
+      const payload = {
+        tienda_id:      tiendaSeleccionada,
+        agente_id:      agenteId,
+        vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
+        descripcion:    desc.trim(),
+        monto,
+        cantidad:       v.cantidad || 1,
+        nombre_cliente: v.cliente_nombre || '',
+        dni_cliente:    v.cliente_dni    || '',
+      }
+      console.log('[ticket] payload →', payload)
+
       try {
-        const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', {
-          tienda_id:      tiendaSeleccionada,
-          agente_id:      getValues('agente_id') || usuario?.agente_id || undefined,
-          vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
-          descripcion:    desc.trim(),
-          monto,
-          cantidad:       v.cantidad || 1,
-          nombre_cliente: v.cliente_nombre || '',
-          dni_cliente:    v.cliente_dni    || '',
-        })
+        const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', payload)
+        console.log('[ticket] respuesta →', res.data)
         if (res.data?.ok && res.data?.id) {
           ids.push(res.data.id)
           if (openPrint) {
             window.open(`/tickets/imprimir/${res.data.id}?print=1`, '_blank', 'width=420,height=680')
           }
         }
-      } catch (err) {
-        console.error('[ticket] Error al crear ticket de venta:', err)
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: unknown; status?: number } })?.response?.data ?? err
+        console.error('[ticket] ERROR al crear ticket:', msg)
+        setBorradorMsg(`Error ticket: ${JSON.stringify(msg)}`)
+        setTimeout(() => setBorradorMsg(''), 6000)
       }
     }
     if (!openPrint && ids.length > 0) setPendingPrintIds(prev => [...prev, ...ids])
