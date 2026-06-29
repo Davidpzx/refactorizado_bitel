@@ -227,7 +227,7 @@ class ReporteController extends Controller
                 }
             }
 
-            $reporte->load(['ventas', 'salidas']);
+            $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
             return response()->json($reporte, 201);
 
         } catch (\RuntimeException $e) {
@@ -871,7 +871,7 @@ class ReporteController extends Controller
 
             DB::commit();
 
-            return response()->json($reporte->fresh()->load(['ventas', 'salidas']));
+            return response()->json($reporte->fresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']));
         } catch (\RuntimeException $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);

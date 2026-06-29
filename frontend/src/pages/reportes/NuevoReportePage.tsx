@@ -1367,6 +1367,27 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     setValue('total_salidas', Math.round(total * 100) / 100)
   }, [salidaItems, setValue])
 
+  // Auto-persistir salidas en BD (debounced 1.5 s) — solo modo crear con reporte ya existente
+  useEffect(() => {
+    if (esEdicion || !savedReporteId) return
+    const timer = setTimeout(async () => {
+      const salidas = salidaItems
+        .filter(s => Number(s.monto) > 0)
+        .map(s => ({
+          tipo: s.tipo.toLowerCase() as 'adelanto' | 'gasto' | 'pasaje' | 'otro',
+          monto: Number(s.monto),
+          observacion: s.motivo,
+        }))
+      try {
+        await reportesApi.actualizarCabecera(savedReporteId, { salidas })
+      } catch {
+        // silencioso — no interrumpir al usuario por un error de salidas
+      }
+    }, 1500)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salidaItems, savedReporteId, esEdicion])
+
   // ── Borrador en la nube (auto-save 60s + manual) ──────────────────────────────
   const esTienda = usuario?.rol === 'tienda' && !esEdicion
   const [borradorMsg, setBorradorMsg] = useState('')
