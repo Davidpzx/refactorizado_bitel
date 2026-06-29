@@ -381,16 +381,25 @@ function AgregarRegistroModal({
     if (open) {
       setM(initialData ?? MODAL_DEFAULT)
       setDniStatus('idle')
-      setCarrito([newCarritoItem()])
+      // Pre-rellenar carrito si editamos un equipo/accesorio existente
+      if (isEdit && initialData && (initialData.seccion === 'EQUIPO' || initialData.seccion === 'ACCESORIO')) {
+        setCarrito([{
+          id: crypto.randomUUID(),
+          inventario_tienda_id: initialData.inventario_tienda_id,
+          producto_nombre: initialData.producto_nombre,
+          imei_serial: initialData.imei_serial,
+          tipo_venta: initialData.seccion as 'EQUIPO' | 'ACCESORIO',
+          tipo_pago: initialData.tipo_pago,
+          precio_venta: initialData.precio_venta,
+          financiera: initialData.financiera,
+          por_cobrar_financiera: initialData.por_cobrar_financiera,
+          costo_snap: initialData.costo_snap,
+        }])
+      } else {
+        setCarrito([newCarritoItem()])
+      }
     }
   }, [open, initialData])
-
-  // Resetear carrito al cambiar de sección
-  useEffect(() => {
-    if (m.seccion === 'EQUIPO' || m.seccion === 'ACCESORIO') {
-      setCarrito([newCarritoItem()])
-    }
-  }, [m.seccion])
 
   const updCarrito = (id: string, changes: Partial<CarritoEquipoItem>) =>
     setCarrito(prev => prev.map(it => it.id === id ? { ...it, ...changes } : it))
@@ -507,15 +516,15 @@ function AgregarRegistroModal({
           </div>
         </div>
 
-        {/* 2b. Sección — solo si VENTA */}
-        {m.tipo_registro === 'VENTA' && <div>
+        {/* 2b. Sección — solo si VENTA y no es edición */}
+        {m.tipo_registro === 'VENTA' && !isEdit && <div>
           <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">4. Sección</Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
             {MODAL_SECCIONES.map(sec => {
               const active = m.seccion === sec.value
               return (
                 <button key={sec.value} type="button"
-                  onClick={() => upd('seccion', sec.value)}
+                  onClick={() => { upd('seccion', sec.value); setCarrito([newCarritoItem()]) }}
                   className="rounded-lg px-3 py-2 text-xs font-semibold transition-all border"
                   style={active
                     ? { background: sec.color, color: '#fff', borderColor: sec.color, boxShadow: `0 0 14px color-mix(in srgb, ${sec.color} 40%, transparent)` }
