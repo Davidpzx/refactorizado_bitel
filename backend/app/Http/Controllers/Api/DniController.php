@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Http;
 
 class DniController extends Controller
 {
-    // Misma API que usa sis_bipay — pública, sin token, confiable
-    private const API_URL = 'https://api.apis.net.pe/v2/reniec/dni?numero=';
-    private const TTL     = 3600 * 24 * 7; // 7 días (datos RENIEC no cambian)
+    // v1 = pública, sin token — igual que sis_bipay
+    private const API_URL = 'https://api.apis.net.pe/v1/dni?numero=';
+    private const TTL     = 3600 * 24 * 7; // 7 días (RENIEC no cambia)
 
     public function consultar(Request $request, string $dni): JsonResponse
     {
@@ -27,13 +27,12 @@ class DniController extends Controller
         }
 
         try {
-            $response = Http::timeout(8)
-                ->withHeaders(['Referer' => config('app.url', 'http://localhost')])
-                ->get(self::API_URL . $dni);
+            $response = Http::timeout(8)->get(self::API_URL . $dni);
 
             $body = $response->json();
 
-            if (!$response->successful() || empty($body) || isset($body['message'])) {
+            // v1 devuelve {} vacío o sin nombres si no encuentra
+            if (!$response->successful() || empty($body) || empty($body['nombres'] ?? '')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No se encontró información para el DNI ' . $dni,
