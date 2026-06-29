@@ -29,6 +29,16 @@ function n(val: string | null | undefined): number {
   return parseFloat(val ?? '0') || 0
 }
 
+/** Precio a mostrar: usa las subtablas cuando están disponibles (son la fuente de verdad),
+ *  cae a monto_total solo si no hay subtabla (OTROS_FLUJO). */
+function montoVenta(venta: VentaConDetalle): number {
+  const l = venta.linea
+  const e = venta.equipo
+  if (l) return n(l.cobrado_unitario) * Math.max(1, l.cantidad ?? 1)
+  if (e) return n(e.precio_venta)
+  return n(venta.monto_total)
+}
+
 type EstadoVariant = 'default' | 'warning' | 'success' | 'outline'
 const ESTADO_VARIANT: Record<ReporteConVentas['estado'], EstadoVariant> = {
   borrador: 'outline',
@@ -130,7 +140,7 @@ function FilaLinea({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(venta.monto_total)}</p>
+          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(montoVenta(venta))}</p>
           {comision > 0 && (
             <p className="text-[11px] text-kyro-success font-medium mt-0.5">
               comisión {sol(l?.comision_unitaria)}
@@ -178,7 +188,7 @@ function FilaEquipo({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(venta.monto_total)}</p>
+          <p className="text-sm font-semibold text-kyro-text tabular-nums">{sol(montoVenta(venta))}</p>
           {ganancia > 0 && (
             <p className="text-[11px] text-kyro-success font-medium mt-0.5">
               ganancia {sol(e?.ganancia_snap)}
@@ -211,7 +221,7 @@ function FilaOtro({ venta, idx }: { venta: VentaConDetalle; idx: number }) {
             </p>
           )}
         </div>
-        <p className="text-sm font-semibold text-kyro-text tabular-nums shrink-0">{sol(venta.monto_total)}</p>
+        <p className="text-sm font-semibold text-kyro-text tabular-nums shrink-0">{sol(montoVenta(venta))}</p>
       </div>
     </div>
   )
@@ -232,7 +242,7 @@ function SeccionVentas({
   vacias?: string
   renderFila: (v: VentaConDetalle, i: number) => React.ReactNode
 }) {
-  const total = ventas.reduce((acc, v) => acc + n(v.monto_total), 0)
+  const total = ventas.reduce((acc, v) => acc + montoVenta(v), 0)
 
   return (
     <Card className="kyro-card">
@@ -689,7 +699,7 @@ export function ReporteDetallePage() {
   const equipos   = ventas.filter(v => v.tipo_venta === 'EQUIPO' || v.tipo_venta === 'ACCESORIO')
   const otros     = ventas.filter(v => v.tipo_venta === 'OTROS_FLUJO')
 
-  const totalVentas = ventas.reduce((acc, v) => acc + n(v.monto_total), 0)
+  const totalVentas = ventas.reduce((acc, v) => acc + montoVenta(v), 0)
   const diff        = n(reporte.diferencia)
   const diffOk      = Math.abs(diff) < 0.01
   const diffGrave   = Math.abs(diff) > 10
