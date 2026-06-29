@@ -24,6 +24,15 @@ export const reportesApi = {
   eliminar: (id: number) =>
     api.delete(`/v1/reportes/${id}`),
 
+  agregarVenta: (reporteId: number, data: Record<string, unknown>) =>
+    api.post<ReporteConVentas>(`/v1/reportes/${reporteId}/agregar-venta`, data).then((r) => r.data),
+
+  eliminarVenta: (reporteId: number, ventaId: number) =>
+    api.delete<ReporteConVentas>(`/v1/reportes/${reporteId}/ventas/${ventaId}`).then((r) => r.data),
+
+  actualizarCabecera: (reporteId: number, data: Record<string, unknown>) =>
+    api.patch<ReporteConVentas>(`/v1/reportes/${reporteId}/cabecera`, data).then((r) => r.data),
+
   planesComisiones: (tipo_servicio?: string) =>
     api.get<ComisionPlan[]>('/v1/comisiones-planes', { params: { tipo_servicio } }).then((r) => r.data),
 

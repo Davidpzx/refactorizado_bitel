@@ -25,7 +25,7 @@ import { crmApi } from '../../services/crm.api'
 import { inventarioApi } from '../../services/inventario.api'
 import type { InventarioItem } from '../../types/inventario'
 import { reportesApi } from '../../services/reportes.api'
-import type { VendedorReporte } from '../../types/reporte'
+import type { ReporteConVentas, VendedorReporte } from '../../types/reporte'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
@@ -839,11 +839,39 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const cerrarCajaRef          = useRef(false)   // true → tras guardar, limpiar para cuadre nuevo
   const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
 
+  // ── Reporte activo persistido en localStorage (modo crear) ───────────────────
+  // Clave por usuario — así cada agente tiene su propio cuadre activo
+  const ACTIVO_LS_KEY = usuario ? `reporte_activo_${usuario.id}` : null
+  const [savedReporteId, setSavedReporteId] = useState<number | null>(null)
+
+  // Leer el ID del reporte activo del localStorage al montar
+  useEffect(() => {
+    if (esEdicion || !ACTIVO_LS_KEY) return
+    const stored = localStorage.getItem(ACTIVO_LS_KEY)
+    if (stored) {
+      const id = Number(stored)
+      if (id > 0) setSavedReporteId(id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ACTIVO_LS_KEY])
+
+  // ── Queries ──────────────────────────────────────────────────────────────────
   const { data: reporteEditar, isLoading: cargandoReporte } = useQuery({
     queryKey: ['reporte', reporteId],
     queryFn: () => reportesApi.obtener(reporteId),
     enabled: esEdicion && reporteId > 0,
   })
+
+  // Carga silenciosa del reporte activo cuando la página se restaura (sin navegar)
+  const { data: savedReporteData } = useQuery({
+    queryKey: ['reporte-activo', savedReporteId],
+    queryFn: () => reportesApi.obtener(savedReporteId!),
+    enabled: !esEdicion && savedReporteId !== null && savedReporteId > 0,
+  })
+
+  // El reporte "en uso" unifica edit mode y modo crear restaurado
+  const activeReport    = esEdicion ? reporteEditar : savedReporteData
+  const activeReporteId = esEdicion ? reporteId     : savedReporteId
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -874,12 +902,60 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     }
   }, [esEdicion, usuario, setValue])
 
-  const { fields, append, remove, update } = useFieldArray({ control, name: 'ventas' })
+  const { fields, append, remove, update, replace } = useFieldArray({ control, name: 'ventas' })
+
+  // ── Sincronizar ventas del form con la respuesta del servidor ───────────────
+  const syncVentasDesdeReporte = (reporte: { ventas: Array<{
+    id: number; vendedor_id: number; tipo_venta: string; subtipo: string | null;
+    monto_total: string | number; efectivo_inicial: string | number; cross_selling: boolean;
+    tienda_destino: string | null; es_remate: boolean; es_extranjero: boolean;
+    linea?: { plan_nombre_snap?: string; es_esim?: boolean; tipo_alta?: string; cantidad?: number; cobrado_unitario?: string | number; comision_unitaria?: string | number } | null;
+    equipo?: { inventario_tienda_id?: number; producto_nombre_snap?: string; imei_serial_snap?: string; tipo_pago?: string; financiera?: string; precio_venta?: string | number; costo_snap?: string | number; por_cobrar_financiera?: string | number } | null;
+    cliente?: { dni_ruc?: string } | null;
+  }> }) => {
+    const ventasSync: VentaFormData[] = reporte.ventas.map(venta => {
+      const nombrePlan = venta.linea?.plan_nombre_snap ?? ''
+      const tipoPago = venta.equipo?.tipo_pago === 'CUOTAS' ? 'CUOTAS' : 'CONTADO'
+      return {
+        ...VENTA_DEFAULT,
+        venta_id: venta.id,
+        vendedor_id: venta.vendedor_id,
+        tipo_venta: venta.tipo_venta as VentaFormData['tipo_venta'],
+        subtipo: venta.subtipo ?? '',
+        monto_total: Number(venta.monto_total),
+        efectivo_inicial: Number(venta.efectivo_inicial),
+        cross_selling: venta.cross_selling,
+        tienda_destino: venta.tienda_destino ?? '',
+        es_remate: venta.es_remate,
+        es_extranjero: venta.es_extranjero,
+        es_migracion: nombrePlan.toUpperCase().includes('MIGRACI'),
+        es_upgrade: nombrePlan.toUpperCase().includes('UPGRADE'),
+        es_esim: venta.linea?.es_esim ?? false,
+        cliente_dni: venta.cliente?.dni_ruc ?? '',
+        inventario_tienda_id: venta.equipo?.inventario_tienda_id ?? 0,
+        producto_nombre: venta.equipo?.producto_nombre_snap ?? '',
+        imei_serial: venta.equipo?.imei_serial_snap ?? '',
+        tipo_pago: tipoPago as 'CONTADO' | 'CUOTAS',
+        financiera: venta.equipo?.financiera ?? '',
+        precio_venta: Number(venta.equipo?.precio_venta ?? venta.monto_total),
+        costo_snap: Number(venta.equipo?.costo_snap ?? 0),
+        por_cobrar_financiera: Number(venta.equipo?.por_cobrar_financiera ?? 0),
+        plan_nombre: nombrePlan,
+        tipo_alta: venta.linea?.tipo_alta ?? 'MNP',
+        cantidad: venta.linea?.cantidad ?? 1,
+        cobrado_unitario: Number(venta.linea?.cobrado_unitario ?? venta.monto_total),
+        comision_unitaria: Number(venta.linea?.comision_unitaria ?? 0),
+      }
+    })
+    replace(ventasSync)
+  }
 
   // ── Modal agregar / editar venta ───────────────────────────────────────────
   const [ventaModalOpen, setVentaModalOpen] = useState(false)
   const [editIndex,      setEditIndex]      = useState<number | null>(null)
   const [editData,       setEditData]       = useState<ModalVentaState | undefined>(undefined)
+  const [ventaSaving,    setVentaSaving]    = useState(false)
+  const [cerrandoCaja,   setCerrandoCaja]   = useState(false)
 
   const openEdit = (idx: number) => {
     const v = ventas[idx]
@@ -984,7 +1060,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     if (!openPrint && ids.length > 0) setPendingPrintIds(prev => [...prev, ...ids])
   }
 
-  const handleVentaConfirm = (items: ModalVentaState[]) => {
+  const handleVentaConfirm = async (items: ModalVentaState[]) => {
     const consultaItems = items.filter(d => d.tipo_registro === 'CONSULTA')
     const ventaItems    = items.filter(d => d.tipo_registro !== 'CONSULTA')
 
@@ -1014,26 +1090,157 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       })
     })
 
-    // Agregar ventas reales al cuadre
-    ventaItems.forEach((data) => {
-      const v = buildVenta(data)
-      if (editIndex !== null && ventaItems.length === 1) {
-        update(editIndex, v)
-      } else {
-        append(v)
+    // Agregar ventas reales → auto-guardar en BD inmediatamente
+    if (ventaItems.length === 0) {
+      setVentaModalOpen(false)
+      setEditIndex(null)
+      setEditData(undefined)
+      return
+    }
+
+    setVentaSaving(true)
+    try {
+      for (const data of ventaItems) {
+        const payload = buildVenta(data) as unknown as Record<string, unknown>
+        const currentReporteId = esEdicion ? reporteId : savedReporteId
+        let reporte: ReporteConVentas
+
+        if (!currentReporteId) {
+          // Primera venta → crear el reporte + venta en un solo request
+          const fv = getValues()
+          const crearPayload = {
+            agente_id: fv.agente_id,
+            tienda_id: fv.tienda_id,
+            fecha: fv.fecha,
+            caja_inicial: fv.caja_inicial || 0,
+            yape: fv.yape || 0,
+            bipay: fv.bipay || 0,
+            transferencia: fv.transferencia || 0,
+            retiro_bipay: fv.retiro_bipay || 0,
+            recarga_bipay: fv.recarga_bipay || 0,
+            pago_servicio: fv.pago_servicio || 0,
+            pago_krece: fv.pago_krece || 0,
+            pago_payjoy: fv.pago_payjoy || 0,
+            tickets_tusamy: fv.tickets_tusamy || 0,
+            efectivo_entregado: fv.efectivo_entregado || 0,
+            destino_efectivo: fv.destino_efectivo,
+            nombre_cubre: fv.nombre_cubre || '',
+            observaciones: fv.observaciones || '',
+            obs_dia: fv.obs_dia || '',
+            usuario_id: usuario?.id ?? 0,
+            ventas: [payload],
+            salidas: [],
+          }
+          reporte = await api.post<ReporteConVentas>('/v1/reportes', crearPayload).then(r => r.data)
+          setSavedReporteId(reporte.id)
+          if (ACTIVO_LS_KEY) localStorage.setItem(ACTIVO_LS_KEY, String(reporte.id))
+          inicializadoRef.current = true
+        } else if (editIndex !== null && ventaItems.length === 1 && ventas[editIndex]?.venta_id) {
+          // Editar venta con ID en BD → borrar + re-agregar
+          await reportesApi.eliminarVenta(currentReporteId, ventas[editIndex].venta_id!)
+          reporte = await reportesApi.agregarVenta(currentReporteId, payload)
+        } else {
+          // Agregar nueva venta a reporte existente
+          reporte = await reportesApi.agregarVenta(currentReporteId, payload)
+        }
+
+        syncVentasDesdeReporte(reporte)
       }
-    })
+
+      // Crear tickets para las ventas (solo tienda)
+      if (esTienda) {
+        const ventasFormData = ventaItems.map(d => buildVenta(d))
+        crearTicketsVentas(ventasFormData, true)
+      }
+
+      setBorradorMsg('✓ Venta guardada')
+      setTimeout(() => setBorradorMsg(''), 3000)
+    } catch (err) {
+      console.error('[venta] Error al guardar:', err)
+      setBorradorMsg('Error al guardar la venta')
+      setTimeout(() => setBorradorMsg(''), 3000)
+    } finally {
+      setVentaSaving(false)
+    }
+
+    setVentaModalOpen(false)
     setEditIndex(null)
     setEditData(undefined)
+  }
+
+  // ── Eliminar venta con confirmación en BD ──────────────────────────────────
+  const handleRemoveVenta = async (idx: number) => {
+    const venta = ventas[idx]
+    const currentReporteId = esEdicion ? reporteId : savedReporteId
+    if (!currentReporteId || !venta.venta_id) {
+      // No persistida todavía → solo quitar del form
+      remove(idx)
+      return
+    }
+    try {
+      const reporte = await reportesApi.eliminarVenta(currentReporteId, venta.venta_id)
+      syncVentasDesdeReporte(reporte)
+    } catch (err) {
+      console.error('[venta] Error al eliminar:', err)
+      setBorradorMsg('Error al eliminar la venta')
+      setTimeout(() => setBorradorMsg(''), 3000)
+    }
+  }
+
+  // ── Cerrar caja (modo crear solamente) ─────────────────────────────────────
+  const handleCerrarCaja = async () => {
+    if (!savedReporteId) {
+      setBorradorMsg('Agrega al menos una venta antes de cerrar la caja')
+      setTimeout(() => setBorradorMsg(''), 3000)
+      return
+    }
+    setCerrandoCaja(true)
+    const fv = getValues()
+    try {
+      await reportesApi.actualizarCabecera(savedReporteId, {
+        caja_inicial: fv.caja_inicial || 0,
+        yape: fv.yape || 0,
+        bipay: fv.bipay || 0,
+        transferencia: fv.transferencia || 0,
+        retiro_bipay: fv.retiro_bipay || 0,
+        recarga_bipay: fv.recarga_bipay || 0,
+        pago_servicio: fv.pago_servicio || 0,
+        pago_krece: fv.pago_krece || 0,
+        pago_payjoy: fv.pago_payjoy || 0,
+        tickets_tusamy: fv.tickets_tusamy || 0,
+        efectivo_entregado: fv.efectivo_entregado || 0,
+        nombre_cubre: fv.nombre_cubre || '',
+        observaciones: fv.observaciones || '',
+        obs_dia: fv.obs_dia || '',
+        destino_efectivo: fv.destino_efectivo,
+        salidas: salidaItems
+          .filter(s => Number(s.monto) > 0)
+          .map(s => ({
+            tipo: s.tipo.toLowerCase() as 'adelanto' | 'gasto' | 'pasaje' | 'otro',
+            monto: Number(s.monto),
+            observacion: s.motivo,
+          })),
+        cerrar: true,
+      })
+      if (ACTIVO_LS_KEY) localStorage.removeItem(ACTIVO_LS_KEY)
+      navigate('/reportes/nuevo')
+    } catch (err) {
+      console.error('[caja] Error al cerrar:', err)
+      setBorradorMsg('Error al cerrar la caja')
+      setTimeout(() => setBorradorMsg(''), 3000)
+    } finally {
+      setCerrandoCaja(false)
+    }
   }
 
   // ── Salidas de efectivo (estado local) ─────────────────────────────────────
   const [salidaItems, setSalidaItems] = useState<SalidaItem[]>([])
 
   useEffect(() => {
-    if (!esEdicion || !reporteEditar || inicializadoRef.current) return
+    // Aplica tanto a edit mode como a restore del reporte activo (localStorage)
+    if (!activeReport || inicializadoRef.current) return
 
-    const ventasIniciales: VentaFormData[] = reporteEditar.ventas.map((venta) => {
+    const ventasIniciales: VentaFormData[] = activeReport.ventas.map((venta) => {
       const nombrePlan = venta.linea?.plan_nombre_snap ?? ''
       const tipoPago = venta.equipo?.tipo_pago === 'CUOTAS' ? 'CUOTAS' : 'CONTADO'
 
@@ -1069,36 +1276,36 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       }
     })
 
-    const destino = ['TIENDA', 'ENTREGADO', 'EN_CAJA'].includes(reporteEditar.destino_efectivo)
-      ? reporteEditar.destino_efectivo as FormData['destino_efectivo']
+    const destino = ['TIENDA', 'ENTREGADO', 'EN_CAJA'].includes(activeReport.destino_efectivo)
+      ? activeReport.destino_efectivo as FormData['destino_efectivo']
       : 'EN_CAJA'
 
     reset({
-      agente_id: reporteEditar.agente_id,
-      tienda_id: reporteEditar.tienda_id,
-      fecha: reporteEditar.fecha,
-      nombre_cubre: reporteEditar.nombre_cubre ?? '',
-      caja_inicial: Number(reporteEditar.caja_inicial),
-      yape: Number(reporteEditar.yape),
-      bipay: Number(reporteEditar.bipay),
-      transferencia: Number(reporteEditar.transferencia),
-      retiro_bipay: Number(reporteEditar.retiro_bipay),
-      recarga_bipay: Number(reporteEditar.recarga_bipay),
-      pago_servicio: Number(reporteEditar.pago_servicio),
-      pago_krece: Number(reporteEditar.pago_krece),
-      pago_payjoy: Number(reporteEditar.pago_payjoy ?? 0),
-      tickets_tusamy: Number(reporteEditar.tickets_tusamy),
-      efectivo_entregado: Number(reporteEditar.efectivo_entregado),
-      total_salidas: Number(reporteEditar.total_salidas),
+      agente_id: activeReport.agente_id,
+      tienda_id: activeReport.tienda_id,
+      fecha: activeReport.fecha,
+      nombre_cubre: activeReport.nombre_cubre ?? '',
+      caja_inicial: Number(activeReport.caja_inicial),
+      yape: Number(activeReport.yape),
+      bipay: Number(activeReport.bipay),
+      transferencia: Number(activeReport.transferencia),
+      retiro_bipay: Number(activeReport.retiro_bipay),
+      recarga_bipay: Number(activeReport.recarga_bipay),
+      pago_servicio: Number(activeReport.pago_servicio),
+      pago_krece: Number(activeReport.pago_krece),
+      pago_payjoy: Number(activeReport.pago_payjoy ?? 0),
+      tickets_tusamy: Number(activeReport.tickets_tusamy),
+      efectivo_entregado: Number(activeReport.efectivo_entregado),
+      total_salidas: Number(activeReport.total_salidas),
       destino_efectivo: destino,
-      observaciones: reporteEditar.observaciones ?? '',
-      obs_dia: reporteEditar.obs_dia ?? '',
+      observaciones: activeReport.observaciones ?? '',
+      obs_dia: activeReport.obs_dia ?? '',
       ventas: ventasIniciales,
     })
 
-    const totalSalidas = Number(reporteEditar.total_salidas)
-    setSalidaItems(reporteEditar.salidas?.length
-      ? reporteEditar.salidas.map(salida => ({
+    const totalSalidas = Number(activeReport.total_salidas)
+    setSalidaItems(activeReport.salidas?.length
+      ? activeReport.salidas.map(salida => ({
           id: crypto.randomUUID(),
           tipo: salida.tipo.charAt(0).toUpperCase() + salida.tipo.slice(1),
           monto: Number(salida.monto),
@@ -1108,7 +1315,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         ? [{ id: crypto.randomUUID(), tipo: 'Otro', monto: totalSalidas, motivo: 'Total previo sin desglose' }]
         : [])
     inicializadoRef.current = true
-  }, [esEdicion, reporteEditar, reset])
+  }, [activeReport, reset])
 
   const guardar = useMutation({
     mutationFn: (data: FormData) => {
@@ -1123,17 +1330,23 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             observacion: salida.motivo,
           })),
       }
-      return esEdicion
-        ? reportesApi.reprocesar(reporteId, payload)
+      return activeReporteId
+        ? reportesApi.reprocesar(activeReporteId, payload)
         : reportesApi.crear(payload)
     },
     onSuccess: (reporte) => {
       if (cerrarCajaRef.current) {
+        // Cerrar caja → limpiar localStorage y empezar nuevo
         cerrarCajaRef.current = false
+        if (ACTIVO_LS_KEY) localStorage.removeItem(ACTIVO_LS_KEY)
         navigate('/reportes/nuevo')
       } else {
-        // replace:true → no queda la página en blanco en el historial
-        navigate(`/reportes/${reporte.id}/editar`, { replace: true })
+        // Guardar normal → quedarse en la misma página, persistir ID
+        setSavedReporteId(reporte.id)
+        if (ACTIVO_LS_KEY) localStorage.setItem(ACTIVO_LS_KEY, String(reporte.id))
+        inicializadoRef.current = true // no re-inicializar el form con los datos del servidor
+        setBorradorMsg('✓ Reporte guardado')
+        setTimeout(() => setBorradorMsg(''), 3000)
       }
     },
   })
@@ -1360,13 +1573,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     guardar.mutate(data)
   }
 
-  const onSubmitYNuevo = (data: FormData) => {
-    cerrarCajaRef.current = true
-    const todasVentas = data.ventas ?? []
-    if (todasVentas.length > 0) crearTicketsVentas(todasVentas, true)
-    guardar.mutate(data)
-  }
-
   if (esEdicion && cargandoReporte) {
     return <div className="flex h-64 items-center justify-center text-sm text-kyro-muted">Cargando reporte...</div>
   }
@@ -1491,10 +1697,11 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               <button
                 type="button"
                 onClick={() => setVentaModalOpen(true)}
-                className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all"
+                disabled={ventaSaving}
+                className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
               >
-                <Plus size={18} /> Agregar Registro
+                <Plus size={18} /> {ventaSaving ? 'Guardando venta...' : 'Agregar Registro'}
               </button>
             )}
 
@@ -1506,7 +1713,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : postpagoRows.map(v => (
                     <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)}
                       onPrint={esTienda ? () => setTicketDesc('Venta Postpago') : undefined} />
                   ))}
             </SectionPanel>
@@ -1519,7 +1726,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : prepagoRows.map(v => (
                     <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)}
                       onPrint={esTienda ? () => setTicketDesc('Venta Prepago / Chip') : undefined} />
                   ))}
             </SectionPanel>
@@ -1539,7 +1746,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : equipoRows.map(v => (
                     <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)}
+                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)}
                       onPrint={esTienda ? () => setTicketDesc('Venta Equipo') : undefined} />
                   ))}
             </SectionPanel>
@@ -1552,7 +1759,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
                 : otrosRows.map(v => (
                     <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
+                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -1569,7 +1776,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin ventas de apoyo.</p>
                 : apoyoRows.map(v => (
                     <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => remove(v.idx)} />
+                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)} />
                   ))}
             </SectionPanel>
 
@@ -1783,42 +1990,53 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           </div>
         </div>
 
-        {guardar.isError && (
-          <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2">
-            {(guardar.error as { response?: { data?: { error?: string } } })?.response?.data?.error
-              ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
-          </p>
-        )}
-
         {stockInsuficiente && (
           <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2 font-semibold">
             STOCK INSUFICIENTE — estás reportando {chipsConsumidos} chips pero solo hay {chipsDisponibles} en stock.
           </p>
         )}
 
-        <div className="flex gap-3">
-          <Button type="submit" variant="gold" disabled={guardar.isPending || stockInsuficiente}
-            className="flex-1 h-11 gap-2 text-base font-semibold">
-            <UploadCloud size={18} />
-            {stockInsuficiente ? 'STOCK INSUFICIENTE' : guardar.isPending ? 'Guardando reporte...' : esEdicion ? 'Aplicar Reprocesado Completo' : 'Guardar Reporte Completo'}
-          </Button>
-          <Button type="button" variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')} disabled={guardar.isPending}>
-            <X size={16} /> Cancelar
-          </Button>
-        </div>
+        {/* Modo edición: reprocesar completo */}
+        {esEdicion && (
+          <>
+            {guardar.isError && (
+              <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2">
+                {(guardar.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+                  ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <Button type="submit" variant="gold" disabled={guardar.isPending || stockInsuficiente}
+                className="flex-1 h-11 gap-2 text-base font-semibold">
+                <UploadCloud size={18} />
+                {stockInsuficiente ? 'STOCK INSUFICIENTE' : guardar.isPending ? 'Guardando reporte...' : 'Aplicar Reprocesado Completo'}
+              </Button>
+              <Button type="button" variant="outline" className="gap-2"
+                onClick={() => navigate(`/reportes/${reporteId}`)} disabled={guardar.isPending}>
+                <X size={16} /> Cancelar
+              </Button>
+            </div>
+          </>
+        )}
 
+        {/* Modo crear: solo "Guardar y Cerrar Caja" */}
         {!esEdicion && (
-          <div className="pb-8">
+          <div className="pb-8 space-y-2">
             <Button
               type="button"
               variant="outline"
-              disabled={guardar.isPending || stockInsuficiente}
-              onClick={handleSubmit(onSubmitYNuevo)}
+              disabled={cerrandoCaja || stockInsuficiente || ventaSaving || !savedReporteId}
+              onClick={handleCerrarCaja}
               className="w-full h-12 gap-2 text-base font-semibold border-2 border-kyro-indigo/50 text-kyro-indigo hover:bg-kyro-indigo/10"
             >
               <Receipt size={18} />
-              {guardar.isPending ? 'Guardando...' : 'Guardar y Cerrar Caja · Empezar Nuevo'}
+              {cerrandoCaja ? 'Cerrando caja...' : 'Guardar y Cerrar Caja · Empezar Nuevo'}
             </Button>
+            {!savedReporteId && (
+              <p className="text-[11px] text-kyro-muted text-center">
+                Agrega al menos una venta para habilitar el cierre de caja.
+              </p>
+            )}
           </div>
         )}
 

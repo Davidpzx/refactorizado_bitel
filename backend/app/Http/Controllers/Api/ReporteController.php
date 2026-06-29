@@ -70,7 +70,7 @@ class ReporteController extends Controller
             '_modo_dios'                     => 'nullable|boolean',
             'usuario_id'                     => 'nullable|integer',
             'fecha'                          => 'required|date',
-            'caja_inicial'                   => 'required|numeric|min:0',
+            'caja_inicial'                   => 'nullable|numeric|min:0',
             'yape'                           => 'nullable|numeric|min:0',
             'bipay'                          => 'nullable|numeric|min:0',
             'transferencia'                  => 'nullable|numeric|min:0',
@@ -80,7 +80,7 @@ class ReporteController extends Controller
             'pago_payjoy'                    => 'nullable|numeric|min:0',
             'tickets_tusamy'                 => 'nullable|numeric|min:0',
             'retiro_bipay'                   => 'nullable|numeric|min:0',
-            'efectivo_entregado'             => 'required|numeric|min:0',
+            'efectivo_entregado'             => 'nullable|numeric|min:0',
             'total_salidas'                  => 'nullable|numeric|min:0',
             'salidas'                        => 'nullable|array',
             'salidas.*.tipo'                 => 'required_with:salidas|in:adelanto,gasto,pasaje,otro',
@@ -143,19 +143,7 @@ class ReporteController extends Controller
             return response()->json(['error' => 'El usuario autenticado no tiene una tienda asignada.'], 422);
         }
 
-        // B5 — Guardia anti-duplicados (paridad legacy procesar_reporte.php):
-        // impide más de un reporte por (agente, tienda, fecha) aunque el front falle o sea evadido.
-        $duplicado = Reporte::query()
-            ->where('agente_id', $agenteId)
-            ->where('tienda_id', $tiendaId)
-            ->whereDate('fecha', $validated['fecha'])
-            ->exists();
-        if ($duplicado) {
-            return response()->json([
-                'error' => 'Ya existe un reporte para este agente, tienda y fecha.',
-                'code'  => 'DUPLICATE_REPORT',
-            ], 422);
-        }
+        // Guard de duplicados eliminado: se permiten múltiples cuadres por día (cerrar caja y abrir nueva).
 
         DB::beginTransaction();
         try {
@@ -1027,6 +1015,210 @@ class ReporteController extends Controller
         }
 
         return null;
+    }
+
+    // ── POST /reportes/{reporte}/agregar-venta ────────────────────────────────
+    // Guarda una venta individual en el reporte (stock + comisión + recálculo).
+    public function agregarVenta(Request $request, Reporte $reporte): JsonResponse
+    {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+        if ($reporte->estado === 'aprobado') {
+            return response()->json(['error' => 'No se puede modificar un reporte aprobado.'], 422);
+        }
+
+        $validated = $request->validate([
+            'vendedor_id'           => 'required|integer|exists:agentes,id',
+            'tipo_venta'            => 'required|in:EQUIPO,ACCESORIO,POSTPAGO,PREPAGO,OTROS_FLUJO,APOYO',
+            'subtipo'               => 'nullable|string|max:50',
+            'monto_total'           => 'required|numeric|min:0',
+            'efectivo_inicial'      => 'nullable|numeric|min:0',
+            'cross_selling'         => 'nullable|boolean',
+            'tienda_destino'        => 'nullable|string|max:10',
+            'es_remate'             => 'nullable|boolean',
+            'es_extranjero'         => 'nullable|boolean',
+            'es_migracion'          => 'nullable|boolean',
+            'es_upgrade'            => 'nullable|boolean',
+            'es_esim'               => 'nullable|boolean',
+            'plan_anterior'         => 'nullable|numeric|min:0',
+            'cliente_dni'           => 'nullable|string|max:11',
+            'inventario_tienda_id'  => 'nullable|integer',
+            'producto_nombre'       => 'nullable|string|max:150',
+            'imei_serial'           => 'nullable|string|max:50',
+            'tipo_pago'             => 'nullable|in:CONTADO,CUOTAS',
+            'financiera'            => 'nullable|string|max:50',
+            'precio_venta'          => 'nullable|numeric|min:0',
+            'costo_snap'            => 'nullable|numeric|min:0',
+            'por_cobrar_financiera' => 'nullable|numeric|min:0',
+            'plan_nombre'           => 'nullable|string|max:150',
+            'tipo_alta'             => 'nullable|string|max:30',
+            'cantidad'              => 'nullable|integer|min:1',
+            'cobrado_unitario'      => 'nullable|numeric|min:0',
+            'comision_unitaria'     => 'nullable|numeric|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $comisionService = new ComisionService();
+            $this->procesarVentas($reporte, [$validated], (string) $reporte->tienda_id, (int) $reporte->agente_id, $comisionService);
+            $this->recalcularTotalesReporte($reporte);
+            (new ComisionOperativaService())->recalcularReporte($reporte);
+            DB::commit();
+            $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+            return response()->json($reporte);
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al agregar la venta: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ── DELETE /reportes/{reporte}/ventas/{venta} ─────────────────────────────
+    // Elimina una venta individual, repone su stock y recalcula totales.
+    public function eliminarVenta(Request $request, Reporte $reporte, Venta $venta): JsonResponse
+    {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+        if ($reporte->estado === 'aprobado') {
+            return response()->json(['error' => 'No se puede modificar un reporte aprobado.'], 422);
+        }
+        if ((int) $venta->reporte_id !== $reporte->id) {
+            return response()->json(['error' => 'Esta venta no pertenece al reporte.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $idTiendaInterna = $this->idTiendaInterna((string) $reporte->tienda_id);
+            $tieneChipsCol   = Schema::hasColumn('ventas', 'chips_descontados');
+            $chipsPrevios    = $tieneChipsCol ? (int) ($venta->chips_descontados ?? 0) : 0;
+
+            // Reponer chips
+            if ($chipsPrevios > 0 && $idTiendaInterna) {
+                $repuestos = 0;
+                if (Schema::hasTable('venta_chip_movimientos')) {
+                    $movimientos = DB::table('venta_chip_movimientos')->where('venta_id', $venta->id)->lockForUpdate()->get();
+                    foreach ($movimientos as $m) {
+                        DB::table('inventario_chips')->where('id', $m->inventario_chip_id)->increment('stock_actual', (int) $m->cantidad);
+                        $repuestos += (int) $m->cantidad;
+                    }
+                    DB::table('venta_chip_movimientos')->where('venta_id', $venta->id)->delete();
+                }
+                $faltante = max(0, $chipsPrevios - $repuestos);
+                $origenCode = $venta->tipo_venta === 'APOYO' ? (string) ($venta->tienda_destino ?? '') : (string) $reporte->tienda_id;
+                if ($faltante > 0 && $origenCode !== '') {
+                    $this->reponerChips((int) $idTiendaInterna, $origenCode, $faltante);
+                }
+            }
+
+            // Reponer inventario equipo
+            $venta->load('equipo');
+            $invId = (int) ($venta->equipo->inventario_tienda_id ?? 0);
+            if ($venta->equipo && $invId > 0) {
+                $upd = ['cantidad' => DB::raw('cantidad + 1')];
+                if (Schema::hasColumn('inventario_tiendas', 'estado'))        $upd['estado']           = 'DISPONIBLE';
+                if (Schema::hasColumn('inventario_tiendas', 'fecha_venta'))   $upd['fecha_venta']      = null;
+                if (Schema::hasColumn('inventario_tiendas', 'reporte_venta_id')) $upd['reporte_venta_id'] = null;
+                DB::table('inventario_tiendas')->where('id', $invId)->update($upd);
+            }
+
+            VentaEquipo::where('venta_id', $venta->id)->delete();
+            VentaLinea::where('venta_id', $venta->id)->delete();
+            $venta->delete();
+
+            $this->recalcularTotalesReporte($reporte);
+            (new ComisionOperativaService())->recalcularReporte($reporte);
+            DB::commit();
+            $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+            return response()->json($reporte);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al eliminar la venta: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ── PATCH /reportes/{reporte}/cabecera ────────────────────────────────────
+    // Actualiza los campos de cabecera (yape, bipay, caja_inicial, etc.) sin tocar las ventas.
+    // Lo llama "Guardar y Cerrar Caja" al final del turno.
+    public function actualizarCabecera(Request $request, Reporte $reporte): JsonResponse
+    {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+        if ($reporte->estado === 'aprobado') {
+            return response()->json(['error' => 'No se puede modificar un reporte aprobado.'], 422);
+        }
+
+        $validated = $request->validate([
+            'caja_inicial'       => 'nullable|numeric|min:0',
+            'yape'               => 'nullable|numeric|min:0',
+            'bipay'              => 'nullable|numeric|min:0',
+            'transferencia'      => 'nullable|numeric|min:0',
+            'retiro_bipay'       => 'nullable|numeric|min:0',
+            'recarga_bipay'      => 'nullable|numeric|min:0',
+            'pago_servicio'      => 'nullable|numeric|min:0',
+            'pago_krece'         => 'nullable|numeric|min:0',
+            'pago_payjoy'        => 'nullable|numeric|min:0',
+            'tickets_tusamy'     => 'nullable|numeric|min:0',
+            'efectivo_entregado' => 'nullable|numeric|min:0',
+            'nombre_cubre'       => 'nullable|string|max:100',
+            'observaciones'      => 'nullable|string',
+            'obs_dia'            => 'nullable|string',
+            'destino_efectivo'   => 'nullable|string|max:50',
+            'salidas'            => 'nullable|array',
+            'salidas.*.tipo'     => 'required_with:salidas|in:adelanto,gasto,pasaje,otro',
+            'salidas.*.monto'    => 'required_with:salidas|numeric|gt:0',
+            'salidas.*.observacion' => 'nullable|string|max:1000',
+            'cerrar'             => 'nullable|boolean',
+        ]);
+
+        $campos = ['caja_inicial','yape','bipay','transferencia','retiro_bipay','recarga_bipay',
+                   'pago_servicio','pago_krece','pago_payjoy','tickets_tusamy','efectivo_entregado',
+                   'nombre_cubre','observaciones','obs_dia','destino_efectivo'];
+        $update = [];
+        foreach ($campos as $c) {
+            if (array_key_exists($c, $validated)) {
+                $update[$c] = $validated[$c] ?? 0;
+            }
+        }
+        if (!empty($update)) $reporte->update($update);
+
+        if ($request->has('salidas')) {
+            $this->guardarSalidas($reporte, $validated['salidas'] ?? []);
+        }
+
+        $this->recalcularTotalesReporte($reporte);
+
+        if ($validated['cerrar'] ?? false) {
+            $reporte->update(['estado' => 'enviado']);
+        }
+
+        (new ComisionOperativaService())->recalcularReporte($reporte);
+        $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+        return response()->json($reporte);
+    }
+
+    // ── Helper: recalcular totales del reporte a partir de sus ventas actuales ─
+    private function recalcularTotalesReporte(Reporte $reporte): void
+    {
+        $reporte->refresh();
+        $totalCalculado = (float) Venta::where('reporte_id', $reporte->id)->sum('monto_total');
+        $totalSistema   = $totalCalculado
+            + (float) $reporte->recarga_bipay
+            + (float) $reporte->pago_servicio
+            + (float) $reporte->pago_krece
+            + (float) $reporte->pago_payjoy
+            + (float) $reporte->tickets_tusamy;
+        $totalNoFisico  = (float) $reporte->yape + (float) $reporte->bipay
+            + (float) $reporte->transferencia + (float) $reporte->retiro_bipay;
+        $totalSalidas   = (float) ReporteSalida::where('reporte_id', $reporte->id)->sum('monto');
+        $efectivoEsperado = round($totalSistema - $totalNoFisico - $totalSalidas, 2);
+        $diferencia       = round((float) $reporte->efectivo_entregado - $efectivoEsperado, 2);
+
+        $reporte->update([
+            'total_calculado'     => $totalCalculado,
+            'total_salidas'       => $totalSalidas,
+            'efectivo_esperado'   => $efectivoEsperado,
+            'diferencia'          => $diferencia,
+            'requiere_aprobacion' => abs($diferencia) > 10,
+        ]);
     }
 
     private function autorizarPropietarioOAdmin(Request $request, Reporte $reporte): void

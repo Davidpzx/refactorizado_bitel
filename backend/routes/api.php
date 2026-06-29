@@ -99,6 +99,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy'])->middleware('open.shift');
 
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
+    Route::post('reportes/{reporte}/agregar-venta',    [ReporteController::class, 'agregarVenta']);
+    Route::delete('reportes/{reporte}/ventas/{venta}', [ReporteController::class, 'eliminarVenta']);
+    Route::patch('reportes/{reporte}/cabecera',        [ReporteController::class, 'actualizarCabecera']);
     Route::post('reportes/{reporte}/solicitar-edicion', [ReporteController::class, 'solicitarEdicion']);
     Route::post('reportes/{reporte}/aprobar-edicion',        [ReporteController::class, 'aprobarEdicion']);
     Route::post('reportes/{reporte}/denegar-edicion',         [ReporteController::class, 'denegarEdicion']);
