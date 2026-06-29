@@ -1168,8 +1168,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         syncVentasDesdeReporte(reporte)
       }
 
-      // Crear tickets para las ventas (solo tienda)
-      if (esTienda) {
+      // Crear tickets para las ventas (tienda propia o admin con tienda seleccionada)
+      if (esTienda || !!tiendaSeleccionada) {
         const ventasFormData = ventaItems.map(d => buildVenta(d))
         crearTicketsVentas(ventasFormData, true)
       }
