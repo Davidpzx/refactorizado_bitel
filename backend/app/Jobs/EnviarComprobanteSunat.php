@@ -57,7 +57,7 @@ class EnviarComprobanteSunat implements ShouldQueue
         ]);
 
         // Si SUNAT rechazó, programar próximo reintento y re-encolar
-        if ($resultado['estado_sunat'] === 'ERROR') {
+        if ($resultado['estado_sunat'] === 'RECHAZADO') {
             $backoffSeg = $this->backoff()[min($this->attempts() - 1, 4)];
             $comprobante->update(['proximo_intento' => now()->addSeconds($backoffSeg)]);
             $this->release($backoffSeg);
@@ -72,7 +72,7 @@ class EnviarComprobanteSunat implements ShouldQueue
         ]);
 
         Comprobante::where('id', $this->comprobanteId)->update([
-            'estado_sunat'  => 'ERROR',
+            'estado_sunat'  => 'RECHAZADO', // BD enum: PENDIENTE/ENVIADO/ACEPTADO/RECHAZADO/ANULADO
             'mensaje_sunat' => 'Job agotó reintentos: ' . substr($e->getMessage(), 0, 450),
         ]);
     }

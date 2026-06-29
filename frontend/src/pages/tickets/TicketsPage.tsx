@@ -124,9 +124,9 @@ function getColumns(
       cell: ({ row }) => <FormaPagoBadge ticket={row.original} />,
     },
     {
-      accessorKey: 'created_at',
+      accessorKey: 'creado_en',
       header: 'Fecha',
-      cell: ({ row }) => row.original.created_at?.slice(0, 10) ?? '—',
+      cell: ({ row }) => row.original.creado_en?.slice(0, 10) ?? '—',
     },
     {
       id: 'acciones',

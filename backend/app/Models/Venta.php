@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,6 +29,21 @@ class Venta extends Model
         'es_remate'         => 'boolean',
         'es_extranjero'     => 'boolean',
     ];
+
+    /**
+     * El ENUM de la BD no incluye 'APOYO'.
+     * Lo almacenamos como OTROS_FLUJO + subtipo='APOYO' y aquí lo revertimos al leer,
+     * para que el frontend siempre vea 'APOYO' como tipo_venta.
+     */
+    protected function tipoVenta(): Attribute
+    {
+        return Attribute::make(
+            get: fn (string $value, array $attributes) =>
+                ($value === 'OTROS_FLUJO' && ($attributes['subtipo'] ?? '') === 'APOYO')
+                    ? 'APOYO'
+                    : $value,
+        );
+    }
 
     public function reporte(): BelongsTo
     {

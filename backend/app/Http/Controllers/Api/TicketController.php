@@ -104,10 +104,8 @@ class TicketController extends Controller
             'yape'           => $yape,
             'bipay'          => $bipay,
             'transferencia'  => $transferencia,
-            'vuelto'         => $vuelto,
-            'creado_en'      => now(),
-            'created_at'     => now(),
-            'updated_at'     => now(),
+            'vuelto'    => $vuelto,
+            'creado_en' => now(),
         ]);
 
         return response()->json(['ok' => true, 'id' => $id]);
@@ -175,7 +173,6 @@ class TicketController extends Controller
         }
 
         if (! empty($update)) {
-            $update['updated_at'] = now();
             DB::table('tickets_emitidos')->where('id', $id)->update($update);
         }
 

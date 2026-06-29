@@ -208,8 +208,9 @@ class GreenterService
 
     private function resolveResult($result, string $xmlPath): array
     {
+        // BD enum: PENDIENTE | ENVIADO | ACEPTADO | RECHAZADO | ANULADO  (no existe ERROR ni ACEPTADO_OBS)
         $base = ['xml_path' => $xmlPath, 'cdr_path' => null, 'hash_cpe' => null,
-                 'estado_sunat' => 'ERROR', 'mensaje_sunat' => null];
+                 'estado_sunat' => 'RECHAZADO', 'mensaje_sunat' => null];
 
         if (!$result) {
             return array_merge($base, ['mensaje_sunat' => 'Sin respuesta de SUNAT']);
@@ -229,12 +230,13 @@ class GreenterService
             ]);
         }
 
-        // Aceptado con observaciones (código 0)
+        // Aceptado con observaciones (código 0) → guardamos como ACEPTADO con nota en mensaje_sunat
+        // (BD no tiene ACEPTADO_OBS en su ENUM)
         $cdrCode = $result->getCdrResponse()?->getCode();
         if ($cdrCode === 0) {
             return array_merge($base, [
-                'estado_sunat'  => 'ACEPTADO_OBS',
-                'mensaje_sunat' => $result->getCdrResponse()->getDescription(),
+                'estado_sunat'  => 'ACEPTADO',
+                'mensaje_sunat' => '[Con observaciones] ' . $result->getCdrResponse()->getDescription(),
             ]);
         }
 

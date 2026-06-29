@@ -17,7 +17,7 @@ interface Comprobante {
   tipo_comprobante: '03' | '01'
   serie: string
   numero: number
-  estado_sunat: 'PENDIENTE' | 'ACEPTADO' | 'ACEPTADO_OBS' | 'ERROR'
+  estado_sunat: 'PENDIENTE' | 'ENVIADO' | 'ACEPTADO' | 'RECHAZADO' | 'ANULADO'
   xml_path: string | null
   cdr_path: string | null
   mensaje_sunat: string | null
@@ -45,15 +45,17 @@ const comprobantesApi = {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
+// BD enum: PENDIENTE | ENVIADO | ACEPTADO | RECHAZADO | ANULADO
 const ESTADO_CONFIG: Record<string, { label: string; class: string; Icon: React.ComponentType<{ size?: number }> }> = {
-  PENDIENTE:    { label: 'Pendiente',      class: 'bg-kyro-warning/10 text-kyro-warning', Icon: Clock },
-  ACEPTADO:     { label: 'Aceptado',       class: 'bg-kyro-success/10 text-kyro-success', Icon: CheckCircle2 },
-  ACEPTADO_OBS: { label: 'Aceptado c/obs', class: 'bg-kyro-info/10 text-kyro-info', Icon: FileCheck },
-  ERROR:        { label: 'Error',          class: 'bg-kyro-danger/10 text-kyro-danger', Icon: AlertCircle },
+  PENDIENTE:  { label: 'Pendiente',  class: 'bg-kyro-warning/10 text-kyro-warning', Icon: Clock },
+  ENVIADO:    { label: 'Enviado',    class: 'bg-kyro-info/10 text-kyro-info',       Icon: Send },
+  ACEPTADO:   { label: 'Aceptado',   class: 'bg-kyro-success/10 text-kyro-success', Icon: CheckCircle2 },
+  RECHAZADO:  { label: 'Rechazado',  class: 'bg-kyro-danger/10 text-kyro-danger',   Icon: AlertCircle },
+  ANULADO:    { label: 'Anulado',    class: 'bg-gray-400/10 text-gray-500',         Icon: FileCheck },
 }
 
 function EstadoBadge({ estado }: { estado: string }) {
-  const cfg = ESTADO_CONFIG[estado] ?? ESTADO_CONFIG.ERROR
+  const cfg = ESTADO_CONFIG[estado] ?? ESTADO_CONFIG.RECHAZADO
   const { Icon } = cfg
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.class}`}>
@@ -67,12 +69,14 @@ const pen = (v: number | string | null | undefined) =>
 
 const TIPO_LABEL: Record<string, string> = { '03': 'Boleta', '01': 'Factura' }
 
+// Valores alineados al ENUM de BD: PENDIENTE | ENVIADO | ACEPTADO | RECHAZADO | ANULADO
 const ESTADOS = [
-  { value: '', label: 'Pendientes', tone: 'indigo' as const },
-  { value: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const },
-  { value: 'ACEPTADO', label: 'Aceptado', tone: 'success' as const },
-  { value: 'ACEPTADO_OBS', label: 'Obs.', tone: 'info' as const },
-  { value: 'ERROR', label: 'Error', tone: 'danger' as const },
+  { value: '',           label: 'Todos',     tone: 'indigo'   as const },
+  { value: 'PENDIENTE',  label: 'Pendiente', tone: 'warning'  as const },
+  { value: 'ENVIADO',    label: 'Enviado',   tone: 'info'     as const },
+  { value: 'ACEPTADO',   label: 'Aceptado',  tone: 'success'  as const },
+  { value: 'RECHAZADO',  label: 'Rechazado', tone: 'danger'   as const },
+  { value: 'ANULADO',    label: 'Anulado',   tone: 'indigo'   as const },
 ]
 
 const TIPOS = [

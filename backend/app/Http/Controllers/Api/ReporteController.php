@@ -469,19 +469,47 @@ class ReporteController extends Controller
             // B2 — Comisión SERVER-AUTHORITATIVE (no se confía en el cliente).
             $comisionTotal = $comisionService->calcularComisionVenta($vd);
 
+            // El ENUM de ventas.tipo_venta NO incluye 'APOYO' en la BD actual.
+            // Lo guardamos como OTROS_FLUJO + subtipo='APOYO' y el modelo Venta
+            // tiene un accessor que lo revierte al leer, por lo que el frontend
+            // siempre recibe 'APOYO' como tipo_venta.
+            $tipoOriginal = $vd['tipo_venta'];
+            $tipoVentaBD  = $tipoOriginal === 'APOYO' ? 'OTROS_FLUJO' : $tipoOriginal;
+            $subtipoBD    = $tipoOriginal === 'APOYO'
+                ? 'APOYO'
+                : ($vd['subtipo'] ?? null);
+
+            // Calcular monto_total server-side para garantizar consistencia
+            // independientemente del valor que envíe el cliente.
+            $montoCalculado = match ($tipoOriginal) {
+                'POSTPAGO', 'PREPAGO', 'APOYO' =>
+                    round((float) ($vd['cobrado_unitario'] ?? 0) * max(1, (int) ($vd['cantidad'] ?? 1)), 2),
+                'EQUIPO', 'ACCESORIO' =>
+                    round((float) ($vd['precio_venta'] ?? 0), 2),
+                default =>
+                    round((float) ($vd['monto_total'] ?? 0), 2),
+            };
+            // Si el cliente envió un monto válido y el calculado es 0, usar el del cliente como fallback
+            if ($montoCalculado <= 0 && (float) ($vd['monto_total'] ?? 0) > 0) {
+                $montoCalculado = round((float) $vd['monto_total'], 2);
+            }
+            $efectivoCalculado = ($tipoOriginal === 'EQUIPO' && strtoupper((string) ($vd['tipo_pago'] ?? 'CONTADO')) === 'CUOTAS')
+                ? round((float) ($vd['por_cobrar_financiera'] ?? 0), 2)
+                : $montoCalculado;
+
             $venta = Venta::create([
                 'reporte_id'        => $reporte->id,
                 'vendedor_id'       => $vendedorId,
                 'cliente_id'        => $cliente_id,
-                'tipo_venta'        => $vd['tipo_venta'],
-                'subtipo'           => $vd['subtipo'] ?? null,
+                'tipo_venta'        => $tipoVentaBD,
+                'subtipo'           => $subtipoBD,
                 'cross_selling'     => (bool) ($vd['cross_selling'] ?? false),
-                'tienda_destino'    => (($vd['cross_selling'] ?? false) || $vd['tipo_venta'] === 'APOYO')
+                'tienda_destino'    => (($vd['cross_selling'] ?? false) || $tipoOriginal === 'APOYO')
                     ? ($vd['tienda_destino'] ?? null) : null,
-                'monto_total'       => $vd['monto_total'],
-                'efectivo_inicial'  => $vd['efectivo_inicial'] ?? $vd['monto_total'],
+                'monto_total'       => $montoCalculado,
+                'efectivo_inicial'  => $efectivoCalculado,
                 'comision_generada' => $comisionTotal,
-                'comision_estado'   => ($vd['tipo_venta'] === 'EQUIPO'
+                'comision_estado'   => ($tipoOriginal === 'EQUIPO'
                     && strtoupper((string) ($vd['tipo_pago'] ?? 'CONTADO')) === 'CUOTAS') ? 'PENDIENTE' : 'ACTIVA',
                 'es_remate'         => (bool) ($vd['es_remate'] ?? false),
                 'es_extranjero'     => (bool) ($vd['es_extranjero'] ?? false),

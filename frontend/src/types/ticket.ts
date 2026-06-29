@@ -14,8 +14,7 @@ export interface Ticket {
   nombre_cliente: string | null
   dni_cliente: string | null
   telefono: string | null
-  created_at: string
-  updated_at: string
+  creado_en: string  // BD: tickets_emitidos usa creado_en (no created_at/updated_at)
 }
 
 export interface TicketFilters {
