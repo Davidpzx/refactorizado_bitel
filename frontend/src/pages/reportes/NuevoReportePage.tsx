@@ -1594,13 +1594,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         actions={
           <div className="flex items-center gap-2">
             {esTienda && <ChipStockBadge />}
-            {esTienda && borradorDisponible && (
+            {esEdicion && esTienda && borradorDisponible && (
               <Button variant="glassWarning" type="button" className="gap-2"
                 onClick={() => restaurarBorrador(borradorDisponible)}>
                 <FolderDown size={15} /> Cargar Borrador
               </Button>
             )}
-            {esTienda && (
+            {esEdicion && esTienda && (
               <Button variant="gold" type="button" className="gap-2" onClick={() => guardarBorrador(false)}>
                 <Save size={15} /> Guardar Borrador
               </Button>
