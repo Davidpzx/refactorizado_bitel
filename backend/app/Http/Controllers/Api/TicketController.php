@@ -87,7 +87,10 @@ class TicketController extends Controller
         ]);
         $formaPago = !empty($metodos) ? implode('+', $metodos) : 'Efectivo';
 
+        $ventaId = $request->input('venta_id') ? (int) $request->input('venta_id') : null;
+
         $id = DB::table('tickets_emitidos')->insertGetId([
+            'venta_id'       => $ventaId,
             'tienda_id'      => $tiendaId,
             'agente_id'      => $agenteId,
             'vendedor'       => $esAdmin
@@ -104,8 +107,8 @@ class TicketController extends Controller
             'yape'           => $yape,
             'bipay'          => $bipay,
             'transferencia'  => $transferencia,
-            'vuelto'    => $vuelto,
-            'creado_en' => now(),
+            'vuelto'         => $vuelto,
+            'creado_en'      => now(),
         ]);
 
         return response()->json(['ok' => true, 'id' => $id]);

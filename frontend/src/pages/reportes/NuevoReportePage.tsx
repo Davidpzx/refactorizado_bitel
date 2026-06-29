@@ -27,6 +27,7 @@ import type { InventarioItem } from '../../types/inventario'
 import { reportesApi } from '../../services/reportes.api'
 import type { ReporteConVentas, VendedorReporte } from '../../types/reporte'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
+import { PostVentaModal } from './cuadre/PostVentaModal'
 
 // ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
 const ACCENT = {
@@ -848,6 +849,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
   const cerrarCajaRef          = useRef(false)   // true → tras guardar, limpiar para cuadre nuevo
   const [pendingPrintIds, setPendingPrintIds] = useState<number[]>([])
+  const [postVenta, setPostVenta] = useState<{ ticketId: number; ventaId: number | null } | null>(null)
 
   // ── Reporte activo persistido en localStorage (modo crear) ───────────────────
   // Clave por usuario — así cada agente tiene su propio cuadre activo
@@ -1037,19 +1039,18 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const [crmMsg, setCrmMsg] = useState('')
 
   // ── Ticket de venta ────────────────────────────────────────────────────────
-  const crearTicketsVentas = async (lista: VentaFormData[], openPrint = false) => {
-    if (lista.length === 0) { console.warn('[ticket] lista vacía'); return }
-    const ids: number[] = []
-    for (const v of lista) {
+  const crearTicketsVentas = async (lista: VentaFormData[], ventaIds: number[] = []) => {
+    if (lista.length === 0) return
+    for (let i = 0; i < lista.length; i++) {
+      const v       = lista[i]
+      const ventaId = ventaIds[i] ?? (v.venta_id ?? null)
+
       const isLinea  = v.tipo_venta === 'POSTPAGO' || v.tipo_venta === 'PREPAGO'
       const isEquipo = v.tipo_venta === 'EQUIPO'   || v.tipo_venta === 'ACCESORIO'
       const monto    = isLinea  ? (v.cobrado_unitario || 0) * (v.cantidad || 1)
                      : isEquipo ? (v.precio_venta || 0)
                      : (v.monto_total || 0)
-
-      console.log('[ticket] procesando:', { tipo_venta: v.tipo_venta, monto, precio_venta: v.precio_venta, cobrado_unitario: v.cobrado_unitario })
-
-      if (monto <= 0) { console.warn('[ticket] monto <= 0, se omite'); continue }
+      if (monto <= 0) continue
 
       const desc = isLinea
         ? `${v.tipo_venta === 'POSTPAGO' ? 'Postpago' : 'Prepago'} · ${[v.plan_nombre, v.tipo_alta].filter(Boolean).join(' · ')}`
@@ -1059,38 +1060,30 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         ? `Apoyo ${v.tienda_destino || ''} · ${v.plan_nombre || ''}`
         : v.subtipo || v.tipo_venta
 
-      const agenteId = getValues('agente_id') || usuario?.agente_id || undefined
       const vendedorObj = vendedores.find(vv => vv.id === v.vendedor_id)
-
-      const payload = {
-        tienda_id:      tiendaSeleccionada,
-        agente_id:      agenteId,
-        vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
-        descripcion:    desc.trim(),
-        monto,
-        cantidad:       v.cantidad || 1,
-        nombre_cliente: v.cliente_nombre || '',
-        dni_cliente:    v.cliente_dni    || '',
-      }
-      console.log('[ticket] payload →', payload)
-
       try {
-        const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', payload)
-        console.log('[ticket] respuesta →', res.data)
+        const res = await api.post<{ ok: boolean; id: number }>('/v1/tickets', {
+          venta_id:       ventaId ?? undefined,
+          tienda_id:      tiendaSeleccionada,
+          agente_id:      getValues('agente_id') || usuario?.agente_id || undefined,
+          vendedor:       vendedorObj?.nombres ?? usuario?.nombre ?? '',
+          descripcion:    desc.trim(),
+          monto,
+          cantidad:       v.cantidad || 1,
+          nombre_cliente: v.cliente_nombre || '',
+          dni_cliente:    v.cliente_dni    || '',
+        })
         if (res.data?.ok && res.data?.id) {
-          ids.push(res.data.id)
-          if (openPrint) {
-            window.open(`/tickets/imprimir/${res.data.id}?print=1`, '_blank', 'width=420,height=680')
-          }
+          // Mostrar modal unificado (ticket + comprobante) solo para el primer resultado
+          if (i === 0) setPostVenta({ ticketId: res.data.id, ventaId })
+          else setPendingPrintIds(prev => [...prev, res.data.id])
         }
       } catch (err: unknown) {
-        const msg = (err as { response?: { data?: unknown; status?: number } })?.response?.data ?? err
-        console.error('[ticket] ERROR al crear ticket:', msg)
+        const msg = (err as { response?: { data?: unknown } })?.response?.data ?? err
         setBorradorMsg(`Error ticket: ${JSON.stringify(msg)}`)
         setTimeout(() => setBorradorMsg(''), 6000)
       }
     }
-    if (!openPrint && ids.length > 0) setPendingPrintIds(prev => [...prev, ...ids])
   }
 
   const handleVentaConfirm = async (items: ModalVentaState[]) => {
@@ -1180,10 +1173,14 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         syncVentasDesdeReporte(reporte)
       }
 
-      // Crear tickets para las ventas (tienda propia o admin con tienda seleccionada)
+      // Crear tickets vinculados a sus ventas
       if (esTienda || !!tiendaSeleccionada) {
-        const ventasFormData = ventaItems.map(d => buildVenta(d))
-        crearTicketsVentas(ventasFormData, true)
+        // Detectar IDs de ventas recién creadas comparando con las conocidas antes del loop
+        const idsConocidos = new Set(ventas.map(v => v.venta_id).filter(Boolean) as number[])
+        const nuevosIds = reporte.ventas
+          .map(v => v.id)
+          .filter(id => !idsConocidos.has(id))
+        crearTicketsVentas(ventaItems.map(d => buildVenta(d)), nuevosIds)
       }
 
       setBorradorMsg('✓ Venta guardada')
@@ -1623,9 +1620,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   })
 
   const onSubmit = (data: FormData) => {
-    // Crear tickets para TODAS las ventas del reporte (abre impresión directa)
     const todasVentas = data.ventas ?? []
-    if (todasVentas.length > 0) crearTicketsVentas(todasVentas, true)
+    if (todasVentas.length > 0) crearTicketsVentas(todasVentas)
     guardar.mutate(data)
   }
 
@@ -2106,6 +2102,15 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           tiendaId={usuario?.tienda_id ?? ''}
           agenteId={usuario?.agente_id ?? 0}
           vendedor={usuario?.nombre ?? ''}
+        />
+      )}
+
+      {/* ── Modal unificado: ticket + comprobante SUNAT ── */}
+      {postVenta && (
+        <PostVentaModal
+          ticketId={postVenta.ticketId}
+          ventaId={postVenta.ventaId}
+          onClose={() => setPostVenta(null)}
         />
       )}
 
