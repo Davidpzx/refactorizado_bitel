@@ -376,7 +376,23 @@ function AgregarRegistroModal({
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
   const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [crmStatus, setCrmStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [carrito, setCarrito] = useState<CarritoEquipoItem[]>([newCarritoItem()])
+
+  // "Recuperar Cliente": busca el DNI en el CRM ligero (crm_clientes) y pre-rellena.
+  const recuperarClienteCrm = () => {
+    if (!/^\d{8}$/.test(m.cliente_dni)) return
+    setCrmStatus('loading')
+    api.get<{ ok: boolean; nombres: string; apellidos: string }>(`/v1/clientes-crm/${m.cliente_dni}`)
+      .then(res => {
+        const nombre = [res.data.nombres, res.data.apellidos].filter(Boolean).join(' ')
+        if (nombre) {
+          setM(prev => ({ ...prev, cliente_nombre: nombre }))
+          setCrmStatus('found')
+        } else { setCrmStatus('notfound') }
+      })
+      .catch(() => setCrmStatus('notfound'))
+  }
 
   useEffect(() => {
     if (open) {
@@ -489,9 +505,17 @@ function AgregarRegistroModal({
               <Input value={m.cliente_dni} onChange={e => { upd('cliente_dni', e.target.value); setDniStatus('idle') }} maxLength={15} placeholder="DNI (8 dígitos) o celular" className="kyro-input mt-0.5 h-8 text-xs font-mono" />
               <p className="mt-0.5 text-[9px] h-3 leading-3">
                 {dniStatus === 'loading'  && <span className="text-kyro-muted animate-pulse">buscando…</span>}
-                {dniStatus === 'found'    && <span className="text-kyro-success">✓ encontrado</span>}
-                {dniStatus === 'notfound' && <span className="text-kyro-danger">no encontrado</span>}
+                {dniStatus === 'found'    && <span className="text-kyro-success">✓ encontrado (RENIEC)</span>}
+                {dniStatus === 'notfound' && crmStatus === 'idle' && <span className="text-kyro-danger">no encontrado</span>}
+                {crmStatus === 'found'    && <span className="text-kyro-success">✓ recuperado del CRM</span>}
+                {crmStatus === 'notfound' && <span className="text-kyro-danger">sin registro previo en CRM</span>}
               </p>
+              {/^\d{8}$/.test(m.cliente_dni) && dniStatus !== 'found' && (
+                <button type="button" onClick={recuperarClienteCrm} disabled={crmStatus === 'loading'}
+                  className="mt-0.5 rounded border border-kyro-gold/40 bg-kyro-gold/10 px-2 py-0.5 text-[9px] font-bold text-kyro-gold disabled:opacity-50">
+                  {crmStatus === 'loading' ? 'Buscando…' : 'Recuperar Cliente (CRM)'}
+                </button>
+              )}
             </div>
             <div>
               <Label className="text-[10px] text-kyro-muted">Nombre completo</Label>
@@ -1114,6 +1138,25 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         setCrmMsg('Error al guardar consulta en CRM')
         setTimeout(() => setCrmMsg(''), 3500)
       })
+    })
+
+    // Cliente Activo: registrar el cliente de cada venta en el CRM ligero
+    // (crm_clientes + interacción) — fire-and-forget, no bloquea el cuadre.
+    ventaItems.forEach(d => {
+      if (!/^\d{8}$/.test(d.cliente_dni) || !d.cliente_nombre?.trim()) return
+      const partes    = d.cliente_nombre.trim().split(/\s+/)
+      const nombres   = partes.slice(0, Math.max(1, partes.length - 2)).join(' ')
+      const apellidos = partes.slice(Math.max(1, partes.length - 2)).join(' ') || '—'
+      const vendedorObj = vendedores.find(vv => vv.id === d.vendedor_id)
+      api.post('/v1/clientes-crm', {
+        dni: d.cliente_dni,
+        nombres,
+        apellidos,
+        operacion: d.seccion === 'POSTPAGO' && d.tipo_alta === 'MNP' ? 'Portabilidad' : (d.seccion || 'VENTA'),
+        producto_interes: d.plan_nombre || d.producto_nombre || undefined,
+        agente: vendedorObj?.nombres,
+        fuente: 'RENIEC_API',
+      }).catch(() => { /* silencioso: el CRM no debe bloquear la venta */ })
     })
 
     // Agregar ventas reales → auto-guardar en BD inmediatamente

@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\AuditoriaNocturnaBipay;
 use App\Console\Commands\AutoRetornoAgentes;
 use App\Console\Commands\LimpiarFotosAsistencia;
 use App\Console\Commands\SalidaAutomaticaAsistencias;
@@ -24,6 +25,13 @@ Schedule::command(AutoRetornoAgentes::class)
 // Cerrar automáticamente turnos sin salida registrada
 Schedule::command(SalidaAutomaticaAsistencias::class)
     ->dailyAt('23:00')
+    ->timezone('America/Lima')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Cruce nocturno Bipay: declarado (ERP) vs scrapeado (agente) de todas las tiendas
+Schedule::command(AuditoriaNocturnaBipay::class)
+    ->dailyAt('23:30')
     ->timezone('America/Lima')
     ->withoutOverlapping()
     ->runInBackground();

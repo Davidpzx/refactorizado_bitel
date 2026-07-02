@@ -47,6 +47,8 @@ const RevisarStockPage   = lazy(() => import('./pages/admin/RevisarStockPage').t
 const RevisarFotosPage   = lazy(() => import('./pages/admin/RevisarFotosPage').then(m => ({ default: m.RevisarFotosPage })))
 const PostpagoPage       = lazy(() => import('./pages/postpago/PostpagoPage').then(m => ({ default: m.PostpagoPage })))
 const MapaCalorPage      = lazy(() => import('./pages/analytics/MapaCalorPage'))
+const CuadreBitelPage    = lazy(() => import('./pages/bipay/CuadreBitelPage').then(m => ({ default: m.CuadreBitelPage })))
+const IntegradorPage     = lazy(() => import('./pages/admin/IntegradorPage').then(m => ({ default: m.IntegradorPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -89,6 +91,7 @@ export default function App() {
               <Route path="/bitacora-stock"      element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
               <Route path="/reporte-bcp"         element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
               <Route path="/tickets"             element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
+              <Route path="/integrador"          element={<Suspense fallback={<PageLoader />}><IntegradorPage /></Suspense>} />
 
               {/* ── Rutas solo admin ── */}
               <Route element={<AdminRoute />}>
@@ -96,6 +99,7 @@ export default function App() {
                 <Route path="/reportes"            element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
                 <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
                 <Route path="/panel-bipay"         element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
+                <Route path="/cuadre-bitel"        element={<Suspense fallback={<PageLoader />}><CuadreBitelPage /></Suspense>} />
                 <Route path="/agentes"             element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
                 <Route path="/agentes/:id"         element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
                 <Route path="/asistencias"         element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />

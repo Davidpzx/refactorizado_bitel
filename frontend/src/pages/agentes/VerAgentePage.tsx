@@ -12,6 +12,7 @@ import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, Shield
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { DocumentosAgentePanel } from '../../components/agente/DocumentosAgentePanel'
 import { formatearFechaCorta } from '../../lib/fechas'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -687,6 +688,7 @@ export function VerAgentePage() {
           <SeguridadDispositivoPanel agenteId={id} />
           <BoletasPanel agenteId={id} nombre={agente.nombres.replace(/\s+/g, '_')} />
           <PerfilRrhhPanel agenteId={id} />
+          <DocumentosAgentePanel agenteId={Number(id)} />
         </div>
       )}
 

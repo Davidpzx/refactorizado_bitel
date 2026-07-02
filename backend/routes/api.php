@@ -36,6 +36,13 @@ use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VentaController;
 use App\Http\Controllers\Api\PostpagoController;
 use App\Http\Controllers\Api\MapaCalorController;
+use App\Http\Controllers\Api\AgenteDocumentoController;
+use App\Http\Controllers\Api\AsistenciaNeiryController;
+use App\Http\Controllers\Api\AuditoriaBipayController;
+use App\Http\Controllers\Api\ClienteCrmController;
+use App\Http\Controllers\Api\CuadreBitelController;
+use App\Http\Controllers\Api\IntegradorController;
+use App\Http\Controllers\Api\RucController;
 use Illuminate\Support\Facades\Route;
 
 // ── Health (público) ─────────────────────────────────────────────────────────
@@ -66,6 +73,15 @@ Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
     Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto']);
 });
 Route::post('/v1/asistencias/turno-corrido', [AsistenciaController::class, 'turnoCorrido'])->middleware('throttle:60,1');
+
+// ── Integrador Bitel — endpoints máquina-a-máquina (agente local → servidor) ──
+// Autenticación propia: token de tienda (agente-config) o API key + timestamp.
+Route::prefix('v1/integrador')->middleware('throttle:120,1')->group(function () {
+    Route::post('agente-config',           [IntegradorController::class, 'agenteConfig']);
+    Route::post('recibir-saldo',           [IntegradorController::class, 'recibirSaldo']);
+    Route::post('recibir-morosidad',       [IntegradorController::class, 'recibirMorosidad']);
+    Route::post('recibir-bitel-historico', [IntegradorController::class, 'recibirBitelHistorico']);
+});
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
@@ -296,6 +312,49 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('heatmap/calendario', [MapaCalorController::class, 'calendario'])->middleware('role:admin');
     Route::get('heatmap/geografico', [MapaCalorController::class, 'geografico'])->middleware('role:admin');
     Route::get('heatmap/horario',    [MapaCalorController::class, 'horario'])->middleware('role:admin');
+
+    // ── Integrador Bitel — gestión (admin / tienda propia) ───────────────────
+    Route::get('integrador/credenciales',                        [IntegradorController::class, 'credenciales'])->middleware('role:admin,tienda');
+    Route::post('integrador/credenciales',                       [IntegradorController::class, 'guardarCredenciales'])->middleware('role:admin,tienda');
+    Route::post('integrador/credenciales/{codigo}/regenerar-token', [IntegradorController::class, 'regenerarToken'])->middleware('role:admin,tienda');
+    Route::post('integrador/credenciales/{codigo}/toggle',       [IntegradorController::class, 'toggleActivo'])->middleware('role:admin');
+    Route::get('integrador/descargar-agente',                    [IntegradorController::class, 'descargarAgente'])->middleware('role:admin,tienda');
+    Route::post('integrador/solicitar-extraccion',               [IntegradorController::class, 'solicitarExtraccion'])->middleware('role:admin');
+    Route::post('integrador/solicitar-bitel-historico',          [IntegradorController::class, 'solicitarBitelHistorico'])->middleware('role:admin');
+    Route::get('integrador/morosidad',                           [IntegradorController::class, 'morosidad'])->middleware('role:admin');
+
+    // ── Cuadre Bitel ERP (admin) ──────────────────────────────────────────────
+    Route::get('cuadre-bitel/panel',            [CuadreBitelController::class, 'panel'])->middleware('role:admin');
+    Route::get('cuadre-bitel/rango',            [CuadreBitelController::class, 'rango'])->middleware('role:admin');
+    Route::get('cuadre-bitel/global',           [CuadreBitelController::class, 'global'])->middleware('role:admin');
+    Route::get('cuadre-bitel/turno',            [CuadreBitelController::class, 'turno'])->middleware('role:admin');
+    Route::get('cuadre-bitel/movimientos-dia',  [CuadreBitelController::class, 'movimientosDia'])->middleware('role:admin');
+    Route::post('cuadre-bitel/apoyos',          [CuadreBitelController::class, 'confirmarApoyo'])->middleware('role:admin');
+    Route::delete('cuadre-bitel/apoyos',        [CuadreBitelController::class, 'eliminarApoyo'])->middleware('role:admin');
+
+    // ── Auditoría Bipay (admin) ───────────────────────────────────────────────
+    Route::get('auditoria-bipay',                     [AuditoriaBipayController::class, 'index'])->middleware('role:admin');
+    Route::post('auditoria-bipay/cruce',              [AuditoriaBipayController::class, 'ejecutarCruce'])->middleware('role:admin');
+    Route::get('auditoria-bipay/webhook',             [AuditoriaBipayController::class, 'webhookConfig'])->middleware('role:admin');
+    Route::put('auditoria-bipay/webhook',             [AuditoriaBipayController::class, 'guardarWebhook'])->middleware('role:admin');
+    Route::post('auditoria-bipay/resolver-conflicto', [AuditoriaBipayController::class, 'resolverConflicto'])->middleware('role:admin');
+    Route::get('auditoria-bipay/{id}/detalles',       [AuditoriaBipayController::class, 'detalles'])->middleware('role:admin');
+    Route::post('auditoria-bipay/{id}/ajustar',       [AuditoriaBipayController::class, 'ajustar'])->middleware('role:admin');
+
+    // ── Cliente Activo CRM (cuadre) ───────────────────────────────────────────
+    Route::get('clientes-crm/{dni}', [ClienteCrmController::class, 'buscar']);
+    Route::post('clientes-crm',      [ClienteCrmController::class, 'guardar']);
+
+    // ── SUNAT RUC ─────────────────────────────────────────────────────────────
+    Route::get('ruc/{ruc}', [RucController::class, 'consultar']);
+
+    // ── Documentos del agente (foto perfil / DNI) ─────────────────────────────
+    Route::get('agentes/{id}/documentos',             [AgenteDocumentoController::class, 'ver'])->middleware('role:admin');
+    Route::post('agentes/{id}/documentos',            [AgenteDocumentoController::class, 'subir'])->middleware('role:admin');
+    Route::delete('agentes/{id}/documentos/{campo}',  [AgenteDocumentoController::class, 'eliminar'])->middleware('role:admin');
+
+    // ── Export plantilla Neiry ────────────────────────────────────────────────
+    Route::get('asistencias/exportar-neiry', [AsistenciaNeiryController::class, 'exportar'])->middleware('role:admin');
 
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
     Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // Integrador Bitel (agente extractor local). La API key debe coincidir con
+    // la del config.php de los agentes desplegados en las tiendas.
+    'integrador' => [
+        'api_key' => env('INTEGRADOR_API_KEY', 'KyrO+-tomowrroland-skrillex-2026?-wazak-vegetta777'),
+    ],
+
 ];

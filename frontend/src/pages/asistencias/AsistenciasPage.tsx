@@ -210,6 +210,29 @@ export function AsistenciasPage() {
     }
   }
 
+  const [exportandoNeiry, setExportandoNeiry] = useState(false)
+
+  // Plantilla Neiry: matriz mensual E/SR/RR/S por agente, agrupada por tienda
+  async function exportarNeiry() {
+    setExportandoNeiry(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const base  = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const mes   = (applied.fecha_desde || new Date().toISOString().slice(0, 10)).slice(0, 7)
+      const r = await fetch(`${base}/v1/asistencias/exportar-neiry?mes=${mes}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const blob = await r.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `Neiry_${mes}.xlsx`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } finally {
+      setExportandoNeiry(false)
+    }
+  }
+
   if (data?.warning) {
     return (
       <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
@@ -238,6 +261,11 @@ export function AsistenciasPage() {
         <Button variant="glassSuccess" size="sm" onClick={exportar} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
+        {usuario?.rol === 'admin' && (
+          <Button variant="outline" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
+            <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
+          </Button>
+        )}
       </PageHeader>
 
       {/* Formulario de asistencia manual (admin) */}

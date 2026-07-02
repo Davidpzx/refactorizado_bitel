@@ -11,6 +11,7 @@ import {
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight,
   Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
+  Scale, Plug,
 } from 'lucide-react'
 
 interface NavItem {
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // ── Pagos digitales ──────────────────────────────────────────────────────
   { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'],           section: 'Pagos digitales' },
+  { to: '/cuadre-bitel',   label: 'Cuadre Bitel',    Icon: Scale,           roles: ['admin'],           section: 'Pagos digitales' },
   { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Pagos digitales' },
 
   // ── Personal ─────────────────────────────────────────────────────────────
@@ -68,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
   { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
   { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
+  { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Administración' },
   { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'],           section: 'Administración' },
   { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
 ]
