@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PageHeader } from '../../components/PageHeader'
 import {
   cuadreBitelApi, auditoriaBipayApi, integradorApi,
   type CuadreCategorial, type CierreAuditoria, type WebhookConfig,
@@ -596,34 +595,33 @@ function TabMorosidad() {
   )
 }
 
-/* ── Página ───────────────────────────────────────────────────────────────── */
+/* ── Panel embebido (pestaña "Cuadre Bitel" del Panel Bipay) ──────────────── */
 
-export function CuadreBitelPage() {
+export function CuadreBitelPanel() {
   const [tab, setTab]     = useState<Tab>('panel')
   const [fecha, setFecha] = useState(hoy())
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <PageHeader
-        title="Cuadre Bitel ERP"
-        subtitle="Conciliación de lo declarado en los cuadres contra el detalle scrapeado del portal Bitel"
-      >
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                tab === t.id ? 'bg-kyro-gold text-black' : 'border border-white/10 text-kyro-muted hover:text-kyro-body'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
         {tab !== 'morosidad' && (
           <input type="date" value={fecha} max={hoy()} onChange={(e) => setFecha(e.target.value)}
             className="rounded-lg border border-white/10 bg-transparent px-3 py-1.5 text-sm" />
         )}
-      </PageHeader>
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-              tab === t.id ? 'bg-kyro-gold text-black' : 'border border-white/10 text-kyro-muted hover:text-kyro-body'
-            }`}>
-            {t.label}
-          </button>
-        ))}
       </div>
+      <p className="text-[0.7rem] text-kyro-muted">
+        Conciliación de lo declarado en los cuadres del ERP contra el detalle scrapeado del portal Bitel.
+      </p>
 
       {tab === 'panel'       && <TabPanel fecha={fecha} />}
       {tab === 'global'      && <TabGlobal fecha={fecha} />}

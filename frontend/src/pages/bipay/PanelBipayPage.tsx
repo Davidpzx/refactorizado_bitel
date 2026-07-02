@@ -7,7 +7,8 @@ import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale } from 'lucide-react'
+import { CuadreBitelPanel } from './CuadreBitelPage'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
@@ -54,7 +55,7 @@ interface TransaccionesData {
 
 export function PanelBipayPage() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas'>('saldo')
+  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas' | 'cuadre'>('saldo')
 
   // Saldo query
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
@@ -164,6 +165,7 @@ export function PanelBipayPage() {
     { id: 'transferir',    label: 'Transferir',     Icon: Send },
     { id: 'ajustar',       label: 'Ajustar Saldo',  Icon: SlidersHorizontal },
     { id: 'cuentas',       label: 'Cuentas',        Icon: CreditCard },
+    { id: 'cuadre',        label: 'Cuadre Bitel',   Icon: Scale },
   ] as const
 
   const inputCls = 'kyro-input'
@@ -212,6 +214,9 @@ export function PanelBipayPage() {
           </Button>
         ))}
       </div>
+
+      {/* TAB: Cuadre Bitel ERP (conciliación declarado vs scrapeado) ───────────── */}
+      {tab === 'cuadre' && <CuadreBitelPanel />}
 
       {/* TAB: Saldo por cuenta ─────────────────────────────────────────────────── */}
       {tab === 'saldo' && (

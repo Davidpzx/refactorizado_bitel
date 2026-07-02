@@ -11,7 +11,7 @@ import {
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
   ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight,
   Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
-  Scale, Plug,
+  Plug,
 } from 'lucide-react'
 
 interface NavItem {
@@ -37,7 +37,6 @@ const NAV_ITEMS: NavItem[] = [
 
   // ── Pagos digitales ──────────────────────────────────────────────────────
   { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'],           section: 'Pagos digitales' },
-  { to: '/cuadre-bitel',   label: 'Cuadre Bitel',    Icon: Scale,           roles: ['admin'],           section: 'Pagos digitales' },
   { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Pagos digitales' },
 
   // ── Personal ─────────────────────────────────────────────────────────────
