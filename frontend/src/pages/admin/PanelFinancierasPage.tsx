@@ -51,6 +51,8 @@ interface FinancieraItem {
     producto_nombre?: string
     [key: string]: unknown
   }
+  desembolso_confirmado_en?: string | null
+  desembolso_confirmado_por_nombre?: string | null
 }
 
 interface Totales {
@@ -249,6 +251,12 @@ export function PanelFinancierasPage() {
                       <Badge variant={estadoBadge[item.comision_estado] ?? 'default'}>
                         {item.comision_estado}
                       </Badge>
+                      {item.comision_estado === 'APROBADA' && item.desembolso_confirmado_por_nombre && (
+                        <p className="mt-1 text-xs text-kyro-subtle">
+                          Confirmado por {item.desembolso_confirmado_por_nombre}
+                          {item.desembolso_confirmado_en ? ` el ${item.desembolso_confirmado_en.slice(0, 10)}` : ''}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {item.comision_estado === 'PENDIENTE' ? (
