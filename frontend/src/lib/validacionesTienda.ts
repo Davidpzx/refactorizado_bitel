@@ -70,6 +70,7 @@ export interface ErroresTienda {
   telefono?: string
   latitud?: string
   longitud?: string
+  radioPermitido?: string
 }
 
 export interface FormularioTienda {
@@ -79,6 +80,7 @@ export interface FormularioTienda {
   telefono: string
   latitud: string
   longitud: string
+  radioPermitido: string
 }
 
 /** Valida una coordenada opcional dada como texto. Vacío es válido (no se manda). */
@@ -87,6 +89,15 @@ function validarCoordenada(valor: string, min: number, max: number): string | un
   const num = Number(valor)
   if (Number.isNaN(num)) return 'Debe ser un número.'
   if (num < min || num > max) return `Debe estar entre ${min} y ${max}.`
+  return undefined
+}
+
+/** Valida el radio de geocerca (metros). Vacío es válido (usa el default del backend, 60m). */
+function validarRadioPermitido(valor: string): string | undefined {
+  if (!valor.trim()) return undefined
+  const num = Number(valor)
+  if (Number.isNaN(num)) return 'Debe ser un número.'
+  if (num < 1) return 'Debe ser mayor a 0.'
   return undefined
 }
 
@@ -131,6 +142,9 @@ export function validarTienda(form: FormularioTienda): ErroresTienda {
 
   const errorLongitud = validarCoordenada(form.longitud, -180, 180)
   if (errorLongitud) errores.longitud = errorLongitud
+
+  const errorRadio = validarRadioPermitido(form.radioPermitido)
+  if (errorRadio) errores.radioPermitido = errorRadio
 
   return errores
 }

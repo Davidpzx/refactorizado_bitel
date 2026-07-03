@@ -27,6 +27,7 @@ interface Tienda {
   activo: boolean
   latitud: number | null
   longitud: number | null
+  radio_permitido: number | null
 }
 
 interface ApiError {
@@ -59,13 +60,14 @@ interface TiendasResponse {
 function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSuccess: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState({
-    codigo:    tienda?.codigo    ?? '',
-    nombre:    tienda?.nombre    ?? '',
-    direccion: tienda?.direccion ?? '',
-    telefono:  tienda?.telefono  ?? '',
-    activo:    tienda?.activo    ?? true,
-    latitud:   tienda?.latitud  != null ? String(tienda.latitud)  : '',
-    longitud:  tienda?.longitud != null ? String(tienda.longitud) : '',
+    codigo:         tienda?.codigo    ?? '',
+    nombre:         tienda?.nombre    ?? '',
+    direccion:      tienda?.direccion ?? '',
+    telefono:       tienda?.telefono  ?? '',
+    activo:         tienda?.activo    ?? true,
+    latitud:        tienda?.latitud  != null ? String(tienda.latitud)  : '',
+    longitud:       tienda?.longitud != null ? String(tienda.longitud) : '',
+    radioPermitido: tienda?.radio_permitido != null ? String(tienda.radio_permitido) : '',
   })
   const [err, setErr]         = useState('')
   const [errores, setErrores] = useState<ErroresTienda>({})
@@ -79,8 +81,9 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
     mutationFn: (payload: typeof form) => {
       const cuerpo = {
         ...payload,
-        latitud:  payload.latitud  ? Number(payload.latitud)  : null,
-        longitud: payload.longitud ? Number(payload.longitud) : null,
+        latitud:        payload.latitud        ? Number(payload.latitud)        : null,
+        longitud:       payload.longitud        ? Number(payload.longitud)      : null,
+        radio_permitido: payload.radioPermitido ? Number(payload.radioPermitido) : null,
       }
       return tienda
         ? api.put(`/v1/tiendas/${tienda.id}`, cuerpo).then(r => r.data)
@@ -94,12 +97,13 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
       const camposBackend = e?.response?.data?.errors ?? {}
       if (Object.keys(camposBackend).length > 0) {
         setErrores({
-          codigo:    camposBackend.codigo?.[0],
-          nombre:    camposBackend.nombre?.[0],
-          direccion: camposBackend.direccion?.[0],
-          telefono:  camposBackend.telefono?.[0],
-          latitud:   camposBackend.latitud?.[0],
-          longitud:  camposBackend.longitud?.[0],
+          codigo:         camposBackend.codigo?.[0],
+          nombre:         camposBackend.nombre?.[0],
+          direccion:      camposBackend.direccion?.[0],
+          telefono:       camposBackend.telefono?.[0],
+          latitud:        camposBackend.latitud?.[0],
+          longitud:       camposBackend.longitud?.[0],
+          radioPermitido: camposBackend.radio_permitido?.[0],
         })
       }
       setErr(mensajeErrorTienda(e, camposBackend))
@@ -198,6 +202,19 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
               placeholder="-77.0428"
             />
             {errores.longitud && <p className="mt-1 text-[11px] text-kyro-danger">{errores.longitud}</p>}
+          </div>
+          <div>
+            <label htmlFor="tienda-radio" className="mb-1 block text-xs text-kyro-muted">Radio de geocerca (metros)</label>
+            <Input
+              id="tienda-radio"
+              type="number"
+              min={1}
+              step="1"
+              value={form.radioPermitido}
+              onChange={e => { setForm(f => ({ ...f, radioPermitido: e.target.value })); setErrores(er => ({ ...er, radioPermitido: undefined })) }}
+              placeholder="60"
+            />
+            {errores.radioPermitido && <p className="mt-1 text-[11px] text-kyro-danger">{errores.radioPermitido}</p>}
           </div>
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
