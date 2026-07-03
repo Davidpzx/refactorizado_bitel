@@ -48,6 +48,7 @@ class TiendaController extends Controller
             'activo'    => ['boolean'],
             'latitud'   => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
             'longitud'  => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+            'radio_permitido' => ['sometimes', 'numeric', 'min:1'],
         ]);
 
         $data['activo'] = $data['activo'] ?? true;
@@ -68,6 +69,7 @@ class TiendaController extends Controller
             'activo'    => ['boolean'],
             'latitud'   => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
             'longitud'  => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+            'radio_permitido' => ['sometimes', 'numeric', 'min:1'],
         ]);
 
         $tienda->update($data);
