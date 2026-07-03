@@ -23,7 +23,7 @@ class HistorialController extends Controller
 
         $query = Reporte::query();
 
-        if ($user->rol === 'tienda') {
+        if ($user->rol !== 'admin') {
             $query->where('reportes.tienda_id', $user->tienda_id);
         } elseif ($request->tienda) {
             $query->where('reportes.tienda_id', $request->tienda);

@@ -91,12 +91,13 @@ export default function App() {
               <Route path="/reporte-bcp"         element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
               <Route path="/tickets"             element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
               <Route path="/integrador"          element={<Suspense fallback={<PageLoader />}><IntegradorPage /></Suspense>} />
+              {/* Historial y Estadísticas: accesibles a tienda (scoped a su propia tienda en backend) */}
+              <Route path="/historial"           element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
+              <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
 
               {/* ── Rutas solo admin ── */}
               <Route element={<AdminRoute />}>
-                <Route path="/historial"           element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
                 <Route path="/reportes"            element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
-                <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
                 <Route path="/panel-bipay"         element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
                 <Route path="/cuadre-bitel"        element={<Navigate to="/panel-bipay" replace />} />
                 <Route path="/agentes"             element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />

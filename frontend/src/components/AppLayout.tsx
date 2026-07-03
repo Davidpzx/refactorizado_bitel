@@ -31,8 +31,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/',               label: 'Dashboard',      Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Operaciones' },
   { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Operaciones' },
-  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin'],           section: 'Operaciones' },
-  { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin'],           section: 'Operaciones' },
+  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Operaciones' },
+  { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Operaciones' },
   { to: '/mapa-calor',    label: 'Mapa de Calor',   Icon: Activity,        roles: ['admin'],           section: 'Operaciones' },
 
   // ── Pagos digitales ──────────────────────────────────────────────────────

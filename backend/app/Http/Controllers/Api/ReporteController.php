@@ -322,7 +322,12 @@ class ReporteController extends Controller
 
     public function actualizarDestino(Request $request, Reporte $reporte): JsonResponse
     {
-        abort_unless($request->user()->rol === 'admin', 403);
+        $user = $request->user();
+        abort_unless(
+            $user->rol === 'admin' || $reporte->tienda_id === $user->tienda_id,
+            403,
+            'No tienes permisos sobre este reporte.'
+        );
 
         $validated = $request->validate([
             'destino_efectivo' => 'required|string|max:50',

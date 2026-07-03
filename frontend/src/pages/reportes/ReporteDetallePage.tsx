@@ -875,7 +875,7 @@ export function ReporteDetallePage() {
           <SalidasCard reporte={reporte} />
           <CuadreFinalCard
             reporte={reporte}
-            isAdmin={usuario?.rol === 'admin'}
+            isAdmin={usuario?.rol === 'admin' || usuario?.tienda_id === reporte.tienda_id}
             onCambiarDestino={(destino, obs) => marcarDestino.mutate({ destino, observacion: obs })}
             isPendingDestino={marcarDestino.isPending}
           />

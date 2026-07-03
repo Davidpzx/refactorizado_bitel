@@ -13,11 +13,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EstadisticasController extends Controller
 {
+    /** Tienda solo ve su propia tienda; admin puede filtrar por cualquiera (o ninguna = todas). */
+    private function tiendaScope(Request $request): ?string
+    {
+        $user = $request->user();
+
+        return $user->rol !== 'admin' ? $user->tienda_id : $request->get('tienda');
+    }
+
     public function ventas(Request $request): JsonResponse
     {
         $desde  = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta  = $request->get('fecha_hasta', now()->toDateString());
-        $tienda = $request->get('tienda');
+        $tienda = $this->tiendaScope($request);
 
         $base = DB::table('ventas as v')
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
@@ -105,7 +113,7 @@ class EstadisticasController extends Controller
     {
         $desde  = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta  = $request->get('fecha_hasta', now()->toDateString());
-        $tienda = $request->get('tienda');
+        $tienda = $this->tiendaScope($request);
 
         $ranking = DB::table('ventas as v')
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
@@ -141,7 +149,7 @@ class EstadisticasController extends Controller
     {
         $desde       = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta       = $request->get('fecha_hasta', now()->toDateString());
-        $tienda      = $request->get('tienda');
+        $tienda      = $this->tiendaScope($request);
         $categoria   = $request->get('categoria', 'todo');     // todo | equipos | postpago | chips
         $subcategoria = trim((string) $request->get('subcategoria', ''));
 
@@ -206,7 +214,7 @@ class EstadisticasController extends Controller
     {
         $desde     = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta     = $request->get('fecha_hasta', now()->toDateString());
-        $tienda    = $request->get('tienda');
+        $tienda    = $this->tiendaScope($request);
         $categoria = $request->get('categoria', 'todo');
 
         $opciones = [];
@@ -244,7 +252,7 @@ class EstadisticasController extends Controller
     {
         $desde = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta = $request->get('fecha_hasta', now()->toDateString());
-        $tienda = $request->get('tienda');
+        $tienda = $this->tiendaScope($request);
 
         $base = DB::table('ventas as v')
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')

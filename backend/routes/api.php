@@ -95,10 +95,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('control-center',      [ControlCenterController::class, 'index']);
     Route::post('marcar-notificacion', [ControlCenterController::class, 'marcarNotificacion']);
 
-    // ── Historial Completo ────────────────────────────────────────────────────
-    Route::get('historial',           [HistorialController::class, 'index'])->middleware('role:admin');
-    Route::get('historial/kpis',      [HistorialController::class, 'kpis'])->middleware('role:admin');
-    Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware('role:admin');
+    // ── Historial Completo (admin ve todo; tienda ve solo su propia tienda) ───
+    Route::get('historial',           [HistorialController::class, 'index'])->middleware('role:admin,tienda');
+    Route::get('historial/kpis',      [HistorialController::class, 'kpis'])->middleware('role:admin,tienda');
+    Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware('role:admin,tienda');
 
     // ── Bitácora de Stock ─────────────────────────────────────────────────────
     Route::get('bitacora-stock',           [BitacoraStockController::class, 'index']);
@@ -217,12 +217,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
     Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
 
-    // ── Estadísticas ─────────────────────────────────────────────────────────
-    Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin');
-    Route::get('estadisticas/exportar',     [EstadisticasController::class, 'exportar'])->middleware('role:admin');
-    Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad'])->middleware('role:admin');
-    Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking'])->middleware('role:admin');
-    Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes'])->middleware('role:admin');
+    // ── Estadísticas (admin ve todo; tienda ve solo su propia tienda) ─────────
+    Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin,tienda');
+    Route::get('estadisticas/exportar',     [EstadisticasController::class, 'exportar'])->middleware('role:admin,tienda');
+    Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad'])->middleware('role:admin,tienda');
+    Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking'])->middleware('role:admin,tienda');
+    Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes'])->middleware('role:admin,tienda');
 
     // ── Reporte BCP ───────────────────────────────────────────────────────────
     Route::get('reporte-bcp',         [ReporteBcpController::class, 'index'])->middleware('role:admin');
