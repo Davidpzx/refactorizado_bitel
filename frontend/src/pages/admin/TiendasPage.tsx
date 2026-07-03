@@ -81,11 +81,12 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
 
   const save = useMutation({
     mutationFn: (payload: typeof form) => {
+      const { radioPermitido, ...resto } = payload
       const cuerpo = {
-        ...payload,
+        ...resto,
         latitud:  payload.latitud  ? Number(payload.latitud)  : null,
         longitud: payload.longitud ? Number(payload.longitud) : null,
-        ...(payload.radioPermitido ? { radio_permitido: Number(payload.radioPermitido) } : {}),
+        ...(radioPermitido ? { radio_permitido: Number(radioPermitido) } : {}),
       }
       return tienda
         ? api.put(`/v1/tiendas/${tienda.id}`, cuerpo).then(r => r.data)

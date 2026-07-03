@@ -44,6 +44,20 @@ class TiendaRadioGeocercaTest extends TestCase
         $this->assertDatabaseHas('tiendas', ['id' => $id, 'radio_permitido' => 60]);
     }
 
+    public function test_radio_permitido_no_acepta_decimales(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $id = DB::table('tiendas')->insertGetId([
+            'codigo' => 'T95', 'nombre' => 'Tienda Test 3', 'radio_permitido' => 60,
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/tiendas/{$id}", ['radio_permitido' => 60.5])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('tiendas', ['id' => $id, 'radio_permitido' => 60]);
+    }
+
     public function test_crear_tienda_con_radio_permitido(): void
     {
         $admin = Usuario::factory()->admin()->create();

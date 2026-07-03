@@ -12,6 +12,8 @@
 **Backend**
 - Agregar `radio_permitido` a `Tienda::$fillable` (`backend/app/Models/Tienda.php`).
 - Agregar regla `radio_permitido => 'nullable|numeric|min:1'` en `TiendaController::store` y `TiendaController::update`. Sin admin. Sin tope máximo (decisión del usuario: no limitar por arriba, solo exigir positivo).
+
+  **Actualización post-implementación (revisión final, 2026-07-03):** la regla implementada es `sometimes|integer|min:1`, no `nullable|numeric|min:1`. Motivo: la columna es `integer NOT NULL DEFAULT 60` — `nullable` permitiría un `null` explícito que rompería el `NOT NULL` de la BD, mientras que `sometimes` (combinado con que el frontend omite la key cuando el campo queda vacío) deja el valor existente/default intacto sin tocar la BD. `integer` en vez de `numeric` evita que un decimal como `60.5` pase la validación y se trunque silenciosamente al guardar.
 - Sin migración: la columna ya existe.
 - Sin cambio de permisos: el CRUD de Tienda ya es `role:admin` únicamente (decisión del usuario: solo admin edita esto).
 

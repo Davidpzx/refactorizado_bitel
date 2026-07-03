@@ -97,6 +97,7 @@ function validarRadioPermitido(valor: string): string | undefined {
   if (!valor.trim()) return undefined
   const num = Number(valor)
   if (Number.isNaN(num)) return 'Debe ser un número.'
+  if (!Number.isInteger(num)) return 'Debe ser un número entero (sin decimales).'
   if (num < 1) return 'Debe ser mayor a 0.'
   return undefined
 }
