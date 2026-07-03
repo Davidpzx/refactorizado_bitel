@@ -79,6 +79,17 @@ financiera sobre la réplica exacta del comportamiento legacy.
    "qué pasó, cuándo (fecha_hora) y quién (texto)"; agregar columnas específicas de
    anulación solo para este flujo sería prematuro sin otro caso de uso que las necesite.
 
+   **Bug preexistente encontrado y corregido de paso:** el insert de auditoría de
+   `restaurar()` nunca funcionó — faltaba la columna `tienda_id` (NOT NULL) y usaba
+   `accion='RESCATE_MANUAL'`, valor fuera del enum `SUMA|RESTA` de la columna
+   (`create_historial_inventario_table`). Ambos errores eran atrapados en silencio por
+   el mismo `try/catch` best-effort, así que la restauración "funcionaba" pero jamás
+   dejaba rastro en `historial_inventario` (en MySQL ni en sqlite). Se corrige
+   agregando `tienda_id` y usando `accion='SUMA'` (semánticamente correcto: la
+   restauración devuelve stock, igual que cualquier otro `SUMA`), dejando el detalle
+   fino ("restauración manual", venta anulada, admin) en `observacion`. Sin este fix,
+   el test de auditoría de este mismo cambio no podía pasar.
+
 ## Puntos de agregación auditados (dashboards/reportes que podían seguir sumando ventas ANULADAS)
 
 | Controlador | Método | Sumaba `ganancia_snap`/`monto_total`/`comision_generada` sin filtrar `ANULADA` | Acción |
