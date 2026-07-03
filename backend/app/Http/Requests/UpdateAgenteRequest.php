@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Agente;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateAgenteRequest extends FormRequest
 {
@@ -38,6 +39,11 @@ class UpdateAgenteRequest extends FormRequest
             'es_gerencia'   => ['sometimes', 'boolean'],
             'permiso_largo' => ['sometimes', 'boolean'],
             'fecha_retorno' => ['nullable', 'date'],
+            // Datos de baja (opcionales, paridad legacy: solo sugeridos por UI, no obligatorios)
+            'clasificacion_baja' => ['sometimes', 'nullable', Rule::in(['LISTA_BLANCA', 'LISTA_NEGRA'])],
+            'motivo_baja'        => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'fecha_baja'         => ['sometimes', 'nullable', 'date'],
+            'observacion'        => ['sometimes', 'nullable', 'string', 'max:1000'],
         ];
     }
 

@@ -16,8 +16,24 @@ export interface Agente {
   es_gerencia: boolean
   permiso_largo: boolean
   fecha_retorno: string | null
+  clasificacion_baja: 'LISTA_BLANCA' | 'LISTA_NEGRA' | null
+  motivo_baja: string | null
   fecha_baja: string | null
+  observacion: string | null
   creado_en: string
+}
+
+export interface HistorialAgenteEvento {
+  id: number
+  id_agente: number
+  estado: string
+  clasificacion_baja: string | null
+  observacion: string | null
+  fecha_registro: string
+  tipo_cambio: string
+  campo_anterior: string | null
+  campo_nuevo: string | null
+  registrado_por: number | null
 }
 
 export interface AgenteFormData {
@@ -38,6 +54,10 @@ export interface AgenteFormData {
   es_gerencia: boolean
   permiso_largo?: boolean
   fecha_retorno?: string
+  clasificacion_baja?: string
+  motivo_baja?: string
+  fecha_baja?: string
+  observacion?: string
 }
 
 export interface AgenteParams {

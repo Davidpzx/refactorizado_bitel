@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { Agente, AgenteFormData, AgenteParams } from '../types/agente'
+import type { Agente, AgenteFormData, AgenteParams, HistorialAgenteEvento } from '../types/agente'
 import type { PaginatedResponse } from '../types/pagination'
 
 export const agentesApi = {
@@ -17,4 +17,7 @@ export const agentesApi = {
 
   destroy: (id: number) =>
     api.delete(`/v1/agentes/${id}`),
+
+  historial: (id: number) =>
+    api.get<{ data: HistorialAgenteEvento[] }>(`/v1/agentes/${id}/historial`).then((r) => r.data.data),
 }

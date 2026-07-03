@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateAgenteRequest;
 use App\Models\Agente;
 use App\Models\Reporte;
 use App\Services\AgenteService;
+use App\Services\HistorialAgenteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgenteController extends Controller
 {
-    public function __construct(private readonly AgenteService $service) {}
+    public function __construct(
+        private readonly AgenteService $service,
+        private readonly HistorialAgenteService $historial,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -48,8 +52,31 @@ class AgenteController extends Controller
 
     public function update(UpdateAgenteRequest $request, Agente $agente): JsonResponse
     {
-        $agente = $this->service->actualizar($agente, $request->validated());
+        $antes    = clone $agente; // snapshot de atributos previos para la auditoría
+        $agente   = $this->service->actualizar($agente, $request->validated());
+        $this->historial->auditarActualizacion($antes, $agente, $request->user()?->id);
+
         return response()->json($agente);
+    }
+
+    // ── GET /agentes/{id}/historial — Auditoría de cambios del agente (admin) ────
+    // Paridad legacy gerencia/ver_agente.php:1423-1436 (#modalHistorial), orden descendente.
+    public function historial(int $id, Request $request): JsonResponse
+    {
+        if (! Agente::whereKey($id)->exists()) {
+            return response()->json(['message' => 'Agente no encontrado.'], 404);
+        }
+        if (! Schema::hasTable('historial_agentes')) {
+            return response()->json(['data' => []]);
+        }
+
+        $rows = DB::table('historial_agentes')
+            ->where('id_agente', $id)
+            ->orderByDesc('fecha_registro')
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json(['data' => $rows]);
     }
 
     public function destroy(Agente $agente): JsonResponse
@@ -300,12 +327,16 @@ class AgenteController extends Controller
             'experiencia_laboral' => 'array|max:20',
         ]);
 
+        $antes = clone $agente; // snapshot para auditar cambios de ficha (FICHA)
+
         $columnasAgente = array_filter(
             $validated,
             fn ($value, $column) => Schema::hasColumn('agentes', $column),
             ARRAY_FILTER_USE_BOTH
         );
         $agente->update($columnasAgente);
+
+        $this->historial->auditarFicha($antes, $agente->fresh(), $request->user()?->id);
 
         if (Schema::hasTable('postulantes_temp')) {
             $columnasPostulante = array_filter(
@@ -478,6 +509,16 @@ class AgenteController extends Controller
         $campo('Estado', $ag->estado ?? '');
         $campo('Rol', ($ag->es_gerencia ?? false) ? 'Jefe de Tienda' : 'Agente');
         $campo('Sueldo Base', 'S/ ' . number_format((float) ($ag->sueldo_base ?? 0), 2));
+
+        // Sección DATOS DE BAJA (paridad exportar_excel_agentes_pro.php:191-196)
+        $fechaBaja = $ag->fecha_baja ?? null;
+        if (($ag->clasificacion_baja ?? null) || ($ag->motivo_baja ?? null) || $fechaBaja) {
+            $seccion('DATOS DE BAJA');
+            $campo('Fecha Baja', $fechaBaja instanceof \DateTimeInterface ? $fechaBaja->format('Y-m-d') : ($fechaBaja ?? ''));
+            $campo('Clasificación', $ag->clasificacion_baja ?? '');
+            $campo('Motivo', $ag->motivo_baja ?? '');
+            $campo('Observación', $ag->observacion ?? '');
+        }
 
         if ($p) {
             $seccion('DATOS DE CONTACTO');

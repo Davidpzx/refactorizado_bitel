@@ -16,6 +16,7 @@ class Agente extends Model
         'sueldo_base', 'dia_pago', 'estado', 'dia_descanso',
         'pin_seguridad', 'fecha_ingreso', 'correo', 'telefono', 'direccion',
         'es_gerencia', 'permiso_largo', 'fecha_retorno',
+        'clasificacion_baja', 'motivo_baja', 'fecha_baja', 'observacion',
         'fecha_prueba_inicio', 'fecha_prueba_fin', 'fecha_nacimiento',
         'lugar_nacimiento', 'formacion_academica', 'carga_familiar',
         'experiencia_laboral', 'contactos_emergencia', 'sistema_pension',
