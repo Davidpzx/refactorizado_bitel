@@ -13,6 +13,8 @@ import { AlertTriangle, LocateFixed, MapPin, Pencil, Plus, Search, Store, Trash2
 import {
   sanitizarCodigo,
   sanitizarNombre,
+  sanitizarDireccion,
+  sanitizarTelefono,
   validarTienda,
   LIMITES_TIENDA,
   type ErroresTienda,
@@ -167,18 +169,33 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Ubicación y estado</h3>
             <p className="text-xs text-kyro-muted">
-              Dirección y teléfono próximamente — aún no están disponibles en la base de datos.
-              Latitud/longitud son opcionales: también se pueden capturar luego con el botón GPS del listado.
+              Dirección y teléfono son opcionales. Latitud/longitud también se pueden capturar luego con el botón GPS del listado.
             </p>
           </div>
         </div>
-        {/*
-          TEMPORAL: dirección y teléfono ocultos hasta correr la migración
-          2026_06_20_000001_add_direccion_telefono_to_tiendas (la tabla real todavía no tiene
-          esas columnas). Backend ya las ignora en TiendaController; esto evita la confusión
-          de que el usuario llene un campo que no se va a guardar. Reactivar junto con el backend.
-        */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="tienda-direccion" className="mb-1 block text-xs text-kyro-muted">Dirección</label>
+            <Input
+              id="tienda-direccion"
+              value={form.direccion}
+              onChange={e => { setForm(f => ({ ...f, direccion: sanitizarDireccion(e.target.value) })); setErrores(er => ({ ...er, direccion: undefined })) }}
+              maxLength={LIMITES_TIENDA.direccion}
+              placeholder="Av. Siempre Viva 123"
+            />
+            {errores.direccion && <p className="mt-1 text-[11px] text-kyro-danger">{errores.direccion}</p>}
+          </div>
+          <div>
+            <label htmlFor="tienda-telefono" className="mb-1 block text-xs text-kyro-muted">Teléfono</label>
+            <Input
+              id="tienda-telefono"
+              value={form.telefono}
+              onChange={e => { setForm(f => ({ ...f, telefono: sanitizarTelefono(e.target.value) })); setErrores(er => ({ ...er, telefono: undefined })) }}
+              maxLength={LIMITES_TIENDA.telefono}
+              placeholder="+51 987654321"
+            />
+            {errores.telefono && <p className="mt-1 text-[11px] text-kyro-danger">{errores.telefono}</p>}
+          </div>
           <div>
             <label htmlFor="tienda-latitud" className="mb-1 block text-xs text-kyro-muted">Latitud</label>
             <Input
