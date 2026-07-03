@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
+import { useAuth } from '../../hooks/useAuth'
 import type { InventarioItem } from '../../types/inventario'
 
 const TIENDAS = [
@@ -25,6 +26,7 @@ const schema = z.object({
   cantidad:          z.number().int().min(1, 'La cantidad mínima es 1'),
   estado:            z.enum(['DISPONIBLE', 'VENDIDO', 'TRASLADO']),
   comision_especial: z.number().min(0).optional(),
+  dni_autoriza:      z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -39,6 +41,8 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const esEdicion  = Boolean(item?.id)
   const crear      = useCrearInventario()
   const actualizar = useActualizarInventario()
+  const { usuario }  = useAuth()
+  const esAdmin       = usuario?.rol === 'admin'
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -62,11 +66,16 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
           precio_costo: 0,
           precio_minimo: 0,
           precio_normal: 0,
+          tienda_id: usuario?.tienda_id ?? '',
         },
   })
   const tipo = watch('tipo')
 
   const onSubmit = (data: FormData) => {
+    if (!esAdmin && !(data.dni_autoriza ?? '').trim()) {
+      return
+    }
+
     const payload = {
       ...data,
       imei_serial: data.imei_serial || null,
@@ -75,6 +84,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
         : undefined,
     }
     delete (payload as Partial<FormData>).imei_seriales_text
+    if (esAdmin) delete (payload as Partial<FormData>).dni_autoriza
 
     if (esEdicion && item) {
       actualizar.mutate({ id: item.id, data: payload }, { onSuccess })
@@ -91,9 +101,9 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="tienda_id">Tienda *</Label>
-          <Select id="tienda_id" {...register('tienda_id')} className="mt-1">
+          <Select id="tienda_id" {...register('tienda_id')} className="mt-1" disabled={!esAdmin}>
             <option value="">Selecciona una tienda</option>
-            {TIENDAS.map((t) => (
+            {(esAdmin ? TIENDAS : TIENDAS.filter(t => t === usuario?.tienda_id)).map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </Select>
@@ -219,6 +229,20 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
           />
         </div>
       </div>
+
+      {!esAdmin && (
+        <div>
+          <Label htmlFor="dni_autoriza">Tu DNI *</Label>
+          <Input
+            id="dni_autoriza"
+            {...register('dni_autoriza')}
+            placeholder="12345678"
+            maxLength={8}
+            required
+            className="mt-1"
+          />
+        </div>
+      )}
 
       {mutError && (
         <p className="text-red-500 text-sm">
