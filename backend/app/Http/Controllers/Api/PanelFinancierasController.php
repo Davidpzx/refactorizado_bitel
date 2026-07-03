@@ -33,6 +33,7 @@ class PanelFinancierasController extends Controller
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
             ->leftJoin('tiendas as ti', 'ti.codigo', '=', 'r.tienda_id')
             ->leftJoin('agentes as ag', 'ag.id', '=', 'v.vendedor_id')
+            ->leftJoin('usuarios as uc', 'uc.id', '=', 'v.desembolso_confirmado_por')
             ->where('v.tipo_venta', 'EQUIPO')
             ->where('ve.tipo_pago', 'CUOTAS')
             ->whereBetween('r.fecha', [$fechaIni, $fechaFin])
@@ -46,7 +47,9 @@ class PanelFinancierasController extends Controller
                 'r.fecha',
                 'r.tienda_id',
                 'ti.nombre as tienda_nombre',
-                'ag.nombres as vendedor_nombre'
+                'ag.nombres as vendedor_nombre',
+                'v.desembolso_confirmado_en',
+                'uc.nombre as desembolso_confirmado_por_nombre'
             )
             ->orderByRaw('v.comision_estado ASC')
             ->orderByDesc('r.fecha');
@@ -90,6 +93,8 @@ class PanelFinancierasController extends Controller
                 'por_cobrar'        => $porCobrar,
                 // Compat con el front (item.detalle?.producto_nombre).
                 'detalle'           => ['producto_nombre' => $v->producto_nombre_snap],
+                'desembolso_confirmado_en'          => $v->desembolso_confirmado_en,
+                'desembolso_confirmado_por_nombre'  => $v->desembolso_confirmado_por_nombre,
             ];
         });
 
@@ -121,6 +126,8 @@ class PanelFinancierasController extends Controller
     }
 
     // ── POST /financieras/{id}/confirmar-desembolso ───────────────────────────
+    // Paridad legacy (confirmar_desembolso.php): lock de la fila, rechaza doble
+    // confirmación, recalcula ganancia_snap solo si el costo ya está fijado.
     public function confirmarDesembolso(int $id): JsonResponse
     {
         $user = Auth::user();
@@ -128,30 +135,44 @@ class PanelFinancierasController extends Controller
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
-        $venta = DB::table('ventas')->where('id', $id)->where('comision_estado', 'PENDIENTE')->first();
-        if (! $venta) {
-            return response()->json(['success' => false, 'message' => 'Registro no encontrado o ya confirmado.'], 404);
-        }
-
-        // D2 — Liberar la comisión del agente al confirmar el desembolso
-        // (paridad legacy: EQUIPO_ESTANDAR de config_comisiones, default S/5).
-        $comisionEquipo = 5.00;
-        if (Schema::hasTable('config_comisiones')) {
-            $valor = DB::table('config_comisiones')->where('tipo', 'EQUIPO_ESTANDAR')->value('monto');
-            if ($valor !== null) {
-                $comisionEquipo = (float) $valor;
+        return DB::transaction(function () use ($id, $user) {
+            $venta = DB::table('ventas')->where('id', $id)->lockForUpdate()->first();
+            if (! $venta) {
+                return response()->json(['success' => false, 'message' => 'Registro no encontrado.'], 404);
             }
-        }
 
-        DB::table('ventas')->where('id', $id)->update([
-            'comision_estado'   => 'APROBADA',
-            'comision_generada' => $comisionEquipo,
-        ]);
+            if ($venta->comision_estado !== 'PENDIENTE') {
+                return response()->json(['success' => false, 'message' => 'El desembolso ya fue confirmado o no está pendiente.'], 422);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Desembolso confirmado. Comisión del agente liberada: S/ ' . number_format($comisionEquipo, 2),
-        ]);
+            $equipo = DB::table('venta_equipos')->where('venta_id', $id)->lockForUpdate()->first();
+            if ($equipo && (float) $equipo->costo_snap > 0) {
+                $ganancia = (float) $equipo->precio_venta - (float) $equipo->costo_snap;
+                DB::table('venta_equipos')->where('id', $equipo->id)->update(['ganancia_snap' => $ganancia]);
+            }
+
+            // D2 — Liberar la comisión del agente al confirmar el desembolso
+            // (paridad legacy: EQUIPO_ESTANDAR de config_comisiones, default S/5).
+            $comisionEquipo = 5.00;
+            if (Schema::hasTable('config_comisiones')) {
+                $valor = DB::table('config_comisiones')->where('tipo', 'EQUIPO_ESTANDAR')->value('monto');
+                if ($valor !== null) {
+                    $comisionEquipo = (float) $valor;
+                }
+            }
+
+            DB::table('ventas')->where('id', $id)->update([
+                'comision_estado'            => 'APROBADA',
+                'comision_generada'          => $comisionEquipo,
+                'desembolso_confirmado_por'  => $user->id,
+                'desembolso_confirmado_en'   => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Desembolso confirmado. Comisión del agente liberada: S/ ' . number_format($comisionEquipo, 2),
+            ]);
+        });
     }
 
     // ── POST /financieras/{id}/revertir-desembolso ────────────────────────────
@@ -162,18 +183,22 @@ class PanelFinancierasController extends Controller
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
-        $updated = DB::table('ventas')
-            ->where('id', $id)
-            ->where('comision_estado', 'APROBADA')
-            ->update([
-                'comision_estado'   => 'PENDIENTE',
-                'comision_generada' => 0,
+        return DB::transaction(function () use ($id) {
+            $venta = DB::table('ventas')->where('id', $id)->lockForUpdate()->first();
+            if (! $venta || $venta->comision_estado !== 'APROBADA') {
+                return response()->json(['success' => false, 'message' => 'Registro no encontrado o no está en estado aprobado.'], 404);
+            }
+
+            // No se revierte venta_equipos.ganancia_snap: el recálculo de ganancia
+            // es una corrección de dato, no un estado ligado a la comisión.
+            DB::table('ventas')->where('id', $id)->update([
+                'comision_estado'           => 'PENDIENTE',
+                'comision_generada'         => 0,
+                'desembolso_confirmado_por' => null,
+                'desembolso_confirmado_en'  => null,
             ]);
 
-        if (! $updated) {
-            return response()->json(['success' => false, 'message' => 'Registro no encontrado o no está en estado aprobado.'], 404);
-        }
-
-        return response()->json(['success' => true, 'message' => 'Desembolso revertido a pendiente.']);
+            return response()->json(['success' => true, 'message' => 'Desembolso revertido a pendiente.']);
+        });
     }
 }
