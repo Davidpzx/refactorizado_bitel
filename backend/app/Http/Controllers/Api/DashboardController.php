@@ -42,6 +42,7 @@ class DashboardController extends Controller
                 ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
                 ->leftJoin('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
                 ->whereIn('v.reporte_id', $ids)
+                ->where('v.comision_estado', '!=', 'ANULADA')
                 ->selectRaw("
                     COALESCE(SUM(COALESCE(ve.ganancia_snap, 0)), 0)
                     + COALESCE(SUM(COALESCE(vl.comision_unitaria * vl.cantidad, 0)), 0)

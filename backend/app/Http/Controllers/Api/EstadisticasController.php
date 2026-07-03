@@ -38,7 +38,8 @@ class EstadisticasController extends Controller
         $base = DB::table('ventas as v')
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
             ->whereBetween('r.fecha', [$desde, $hasta])
-            ->where('r.estado', '!=', 'borrador');
+            ->where('r.estado', '!=', 'borrador')
+            ->where('v.comision_estado', '!=', 'ANULADA');
 
         if ($tienda) {
             $base->where('r.tienda_id', $tienda);
@@ -128,6 +129,7 @@ class EstadisticasController extends Controller
             ->join('agentes as a', 'a.id', '=', 'v.vendedor_id')
             ->whereBetween('r.fecha', [$desde, $hasta])
             ->where('r.estado', '!=', 'borrador')
+            ->where('v.comision_estado', '!=', 'ANULADA')
             ->when($tienda, fn($q) => $q->where('r.tienda_id', $tienda))
             ->selectRaw("
                 v.vendedor_id,
@@ -181,6 +183,7 @@ class EstadisticasController extends Controller
             ->join('agentes as a', 'a.id', '=', 'v.vendedor_id')
             ->whereBetween('r.fecha', [$desde, $hasta])
             ->where('r.estado', '!=', 'borrador')
+            ->where('v.comision_estado', '!=', 'ANULADA')
             ->where('v.tipo_venta', $tipoVenta)
             ->when($tienda, fn ($q) => $q->where('r.tienda_id', $tienda));
 
@@ -266,6 +269,7 @@ class EstadisticasController extends Controller
             ->join('reportes as r', 'r.id', '=', 'v.reporte_id')
             ->whereBetween('r.fecha', [$desde, $hasta])
             ->where('r.estado', '!=', 'borrador')
+            ->where('v.comision_estado', '!=', 'ANULADA')
             ->when($tienda, fn ($query) => $query->where('r.tienda_id', $tienda));
 
         $totales = (clone $base)

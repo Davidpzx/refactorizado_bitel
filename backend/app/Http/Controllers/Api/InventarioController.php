@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
+use App\Models\VentaEquipo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -754,19 +755,66 @@ class InventarioController extends Controller
             ], 422);
         }
 
-        $equipo->update([
-            'estado'         => 'DISPONIBLE',
-            'fecha_venta'    => null,
-            'vendido_por_id' => null,
-        ]);
+        // La fila más reciente: al conservar histórico (no borrar), un mismo
+        // inventario_tienda_id puede tener más de una venta si se restauró y se
+        // volvió a vender. La última es la que corresponde al estado VENDIDO actual.
+        $ventaEquipo = VentaEquipo::where('inventario_tienda_id', $id)->latest('id')->first();
+        $venta = $ventaEquipo?->venta;
+
+        if ($venta && Schema::hasTable('pagos_planilla')) {
+            $reporteFecha = DB::table('reportes')->where('id', $venta->reporte_id)->value('fecha');
+            if ($reporteFecha) {
+                $boletaPagada = DB::table('pagos_planilla')
+                    ->where('agente_id', $venta->vendedor_id)
+                    ->where('estado', 'PAGADO')
+                    ->whereDate('fecha_inicio', '<=', $reporteFecha)
+                    ->whereDate('fecha_fin', '>=', $reporteFecha)
+                    ->first();
+
+                if ($boletaPagada) {
+                    return response()->json([
+                        'ok'      => false,
+                        'message' => "No se puede restaurar: la comisión de esta venta ya fue pagada en la planilla del "
+                            . "{$boletaPagada->fecha_inicio} al {$boletaPagada->fecha_fin} (boleta #{$boletaPagada->id}).",
+                    ], 422);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($equipo, $venta) {
+            $equipo->update([
+                'estado'         => 'DISPONIBLE',
+                'fecha_venta'    => null,
+                'vendido_por_id' => null,
+            ]);
+
+            if ($venta) {
+                $venta->update([
+                    'comision_estado'   => 'ANULADA',
+                    'comision_generada' => 0,
+                ]);
+            }
+        });
 
         try {
+            $admin = Auth::user();
+            $observacion = 'Restauración manual por admin desde Kardex de Inventario'
+                . " (admin id={$admin->id}, {$admin->nombre})";
+            if ($venta) {
+                $observacion .= " — venta #{$venta->id} marcada ANULADA.";
+            }
+
+            // accion='SUMA': el enum de la columna solo admite SUMA|RESTA (ver migración
+            // create_historial_inventario_table). 'RESCATE_MANUAL' no es un valor válido
+            // y el insert fallaba silenciosamente (atrapado por este mismo catch) — el
+            // detalle real queda en la observación.
             DB::table('historial_inventario')->insert([
+                'tienda_id'    => $equipo->tienda_id,
                 'producto_id'  => $id,
                 'agente_id'    => null,
-                'accion'       => 'RESCATE_MANUAL',
+                'accion'       => 'SUMA',
                 'cantidad'     => 1,
-                'observacion'  => 'Restauración manual por admin desde Kardex de Inventario',
+                'observacion'  => $observacion,
                 'fecha_hora'   => now(),
             ]);
         } catch (\Throwable) {}
