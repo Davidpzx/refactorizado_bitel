@@ -150,7 +150,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index']);
     Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar']);
     Route::get('inventario', [InventarioController::class, 'index']);
-    Route::post('inventario', [InventarioController::class, 'store'])->middleware('role:admin');
+    Route::post('inventario', [InventarioController::class, 'store']);
     Route::get('inventario/{inventario}', [InventarioController::class, 'show']);
     Route::match(['put', 'patch'], 'inventario/{inventario}', [InventarioController::class, 'update'])->middleware('role:admin');
     Route::delete('inventario/{inventario}', [InventarioController::class, 'destroy'])->middleware('role:admin');

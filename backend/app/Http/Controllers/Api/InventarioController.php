@@ -68,6 +68,8 @@ class InventarioController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'tienda_id'         => 'required|string|max:50',
             'producto_nombre'   => 'required|string|max:150',
@@ -81,6 +83,7 @@ class InventarioController extends Controller
             'cantidad'          => 'required|integer|min:1',
             'estado'            => 'required|in:DISPONIBLE,VENDIDO,TRASLADO',
             'comision_especial' => 'nullable|numeric|min:0',
+            'dni_autoriza'      => ['nullable', 'regex:/^\d{8}$/'],
         ], [
             'tienda_id.required'       => 'La tienda es obligatoria.',
             'producto_nombre.required' => 'El nombre del producto es obligatorio.',
@@ -92,7 +95,29 @@ class InventarioController extends Controller
             'cantidad.required'        => 'La cantidad es obligatoria.',
             'estado.required'          => 'El estado es obligatorio.',
             'estado.in'                => 'El estado debe ser DISPONIBLE, VENDIDO o TRASLADO.',
+            'dni_autoriza.regex'       => 'DNI inválido (debe tener 8 dígitos).',
         ]);
+
+        if ($user->rol !== 'admin') {
+            if ((string) $validated['tienda_id'] !== (string) $user->tienda_id) {
+                return response()->json(['message' => 'No puedes registrar stock para otra tienda.'], 403);
+            }
+
+            if (empty($validated['dni_autoriza'])) {
+                return response()->json(['message' => 'Tu DNI es requerido.'], 422);
+            }
+
+            $agente = DB::table('agentes')
+                ->where('dni', $validated['dni_autoriza'])
+                ->where('estado', 'ACTIVO')
+                ->first();
+
+            if (!$agente) {
+                return response()->json(['message' => 'DNI no corresponde a un agente activo.'], 422);
+            }
+        }
+
+        unset($validated['dni_autoriza']);
 
         $imeis = collect($validated['imei_seriales'] ?? [])
             ->push($validated['imei_serial'] ?? null)
