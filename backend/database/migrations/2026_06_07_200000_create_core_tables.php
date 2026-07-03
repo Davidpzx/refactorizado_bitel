@@ -11,7 +11,8 @@ return new class extends Migration
         // ── tiendas ────────────────────────────────────────────────────────────
         if (!Schema::hasTable('tiendas')) {
             Schema::create('tiendas', function (Blueprint $table) {
-                $table->string('codigo', 20)->primary();
+                $table->id();
+                $table->string('codigo', 20)->unique();
                 $table->string('nombre', 100);
                 $table->string('direccion', 200)->nullable();
                 $table->string('telefono', 20)->nullable();
