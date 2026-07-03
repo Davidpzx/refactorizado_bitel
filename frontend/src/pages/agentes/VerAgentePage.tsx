@@ -1,14 +1,15 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
-import type { Agente } from '../../types/agente'
+import { agentesApi } from '../../services/agentes.api'
+import type { Agente, HistorialAgenteEvento } from '../../types/agente'
 import type { Reporte } from '../../types/reporte'
 import type { PaginatedResponse } from '../../types/pagination'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye, Plus } from 'lucide-react'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye, Plus, History, X } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -546,12 +547,76 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
   )
 }
 
+const TIPO_CAMBIO_BADGE: Record<string, { variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
+  CESE:      { variant: 'destructive', label: 'Cese' },
+  REINGRESO: { variant: 'success',     label: 'Reingreso' },
+  TIENDA:    { variant: 'default',      label: 'Tienda' },
+  HORARIO:   { variant: 'warning',      label: 'Horario' },
+  FICHA:     { variant: 'outline',      label: 'Ficha' },
+  ESTADO:    { variant: 'outline',      label: 'Estado' },
+}
+
+function HistorialAgenteModal({ agenteId, onClose }: { agenteId: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['agente-historial', agenteId],
+    queryFn: () => agentesApi.historial(Number(agenteId)),
+  })
+  const eventos: HistorialAgenteEvento[] = data ?? []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="kyro-card relative flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-kyro-border p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text">
+            <History size={15} className="text-kyro-gold" /> Historial del agente
+          </h3>
+          <Button size="iconSm" variant="ghost" aria-label="Cerrar" onClick={onClose}><X size={16} /></Button>
+        </div>
+        <div className="overflow-y-auto p-4">
+          {isLoading && <p className="py-8 text-center text-sm text-kyro-muted">Cargando historial...</p>}
+          {!isLoading && eventos.length === 0 && (
+            <p className="py-8 text-center text-sm text-kyro-muted">Sin eventos registrados.</p>
+          )}
+          <ul className="space-y-3">
+            {eventos.map(ev => {
+              const badge = TIPO_CAMBIO_BADGE[ev.tipo_cambio] ?? { variant: 'outline' as const, label: ev.tipo_cambio }
+              return (
+                <li key={ev.id} className="rounded-kyro border border-kyro-border bg-kyro-elevated p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                    <span className="font-mono text-xs text-kyro-muted">
+                      {new Date(ev.fecha_registro.replace(' ', 'T')).toLocaleString('es-PE')}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-xs text-kyro-body">
+                    <p>Estado: <strong>{ev.estado}</strong></p>
+                    {ev.clasificacion_baja && <p>Clasificación: <strong>{ev.clasificacion_baja}</strong></p>}
+                    {ev.observacion && <p>Observación: {ev.observacion}</p>}
+                    {(ev.campo_anterior || ev.campo_nuevo) && (
+                      <p className="text-kyro-muted">
+                        <span className="text-kyro-danger">{ev.campo_anterior ?? '—'}</span>
+                        {' → '}
+                        <span className="text-kyro-success">{ev.campo_nuevo ?? '—'}</span>
+                      </p>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
   const navigate     = useNavigate()
   const { usuario }  = useAuth()
   const isAdmin      = usuario?.rol === 'admin'
   const [page, setPage] = useState(1)
+  const [mostrarHistorial, setMostrarHistorial] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['agente-ventas', id, page],
@@ -639,14 +704,18 @@ export function VerAgentePage() {
             <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-kyro-subtle">Sueldo base</p>
             <p className="mt-1 font-mono text-lg font-bold tabular-nums text-kyro-text">{fmt(agente.sueldo_base)}</p>
             {isAdmin && id && (
-              <Button
-                size="sm"
-                variant="glassInfo"
-                className="mt-3"
-                onClick={() => descargar(`/v1/constancias/agente/${id}`, `certificado_${agente.nombres.replace(/\s+/g, '_')}.pdf`)}
-              >
-                <Download size={13} /> Certificado
-              </Button>
+              <div className="mt-3 flex flex-col items-end gap-2">
+                <Button
+                  size="sm"
+                  variant="glassInfo"
+                  onClick={() => descargar(`/v1/constancias/agente/${id}`, `certificado_${agente.nombres.replace(/\s+/g, '_')}.pdf`)}
+                >
+                  <Download size={13} /> Certificado
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setMostrarHistorial(true)}>
+                  <History size={13} /> Historial
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -763,6 +832,10 @@ export function VerAgentePage() {
           </div>
         )}
       </section>
+
+      {mostrarHistorial && id && (
+        <HistorialAgenteModal agenteId={id} onClose={() => setMostrarHistorial(false)} />
+      )}
     </div>
   )
 }

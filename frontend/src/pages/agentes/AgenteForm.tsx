@@ -56,6 +56,10 @@ const schema = z.object({
   es_gerencia:   z.boolean(),
   permiso_largo: z.boolean().optional(),
   fecha_retorno: z.string().optional().or(z.literal('')),
+  clasificacion_baja: z.enum(['LISTA_BLANCA', 'LISTA_NEGRA']).optional().or(z.literal('')),
+  motivo_baja:   z.string().max(1000, 'Máximo 1000 caracteres').optional().or(z.literal('')),
+  fecha_baja:    z.string().optional().or(z.literal('')),
+  observacion:   z.string().max(1000, 'Máximo 1000 caracteres').optional().or(z.literal('')),
 })
 
 type FormData = z.infer<typeof schema>
@@ -145,6 +149,10 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
           es_gerencia:   agente.es_gerencia,
           permiso_largo: agente.permiso_largo ?? false,
           fecha_retorno: soloFecha(agente.fecha_retorno),
+          clasificacion_baja: agente.clasificacion_baja ?? '',
+          motivo_baja:   agente.motivo_baja ?? '',
+          fecha_baja:    soloFecha(agente.fecha_baja),
+          observacion:   agente.observacion ?? '',
           pin_seguridad: '',
         }
       : { estado: 'ACTIVO', es_gerencia: false, sueldo_base: 0 },
@@ -300,6 +308,31 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
 
         {esEdicion && estadoValue !== 'ACTIVO' && (
           <div className="mt-4 grid grid-cols-1 gap-4 rounded-kyro border border-kyro-warning/30 bg-kyro-warning/5 p-3 sm:grid-cols-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-kyro-warning sm:col-span-2">
+              Datos de baja
+            </p>
+            <div>
+              <Label htmlFor="clasificacion_baja">Clasificación</Label>
+              <Select id="clasificacion_baja" {...register('clasificacion_baja')} className="mt-1">
+                <option value="">— Sin clasificar —</option>
+                <option value="LISTA_BLANCA">Lista blanca (puede reingresar)</option>
+                <option value="LISTA_NEGRA">Lista negra (no recontratar)</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="fecha_baja">Fecha de baja</Label>
+              <Input id="fecha_baja" type="date" {...register('fecha_baja')} className="mt-1" />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="motivo_baja">Motivo de la baja</Label>
+              <textarea id="motivo_baja" rows={2} {...register('motivo_baja')} className="kyro-input mt-1 w-full text-sm" placeholder="Motivo del cese (opcional)" />
+              <FieldError>{errors.motivo_baja?.message}</FieldError>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="observacion">Observación</Label>
+              <textarea id="observacion" rows={2} {...register('observacion')} className="kyro-input mt-1 w-full text-sm" placeholder="Detalle adicional (opcional)" />
+              <FieldError>{errors.observacion?.message}</FieldError>
+            </div>
             <label className="flex cursor-pointer items-center gap-3 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
               <input id="permiso_largo" type="checkbox" {...register('permiso_largo')} className="h-4 w-4 rounded border-kyro-border accent-kyro-gold" />
               Permiso largo (licencia con retorno programado)
