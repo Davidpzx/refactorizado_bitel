@@ -69,8 +69,21 @@ class TrasladoChipsController extends Controller
 
         // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
         $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
-        $enviadoPorId   = null;
-        $authDni        = trim($request->input('auth_dni', '')) ?: null;
+        $authDni        = trim($request->input('auth_dni', ''));
+
+        if (!$authDni) {
+            return response()->json(['success' => false, 'message' => 'Tu DNI es requerido.'], 422);
+        }
+
+        $agente = Agente::whereRaw('UPPER(TRIM(dni)) = UPPER(TRIM(?))', [$authDni])
+            ->where('estado', 'ACTIVO')
+            ->first();
+
+        if (!$agente) {
+            return response()->json(['success' => false, 'message' => 'DNI no corresponde a un agente activo.'], 403);
+        }
+
+        $enviadoPorId = $agente->id;
 
         $chip = InventarioChip::find($chipId);
         if (!$chip) {
