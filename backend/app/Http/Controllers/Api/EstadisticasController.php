@@ -18,7 +18,15 @@ class EstadisticasController extends Controller
     {
         $user = $request->user();
 
-        return $user->rol !== 'admin' ? $user->tienda_id : $request->get('tienda');
+        if ($user->rol !== 'admin') {
+            // Fallar CERRADO: un usuario tienda sin tienda_id asignada no debe ver nada.
+            // Los consumidores hacen `if ($tienda)` / `->when($tienda, ...)`, y un valor
+            // falsy saltaria el filtro completo exponiendo todas las tiendas. Mismo
+            // criterio que HistorialController, que con null filtra IS NULL y devuelve vacio.
+            return $user->tienda_id ?: '__SIN_TIENDA__';
+        }
+
+        return $request->get('tienda');
     }
 
     public function ventas(Request $request): JsonResponse

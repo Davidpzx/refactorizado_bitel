@@ -112,4 +112,18 @@ class EstadisticasTiendaAccesoTest extends TestCase
             ->assertOk()
             ->assertJsonPath('totales.total_ventas', 2);
     }
+
+    public function test_tienda_sin_tienda_id_asignada_no_ve_nada(): void
+    {
+        // Fallar cerrado: un usuario tienda mal configurado (sin tienda_id) no debe
+        // ver las ventas de todas las tiendas por el filtro `if ($tienda)` saltandose.
+        $sinTienda = Usuario::factory()->vendedor('T01')->create(['tienda_id' => null]);
+        $this->crearReporteConVenta('T01');
+        $this->crearReporteConVenta('T02');
+
+        $this->actingAs($sinTienda, 'sanctum')
+            ->getJson('/api/v1/estadisticas/ventas')
+            ->assertOk()
+            ->assertJsonPath('totales.total_ventas', 0);
+    }
 }
