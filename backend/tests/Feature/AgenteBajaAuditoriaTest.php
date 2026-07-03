@@ -164,6 +164,25 @@ class AgenteBajaAuditoriaTest extends TestCase
         $this->assertSame($admin->id, (int) $resp[0]['registrado_por']);
     }
 
+    public function test_editar_agente_activo_con_campos_de_baja_vacios_no_rompe(): void
+    {
+        // El frontend envía cadenas vacías para clasificacion_baja/fecha_baja al editar un agente
+        // activo; deben tratarse como null (ConvertEmptyStringsToNull) y no fallar la validación.
+        $admin = Usuario::factory()->admin()->create();
+        $id = $this->crearAgente();
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/agentes/{$id}", [
+                'sueldo_base'        => 1500,
+                'clasificacion_baja' => '',
+                'motivo_baja'        => '',
+                'fecha_baja'         => '',
+                'observacion'        => '',
+            ])
+            ->assertOk()
+            ->assertJsonPath('sueldo_base', '1500.00');
+    }
+
     public function test_historial_es_solo_admin(): void
     {
         $vendedor = Usuario::factory()->vendedor('T01')->create();
