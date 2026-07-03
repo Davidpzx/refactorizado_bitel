@@ -81,9 +81,9 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
     mutationFn: (payload: typeof form) => {
       const cuerpo = {
         ...payload,
-        latitud:        payload.latitud        ? Number(payload.latitud)        : null,
-        longitud:       payload.longitud        ? Number(payload.longitud)      : null,
-        radio_permitido: payload.radioPermitido ? Number(payload.radioPermitido) : null,
+        latitud:  payload.latitud  ? Number(payload.latitud)  : null,
+        longitud: payload.longitud ? Number(payload.longitud) : null,
+        ...(payload.radioPermitido ? { radio_permitido: Number(payload.radioPermitido) } : {}),
       }
       return tienda
         ? api.put(`/v1/tiendas/${tienda.id}`, cuerpo).then(r => r.data)
