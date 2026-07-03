@@ -1,18 +1,15 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
 import { useCrearInventario, useActualizarInventario } from '../../hooks/useInventario'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { useAuth } from '../../hooks/useAuth'
+import { api } from '../../services/api'
 import type { InventarioItem } from '../../types/inventario'
-
-const TIENDAS = [
-  'PUNDA50', 'PUNDA11', 'PUNSC01', 'PUNDA23',
-  'TACDA13', 'TACDA17', 'TACDA21', 'TACDA25', 'TACDA27', 'TACDA30',
-]
 
 const schema = z.object({
   tienda_id:         z.string().min(1, 'La tienda es obligatoria'),
@@ -41,8 +38,15 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const esEdicion  = Boolean(item?.id)
   const crear      = useCrearInventario()
   const actualizar = useActualizarInventario()
-  const { usuario }  = useAuth()
-  const esAdmin       = usuario?.rol === 'admin'
+  const { usuario } = useAuth()
+  const esAdmin     = usuario?.rol === 'admin'
+
+  const { data: tiendasData } = useQuery<{ data: { codigo: string; nombre: string }[] }>({
+    queryKey: ['tiendas-inventario'],
+    queryFn: () => api.get('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data),
+    staleTime: 5 * 60_000,
+  })
+  const tiendas = (tiendasData?.data ?? []).map(t => t.codigo)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -72,12 +76,14 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const tipo = watch('tipo')
 
   const onSubmit = (data: FormData) => {
-    if (!esAdmin && !(data.dni_autoriza ?? '').trim()) {
+    const dniAutoriza = (data.dni_autoriza ?? '').trim()
+    if (!esAdmin && !dniAutoriza) {
       return
     }
 
     const payload = {
       ...data,
+      dni_autoriza: dniAutoriza,
       imei_serial: data.imei_serial || null,
       imei_seriales: !esEdicion && data.tipo === 'EQUIPO'
         ? (data.imei_seriales_text ?? '').split(/\r?\n|,/).map(v => v.trim()).filter(Boolean)
@@ -103,7 +109,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
           <Label htmlFor="tienda_id">Tienda *</Label>
           <Select id="tienda_id" {...register('tienda_id')} className="mt-1" disabled={!esAdmin}>
             <option value="">Selecciona una tienda</option>
-            {(esAdmin ? TIENDAS : TIENDAS.filter(t => t === usuario?.tienda_id)).map((t) => (
+            {(esAdmin ? tiendas : tiendas.filter(t => t === usuario?.tienda_id)).map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </Select>
