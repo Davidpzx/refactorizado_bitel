@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -118,6 +119,35 @@ class InventarioController extends Controller
         }
 
         unset($validated['dni_autoriza']);
+
+        if ($validated['tipo'] === 'CHIP') {
+            $tiendaCodigo = (string) $validated['tienda_id'];
+            $tiendaDbId = DB::table('tiendas')->where('codigo', $tiendaCodigo)->value('id');
+
+            if (! $tiendaDbId) {
+                return response()->json(['message' => 'La tienda no existe.'], 422);
+            }
+
+            $chip = DB::transaction(function () use ($tiendaDbId, $tiendaCodigo, $validated) {
+                $existente = InventarioChip::where('tienda_id', $tiendaDbId)
+                    ->where('tienda_origen', $tiendaCodigo)
+                    ->first();
+
+                if ($existente) {
+                    $existente->increment('stock_actual', $validated['cantidad']);
+                    return $existente->fresh();
+                }
+
+                return InventarioChip::create([
+                    'tienda_id'     => $tiendaDbId,
+                    'tienda_origen' => $tiendaCodigo,
+                    'tipo_chip'     => 'FÍSICO',
+                    'stock_actual'  => $validated['cantidad'],
+                ]);
+            });
+
+            return response()->json($chip, 201);
+        }
 
         $imeis = collect($validated['imei_seriales'] ?? [])
             ->push($validated['imei_serial'] ?? null)
