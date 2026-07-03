@@ -76,6 +76,7 @@ class HistorialController extends Controller
                 ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
                 ->leftJoin('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
                 ->whereIn('v.reporte_id', $ids)
+                ->where('v.comision_estado', '!=', 'ANULADA')
                 ->selectRaw('
                     COALESCE(SUM(COALESCE(ve.ganancia_snap, 0)), 0)
                     + COALESCE(SUM(COALESCE(vl.comision_unitaria * vl.cantidad, 0)), 0)
@@ -130,6 +131,10 @@ class HistorialController extends Controller
             $fecha  = $r->fecha instanceof \DateTimeInterface ? $r->fecha->format('d/m/Y') : date('d/m/Y', strtotime((string) $r->fecha));
 
             foreach ($r->ventas as $venta) {
+                if ($venta->comision_estado === 'ANULADA') {
+                    continue;
+                }
+
                 $esApoyo = $venta->cross_selling || $venta->tipo_venta === 'APOYO';
 
                 if (in_array($venta->tipo_venta, ['POSTPAGO', 'PREPAGO', 'APOYO'], true)) {
