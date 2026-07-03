@@ -19,6 +19,7 @@ class Venta extends Model
         'tipo_venta', 'subtipo', 'cross_selling', 'tienda_destino',
         'monto_total', 'efectivo_inicial', 'comision_generada',
         'comision_estado', 'es_remate', 'es_extranjero', 'chips_descontados',
+        'desembolso_confirmado_por', 'desembolso_confirmado_en',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class Venta extends Model
         'cross_selling'     => 'boolean',
         'es_remate'         => 'boolean',
         'es_extranjero'     => 'boolean',
+        'desembolso_confirmado_en' => 'datetime',
     ];
 
     /**
