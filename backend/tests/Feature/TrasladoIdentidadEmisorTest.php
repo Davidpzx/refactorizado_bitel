@@ -71,4 +71,18 @@ class TrasladoIdentidadEmisorTest extends TestCase
             'tienda_destino' => 'T02', 'enviado_por_id' => $agente->id, 'enviado_dni' => '87654321',
         ]);
     }
+
+    public function test_crear_traslado_masivo_sin_auth_dni_falla(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $id = $this->crearProductoDisponible();
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/traslados', [
+                'equipos_ids' => json_encode([$id]), 'tienda_destino' => 'T02',
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('traslados_stock', ['tienda_destino' => 'T02']);
+    }
 }

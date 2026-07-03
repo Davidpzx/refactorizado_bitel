@@ -49,6 +49,8 @@ class TrasladoChipsIdentidadEmisorTest extends TestCase
                 'auth_dni' => '99999999',
             ])
             ->assertStatus(403);
+
+        $this->assertDatabaseMissing('traslados_chips', ['tienda_destino' => 'T02']);
     }
 
     public function test_crear_traslado_chips_con_dni_valido_persiste_enviado_por_id(): void
