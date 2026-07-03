@@ -185,6 +185,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar'])->middleware('role:admin');
 
     // ── Agentes — acciones adicionales ───────────────────────────────────────
+    Route::get('agentes/{id}/historial',               [AgenteController::class, 'historial'])->middleware('role:admin');
     Route::get('agentes/{agente}/ventas',              [AgenteController::class, 'ventas'])->middleware('role:admin');
     Route::get('agentes/{agente}/comisiones',          [AgenteController::class, 'comisiones'])->middleware('role:admin');
     Route::patch('agentes/{id}/fechas-laborales',      [AgenteController::class, 'editarFechasLaborales'])->middleware('role:admin');
