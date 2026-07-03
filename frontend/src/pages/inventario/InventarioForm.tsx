@@ -41,12 +41,12 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const { usuario } = useAuth()
   const esAdmin     = usuario?.rol === 'admin'
 
-  const { data: tiendasData } = useQuery<{ data: { codigo: string; nombre: string }[] }>({
-    queryKey: ['tiendas-inventario'],
-    queryFn: () => api.get('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data),
+  const { data: tiendasData } = useQuery<{ codigo: string; nombre: string }[]>({
+    queryKey: ['tiendas-select'],
+    queryFn: () => api.get('/v1/tiendas/select').then(r => r.data),
     staleTime: 5 * 60_000,
   })
-  const tiendas = (tiendasData?.data ?? []).map(t => t.codigo)
+  const tiendas = (tiendasData ?? []).map(t => t.codigo)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
