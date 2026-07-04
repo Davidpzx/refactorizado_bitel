@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
@@ -247,7 +248,7 @@ export function AsistenciasPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes">
+      <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes" Icon={Clock}>
         {usuario?.rol === 'admin' && (
           <Button variant="glassInfo" size="sm" onClick={() => setShowManual(s => !s)}>
             <ClipboardList size={14} /> Asistencia Manual
@@ -408,20 +409,10 @@ export function AsistenciasPage() {
       {/* KPI Cards */}
       {kpis && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Presentes',     value: kpis.presentes,          Icon: UserCheck,   color: 'text-kyro-success', border: 'border-l-kyro-success' },
-            { label: 'Ausentes',      value: kpis.ausentes,           Icon: UserX,       color: 'text-kyro-danger',  border: 'border-l-kyro-danger' },
-            { label: 'Tardanzas',     value: kpis.tardanzas,          Icon: AlertCircle, color: 'text-kyro-warning', border: 'border-l-kyro-warning' },
-            { label: 'Pend. Revisión',value: kpis.pendientes_revision, Icon: Clock,      color: 'text-kyro-info',    border: 'border-l-kpi-total' },
-          ].map(k => (
-            <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
-              <div className="flex items-center gap-1 mb-1">
-                <k.Icon size={13} className={k.color} />
-                <p className="text-xs text-gray-500">{k.label}</p>
-              </div>
-              <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
-            </div>
-          ))}
+          <StatCard title="Presentes" value={kpis.presentes} accent="#22c55e" valueColorClass="text-kyro-success" icon={<UserCheck size={13} />} />
+          <StatCard title="Ausentes" value={kpis.ausentes} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<UserX size={13} />} />
+          <StatCard title="Tardanzas" value={kpis.tardanzas} accent="#f59e0b" valueColorClass="text-kyro-warning" icon={<AlertCircle size={13} />} />
+          <StatCard title="Pend. Revisión" value={kpis.pendientes_revision} accent="#0d6efd" valueColorClass="text-kyro-info" icon={<Clock size={13} />} />
         </div>
       )}
 

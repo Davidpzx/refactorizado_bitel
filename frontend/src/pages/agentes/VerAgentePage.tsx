@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DocumentosAgentePanel } from '../../components/agente/DocumentosAgentePanel'
 import { formatearFechaCorta } from '../../lib/fechas'
+import { StatCard } from '../../components/ui/StatCard'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -723,29 +724,25 @@ export function VerAgentePage() {
 
       {stats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
-            <div className="mb-2 flex items-center gap-2 text-kyro-muted">
-              <FileText size={14} />
-              <p className="text-xs">Total reportes</p>
-            </div>
-            <p className="text-xl font-bold text-kyro-text">{stats.total_reportes}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
-            <div className="mb-2 flex items-center gap-2 text-kyro-gold">
-              <DollarSign size={14} />
-              <p className="text-xs">Total vendido</p>
-            </div>
-            <p className="font-mono text-xl font-bold tabular-nums text-kyro-text">{fmt(stats.total_vendido)}</p>
-          </div>
-          <div className={`kyro-card border-l-4 p-4 ${dif < 0 ? 'border-l-kyro-danger' : dif > 0 ? 'border-l-kyro-warning' : 'border-l-kpi-neutral'}`}>
-            <div className="mb-2 flex items-center gap-2 text-kyro-muted">
-              <TrendingUp size={14} />
-              <p className="text-xs">Diferencia acumulada</p>
-            </div>
-            <p className={`font-mono text-xl font-bold tabular-nums ${dif < 0 ? 'text-kyro-danger' : dif > 0 ? 'text-kyro-warning' : 'text-kyro-body'}`}>
-              {dif > 0 ? '+' : ''}{fmt(dif)}
-            </p>
-          </div>
+          <StatCard
+            title="Total reportes"
+            value={stats.total_reportes}
+            accent="#0d6efd"
+            icon={<FileText size={14} />}
+          />
+          <StatCard
+            title="Total vendido"
+            value={fmt(stats.total_vendido)}
+            accent="#0d6efd"
+            icon={<DollarSign size={14} />}
+          />
+          <StatCard
+            title="Diferencia acumulada"
+            value={`${dif > 0 ? '+' : ''}${fmt(dif)}`}
+            accent={dif < 0 ? '#ef4444' : dif > 0 ? '#f59e0b' : '#6c757d'}
+            valueColorClass={dif < 0 ? 'text-kyro-danger' : dif > 0 ? 'text-kyro-warning' : 'text-kyro-body'}
+            icon={<TrendingUp size={14} />}
+          />
         </div>
       )}
 

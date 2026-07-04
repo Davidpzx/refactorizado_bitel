@@ -4,6 +4,7 @@ import { adminPaginasApi, type FotoPendienteItem } from '../../services/adminPag
 import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { Camera } from 'lucide-react'
 
 function srcFoto(foto: string): string {
   return foto.startsWith('data:') ? foto : `data:image/jpeg;base64,${foto}`
@@ -34,6 +35,7 @@ export function RevisarFotosPage() {
       <PageHeader
         title="Revisar Fotos de Asistencia"
         description="Audita las marcaciones del Protocolo de Local Cerrado. Aprobar elimina la foto (zero-retention)."
+        Icon={Camera}
       />
 
       {isLoading ? (

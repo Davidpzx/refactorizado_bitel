@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { StatCard } from '../../components/ui/StatCard'
 import { Select } from '../../components/ui/select'
 import { Label } from '../../components/ui/label'
 import { Clock, TrendingDown, ShieldOff, DollarSign } from 'lucide-react'
@@ -58,6 +59,7 @@ export function HistorialLiquidacionPage() {
       <PageHeader
         title="Liquidacion de Asistencias"
         subtitle="Tardanzas, deuda, comodines y descuentos por agente y mes."
+        Icon={Clock}
       >
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -119,20 +121,10 @@ export function HistorialLiquidacionPage() {
           </section>
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {[
-              { label: 'Tardanza total', value: `${data.resumen.total_tardanzas_min} min`, Icon: Clock, accent: 'border-l-kyro-warning', text: 'text-kyro-warning' },
-              { label: 'Deuda acumulada', value: `${data.resumen.deuda_acumulada_min} min`, Icon: TrendingDown, accent: 'border-l-kyro-danger', text: 'text-kyro-danger' },
-              { label: 'Comodines usados', value: String(data.resumen.comodines_usados), Icon: ShieldOff, accent: 'border-l-kyro-info', text: 'text-kyro-info' },
-              { label: 'Descuento total', value: `S/ ${Number(data.resumen.total_descuento_soles).toFixed(2)}`, Icon: DollarSign, accent: 'border-l-kyro-danger', text: 'text-kyro-danger' },
-            ].map(({ label, value, Icon, accent, text }) => (
-              <div key={label} className={`kyro-card border-l-4 p-4 ${accent}`}>
-                <div className={`mb-2 flex items-center gap-2 ${text}`}>
-                  <Icon size={14} />
-                  <p className="text-xs">{label}</p>
-                </div>
-                <p className={`text-xl font-bold tabular-nums ${text}`}>{value}</p>
-              </div>
-            ))}
+            <StatCard title="Tardanza total" value={`${data.resumen.total_tardanzas_min} min`} accent="#f59e0b" valueColorClass="text-kyro-warning" icon={<Clock size={14} />} />
+            <StatCard title="Deuda acumulada" value={`${data.resumen.deuda_acumulada_min} min`} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<TrendingDown size={14} />} />
+            <StatCard title="Comodines usados" value={String(data.resumen.comodines_usados)} accent="#0d6efd" valueColorClass="text-kyro-info" icon={<ShieldOff size={14} />} />
+            <StatCard title="Descuento total" value={`S/ ${Number(data.resumen.total_descuento_soles).toFixed(2)}`} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<DollarSign size={14} />} />
           </div>
 
           <section className="kyro-card overflow-hidden">

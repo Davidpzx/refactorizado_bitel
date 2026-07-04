@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Pencil, Trash2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, RefreshCw, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -511,7 +511,7 @@ export function ComisionesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio">
+      <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio" Icon={TrendingUp}>
         <div className="flex flex-wrap gap-3">
           <Button variant="glassInfo" onClick={() => setModal('tarifas')}>
             <AlertCircle size={15} className="mr-2" /> Tarifas operativas

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Input } from '../../components/ui/input'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CalendarCheck } from 'lucide-react'
 
 interface CeldaMatriz {
   fecha: string
@@ -87,6 +87,7 @@ export function ControlAsistenciasPage() {
       <PageHeader
         title="Control de Asistencia"
         subtitle="Matriz mensual agente x dia, agrupada por tienda"
+        Icon={CalendarCheck}
         actions={
           <div className="flex items-center gap-2">
             <Link

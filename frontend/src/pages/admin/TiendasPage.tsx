@@ -308,6 +308,7 @@ export function TiendasPage() {
       <PageHeader
         title="Tiendas"
         description="Catálogo de sucursales registradas en el sistema."
+        Icon={Store}
         actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
       />
 

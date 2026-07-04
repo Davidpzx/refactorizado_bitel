@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '../../components/PageHeader'
 import { integradorApi, type CredencialTienda } from '../../services/integradorBitel.api'
 import { apiErrorData } from '../../lib/httpError'
+import { Plug } from 'lucide-react'
 
 function EstadoAgente({ estado }: { estado: CredencialTienda['estado_agente'] }) {
   const map = {
@@ -129,6 +130,7 @@ export function IntegradorPage() {
       <PageHeader
         title="Integrador Bipay — Credenciales Bitel"
         subtitle="Cada tienda gestiona el acceso de su agente de sincronización (extractor local)"
+        Icon={Plug}
       />
       {isLoading && <p className="py-10 text-center text-sm text-kyro-muted">Cargando...</p>}
       <div className="space-y-4">
