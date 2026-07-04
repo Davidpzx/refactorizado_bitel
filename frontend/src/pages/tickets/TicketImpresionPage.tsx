@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
+import { useAuth } from '../../hooks/useAuth'
 
 interface Ticket {
   id: number
@@ -23,6 +24,8 @@ interface Ticket {
 
 export function TicketImpresionPage() {
   const { id } = useParams<{ id: string }>()
+  const { usuario } = useAuth()
+  const formato58 = usuario?.formato_ticket === '58'
 
   const { data: ticket, isLoading, isError } = useQuery<Ticket>({
     queryKey: ['ticket', id],
@@ -106,11 +109,11 @@ export function TicketImpresionPage() {
 
         @media print {
           .controles { display:none; }
-          @page { size:80mm auto; margin:3mm 2mm; }
+          @page { size:${formato58 ? '58' : '80'}mm auto; margin:3mm 2mm; }
           body { background:#fff; }
-          .ticket { width:76mm; margin:0; padding:0; font-size:9pt; }
+          .ticket { width:${formato58 ? '54' : '76'}mm; margin:0; padding:0; font-size:${formato58 ? '8' : '9'}pt; }
           .cabecera { padding:2px 0 2px; }
-          .marca { font-size:13pt; }
+          .marca { font-size:${formato58 ? '11' : '13'}pt; }
           .razon-social { font-size:7pt; }
           .fila { margin:2px 0; }
           .desc { font-size:8.5pt; }

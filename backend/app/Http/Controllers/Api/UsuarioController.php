@@ -41,6 +41,7 @@ class UsuarioController extends Controller
             'agente_id' => ['nullable', 'required_if:rol,tienda', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
+            'formato_ticket' => ['nullable', Rule::in(['58', '80'])],
         ], [
             'nombre.regex'    => 'El nombre no debe contener números ni símbolos.',
             'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
@@ -65,6 +66,7 @@ class UsuarioController extends Controller
             'agente_id' => ['nullable', 'integer', 'exists:agentes,id'],
             'activo'    => ['boolean'],
             'tiene_bcp' => ['boolean'],
+            'formato_ticket' => ['nullable', Rule::in(['58', '80'])],
         ], [
             'nombre.regex'     => 'El nombre no debe contener números ni símbolos.',
             'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
