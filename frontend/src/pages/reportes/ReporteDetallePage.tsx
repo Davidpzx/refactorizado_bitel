@@ -698,6 +698,7 @@ export function ReporteDetallePage() {
   const prepago   = ventas.filter(v => v.tipo_venta === 'PREPAGO')
   const equipos   = ventas.filter(v => v.tipo_venta === 'EQUIPO' || v.tipo_venta === 'ACCESORIO')
   const otros     = ventas.filter(v => v.tipo_venta === 'OTROS_FLUJO')
+  const apoyo     = ventas.filter(v => v.tipo_venta === 'APOYO')
 
   const totalVentas = ventas.reduce((acc, v) => acc + montoVenta(v), 0)
   const diff        = n(reporte.diferencia)
@@ -872,6 +873,16 @@ export function ReporteDetallePage() {
               ventas={otros}
               totalLabel="Total otros"
               renderFila={(v, i) => <FilaOtro key={v.id} venta={v} idx={i} />}
+            />
+          )}
+
+          {/* Apoyo a otras tiendas */}
+          {apoyo.length > 0 && (
+            <SeccionVentas
+              titulo="Apoyo a Otras Tiendas"
+              ventas={apoyo}
+              totalLabel="Total apoyo"
+              renderFila={(v, i) => <FilaLinea key={v.id} venta={v} idx={i} />}
             />
           )}
 
