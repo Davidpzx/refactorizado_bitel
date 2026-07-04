@@ -201,14 +201,6 @@ export function AppLayout() {
                 )}
               </div>
             )}
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
-            >
-              {isDark ? <Sun size={13} /> : <Moon size={13} />}
-            </button>
             {/* Collapse toggle (desktop only) */}
             <button
               onClick={() => setCollapsed((c) => !c)}
