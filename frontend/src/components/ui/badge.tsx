@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react'
 
-type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline'
+type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan'
 
 const variantClasses: Record<Variant, string> = {
   default:     'border-blue-200/70 bg-blue-50 text-blue-700 dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300',
@@ -8,6 +8,9 @@ const variantClasses: Record<Variant, string> = {
   warning:     'border-amber-200/70 bg-amber-50 text-amber-700 dark:border-amber-400/15 dark:bg-amber-500/10 dark:text-amber-300',
   destructive: 'border-red-200/70 bg-red-50 text-red-700 dark:border-red-400/15 dark:bg-red-500/10 dark:text-red-300',
   outline:     'border-gray-300 bg-white/60 text-gray-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300',
+  // Identidad legacy Bitel: dorado (rol ADMIN, PIN) y cian (rol TIENDA, BCP, códigos)
+  gold:        'border-kyro-gold/30 bg-kyro-gold/10 text-kyro-gold',
+  cyan:        'border-kyro-info/30 bg-kyro-info/10 text-kyro-info',
 }
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
