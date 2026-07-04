@@ -132,8 +132,8 @@ class LeadController extends Controller
         $hasta    = $request->input('hasta', now()->toDateString());
 
         $buildBase = fn () => Lead::query()
-            ->when($tiendaId, fn ($q) => $q->where('tienda_id', $tiendaId))
-            ->whereBetween('creado_en', [$desde, $hasta . ' 23:59:59']);
+            ->when($tiendaId, fn ($q) => $q->where('leads.tienda_id', $tiendaId))
+            ->whereBetween('leads.creado_en', [$desde, $hasta . ' 23:59:59']);
 
         // Pipeline del período ─────────────────────────────────────────────────
         $porEstado = $buildBase()
