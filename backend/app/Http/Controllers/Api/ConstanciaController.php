@@ -87,6 +87,15 @@ class ConstanciaController extends Controller
             return response()->json(['message' => 'Constancia no encontrada.'], 404);
         }
 
+        $user = Auth::user();
+        abort_if(
+            $user->rol !== 'admin'
+                && $traslado->tienda_origen !== $user->tienda_id
+                && $traslado->tienda_destino !== $user->tienda_id,
+            403,
+            'No tienes permisos sobre este traslado.'
+        );
+
         $empresa = DB::table('configuraciones')->first();
 
         $pdf = Pdf::loadView('constancias.traslado', compact('traslado', 'items', 'tipo', 'empresa'))
@@ -109,6 +118,13 @@ class ConstanciaController extends Controller
             return response()->json(['message' => 'Agente no encontrado.'], 404);
         }
 
+        $user = Auth::user();
+        abort_if(
+            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            403,
+            'No tienes permisos sobre este agente.'
+        );
+
         $empresa = DB::table('configuraciones')->first();
 
         $pdf = Pdf::loadView('constancias.agente', compact('agente', 'empresa'))
@@ -130,6 +146,13 @@ class ConstanciaController extends Controller
         if (!$agente) {
             return response()->json(['message' => 'Agente no encontrado.'], 404);
         }
+
+        $user = Auth::user();
+        abort_if(
+            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            403,
+            'No tienes permisos sobre esta boleta.'
+        );
 
         $empresa = DB::table('configuraciones')->first();
 
@@ -211,6 +234,13 @@ class ConstanciaController extends Controller
         if (!$reporte) {
             return response()->json(['message' => 'Reporte no encontrado.'], 404);
         }
+
+        $user = Auth::user();
+        abort_if(
+            $user->rol !== 'admin' && $reporte->tienda_id !== $user->tienda_id,
+            403,
+            'No tienes permisos sobre este reporte.'
+        );
 
         $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
             ->where('reporte_id', $id)
