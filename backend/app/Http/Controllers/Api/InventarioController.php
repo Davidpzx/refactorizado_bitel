@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
 use App\Models\VentaEquipo;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -196,7 +197,7 @@ class InventarioController extends Controller
     public function show(Request $request, InventarioTienda $inventario): JsonResponse
     {
         abort_if(
-            $request->user()->rol !== 'admin' && $inventario->tienda_id !== $request->user()->tienda_id,
+            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $inventario->tienda_id),
             403,
             'No tienes permisos sobre este inventario.'
         );
@@ -315,7 +316,7 @@ class InventarioController extends Controller
         }
 
         // Blindaje de propiedad: el producto debe ser de la tienda del usuario.
-        if ((string) $producto->tienda_id !== (string) $user->tienda_id) {
+        if (TiendaGuard::bloqueaAcceso(false, $user->tienda_id, $producto->tienda_id)) {
             return response()->json(['success' => false, 'msg' => 'El producto no pertenece a tu tienda.'], 403);
         }
 
