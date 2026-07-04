@@ -6,7 +6,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, LayoutGrid } from 'lucide-react'
 
 interface TiendaInfo {
   codigo: string
@@ -55,6 +55,7 @@ export function MatrizInventarioPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={LayoutGrid}
         title="Matriz de Inventario"
         description="Vista cruzada de stock por tienda y producto."
         actions={

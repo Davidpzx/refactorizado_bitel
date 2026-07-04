@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History, LayoutGrid } from 'lucide-react'
+import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History, LayoutGrid, Package } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
@@ -458,6 +458,7 @@ export function InventarioPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={Package}
         title="Inventario de Tiendas"
         description="Stock de equipos, accesorios y chips por tienda."
         actions={

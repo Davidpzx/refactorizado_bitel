@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Download, RotateCcw } from 'lucide-react'
+import { Download, RotateCcw, ClipboardList } from 'lucide-react'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader } from '../../components/PageHeader'
@@ -131,6 +131,7 @@ export function KardexInventarioPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={ClipboardList}
         title="Kardex de Inventario"
         description="Historial completo de movimientos de stock."
         actions={
