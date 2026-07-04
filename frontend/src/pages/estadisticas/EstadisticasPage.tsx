@@ -11,7 +11,8 @@ import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { Download, TrendingUp } from 'lucide-react'
+import { StatCard } from '../../components/ui/StatCard'
+import { Download, TrendingUp, BarChart2 } from 'lucide-react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
@@ -171,6 +172,7 @@ export function EstadisticasPage() {
       <PageHeader
         title="Estadísticas de Ventas"
         description="Explora el rendimiento comercial por categoría, tienda, producto y agente."
+        Icon={BarChart2}
         actions={<Button variant="glassSuccess" size="sm" onClick={exportarExcel} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar'}
         </Button>}
@@ -211,18 +213,24 @@ export function EstadisticasPage() {
       {totales && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Total Ventas',  value: totales.total_ventas, sub: pen.format(Number(totales.monto_total)), border: 'border-l-kpi-total' },
-            { label: 'Postpago',      value: totales.postpago,     sub: `${totales.total_ventas > 0 ? Math.round(totales.postpago * 100 / totales.total_ventas) : 0}%`, border: 'border-l-kpi-total' },
-            { label: 'Prepago/Chips', value: totales.prepago,      sub: '', border: 'border-l-kpi-yape' },
-            { label: 'Eq. Cuotas',   value: totales.eq_cuotas,    sub: '', border: 'border-l-kyro-warning' },
-            { label: 'Eq. Contado',  value: totales.eq_contado,   sub: '', border: 'border-l-kyro-warning' },
-            { label: 'Accesorios',   value: totales.accesorios,   sub: '', border: 'border-l-kyro-success' },
+            { label: 'Total Ventas',  value: totales.total_ventas, sub: pen.format(Number(totales.monto_total)), accent: '#0d6efd' },
+            { label: 'Postpago',      value: totales.postpago,     sub: `${totales.total_ventas > 0 ? Math.round(totales.postpago * 100 / totales.total_ventas) : 0}%`, accent: '#0d6efd' },
+            { label: 'Prepago/Chips', value: totales.prepago,      sub: '', accent: '#a78bfa' },
+            { label: 'Eq. Cuotas',   value: totales.eq_cuotas,    sub: '', accent: '#f59e0b' },
+            { label: 'Eq. Contado',  value: totales.eq_contado,   sub: '', accent: '#f59e0b' },
+            { label: 'Accesorios',   value: totales.accesorios,   sub: '', accent: '#22c55e' },
           ].map(kpi => (
-            <div key={kpi.label} className={`kyro-card border-l-4 p-4 transition-all duration-200 hover:-translate-y-0.5 ${kpi.border}`}>
-              <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">{kpi.label}</p>
-              <p className="text-2xl font-bold tracking-tight text-kyro-text">{kpi.value}</p>
-              {kpi.sub && <p className="mt-0.5 text-xs text-kyro-subtle">{kpi.sub}</p>}
-            </div>
+            <StatCard
+              key={kpi.label}
+              title={kpi.label}
+              accent={kpi.accent}
+              value={
+                <span className="flex flex-col gap-0.5">
+                  <span>{kpi.value}</span>
+                  {kpi.sub && <span className="text-xs font-normal text-kyro-subtle">{kpi.sub}</span>}
+                </span>
+              }
+            />
           ))}
         </div>
       )}
