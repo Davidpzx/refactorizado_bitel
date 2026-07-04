@@ -90,6 +90,11 @@ class InventarioRestaurarTest extends TestCase
         $equipoId = $this->crearEquipoVendido($vendedorId, 'PUNDA50', $reporteId);
         $ventaId = $this->crearVentaEquipo($reporteId, $vendedorId, $equipoId);
 
+        DB::table('ventas')->where('id', $ventaId)->update([
+            'desembolso_confirmado_por' => $admin->id,
+            'desembolso_confirmado_en'  => now(),
+        ]);
+
         $this->actingAs($admin, 'sanctum')
             ->postJson("/api/v1/inventario/{$equipoId}/restaurar")
             ->assertOk()
@@ -103,6 +108,8 @@ class InventarioRestaurarTest extends TestCase
         $venta = DB::table('ventas')->where('id', $ventaId)->first();
         $this->assertSame('ANULADA', $venta->comision_estado);
         $this->assertSame(0.0, (float) $venta->comision_generada);
+        $this->assertNull($venta->desembolso_confirmado_por);
+        $this->assertNull($venta->desembolso_confirmado_en);
 
         $historial = DB::table('historial_inventario')
             ->where('producto_id', $equipoId)

@@ -790,8 +790,10 @@ class InventarioController extends Controller
 
             if ($venta) {
                 $venta->update([
-                    'comision_estado'   => 'ANULADA',
-                    'comision_generada' => 0,
+                    'comision_estado'            => 'ANULADA',
+                    'comision_generada'          => 0,
+                    'desembolso_confirmado_por'  => null,
+                    'desembolso_confirmado_en'   => null,
                 ]);
             }
         });
