@@ -14,6 +14,7 @@ use App\Models\VentaLinea;
 use App\Services\ComisionService;
 use App\Services\ComisionOperativaService;
 use App\Services\UserAgentResolver;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -666,8 +667,8 @@ class ReporteController extends Controller
     public function actualizarDestino(Request $request, Reporte $reporte): JsonResponse
     {
         $user = $request->user();
-        abort_unless(
-            $user->rol === 'admin' || $reporte->tienda_id === $user->tienda_id,
+        abort_if(
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $reporte->tienda_id),
             403,
             'No tienes permisos sobre este reporte.'
         );
