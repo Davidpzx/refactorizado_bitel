@@ -9,7 +9,8 @@ import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store, Users, Search, Download } from 'lucide-react'
+import { StatCard } from '../../components/ui/StatCard'
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store, Users, Search, Download, BookOpen } from 'lucide-react'
 
 interface BitacoraKpis {
   total_mov: number
@@ -145,6 +146,7 @@ export function BitacoraStockPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={BookOpen}
         title="Bitácora de Stock"
         description="Trazabilidad de entradas, salidas y ajustes de inventario."
       />
@@ -158,51 +160,48 @@ export function BitacoraStockPage() {
       {/* KPI Cards */}
       {kpis && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-info"><Activity size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Movimientos</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-info">{kpis.total_mov.toLocaleString()}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kyro-success p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><TrendingUp size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Entradas (+)</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-success">+{kpis.total_entradas.toLocaleString()}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kyro-danger p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-danger"><TrendingDown size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Salidas (-)</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-danger">-{kpis.total_salidas.toLocaleString()}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-neutral p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-muted"><Store size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Balance Neto</p>
-            </div>
-            <p className={`mt-2 font-mono text-xl font-bold ${(kpis.total_entradas - kpis.total_salidas) >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}`}>
-              {kpis.total_entradas - kpis.total_salidas >= 0 ? '+' : ''}
-              {(kpis.total_entradas - kpis.total_salidas).toLocaleString()}
-            </p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-info"><Store size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tiendas Afectadas</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{kpis.tiendas_afectadas.toLocaleString()}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kyro-indigo p-4 transition-all hover:-translate-y-0.5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-gold"><Users size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Agentes Involucrados</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{kpis.agentes_involucrados.toLocaleString()}</p>
-          </div>
+          <StatCard
+            title="Total Movimientos"
+            accent="var(--color-kpi-total)"
+            icon={<Activity size={18} />}
+            valueColorClass="font-mono text-kyro-info"
+            value={kpis.total_mov.toLocaleString()}
+          />
+          <StatCard
+            title="Entradas (+)"
+            accent="var(--color-kyro-success)"
+            icon={<TrendingUp size={18} />}
+            valueColorClass="font-mono text-kyro-success"
+            value={`+${kpis.total_entradas.toLocaleString()}`}
+          />
+          <StatCard
+            title="Salidas (-)"
+            accent="var(--color-kyro-danger)"
+            icon={<TrendingDown size={18} />}
+            valueColorClass="font-mono text-kyro-danger"
+            value={`-${kpis.total_salidas.toLocaleString()}`}
+          />
+          <StatCard
+            title="Balance Neto"
+            accent="var(--color-kpi-neutral)"
+            icon={<Store size={18} />}
+            valueColorClass={`font-mono ${(kpis.total_entradas - kpis.total_salidas) >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}`}
+            value={`${kpis.total_entradas - kpis.total_salidas >= 0 ? '+' : ''}${(kpis.total_entradas - kpis.total_salidas).toLocaleString()}`}
+          />
+          <StatCard
+            title="Tiendas Afectadas"
+            accent="var(--color-kpi-total)"
+            icon={<Store size={18} />}
+            valueColorClass="font-mono text-kyro-text"
+            value={kpis.tiendas_afectadas.toLocaleString()}
+          />
+          <StatCard
+            title="Agentes Involucrados"
+            accent="var(--color-kyro-indigo)"
+            icon={<Users size={18} />}
+            valueColorClass="font-mono text-kyro-text"
+            value={kpis.agentes_involucrados.toLocaleString()}
+          />
         </div>
       )}
 

@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ArrowRightLeft } from 'lucide-react'
 import { Dialog } from '../../components/ui/dialog'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
@@ -417,6 +418,7 @@ export function TrasladoChipsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
+        Icon={ArrowRightLeft}
         title="Traslados de Chips"
         description="Stock de chips por tienda y gestión de traslados."
         actions={<Button variant="gold" onClick={() => setDialogCrear(true)}>+ Trasladar Chips</Button>}
