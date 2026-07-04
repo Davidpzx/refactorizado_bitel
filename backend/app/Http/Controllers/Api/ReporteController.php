@@ -635,10 +635,9 @@ class ReporteController extends Controller
     {
         $this->autorizarPropietarioOAdmin($request, $reporte);
 
-        if ($reporte->estado === 'aprobado') {
-            return response()->json(['error' => 'No se puede eliminar un reporte aprobado.'], 422);
-        }
-
+        // Paridad legacy (sis_bipay/gerencia/eliminar_reporte.php): se puede eliminar
+        // cualquier reporte, incluido uno aprobado. El bloqueo por estado==='aprobado'
+        // era una regla nueva del refactor que negocio decidió revertir.
         DB::transaction(function () use ($reporte) {
             $this->revertirVentas($reporte);
             $reporte->delete();
