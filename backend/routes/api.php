@@ -371,6 +371,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('asistencias/mi-historial',             [AsistenciaController::class, 'miHistorial']);
     Route::post('asistencias/salvavidas',             [AsistenciaController::class, 'salvavidas']);
     Route::post('asistencias/excepcion',              [AsistenciaController::class, 'registrarExcepcion'])->middleware('role:admin');
+    Route::get('asistencias/matriz',                  [AsistenciaController::class, 'matriz'])->middleware('role:admin');
+    Route::post('asistencias/excepcion-jornada',      [AsistenciaController::class, 'excepcionJornada'])->middleware('role:admin');
     Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar'])->middleware('role:admin');
     Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar'])->middleware('role:admin');
 });

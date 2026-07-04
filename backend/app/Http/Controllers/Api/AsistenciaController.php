@@ -1942,4 +1942,163 @@ class AsistenciaController extends Controller
             'message' => $estado === 'PERMISO' ? 'Permiso registrado (genera deuda de 9h).' : 'Falta injustificada registrada.',
         ], 201);
     }
+
+    // ── GET /asistencias/matriz — Control mensual agente × día (paridad legacy control_asistencias.php) ──
+    public function matriz(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user?->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! $this->tablaExiste()) {
+            return response()->json(['error' => 'Sistema de asistencias no configurado.'], 503);
+        }
+
+        $mes = trim((string) $request->query('mes', ''));
+        if (! preg_match('/^\d{4}-\d{2}$/', $mes)) {
+            $mes = $this->ahora()->format('Y-m');
+        }
+
+        $fechaIni = $mes.'-01';
+        $fechaFinMes = Carbon::parse($fechaIni)->endOfMonth()->toDateString();
+        $hoy = $this->ahora()->toDateString();
+        $fechaFin = ($mes === $this->ahora()->format('Y-m')) ? $hoy : $fechaFinMes;
+        $diasMostrar = (int) Carbon::parse($fechaFin)->day;
+
+        $agentes = DB::table('agentes')
+            ->where('estado', 'ACTIVO')
+            ->orderBy('tienda_base')->orderBy('nombres')
+            ->get(['id', 'nombres', 'tienda_base', 'dia_descanso']);
+
+        $ids = $agentes->pluck('id');
+
+        $asisMap = [];
+        if ($ids->isNotEmpty()) {
+            foreach (DB::table('asistencias')->whereIn('agente_id', $ids)->whereBetween('fecha', [$fechaIni, $fechaFin])->get() as $row) {
+                $dia = (int) Carbon::parse($row->fecha)->day;
+                $asisMap[$row->agente_id][$dia] = $row;
+            }
+        }
+
+        $exMap = [];
+        if ($ids->isNotEmpty() && Schema::hasTable('excepciones_jornada')) {
+            foreach (DB::table('excepciones_jornada')->whereIn('agente_id', $ids)->whereBetween('fecha', [$fechaIni, $fechaFin])->get(['agente_id', 'fecha', 'tipo']) as $row) {
+                $dia = (int) Carbon::parse($row->fecha)->day;
+                $exMap[$row->agente_id][$dia] = $row->tipo;
+            }
+        }
+
+        $porTienda = [];
+        foreach ($agentes as $agente) {
+            $porTienda[$agente->tienda_base ?? '—'][] = $agente;
+        }
+
+        $tiendas = [];
+        foreach ($porTienda as $tienda => $agentesTienda) {
+            $filas = [];
+            foreach ($agentesTienda as $agente) {
+                $dias = [];
+                for ($d = 1; $d <= $diasMostrar; $d++) {
+                    $fechaD = $mes.'-'.str_pad((string) $d, 2, '0', STR_PAD_LEFT);
+                    $asis = $asisMap[$agente->id][$d] ?? null;
+                    $exTipo = $exMap[$agente->id][$d] ?? null;
+                    $dias[$d] = $this->celdaMatriz($agente, $asis, $exTipo, $fechaD, $hoy);
+                }
+                $filas[] = [
+                    'id' => $agente->id,
+                    'nombre' => $agente->nombres,
+                    'dia_descanso' => $agente->dia_descanso,
+                    'dias' => $dias,
+                ];
+            }
+            $tiendas[] = ['tienda' => $tienda, 'agentes' => $filas];
+        }
+
+        return response()->json([
+            'mes' => $mes,
+            'dias_mostrar' => $diasMostrar,
+            'tiendas' => $tiendas,
+        ]);
+    }
+
+    private function celdaMatriz(object $agente, ?object $asis, ?string $exTipo, string $fecha, string $hoy): array
+    {
+        $diasEs = ['', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+        $iso = Carbon::parse($fecha)->dayOfWeekIso;
+        $esFuturo = $fecha > $hoy;
+        $esDescanso = ! $asis && strtoupper((string) ($agente->dia_descanso ?? '')) === ($diasEs[$iso] ?? '');
+        $estadoAsis = $asis->estado_asistencia ?? null;
+        $tardanza = (int) ($asis->minutos_tardanza ?? 0);
+        $esMedioTiempo = $exTipo === 'MEDIO_TIEMPO';
+
+        $estado = match (true) {
+            $esDescanso => 'DESCANSO',
+            $esFuturo => 'FUTURO',
+            ! $asis => 'SIN_MARCA',
+            $estadoAsis === 'FALTA_INJUSTIFICADA' => 'FALTA',
+            $estadoAsis === 'PERMISO' => 'PERMISO',
+            $estadoAsis === 'FERIADO' => 'FERIADO',
+            $esMedioTiempo => 'MEDIO_TIEMPO',
+            $tardanza > 0 => 'TARDANZA',
+            default => 'OK',
+        };
+
+        return [
+            'fecha' => $fecha,
+            'asistencia_id' => $asis->id ?? null,
+            'estado' => $estado,
+            'minutos_tardanza' => $tardanza,
+            'hora_ingreso' => $asis->hora_ingreso ?? null,
+            'inicio_refrigerio' => $asis->inicio_refrigerio ?? null,
+            'fin_refrigerio' => $asis->fin_refrigerio ?? null,
+            'hora_salida' => $asis->hora_salida ?? null,
+            'omitio_refrigerio' => (bool) ($asis->omitio_refrigerio ?? false),
+            'excepcion_tipo' => $exTipo,
+        ];
+    }
+
+    // ── POST /asistencias/excepcion-jornada — Toggle MEDIO_TIEMPO/TURNO_LIBRE/OTRO ──
+    // Paridad legacy gerencia/ajax_excepcion_jornada.php: si ya existe la fila
+    // (agente_id, fecha) la borra (estado off); si no existe, la crea (estado on).
+    public function excepcionJornada(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user?->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('excepciones_jornada')) {
+            return response()->json(['success' => false, 'message' => 'Tabla excepciones_jornada no configurada.'], 503);
+        }
+
+        $validated = $request->validate([
+            'agente_id' => 'required|integer|min:1',
+            'fecha' => 'required|date_format:Y-m-d',
+            'tipo' => 'nullable|in:MEDIO_TIEMPO,TURNO_LIBRE,OTRO',
+            'horas_trabajadas' => 'nullable|numeric',
+        ]);
+
+        $agenteId = (int) $validated['agente_id'];
+        $fecha = $validated['fecha'];
+        $tipo = $validated['tipo'] ?? 'MEDIO_TIEMPO';
+        $horas = round(max(0, min(24, (float) ($validated['horas_trabajadas'] ?? 4.0))), 2);
+
+        $existente = DB::table('excepciones_jornada')->where('agente_id', $agenteId)->where('fecha', $fecha)->first();
+
+        if ($existente) {
+            DB::table('excepciones_jornada')->where('id', $existente->id)->delete();
+
+            return response()->json(['success' => true, 'estado' => 'off']);
+        }
+
+        DB::table('excepciones_jornada')->insert([
+            'agente_id' => $agenteId,
+            'fecha' => $fecha,
+            'tipo' => $tipo,
+            'horas_trabajadas' => $horas,
+            'registrado_por' => $user->id,
+            'creado_en' => $this->ahora(),
+        ]);
+
+        return response()->json(['success' => true, 'estado' => 'on'], 201);
+    }
 }
