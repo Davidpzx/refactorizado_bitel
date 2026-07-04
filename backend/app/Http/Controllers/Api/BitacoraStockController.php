@@ -39,12 +39,11 @@ class BitacoraStockController extends Controller
                 });
             });
 
-        if ($user->rol === 'tienda') {
-            // $user->tienda_id es el código string (e.g. 'PUNDA50') → resolvemos a int
+        if ($user->rol !== 'admin') {
+            // $user->tienda_id es el código string (e.g. 'PUNDA50') → resolvemos a int.
+            // Fallar CERRADO: sin tienda válida no debe ver nada (-1 no existe como PK).
             $tiendaIntId = DB::table('tiendas')->where('codigo', $user->tienda_id)->value('id');
-            if ($tiendaIntId) {
-                $base->where('h.tienda_id', $tiendaIntId);
-            }
+            $base->where('h.tienda_id', $tiendaIntId ?: -1);
         } elseif ($request->filled('tienda')) {
             $tiendaIntId = DB::table('tiendas')->where('codigo', $request->tienda)->value('id');
             if ($tiendaIntId) {
@@ -164,8 +163,10 @@ class BitacoraStockController extends Controller
             ->when($request->fecha_desde, fn($q, $f) => $q->whereDate('h.fecha_hora', '>=', $f))
             ->when($request->fecha_hasta, fn($q, $f) => $q->whereDate('h.fecha_hora', '<=', $f));
 
-        if ($user->rol === 'tienda') {
-            $query->where('h.tienda_id', $user->tienda_id);
+        if ($user->rol !== 'admin') {
+            // Mismo criterio fail-closed que baseQuery(): resolver código → int id.
+            $tiendaIntId = DB::table('tiendas')->where('codigo', $user->tienda_id)->value('id');
+            $query->where('h.tienda_id', $tiendaIntId ?: -1);
         }
 
         return response()->json($query->selectRaw("
