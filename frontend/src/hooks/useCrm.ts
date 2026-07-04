@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { crmApi } from '../services/crm.api'
-import type { CrmDashboardFilters, InteraccionCrm, LeadFormData } from '../types/crm'
+import type { CrmDashboardFilters, CrmTemperaturaFiltros, InteraccionCrm, LeadFormData } from '../types/crm'
 
 export function useLeads(params?: Record<string, string | number>) {
   return useQuery({
@@ -80,6 +80,14 @@ export function useCrmDashboard(params?: CrmDashboardFilters) {
   return useQuery({
     queryKey: ['crm-dashboard', params],
     queryFn: () => crmApi.dashboard(params),
+    staleTime: 60_000,
+  })
+}
+
+export function useCrmTemperatura(params?: CrmTemperaturaFiltros & { per_page?: number }) {
+  return useQuery({
+    queryKey: ['crm-temperatura', params],
+    queryFn: () => crmApi.temperatura.list(params),
     staleTime: 60_000,
   })
 }

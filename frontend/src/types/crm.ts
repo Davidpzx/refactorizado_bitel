@@ -93,3 +93,38 @@ export interface CrmDashboardData {
   ranking_agentes: CrmRankingAgente[]
   actividad_reciente: CrmActividadItem[]
 }
+
+// ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
+
+export type TemperaturaEtiqueta = 'Caliente' | 'Frío' | 'Upselling' | 'Neutro'
+
+export interface Temperatura {
+  etiqueta: TemperaturaEtiqueta
+  bg: string
+  text: string
+  border: string
+}
+
+export interface CrmInteraccionTemp {
+  id: number
+  cliente_id: number
+  dni: string
+  nombres: string
+  apellidos: string
+  telefono: string | null
+  tienda_codigo: string
+  agente_nombre: string
+  tipo_operacion: string
+  producto_interes: string | null
+  motivo_rechazo: string | null
+  fecha_hora: string
+  temperatura: Temperatura
+}
+
+export interface CrmTemperaturaFiltros {
+  tienda_codigo?: string
+  dni?: string
+  desde?: string
+  hasta?: string
+  temperatura?: TemperaturaEtiqueta
+}
