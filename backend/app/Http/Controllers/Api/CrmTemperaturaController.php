@@ -34,24 +34,33 @@ class CrmTemperaturaController extends Controller
                 'i.producto_interes', 'i.motivo_rechazo', 'i.fecha_hora',
             ]);
 
-        $perPage = $request->integer('per_page', 50);
-        $paginado = $query->paginate($perPage);
-
-        $temperaturas = [];
+        $perPage    = $request->integer('per_page', 50);
         $filtroTemp = $request->input('temperatura');
 
-        $data = collect($paginado->items())->map(function ($row) use (&$temperaturas) {
-            $row = (array) $row;
-            if (! isset($temperaturas[$row['dni']])) {
-                $temperaturas[$row['dni']] = $this->calculador->calcular($row['dni']);
-            }
-            $row['temperatura'] = $temperaturas[$row['dni']];
-            return $row;
-        });
-
+        // La temperatura es un campo calculado (no existe en la tabla), así que no se
+        // puede filtrar en SQL antes de paginar. Si se pide ese filtro, resolvemos la
+        // temperatura de TODOS los candidatos y paginamos la colección ya filtrada;
+        // así total/current_page/per_page quedan consistentes con `data`. Sin el
+        // filtro, seguimos paginando en SQL (más barato) como antes.
         if ($filtroTemp) {
-            $data = $data->filter(fn ($row) => $row['temperatura']['etiqueta'] === $filtroTemp)->values();
+            $page = $request->integer('page', 1);
+
+            $filtrados = $this->conTemperatura(collect($query->get()))
+                ->filter(fn ($row) => $row['temperatura']['etiqueta'] === $filtroTemp)
+                ->values();
+
+            $data = $filtrados->forPage($page, $perPage)->values();
+
+            return response()->json([
+                'data'         => $data,
+                'total'        => $filtrados->count(),
+                'current_page' => $page,
+                'per_page'     => $perPage,
+            ]);
         }
+
+        $paginado = $query->paginate($perPage);
+        $data     = $this->conTemperatura(collect($paginado->items()));
 
         return response()->json([
             'data'         => $data,
@@ -59,6 +68,21 @@ class CrmTemperaturaController extends Controller
             'current_page' => $paginado->currentPage(),
             'per_page'     => $paginado->perPage(),
         ]);
+    }
+
+    /** Anota cada fila con la temperatura de su DNI, calculando cada DNI único una sola vez. */
+    private function conTemperatura(\Illuminate\Support\Collection $rows): \Illuminate\Support\Collection
+    {
+        $temperaturas = [];
+
+        return $rows->map(function ($row) use (&$temperaturas) {
+            $row = (array) $row;
+            if (! isset($temperaturas[$row['dni']])) {
+                $temperaturas[$row['dni']] = $this->calculador->calcular($row['dni']);
+            }
+            $row['temperatura'] = $temperaturas[$row['dni']];
+            return $row;
+        });
     }
 
     /** GET /v1/crm/temperatura/{dni} — temperatura calculada de un solo cliente. */

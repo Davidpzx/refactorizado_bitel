@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Crm\TemperaturaCalculator;
 use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -180,5 +181,73 @@ class CrmTemperaturaTest extends TestCase
             ->getJson('/api/v1/crm/temperatura/10101010')
             ->assertOk()
             ->assertJson(['etiqueta' => 'Caliente']);
+    }
+
+    public function test_endpoint_lista_temperatura_filtra_antes_de_paginar_y_total_es_consistente(): void
+    {
+        // 2 clientes "Caliente" (interaccion reciente sin rechazo) + 1 "Frio" (rechazo por credito, antiguo).
+        $caliente1 = $this->crearCliente('20000001');
+        $caliente2 = $this->crearCliente('20000002');
+        $frio      = $this->crearCliente('20000003');
+
+        $this->crearInteraccion($caliente1, ['fecha_hora' => now()->subHours(1), 'motivo_rechazo' => null]);
+        $this->crearInteraccion($caliente2, ['fecha_hora' => now()->subHours(2), 'motivo_rechazo' => null]);
+        $this->crearInteraccion($frio, [
+            'fecha_hora'     => now()->subMonths(6),
+            'motivo_rechazo' => 'Evaluación Crediticia',
+        ]);
+
+        // per_page=1 fuerza a que, si el filtro se aplicara despues de paginar, la
+        // pagina cruda (ordenada por fecha_hora desc) solo traeria a caliente1.
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?temperatura=Caliente&per_page=1&page=1')
+            ->assertOk();
+
+        $this->assertEquals(2, $response->json('total'));
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Caliente', $response->json('data.0.temperatura.etiqueta'));
+
+        $pagina2 = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?temperatura=Caliente&per_page=1&page=2')
+            ->assertOk();
+
+        $this->assertEquals(2, $pagina2->json('total'));
+        $this->assertCount(1, $pagina2->json('data'));
+        $this->assertEquals('Caliente', $pagina2->json('data.0.temperatura.etiqueta'));
+        $this->assertNotEquals($response->json('data.0.dni'), $pagina2->json('data.0.dni'));
+    }
+
+    public function test_calculador_devuelve_caliente_exactamente_en_el_limite_de_48_horas(): void
+    {
+        // Congelamos el reloj: el "ahora" del calculador debe ser el mismo que el usado
+        // para sembrar fecha_hora, para que el borde de >= 48h no dependa de milisegundos.
+        Carbon::setTestNow(Carbon::parse('2026-01-15 12:00:00'));
+
+        $id = $this->crearCliente('30000001');
+        $this->crearInteraccion($id, ['fecha_hora' => now()->subHours(48), 'motivo_rechazo' => null]);
+
+        $resultado = $this->calculador->calcular('30000001');
+
+        Carbon::setTestNow();
+
+        $this->assertEquals('Caliente', $resultado['etiqueta']);
+    }
+
+    public function test_calculador_devuelve_upselling_exactamente_en_el_limite_de_30_dias(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-15 12:00:00'));
+
+        $id = $this->crearCliente('30000002');
+        $this->crearInteraccion($id, [
+            'tipo_operacion' => 'Prepago',
+            'fecha_hora'     => now()->subDays(30),
+            'motivo_rechazo' => null,
+        ]);
+
+        $resultado = $this->calculador->calcular('30000002');
+
+        Carbon::setTestNow();
+
+        $this->assertEquals('Upselling', $resultado['etiqueta']);
     }
 }
