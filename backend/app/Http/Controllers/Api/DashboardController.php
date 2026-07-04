@@ -81,12 +81,19 @@ class DashboardController extends Controller
      * una fila por venta/servicio, sin el LIMIT 5 de kpis(). Admin-only (ver spec: el sub-rol
      * jefe_tienda-vía-PIN del legacy no existe como gate en el refactor; T1.2 pendiente).
      */
+    /** Ventana máxima cuando se exporta sin fecha_desde/fecha_hasta, para acotar el volumen en memoria. */
+    private const EXPORT_DIAS_MAX_SIN_FILTRO = 90;
+
     public function exportar(Request $request): StreamedResponse
     {
         $reportes = Reporte::query()
             ->where('reportes.estado', '!=', 'borrador')
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('reportes.fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('reportes.fecha', '<=', $f))
+            ->when(
+                ! $request->fecha_desde && ! $request->fecha_hasta,
+                fn ($q) => $q->whereDate('reportes.fecha', '>=', now()->subDays(self::EXPORT_DIAS_MAX_SIN_FILTRO)->toDateString())
+            )
             ->when($request->tienda, fn ($q, $t) => $q->where('reportes.tienda_id', $t))
             ->leftJoin('agentes as a', 'reportes.agente_id', '=', 'a.id')
             ->select(['reportes.*', DB::raw("COALESCE(a.nombres, 'Agente') AS agente_nombre")])

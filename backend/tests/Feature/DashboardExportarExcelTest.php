@@ -100,4 +100,55 @@ class DashboardExportarExcelTest extends TestCase
         $this->assertStringContainsString('ProductoDentroDeRango', $texto);
         $this->assertStringNotContainsString('ProductoFueraDeRango', $texto);
     }
+
+    public function test_sin_filtro_de_fecha_acota_a_los_ultimos_90_dias(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+
+        DB::table('agentes')->insert([
+            'id' => 1, 'dni' => '00000001', 'nombres' => 'Agente Uno', 'estado' => 'ACTIVO',
+        ]);
+
+        $recienteId = $this->crearReporte('T01', now()->subDays(10)->toDateString());
+        DB::table('ventas')->insert([
+            'reporte_id' => $recienteId, 'vendedor_id' => 1, 'tipo_venta' => 'EQUIPO',
+            'cross_selling' => false, 'monto_total' => 300, 'comision_generada' => 0,
+            'comision_estado' => 'ACTIVA', 'creado_en' => now(),
+        ]);
+        DB::table('venta_equipos')->insert([
+            'venta_id' => DB::table('ventas')->where('reporte_id', $recienteId)->value('id'),
+            'producto_nombre_snap' => 'ProductoReciente',
+            'tipo_item' => 'EQUIPO', 'tipo_pago' => 'CONTADO', 'precio_venta' => 300,
+        ]);
+
+        $antiguoId = $this->crearReporte('T01', now()->subDays(200)->toDateString());
+        DB::table('ventas')->insert([
+            'reporte_id' => $antiguoId, 'vendedor_id' => 1, 'tipo_venta' => 'EQUIPO',
+            'cross_selling' => false, 'monto_total' => 300, 'comision_generada' => 0,
+            'comision_estado' => 'ACTIVA', 'creado_en' => now(),
+        ]);
+        DB::table('venta_equipos')->insert([
+            'venta_id' => DB::table('ventas')->where('reporte_id', $antiguoId)->value('id'),
+            'producto_nombre_snap' => 'ProductoAntiguoFueraDeVentana',
+            'tipo_item' => 'EQUIPO', 'tipo_pago' => 'CONTADO', 'precio_venta' => 300,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get('/api/v1/dashboard/exportar')
+            ->assertOk();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($tmp, $response->streamedContent());
+        $spreadsheet = IOFactory::load($tmp);
+        $texto = '';
+        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
+            foreach ($row->getCellIterator() as $cell) {
+                $texto .= $cell->getValue() . ' ';
+            }
+        }
+        unlink($tmp);
+
+        $this->assertStringContainsString('ProductoReciente', $texto);
+        $this->assertStringNotContainsString('ProductoAntiguoFueraDeVentana', $texto);
+    }
 }
