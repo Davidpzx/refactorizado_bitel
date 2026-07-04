@@ -783,8 +783,18 @@ class AsistenciaController extends Controller
             return null;
         }
 
-        $hashDb = trim((string) $this->valor($agente, 'hash_dispositivo', ''));
+        // Prefijo dasam-face-: hash de reconocimiento facial (dispositivo/app externa), vive en su
+        // propia columna independiente de hash_dispositivo (paridad con verificarHashDispositivo() legacy).
+        $columnaHash = str_starts_with($deviceId, 'dasam-face-') ? 'hash_facial' : 'hash_dispositivo';
+        $hashDb = trim((string) $this->valor($agente, $columnaHash, ''));
+
         if (! $usaToken && $hashDb !== '' && ! hash_equals($hashDb, $deviceId)) {
+            if (str_starts_with($hashDb, 'dasam-sf-')) {
+                // Sentinel dasam-sf-: bypass manual de fraude para este agente/columna. No bloquea,
+                // no registra fraude y no re-vincula (el sentinel se mantiene tal cual en BD).
+                return null;
+            }
+
             $this->registrarFraudeDispositivo($agente, 'HASH_DISTINTO', $tienda);
 
             return response()->json([
@@ -793,8 +803,12 @@ class AsistenciaController extends Controller
             ], 403);
         }
 
+        // El re-vínculo tras token de emergencia siempre opera sobre hash_dispositivo, nunca sobre
+        // hash_facial, aunque el device_hash recibido sea facial (asimetría legacy preservada).
+        $columnaRelink = $usaToken ? 'hash_dispositivo' : $columnaHash;
+
         $duplicado = DB::table('agentes')
-            ->where('hash_dispositivo', $deviceId)
+            ->where($columnaRelink, $deviceId)
             ->where('id', '!=', $agente->id)
             ->first();
 
@@ -807,12 +821,12 @@ class AsistenciaController extends Controller
             ], 403);
         }
 
-        DB::transaction(function () use ($agente, $deviceId, $tienda, $duplicado, $usaToken) {
+        DB::transaction(function () use ($agente, $deviceId, $tienda, $duplicado, $usaToken, $columnaRelink) {
             if ($duplicado && $usaToken) {
-                DB::table('agentes')->where('id', $duplicado->id)->update(['hash_dispositivo' => null]);
+                DB::table('agentes')->where('id', $duplicado->id)->update([$columnaRelink => null]);
             }
 
-            $update = ['hash_dispositivo' => $deviceId];
+            $update = [$columnaRelink => $deviceId];
             if (Schema::hasColumn('agentes', 'fecha_registro_disp')) {
                 $update['fecha_registro_disp'] = $this->ahora();
             }
