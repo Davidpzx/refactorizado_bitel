@@ -252,8 +252,8 @@ export function DashboardPage() {
       })
   }
 
-  const tableHeaders = ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', 'Acciones']
-  const rightAligned = new Set(['Total', 'F. Entregado', 'Diferencia'])
+  const tableHeaders = ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
+  const rightAligned = new Set(['Venta Total', 'Físico Entregado', 'Diferencia'])
 
   return (
     <div className="space-y-6">
@@ -263,6 +263,20 @@ export function DashboardPage() {
         Icon={LayoutDashboard}
         actions={usuario?.rol === 'admin' ? (
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAnomalias(true)}
+              className="relative flex h-9 items-center gap-2 rounded-lg border border-red-200/70 bg-white/80 px-3 text-xs font-semibold text-red-600/90 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-red-500/20 dark:bg-zinc-900/65 dark:text-red-400/90"
+              title="Reportes con anomalías"
+            >
+              <Bell size={18} />
+              <span>Anomalías</span>
+              {anomaliasCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">
+                  {anomaliasCount > 99 ? '99+' : anomaliasCount}
+                </span>
+              )}
+            </button>
             <Button
               variant="outline"
               size="sm"
@@ -277,20 +291,6 @@ export function DashboardPage() {
             <Button size="sm" onClick={() => navigate('/reportes/nuevo')} className="gap-1.5">
               <FilePlus2 size={14} /> Registrar Cuadre
             </Button>
-            <button
-              type="button"
-              onClick={() => setShowAnomalias(true)}
-              className="relative flex h-9 items-center gap-2 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300"
-              title="Reportes con anomalías"
-            >
-              <Bell size={18} />
-              <span>Anomalías</span>
-              {anomaliasCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">
-                  {anomaliasCount > 99 ? '99+' : anomaliasCount}
-                </span>
-              )}
-            </button>
           </div>
         ) : undefined}
       />
@@ -459,8 +459,8 @@ export function DashboardPage() {
                       {new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800 dark:text-zinc-200">{r.agente_nombre}</div>
-                      <div className="text-xs text-gray-400 dark:text-zinc-500">{r.tienda_id}</div>
+                      <div className="font-medium text-gray-800 dark:text-zinc-200">{r.tienda_id}</div>
+                      <div className="text-xs text-gray-400 dark:text-zinc-500">{r.agente_nombre}</div>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.total_calculado)}</td>
                     <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.efectivo_entregado)}</td>
