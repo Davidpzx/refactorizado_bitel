@@ -1,5 +1,8 @@
 import { api } from './api'
-import type { CrmDashboardData, CrmDashboardFilters, InteraccionCrm, Lead, LeadFormData, PipelineResponse } from '../types/crm'
+import type {
+  CrmDashboardData, CrmDashboardFilters, CrmInteraccionTemp, CrmTemperaturaFiltros,
+  InteraccionCrm, Lead, LeadFormData, PipelineResponse, Temperatura,
+} from '../types/crm'
 
 export const crmApi = {
   leads: {
@@ -32,4 +35,12 @@ export const crmApi = {
 
   dashboard: (params?: CrmDashboardFilters): Promise<CrmDashboardData> =>
     api.get('/v1/crm/dashboard', { params }).then(r => r.data),
+
+  temperatura: {
+    list: (params?: CrmTemperaturaFiltros & { per_page?: number }): Promise<{ data: CrmInteraccionTemp[]; total: number }> =>
+      api.get('/v1/crm/temperatura', { params }).then(r => r.data),
+
+    porDni: (dni: string): Promise<Temperatura> =>
+      api.get(`/v1/crm/temperatura/${dni}`).then(r => r.data),
+  },
 }

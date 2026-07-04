@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\AgenteDocumentoController;
 use App\Http\Controllers\Api\AsistenciaNeiryController;
 use App\Http\Controllers\Api\AuditoriaBipayController;
 use App\Http\Controllers\Api\ClienteCrmController;
+use App\Http\Controllers\Api\CrmTemperaturaController;
 use App\Http\Controllers\Api\CuadreBitelController;
 use App\Http\Controllers\Api\IntegradorController;
 use App\Http\Controllers\Api\RucController;
@@ -221,6 +222,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('leads',              LeadController::class);
     Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
     Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
+
+    // ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
+    Route::get('crm/temperatura',        [CrmTemperaturaController::class, 'index']);
+    Route::get('crm/temperatura/{dni}',  [CrmTemperaturaController::class, 'porDni']);
 
     // ── Estadísticas (admin ve todo; tienda ve solo su propia tienda) ─────────
     Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin,tienda');

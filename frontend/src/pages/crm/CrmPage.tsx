@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  useLeads, usePipeline, useCrearLead, useActualizarLead, useEliminarLead, useCrmDashboard,
+  useLeads, usePipeline, useCrearLead, useActualizarLead, useEliminarLead, useCrmDashboard, useCrmTemperatura,
 } from '../../hooks/useCrm'
 import { PageHeader } from '../../components/PageHeader'
 import { PageTabs } from '../../components/ui/PageTabs'
@@ -20,7 +20,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
   ResponsiveContainer, Cell,
 } from 'recharts'
-import type { CrmDashboardFilters, Lead, LeadFormData } from '../../types/crm'
+import type { CrmDashboardFilters, CrmInteraccionTemp, CrmTemperaturaFiltros, Lead, LeadFormData, TemperaturaEtiqueta } from '../../types/crm'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,9 @@ const TIENDAS = [
   'PUNDA50','PUNDA11','PUNSC01','PUNDA23',
   'TACDA13','TACDA17','TACDA21','TACDA25','TACDA27','TACDA30',
 ]
+
+// Orden visual igual al Kanban del legacy (crm_dashboard.php:909-956)
+const TEMPERATURAS: TemperaturaEtiqueta[] = ['Neutro', 'Upselling', 'Caliente', 'Frío']
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -513,18 +516,115 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
   )
 }
 
+// ── Temperatura calculada (CRM legacy: crm_clientes/crm_interacciones) ────────
+
+function TemperaturaCard({ item }: { item: CrmInteraccionTemp }) {
+  const temp = item.temperatura
+  return (
+    <div
+      className="space-y-2 rounded-kyro-lg border p-3 text-xs"
+      style={{ background: 'rgba(255,255,255,0.03)', borderColor: temp.border }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-1">
+        <span className="text-sm font-semibold tracking-tight text-kyro-text">{item.nombres} {item.apellidos}</span>
+        <span className="rounded-full bg-kyro-elevated px-2 py-0.5 font-mono text-[0.68rem] text-kyro-subtle">{item.dni}</span>
+      </div>
+      <div className="space-y-0.5 text-kyro-subtle" style={{ lineHeight: 1.4 }}>
+        <div>{item.tienda_codigo} · <span className="text-kyro-body">{item.agente_nombre}</span></div>
+        <div>{new Date(item.fecha_hora).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}</div>
+        {item.producto_interes && <div>Interés: {item.producto_interes}</div>}
+        {item.motivo_rechazo && <div className="font-bold text-kyro-danger">⚠ {item.motivo_rechazo}</div>}
+      </div>
+      {item.telefono && (
+        <a
+          href={`https://wa.me/51${item.telefono}`}
+          target="_blank"
+          rel="noreferrer"
+          className="block rounded-kyro border border-kyro-success/35 bg-kyro-success/10 px-2 py-1 text-center font-medium text-kyro-success transition-colors hover:underline"
+        >
+          Contactar por WhatsApp
+        </a>
+      )}
+    </div>
+  )
+}
+
+function TemperaturaColumna({ etiqueta, items }: { etiqueta: TemperaturaEtiqueta; items: CrmInteraccionTemp[] }) {
+  const colores = items[0]?.temperatura ?? { bg: 'rgba(148,163,184,.12)', text: '#94a3b8', border: 'rgba(148,163,184,.25)' }
+  return (
+    <div className="flex min-h-[200px] min-w-[240px] flex-col gap-2.5 rounded-kyro-lg border p-3.5" style={{ background: 'rgba(0,0,0,0.15)', borderColor: colores.border }}>
+      <div className="mb-1 flex items-center justify-between border-b border-kyro-border pb-2.5">
+        <span className="text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={{ color: colores.text }}>{etiqueta}</span>
+        <Badge variant="outline" className="min-w-6 justify-center border-kyro-border bg-kyro-elevated text-xs">{items.length}</Badge>
+      </div>
+      {items.map(item => <TemperaturaCard key={item.id} item={item} />)}
+      {items.length === 0 && (
+        <p className="mt-6 rounded-kyro border border-dashed border-kyro-border py-6 text-center text-xs text-kyro-subtle">Sin registros</p>
+      )}
+    </div>
+  )
+}
+
+function CrmTemperaturaTab({ tiendaId }: { tiendaId: string }) {
+  const [filters, setFilters] = useState<CrmTemperaturaFiltros>({ tienda_codigo: tiendaId || undefined })
+
+  const { data, isLoading } = useCrmTemperatura({ ...filters, per_page: 200 })
+  const items = data?.data ?? []
+
+  const porTemperatura = TEMPERATURAS.reduce((acc, t) => {
+    acc[t] = items.filter(i => i.temperatura.etiqueta === t)
+    return acc
+  }, {} as Record<TemperaturaEtiqueta, CrmInteraccionTemp[]>)
+
+  return (
+    <div className="space-y-4">
+      <div className="kyro-card flex flex-wrap items-end gap-3 p-3">
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Desde</label>
+          <input
+            type="date"
+            value={filters.desde ?? ''}
+            onChange={e => setFilters(f => ({ ...f, desde: e.target.value || undefined }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-kyro-muted">Hasta</label>
+          <input
+            type="date"
+            value={filters.hasta ?? ''}
+            onChange={e => setFilters(f => ({ ...f, hasta: e.target.value || undefined }))}
+            className="kyro-input h-9 w-40"
+          />
+        </div>
+      </div>
+
+      {isLoading && <div className="kyro-card py-16 text-center text-sm text-kyro-muted">Cargando temperatura...</div>}
+
+      {!isLoading && (
+        <div className="kyro-glass flex min-h-[400px] gap-4 overflow-x-auto rounded-kyro-xl p-3 pb-5">
+          {TEMPERATURAS.map(etiqueta => (
+            <TemperaturaColumna key={etiqueta} etiqueta={etiqueta} items={porTemperatura[etiqueta] ?? []} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 const CRM_TABS = [
-  { id: 'pipeline',  label: 'Pipeline Kanban' },
-  { id: 'analytics', label: 'Analytics' },
+  { id: 'pipeline',    label: 'Pipeline Kanban' },
+  { id: 'temperatura', label: 'Temperatura' },
+  { id: 'analytics',   label: 'Analytics' },
 ] as const
 
 export function CrmPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
-  const [tab, setTab] = useState<'pipeline' | 'analytics'>('pipeline')
+  const [tab, setTab] = useState<'pipeline' | 'temperatura' | 'analytics'>('pipeline')
 
   const params: Record<string, string | number> = filtroTienda
     ? { tienda_id: filtroTienda, per_page: 200 }
@@ -630,6 +730,9 @@ export function CrmPage() {
           )}
         </>
       )}
+
+      {/* ── Tab Temperatura ────────────────────────────────────────────────── */}
+      {tab === 'temperatura' && <CrmTemperaturaTab tiendaId={filtroTienda} />}
 
       {/* ── Tab Analytics ─────────────────────────────────────────────────── */}
       {tab === 'analytics' && <CrmAnalytics tiendaId={filtroTienda} />}
