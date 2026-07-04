@@ -1232,14 +1232,27 @@ class ReporteController extends Controller
             (new ComisionOperativaService())->recalcularReporte($reporte);
 
             $reporte->refresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
-            $detalleHistorial = empty($cambiosVendedor)
-                ? 'Reporte reprocesado tras edicion autorizada.'
-                : 'Cambio de vendedor/comision: ' . implode(' // ', $cambiosVendedor);
+
+            // Paridad legacy (procesar_edicion.php): si el cambio de vendedor revierte
+            // una alerta previa, se audita como 'edicion_restaurada' en vez de 'edicion_critica'.
+            $esRestauracion = ! empty($cambiosVendedor)
+                && $this->esRestauracionComision($cambiosVendedor, (int) $reporte->id);
+
+            if (empty($cambiosVendedor)) {
+                $accionHistorial  = 'edicion_reporte';
+                $detalleHistorial = 'Reporte reprocesado tras edicion autorizada.';
+            } elseif ($esRestauracion) {
+                $accionHistorial  = 'edicion_restaurada';
+                $detalleHistorial = 'Comision restaurada: ' . implode(' // ', $cambiosVendedor);
+            } else {
+                $accionHistorial  = 'edicion_critica';
+                $detalleHistorial = 'Cambio de vendedor/comision: ' . implode(' // ', $cambiosVendedor);
+            }
 
             HistorialReporte::create([
                 'reporte_id' => $reporte->id,
                 'usuario_id' => $request->user()?->id,
-                'accion'     => empty($cambiosVendedor) ? 'edicion_reporte' : 'edicion_critica',
+                'accion'     => $accionHistorial,
                 'detalle'    => $detalleHistorial,
                 'snapshot_antes' => $snapshotAntes,
                 'snapshot_despues' => $this->snapshotReporte($reporte),
@@ -1371,6 +1384,41 @@ class ReporteController extends Controller
     private function claveAuditoriaVenta(string $tipo, string $descripcion, string $dni): string
     {
         return mb_strtoupper(trim($tipo) . '|' . trim($descripcion) . '|' . trim($dni));
+    }
+
+    /**
+     * ¿La edición actual restaura una comisión previamente robada? (paridad legacy
+     * reportes/procesar_edicion.php → flag es_restauracion / accion edicion_restaurada).
+     *
+     * Se compara cada cambio de vendedor actual "[desc] de A a B" contra la PRIMERA
+     * alerta 'edicion_critica' del reporte: si esa alerta contiene el movimiento inverso
+     * "[desc] de B a A", significa que este cambio devuelve la venta a su vendedor original.
+     *
+     * @param  array<int, string>  $cambiosVendedor
+     */
+    private function esRestauracionComision(array $cambiosVendedor, int $reporteId): bool
+    {
+        $primeraAlerta = HistorialReporte::where('reporte_id', $reporteId)
+            ->where('accion', 'edicion_critica')
+            ->orderBy('id')
+            ->value('detalle');
+
+        if (! $primeraAlerta) {
+            return false;
+        }
+
+        foreach ($cambiosVendedor as $cambio) {
+            if (! preg_match('/\[(.*?)\] de (.*?) a (.*?)$/', $cambio, $m)) {
+                continue;
+            }
+            [$inside, $anterior, $nuevo] = [$m[1], $m[2], $m[3]];
+            $inverso = "[{$inside}] de {$nuevo} a {$anterior}";
+            if (strpos($primeraAlerta, $inverso) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function idTiendaInterna(string $codigo): ?int
