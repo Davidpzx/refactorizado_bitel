@@ -17,7 +17,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star } from 'lucide-react'
 import type { ComponentType } from 'react'
 import {
-  BarChart, Bar, LineChart, Line,
+  BarChart, Bar, LineChart, Line, PieChart, Pie,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
   ResponsiveContainer, Cell,
 } from 'recharts'
@@ -303,6 +303,13 @@ const FUENTE_COLORS: Record<string, string> = {
   LLAMADA:    'var(--color-kyro-warning)',
 }
 
+const FUENTE_LABELS: Record<string, string> = {
+  PRESENCIAL: 'Presencial',
+  WHATSAPP:   'WhatsApp',
+  REFERIDO:   'Referido',
+  LLAMADA:    'Llamada',
+}
+
 const TIPO_ICON: Record<string, string> = {
   LLAMADA:   '📞',
   VISITA:    '🏪',
@@ -332,11 +339,11 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
   const totalActividad  = tendencia.reduce((s, d) => s + d.leads, 0)
 
   const kpis = [
-    { label: 'Leads en período',   value: data?.total_leads   ?? 0, icon: <Users size={16} />,        accent: '#0d6efd', text: 'text-kyro-text' },
-    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, icon: <TrendingUp size={16} />, accent: '#22c55e', text: 'text-kyro-success' },
-    { label: 'Convertidos',        value: data?.convertidos   ?? 0, icon: <CheckCircle size={16} />,  accent: '#22c55e', text: 'text-kyro-success' },
-    { label: 'Perdidos',           value: data?.perdidos      ?? 0, icon: <XCircle size={16} />,      accent: '#ef4444', text: 'text-kyro-danger' },
-    { label: 'Interacciones',      value: totalActividad,           icon: <MessageSquare size={16} />, accent: '#6366f1', text: 'text-kyro-body' },
+    { label: 'Leads en período',   value: data?.total_leads   ?? 0, Icon: Users,        accent: '#0d6efd', text: 'text-kyro-text' },
+    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, Icon: TrendingUp, accent: '#22c55e', text: 'text-kyro-success' },
+    { label: 'Convertidos',        value: data?.convertidos   ?? 0, Icon: CheckCircle,  accent: '#22c55e', text: 'text-kyro-success' },
+    { label: 'Perdidos',           value: data?.perdidos      ?? 0, Icon: XCircle,      accent: '#ef4444', text: 'text-kyro-danger' },
+    { label: 'Interacciones',      value: totalActividad,           Icon: MessageSquare, accent: '#6366f1', text: 'text-kyro-body' },
   ]
 
   return (
@@ -379,7 +386,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
           {/* KPI Strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {kpis.map(k => (
-              <StatCard key={k.label} title={k.label} accent={k.accent} icon={k.icon} value={k.value} valueColorClass={k.text} />
+              <StatCard key={k.label} title={k.label} accent={k.accent} icon={<KpiIcon accent={k.accent} Icon={k.Icon} />} value={k.value} valueColorClass={k.text} />
             ))}
           </div>
 
@@ -406,23 +413,31 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
               </ResponsiveContainer>
             </div>
 
-            {/* Por fuente */}
+            {/* Por fuente — dona, como el "Desglose por tipo de operación" del legacy */}
             <div className="kyro-card p-4">
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
               <h3 className="mb-4 text-sm font-semibold text-kyro-text">Leads por Canal de Captación</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={porFuente} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
-                  <XAxis dataKey="fuente" tick={{ fontSize: 11 }}
-                    tickFormatter={v => ({ PRESENCIAL:'Presencial', WHATSAPP:'WhatsApp', REFERIDO:'Referido', LLAMADA:'Llamada' } as Record<string,string>)[v as string] ?? String(v)} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => [Number(v), 'Leads']} />
-                  <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                <PieChart>
+                  <Pie
+                    data={porFuente}
+                    dataKey="total"
+                    nameKey="fuente"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={2}
+                  >
                     {porFuente.map(f => (
                       <Cell key={f.fuente} fill={FUENTE_COLORS[f.fuente] ?? 'var(--color-kyro-muted)'} />
                     ))}
-                  </Bar>
-                </BarChart>
+                  </Pie>
+                  <Tooltip formatter={(v, _n, item) => [Number(v), FUENTE_LABELS[item.payload.fuente as string] ?? item.payload.fuente]} />
+                  <Legend
+                    verticalAlign="bottom"
+                    wrapperStyle={{ fontSize: 11 }}
+                    formatter={(v: string) => FUENTE_LABELS[v] ?? v}
+                  />
+                </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -636,7 +651,8 @@ export function CrmPage() {
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
   const [busqueda, setBusqueda] = useState('')
-  const [tab, setTab] = useState<'pipeline' | 'temperatura' | 'analytics'>('pipeline')
+  // Landing en "Analytics": el legacy ("CRM y Marketing") abre directo en KPIs + gráficos + registro.
+  const [tab, setTab] = useState<'pipeline' | 'temperatura' | 'analytics'>('analytics')
 
   const params: Record<string, string | number> = {
     ...(filtroTienda ? { tienda_id: filtroTienda } : {}),
@@ -695,9 +711,7 @@ export function CrmPage() {
           <option value="">Todas las tiendas</option>
           {TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
-        {tab === 'pipeline' && (
-          <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
-        )}
+        <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
       </PageHeader>
 
       {/* Tabs */}

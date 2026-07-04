@@ -99,7 +99,8 @@ export function EstadisticasPage() {
     tienda: '',
   })
   const [applied, setApplied] = useState({ ...filters })
-  const [tab, setTab] = useState<'resumen' | 'tiendas' | 'top' | 'ranking'>('resumen')
+  // Landing en "Por Tienda": el legacy ("Productividad por Tienda") abre directo en la tabla de ranking.
+  const [tab, setTab] = useState<'resumen' | 'tiendas' | 'top' | 'ranking'>('tiendas')
 
   // Subfiltros del ranking (paridad legacy obtener_ranking/subfiltros).
   const [rankCat, setRankCat] = useState<'todo' | 'equipos' | 'postpago' | 'chips'>('todo')
