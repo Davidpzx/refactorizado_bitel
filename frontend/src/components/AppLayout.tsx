@@ -42,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   // ── Personal ─────────────────────────────────────────────────────────────
   { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'],           section: 'Personal' },
   { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Personal' },
+  { to: '/asistencias/control', label: 'Control Mensual', Icon: Clock,      roles: ['admin'],           section: 'Personal' },
   { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'],         section: 'Personal' },
   { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'],           section: 'Personal' },
 
