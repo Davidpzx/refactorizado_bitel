@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, FileText } from 'lucide-react'
+import { ChevronLeft, FileText, FileSpreadsheet } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
@@ -718,6 +718,14 @@ export function ReporteDetallePage() {
           <span>Reportes</span>
         </Button>
         <div className="flex items-center gap-3">
+          <Button
+            variant="glassSuccess"
+            size="sm"
+            onClick={() => descargar(`/v1/reportes/${reporte.id}/exportar-excel`, `Reporte_Detallado_${reporte.id}.xlsx`)}
+            className="gap-2"
+          >
+            <FileSpreadsheet size={15} /> Exportar Excel
+          </Button>
           <Button
             variant="glassDanger"
             size="sm"

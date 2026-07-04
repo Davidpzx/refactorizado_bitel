@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle } from 'lucide-react'
+import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle, FileSpreadsheet } from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
@@ -236,6 +236,26 @@ export function DashboardPage() {
     setAppliedFilters({ fecha_desde: todayStr, fecha_hasta: todayStr })
   }
 
+  function exportarExcel() {
+    const params = new URLSearchParams()
+    if (appliedFilters.fecha_desde) params.set('fecha_desde', appliedFilters.fecha_desde)
+    if (appliedFilters.fecha_hasta) params.set('fecha_hasta', appliedFilters.fecha_hasta)
+    if ('tienda' in appliedFilters && appliedFilters.tienda) params.set('tienda', appliedFilters.tienda)
+    const token = localStorage.getItem('auth_token')
+    const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+    const url = `${base}/v1/dashboard/exportar?${params.toString()}`
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const burl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = burl
+        link.download = `Reporte_Ventas_Desglosado_${new Date().toISOString().slice(0, 10)}.xlsx`
+        link.click()
+        URL.revokeObjectURL(burl)
+      })
+  }
+
   const tableHeaders = ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', 'Acciones']
   const rightAligned = new Set(['Total', 'F. Entregado', 'Diferencia'])
 
@@ -245,20 +265,25 @@ export function DashboardPage() {
         title="Dashboard Gerencial"
         description="Visión consolidada de caja, canales digitales y reportes operativos."
         actions={usuario?.rol === 'admin' ? (
-          <button
-            type="button"
-            onClick={() => setShowAnomalias(true)}
-            className="relative flex h-9 items-center gap-2 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300"
-            title="Reportes con anomalías"
-          >
-            <Bell size={18} />
-            <span>Anomalías</span>
-            {anomaliasCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">
-                {anomaliasCount > 99 ? '99+' : anomaliasCount}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <Button variant="glassSuccess" size="sm" onClick={exportarExcel} className="gap-1.5">
+              <FileSpreadsheet size={14} /> Exportar Excel
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowAnomalias(true)}
+              className="relative flex h-9 items-center gap-2 rounded-lg border border-gray-200/80 bg-white/80 px-3 text-xs font-semibold text-gray-600 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-white/10 dark:bg-zinc-900/65 dark:text-zinc-300"
+              title="Reportes con anomalías"
+            >
+              <Bell size={18} />
+              <span>Anomalías</span>
+              {anomaliasCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">
+                  {anomaliasCount > 99 ? '99+' : anomaliasCount}
+                </span>
+              )}
+            </button>
+          </div>
         ) : undefined}
       />
 
