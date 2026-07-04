@@ -98,7 +98,7 @@ class IntegradorController extends Controller
         $grouped = $this->agruparMovimientos($movimientos, $fechaReporte);
 
         try {
-            $resultado = DB::transaction(function () use ($cuentaId, $saldoBipay, $data, $grouped, $movimientos, $channelCode, $fechaReporte) {
+            $resultado = DB::transaction(function () use ($cuentaId, $saldoBipay, $data, $grouped, $movimientos, $channelCode, $codigoCanal, $fechaReporte) {
                 $cuenta = DB::table('cuentas_bipay')->where('id', $cuentaId)->lockForUpdate()->first();
                 if (! $cuenta) {
                     throw new \RuntimeException("La cuenta Bipay con ID {$cuentaId} no existe.");
@@ -120,18 +120,22 @@ class IntegradorController extends Controller
 
                 foreach ($grouped as $g) {
                     $ventasBrutas = $g['postpago'] + $g['paquetes'] + $g['recargas'] + $g['prepago'] + $g['portabilidad'] + $g['otros'];
-                    DB::statement('
-                        INSERT INTO bitel_movimientos_diarios
-                            (tienda_codigo, fecha, postpago, paquetes, recargas, prepago, portabilidad, reembolsos, otros, total_neto)
-                        VALUES (?,?,?,?,?,?,?,?,?,?)
-                        ON DUPLICATE KEY UPDATE
-                            postpago = VALUES(postpago), paquetes = VALUES(paquetes), recargas = VALUES(recargas),
-                            prepago = VALUES(prepago), portabilidad = VALUES(portabilidad), reembolsos = VALUES(reembolsos),
-                            otros = VALUES(otros), total_neto = VALUES(total_neto)
-                    ', [
-                        $g['tienda_codigo'], $g['fecha'], $g['postpago'], $g['paquetes'], $g['recargas'],
-                        $g['prepago'], $g['portabilidad'], $g['reembolsos'], $g['otros'],
-                        $ventasBrutas - $g['reembolsos'],
+                    // upsert() = ON DUPLICATE KEY UPDATE portable; clave de conflicto = índice
+                    // único uk_tienda_fecha_mov (tienda_codigo, fecha).
+                    DB::table('bitel_movimientos_diarios')->upsert([[
+                        'tienda_codigo' => $g['tienda_codigo'],
+                        'fecha' => $g['fecha'],
+                        'postpago' => $g['postpago'],
+                        'paquetes' => $g['paquetes'],
+                        'recargas' => $g['recargas'],
+                        'prepago' => $g['prepago'],
+                        'portabilidad' => $g['portabilidad'],
+                        'reembolsos' => $g['reembolsos'],
+                        'otros' => $g['otros'],
+                        'total_neto' => $ventasBrutas - $g['reembolsos'],
+                    ]], ['tienda_codigo', 'fecha'], [
+                        'postpago', 'paquetes', 'recargas', 'prepago',
+                        'portabilidad', 'reembolsos', 'otros', 'total_neto',
                     ]);
                 }
 
@@ -156,6 +160,14 @@ class IntegradorController extends Controller
                 }
 
                 $this->insertarDetalleOperaciones($movimientos, $channelCode);
+
+                // Marcar la última sincronización exitosa de la tienda (el panel admin
+                // lee last_sync_at; sin esto la columna quedaba siempre vacía).
+                if ($codigoCanal !== '') {
+                    DB::table('integrador_credenciales')
+                        ->where('tienda_codigo', $codigoCanal)
+                        ->update(['last_sync_at' => now()]);
+                }
 
                 return [
                     'saldo_anterior' => $saldoAnterior,
@@ -679,16 +691,15 @@ class IntegradorController extends Controller
             $tienda = ! empty($m['cod_tienda']) ? $m['cod_tienda'] : $channelCode;
             $descRaw = trim(($m['descripcion'] ?? '').' '.($m['isdn_cliente'] ?? '').' '.($m['nota'] ?? ''));
 
-            $insertados += DB::affectingStatement('
-                INSERT IGNORE INTO bitel_operaciones_detalle
-                    (tienda_codigo, fecha_hora, tipo_operacion, descripcion, monto, codigo_personal)
-                VALUES (?,?,?,?,?,?)
-            ', [
-                $tienda, $fechaHora,
-                substr($m['tipo_transaccion'] ?? 'OTROS', 0, 100),
-                substr($descRaw, 0, 255),
-                (float) ($m['cantidad'] ?? 0),
-                CuadreBitelService::extraerCodigoPersonal($descRaw),
+            // insertOrIgnore() = INSERT IGNORE portable; el índice único idx_unique_mov
+            // (tienda_codigo, fecha_hora, descripcion, monto) descarta duplicados en silencio.
+            $insertados += DB::table('bitel_operaciones_detalle')->insertOrIgnore([
+                'tienda_codigo' => $tienda,
+                'fecha_hora' => $fechaHora,
+                'tipo_operacion' => substr($m['tipo_transaccion'] ?? 'OTROS', 0, 100),
+                'descripcion' => substr($descRaw, 0, 255),
+                'monto' => (float) ($m['cantidad'] ?? 0),
+                'codigo_personal' => CuadreBitelService::extraerCodigoPersonal($descRaw),
             ]);
         }
 
@@ -708,28 +719,22 @@ class IntegradorController extends Controller
             $periodo = preg_match('/^\d{4}-\d{2}$/', $c['periodo'] ?? '')
                 ? $c['periodo'] : date('Y-m', strtotime($fechaBase));
 
-            DB::statement('
-                INSERT INTO clientes_estado
-                    (numero_linea, dni_cliente, cod_tienda, plan, fecha_alta,
-                     estado_linea, estado_bloqueo, dias_mora, monto_deuda, es_churn, periodo)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                ON DUPLICATE KEY UPDATE
-                    dni_cliente = VALUES(dni_cliente), cod_tienda = VALUES(cod_tienda), plan = VALUES(plan),
-                    fecha_alta = VALUES(fecha_alta), estado_linea = VALUES(estado_linea),
-                    estado_bloqueo = VALUES(estado_bloqueo), dias_mora = VALUES(dias_mora),
-                    monto_deuda = VALUES(monto_deuda), es_churn = VALUES(es_churn)
-            ', [
-                substr($linea, 0, 20),
-                substr(preg_replace('/\D/', '', (string) ($c['dni_cliente'] ?? '')), 0, 12),
-                $this->sanearCodigo($c['cod_tienda'] ?? ''),
-                substr((string) ($c['plan'] ?? ''), 0, 100),
-                ! empty($c['fecha_alta']) ? date('Y-m-d', strtotime($c['fecha_alta'])) : null,
-                $estadoLinea,
-                in_array($c['estado_bloqueo'] ?? '', ['BLOQUEO_1', 'BLOQUEO_2', 'NORMAL'], true) ? $c['estado_bloqueo'] : 'NORMAL',
-                (int) ($c['dias_mora'] ?? 0),
-                (float) ($c['monto_deuda'] ?? 0),
-                $estadoLinea === 'BAJA' ? 1 : 0,
-                $periodo,
+            // upsert() portable; conflicto = índice único uq_linea_periodo (numero_linea, periodo).
+            DB::table('clientes_estado')->upsert([[
+                'numero_linea' => substr($linea, 0, 20),
+                'dni_cliente' => substr(preg_replace('/\D/', '', (string) ($c['dni_cliente'] ?? '')), 0, 12),
+                'cod_tienda' => $this->sanearCodigo($c['cod_tienda'] ?? ''),
+                'plan' => substr((string) ($c['plan'] ?? ''), 0, 100),
+                'fecha_alta' => ! empty($c['fecha_alta']) ? date('Y-m-d', strtotime($c['fecha_alta'])) : null,
+                'estado_linea' => $estadoLinea,
+                'estado_bloqueo' => in_array($c['estado_bloqueo'] ?? '', ['BLOQUEO_1', 'BLOQUEO_2', 'NORMAL'], true) ? $c['estado_bloqueo'] : 'NORMAL',
+                'dias_mora' => (int) ($c['dias_mora'] ?? 0),
+                'monto_deuda' => (float) ($c['monto_deuda'] ?? 0),
+                'es_churn' => $estadoLinea === 'BAJA' ? 1 : 0,
+                'periodo' => $periodo,
+            ]], ['numero_linea', 'periodo'], [
+                'dni_cliente', 'cod_tienda', 'plan', 'fecha_alta', 'estado_linea',
+                'estado_bloqueo', 'dias_mora', 'monto_deuda', 'es_churn',
             ]);
             $n++;
         }
@@ -749,28 +754,22 @@ class IntegradorController extends Controller
                 ? $lm['estado_linea'] : 'ACTIVO';
             $periodo = preg_match('/^\d{4}-\d{2}$/', $lm['periodo'] ?? '') ? $lm['periodo'] : $periodoDefault;
 
-            DB::statement('
-                INSERT INTO lineas_morosidad
-                    (numero_linea, cliente, cod_tienda, plan, fecha_alta,
-                     estado_linea, fecha_cancelacion, dias_mora, monto_deuda, es_churn, periodo)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                ON DUPLICATE KEY UPDATE
-                    cliente = VALUES(cliente), cod_tienda = VALUES(cod_tienda), plan = VALUES(plan),
-                    fecha_alta = VALUES(fecha_alta), estado_linea = VALUES(estado_linea),
-                    fecha_cancelacion = VALUES(fecha_cancelacion), dias_mora = VALUES(dias_mora),
-                    monto_deuda = VALUES(monto_deuda), es_churn = VALUES(es_churn)
-            ', [
-                substr($linea, 0, 20),
-                substr((string) ($lm['cliente'] ?? ''), 0, 150),
-                $this->sanearCodigo($lm['cod_tienda'] ?? ''),
-                substr((string) ($lm['plan'] ?? ''), 0, 100),
-                ! empty($lm['fecha_alta']) ? date('Y-m-d', strtotime($lm['fecha_alta'])) : null,
-                $estadoLinea,
-                ! empty($lm['fecha_cancelacion']) ? date('Y-m-d', strtotime($lm['fecha_cancelacion'])) : null,
-                (int) ($lm['dias_mora'] ?? 0),
-                (float) ($lm['monto_deuda'] ?? 0),
-                (int) ($lm['es_churn'] ?? 0),
-                $periodo,
+            // upsert() portable; conflicto = índice único uq_linea_periodo_mor (numero_linea, periodo).
+            DB::table('lineas_morosidad')->upsert([[
+                'numero_linea' => substr($linea, 0, 20),
+                'cliente' => substr((string) ($lm['cliente'] ?? ''), 0, 150),
+                'cod_tienda' => $this->sanearCodigo($lm['cod_tienda'] ?? ''),
+                'plan' => substr((string) ($lm['plan'] ?? ''), 0, 100),
+                'fecha_alta' => ! empty($lm['fecha_alta']) ? date('Y-m-d', strtotime($lm['fecha_alta'])) : null,
+                'estado_linea' => $estadoLinea,
+                'fecha_cancelacion' => ! empty($lm['fecha_cancelacion']) ? date('Y-m-d', strtotime($lm['fecha_cancelacion'])) : null,
+                'dias_mora' => (int) ($lm['dias_mora'] ?? 0),
+                'monto_deuda' => (float) ($lm['monto_deuda'] ?? 0),
+                'es_churn' => (int) ($lm['es_churn'] ?? 0),
+                'periodo' => $periodo,
+            ]], ['numero_linea', 'periodo'], [
+                'cliente', 'cod_tienda', 'plan', 'fecha_alta', 'estado_linea',
+                'fecha_cancelacion', 'dias_mora', 'monto_deuda', 'es_churn',
             ]);
             $n++;
         }
