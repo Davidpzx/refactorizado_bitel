@@ -141,7 +141,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     ));
     Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes'])->middleware('role:admin');
     Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica'])->middleware('role:admin');
-    Route::apiResource('agentes', AgenteController::class)->middleware('role:admin');
+    // show() valida tienda_base internamente (admin ve todo, no-admin solo su propia tienda)
+    Route::apiResource('agentes', AgenteController::class)->except(['show'])->middleware('role:admin');
+    Route::get('agentes/{agente}', [AgenteController::class, 'show']);
     Route::apiResource('clientes',    ClienteController::class);
     // Custom inventario routes MUST come before apiResource to avoid {inventario} wildcard conflict
     Route::get('inventario/kardex',          [InventarioController::class, 'kardex']);

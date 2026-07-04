@@ -11,6 +11,7 @@ use App\Services\AgenteService;
 use App\Services\HistorialAgenteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -41,6 +42,13 @@ class AgenteController extends Controller
 
     public function show(Agente $agente): JsonResponse
     {
+        $user = Auth::user();
+        abort_if(
+            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            403,
+            'No tienes permisos sobre este agente.'
+        );
+
         return response()->json($agente);
     }
 
