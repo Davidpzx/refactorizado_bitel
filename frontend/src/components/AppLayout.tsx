@@ -23,57 +23,62 @@ interface NavItem {
   soon?: boolean
 }
 
-// Orden y agrupación reorganizados (ver auditoría de sidebar). Cada item declara
-// su `section`; el separador visual se calcula comparando con el item anterior
-// VISIBLE (no por índice fijo), así el agrupado no se rompe según el rol del usuario.
+// Orden y agrupación reproducen las 5 secciones del legacy sis_bipay
+// (includes/header.php): Gerencia / Administración / Inventario / Operaciones /
+// Configuración. Cada item declara su `section`; el separador visual se calcula
+// comparando con el item anterior VISIBLE (no por índice fijo), así el agrupado
+// no se rompe según el rol del usuario. Los ítems que no existen en el sidebar
+// legacy (solo-refactor) se ubican al final de la sección afín.
 const NAV_ITEMS: NavItem[] = [
-  // ── Operaciones ──────────────────────────────────────────────────────────
-  { to: '/',               label: 'Dashboard',      Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Operaciones' },
-  { to: '/reportes/nuevo', label: 'Nuevo Cuadre',    Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
-  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Operaciones' },
-  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Operaciones' },
-  { to: '/estadisticas',   label: 'Estadísticas',    Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Operaciones' },
-  { to: '/mapa-calor',    label: 'Mapa de Calor',   Icon: Activity,        roles: ['admin'],           section: 'Operaciones' },
+  // ── Gerencia ─────────────────────────────────────────────────────────────
+  { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
+  { to: '/crm',            label: 'CRM',             Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia' },
+  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/revisar-stock',  label: 'Precios',         Icon: Package,         roles: ['admin'],           section: 'Gerencia' },
 
-  // ── Pagos digitales ──────────────────────────────────────────────────────
-  { to: '/panel-bipay',    label: 'Panel Bipay',     Icon: CreditCard,      roles: ['admin'],           section: 'Pagos digitales' },
-  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Pagos digitales' },
+  // ── Administración ───────────────────────────────────────────────────────
+  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
+  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
+  { to: '/agentes',        label: 'Personal',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
+  { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Administración' },
+  { to: '/asistencias/control', label: 'Control Mensual', Icon: Clock,      roles: ['admin'],           section: 'Administración' },
+  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'],         section: 'Administración' },
+  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'],           section: 'Administración' },
+  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Administración' },
+  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Administración' },
+  { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'],           section: 'Administración' },
+  { to: '/financieras',    label: 'Financieras',     Icon: Landmark,        roles: ['admin'],           section: 'Administración' },
+  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Administración' },
+  { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: CreditCard,      roles: ['admin'],           section: 'Administración' },
+  { to: '/postpago',       label: 'Churn / Postpago', Icon: Signal,         roles: ['admin'],           section: 'Administración' },
+  { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: Activity,        roles: ['admin'],           section: 'Administración' },
+  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
+  { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
+  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Administración' },
 
-  // ── Personal ─────────────────────────────────────────────────────────────
-  { to: '/agentes',        label: 'Agentes',         Icon: Users,           roles: ['admin'],           section: 'Personal' },
-  { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Personal' },
-  { to: '/asistencias/control', label: 'Control Mensual', Icon: Clock,      roles: ['admin'],           section: 'Personal' },
-  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'],         section: 'Personal' },
-  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'],           section: 'Personal' },
-
-  // ── Inventario (antes disperso en 2 grupos distintos) ───────────────────
-  { to: '/revisar-stock',  label: 'Revisar Stock',   Icon: Package,         roles: ['admin'],           section: 'Inventario' },
+  // ── Inventario ───────────────────────────────────────────────────────────
   { to: '/inventario',     label: 'Inventario',      Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText, roles: ['admin'],           section: 'Inventario' },
   { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,        roles: ['admin', 'tienda'], section: 'Inventario' },
 
-  // ── Clientes y Marketing (le da hogar visible al CRM) ───────────────────
-  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Clientes y Marketing' },
-  { to: '/crm',            label: 'CRM',              Icon: Megaphone,       roles: ['admin'],           section: 'Clientes y Marketing' },
-  { to: '/postpago',       label: 'Monitor Postpago', Icon: Signal,          roles: ['admin'],           section: 'Clientes y Marketing' },
+  // ── Operaciones ──────────────────────────────────────────────────────────
+  { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
+  { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: Clock,           roles: ['admin', 'tienda'], section: 'Operaciones' },
 
-  // ── Recursos y Finanzas ──────────────────────────────────────────────────
-  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Recursos y Finanzas' },
-  { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'],           section: 'Recursos y Finanzas' },
-  { to: '/financieras',    label: 'Financieras',     Icon: Landmark,        roles: ['admin'],           section: 'Recursos y Finanzas' },
-  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Recursos y Finanzas' },
-  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Recursos y Finanzas' },
-
-  // ── Administración ───────────────────────────────────────────────────────
-  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
-  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
-  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
-  { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Administración' },
-  { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'],           section: 'Administración' },
-  { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
+  // ── Configuración ────────────────────────────────────────────────────────
+  { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'],           section: 'Configuración' },
+  { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
 ]
+
+/** La 1ª sección del legacy se llama "Gerencia" para admin y "Mi Panel" para tienda. */
+function sectionLabel(section: string, role: string) {
+  return section === 'Gerencia' && role === 'tienda' ? 'Mi Panel' : section
+}
 
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
@@ -214,7 +219,7 @@ export function AppLayout() {
                 {showSeparator && !collapsed && (
                   <div className="pt-3 pb-1 px-3">
                     <span className="block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide text-kyro-muted">
-                      {section}
+                      {sectionLabel(section, userRole)}
                     </span>
                   </div>
                 )}
