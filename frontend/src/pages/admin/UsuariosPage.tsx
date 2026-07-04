@@ -334,7 +334,7 @@ export function UsuariosPage() {
                   <td className="px-4 py-3 font-medium text-kyro-text">{u.nombre}</td>
                   <td className="px-4 py-3 text-kyro-body">{u.email}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={u.rol === 'admin' ? 'destructive' : 'success'}>{u.rol}</Badge>
+                    <Badge variant={u.rol === 'admin' ? 'gold' : 'cyan'}>{u.rol}</Badge>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-kyro-body">{u.tienda_id ?? '—'}</td>
                   <td className="px-4 py-3 text-xs text-kyro-body">{u.agente?.nombres ?? '—'}</td>

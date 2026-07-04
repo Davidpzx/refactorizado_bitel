@@ -1,3 +1,5 @@
+import { Search } from 'lucide-react'
+import type { ReactNode } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -16,6 +18,8 @@ interface DataTableProps<TData> {
   onPaginationChange: OnChangeFn<PaginationState>
   isLoading?: boolean
   total?: number
+  emptyIcon?: ReactNode
+  emptyLabel?: string
 }
 
 export function DataTable<TData>({
@@ -26,6 +30,8 @@ export function DataTable<TData>({
   onPaginationChange,
   isLoading = false,
   total,
+  emptyIcon,
+  emptyLabel = 'Sin resultados',
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -82,7 +88,12 @@ export function DataTable<TData>({
               ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-12 text-center text-gray-400 dark:text-zinc-500">
-                    Sin resultados
+                    <span className="inline-flex flex-col items-center gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.04] dark:text-zinc-500">
+                        {emptyIcon ?? <Search size={16} />}
+                      </span>
+                      {emptyLabel}
+                    </span>
                   </td>
                 </tr>
               ) : (
