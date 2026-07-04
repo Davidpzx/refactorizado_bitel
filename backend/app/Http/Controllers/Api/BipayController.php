@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BipayController extends Controller
 {
@@ -35,8 +40,13 @@ class BipayController extends Controller
             ]);
         }
 
+        $columnas = ['id', 'alias', 'numero_cuenta', 'tipo', 'saldo_actual', 'saldo_bipay', 'saldo_anypay'];
+        if (Schema::hasColumn('cuentas_bipay', 'cuenta_madre_id')) {
+            $columnas[] = 'cuenta_madre_id';
+        }
+
         $cuentas = DB::table('cuentas_bipay')
-            ->select('id', 'alias', 'numero_cuenta', 'tipo', 'saldo_actual', 'saldo_bipay', 'saldo_anypay')
+            ->select($columnas)
             ->orderBy('tipo')
             ->orderBy('alias')
             ->get();
@@ -57,8 +67,7 @@ class BipayController extends Controller
 
     public function transacciones(Request $request): JsonResponse
     {
-        $faltantes = $this->tablasFaltantes();
-        if (!empty($faltantes)) {
+        if (!empty($this->tablasFaltantes())) {
             return response()->json([
                 'warning' => 'Tablas Bipay no existen.',
                 'data'    => [],
@@ -66,29 +75,109 @@ class BipayController extends Controller
             ]);
         }
 
-        $desde    = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
-        $hasta    = $request->get('fecha_hasta', now()->toDateString());
-        $cuentaId = $request->get('cuenta_id');
+        [$query] = $this->consultaTransacciones($request);
+
+        $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
+
+        return response()->json($data);
+    }
+
+    // ── GET /bipay/transacciones/exportar — Export Excel del historial (admin) ──
+    // Paridad legacy gerencia/panel_bipay.php (?export=excel, líneas 341-368).
+    public function exportarTransacciones(Request $request): StreamedResponse|JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        if (!empty($this->tablasFaltantes())) {
+            return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
+        }
+
+        [$query, $desde, $hasta] = $this->consultaTransacciones($request);
+        $historial = $query->orderByDesc('tb.creado_en')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Historial Bipay');
+        $sheet->fromArray(['Fecha', 'Tipo', 'Origen', 'Destino', 'Monto', 'Ref / Notas', 'Operador'], null, 'A1');
+        $sheet->getStyle('A1:G1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
+        ]);
+
+        $fila = 2;
+        foreach ($historial as $tx) {
+            $detalle = (string) ($tx->observacion ?? '');
+            if ($tx->tipo_operacion === 'AJUSTE') {
+                $antes = (float) ($tx->saldo_origen_pre ?? 0) + (float) ($tx->saldo_anypay_pre ?? 0);
+                $despues = $antes + (float) $tx->monto;
+                $detalle = sprintf('Ant: S/ %s -> S/ %s. %s', number_format($antes, 2), number_format($despues, 2), $detalle);
+            }
+
+            $sheet->fromArray([
+                Carbon::parse($tx->creado_en)->format('d/m/Y H:i'),
+                $tx->tipo_operacion,
+                $tx->origen_alias ?? '—',
+                $tx->destino_alias ?? '—',
+                (float) $tx->monto,
+                $detalle,
+                $tx->operador ?? '—',
+            ], null, 'A'.$fila);
+            $fila++;
+        }
+
+        foreach ($sheet->getColumnIterator() as $column) {
+            $sheet->getColumnDimension($column->getColumnIndex())->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            "bipay_historial_{$desde}_a_{$hasta}.xlsx",
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
+    }
+
+    /**
+     * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
+     * exportarTransacciones() (fecha, cuenta, tipo de operación).
+     *
+     * @return array{0: Builder, 1: string, 2: string}
+     */
+    private function consultaTransacciones(Request $request): array
+    {
+        $desde       = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
+        $hasta       = $request->get('fecha_hasta', now()->toDateString());
+        $cuentaId    = $request->get('cuenta_id');
+        $tipoOp      = $request->get('tipo_operacion');
+        $tiposValidos = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA', 'CIERRE_DIA'];
 
         $query = DB::table('transacciones_bipay as tb')
             ->leftJoin('cuentas_bipay as co', 'co.id', '=', 'tb.cuenta_origen_id')
             ->leftJoin('cuentas_bipay as cd', 'cd.id', '=', 'tb.cuenta_destino_id')
+            ->leftJoin('usuarios as u', 'u.id', '=', 'tb.creado_por')
             ->whereRaw('DATE(tb.creado_en) BETWEEN ? AND ?', [$desde, $hasta])
             ->select([
                 'tb.*',
                 'tb.creado_en AS created_at',
                 'co.alias AS origen_alias',
                 'cd.alias AS destino_alias',
+                'u.nombre AS operador',
             ]);
 
         if ($cuentaId) {
-            $query->where(fn($q) => $q->where('tb.cuenta_origen_id', $cuentaId)
+            $query->where(fn ($q) => $q->where('tb.cuenta_origen_id', $cuentaId)
                 ->orWhere('tb.cuenta_destino_id', $cuentaId));
         }
 
-        $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
+        if ($tipoOp && in_array($tipoOp, $tiposValidos, true)) {
+            $query->where('tb.tipo_operacion', $tipoOp);
+        }
 
-        return response()->json($data);
+        return [$query, $desde, $hasta];
     }
 
     public function recarga(Request $request): JsonResponse
@@ -881,6 +970,79 @@ class BipayController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Cuenta eliminada.']);
+    }
+
+    // ── POST /bipay/cuentas/{id}/vincular-huerfana — Vincular cuenta auto-registrada
+    // sin madre, convirtiéndola en MADRE (admin). Paridad legacy panel_bipay.php
+    // acción `vincular_huerfana`.
+    public function vincularHuerfana(Request $request, int $id): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('cuentas_bipay')) {
+            return response()->json(['success' => false, 'message' => 'Tabla Bipay no configurada.'], 422);
+        }
+        if (! Schema::hasColumn('cuentas_bipay', 'razon_social')) {
+            return response()->json(['success' => false, 'message' => 'Columna razon_social no configurada.'], 422);
+        }
+
+        $data = $request->validate([
+            'razon_social' => ['required', 'string', 'max:150'],
+            'alias'        => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $cuenta = DB::table('cuentas_bipay')->where('id', $id)->first();
+        if (! $cuenta) {
+            return response()->json(['success' => false, 'message' => 'Cuenta no encontrada.'], 404);
+        }
+
+        $nuevoAlias = trim($data['alias'] ?? '') ?: $data['razon_social'];
+
+        DB::table('cuentas_bipay')->where('id', $id)->update([
+            'razon_social' => $data['razon_social'],
+            'alias'        => $nuevoAlias,
+            'tipo'         => 'MADRE',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Cuenta \"{$nuevoAlias}\" vinculada y convertida a MADRE.",
+        ]);
+    }
+
+    // ── GET /bipay/locks-activos — Tiendas en cooldown vigente (admin). Paridad
+    // legacy panel_bipay.php "Locks Activos", mapeado a bipay_cooldowns (el destino
+    // no tiene tabla bipay_locks; ver spec 2026-07-03-bipay-panel-avanzado-design.md).
+    public function locksActivos(Request $request): JsonResponse
+    {
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        if (! Schema::hasTable('bipay_cooldowns')) {
+            return response()->json(['locks' => []]);
+        }
+
+        $ahora = $this->ahoraCajero();
+
+        $locks = DB::table('bipay_cooldowns as bc')
+            ->join('cuentas_bipay as cb', 'cb.id', '=', 'bc.cuenta_bipay_id')
+            ->join('tiendas as t', 't.codigo', '=', 'bc.tienda_codigo')
+            ->select(['bc.cuenta_bipay_id', 'bc.tienda_codigo', 'bc.cooldown_hasta', 'cb.alias as cuenta_alias', 't.nombre as tienda_nombre'])
+            ->get()
+            ->map(fn ($lk) => [
+                'cuenta_bipay_id' => (int) $lk->cuenta_bipay_id,
+                'tienda_codigo'   => $lk->tienda_codigo,
+                'tienda_nombre'   => $lk->tienda_nombre,
+                'cuenta_alias'    => $lk->cuenta_alias,
+                'expira_en'       => $lk->cooldown_hasta,
+                'cooldown_segs'   => $this->segundosRestantes($lk->cooldown_hasta, $ahora),
+            ])
+            ->filter(fn ($lk) => $lk['cooldown_segs'] > 0)
+            ->sortBy('cooldown_segs')
+            ->values();
+
+        return response()->json(['locks' => $locks]);
     }
 
     private function insertarTransaccion(array $data, mixed $fecha = null): void

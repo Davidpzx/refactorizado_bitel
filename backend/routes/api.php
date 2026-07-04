@@ -252,12 +252,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Bipay ─────────────────────────────────────────────────────────────────
     Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
+    Route::get('bipay/transacciones/exportar', [BipayController::class, 'exportarTransacciones'])->middleware('role:admin');
+    Route::get('bipay/locks-activos',  [BipayController::class, 'locksActivos'])->middleware('role:admin');
     Route::post('bipay/recarga',       [BipayController::class, 'recarga'])->middleware('role:admin');
     Route::post('bipay/transferir',    [BipayController::class, 'transferir'])->middleware('role:admin');
     Route::post('bipay/ajustar',       [BipayController::class, 'ajustar'])->middleware('role:admin');
     Route::post('bipay/cuentas',       [BipayController::class, 'crearCuenta'])->middleware('role:admin');
     Route::put('bipay/cuentas/{id}',   [BipayController::class, 'editarCuenta'])->middleware('role:admin');
     Route::delete('bipay/cuentas/{id}', [BipayController::class, 'eliminarCuenta'])->middleware('role:admin');
+    Route::post('bipay/cuentas/{id}/vincular-huerfana', [BipayController::class, 'vincularHuerfana'])->middleware('role:admin');
     Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
     Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
     Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);
