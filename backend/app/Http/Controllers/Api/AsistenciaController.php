@@ -2090,14 +2090,23 @@ class AsistenciaController extends Controller
             return response()->json(['success' => true, 'estado' => 'off']);
         }
 
-        DB::table('excepciones_jornada')->insert([
-            'agente_id' => $agenteId,
-            'fecha' => $fecha,
-            'tipo' => $tipo,
-            'horas_trabajadas' => $horas,
-            'registrado_por' => $user->id,
-            'creado_en' => $this->ahora(),
-        ]);
+        try {
+            DB::table('excepciones_jornada')->insert([
+                'agente_id' => $agenteId,
+                'fecha' => $fecha,
+                'tipo' => $tipo,
+                'horas_trabajadas' => $horas,
+                'registrado_por' => $user->id,
+                'creado_en' => $this->ahora(),
+            ]);
+        } catch (QueryException $e) {
+            if (! in_array((string) $e->getCode(), ['23000', '23505'], true)) {
+                throw $e;
+            }
+
+            // Doble submit: otra petición ya insertó la excepción para este agente/fecha.
+            return response()->json(['success' => true, 'estado' => 'on']);
+        }
 
         return response()->json(['success' => true, 'estado' => 'on'], 201);
     }
