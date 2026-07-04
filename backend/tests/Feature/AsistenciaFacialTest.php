@@ -184,4 +184,31 @@ class AsistenciaFacialTest extends TestCase
             'hash_facial' => null,
         ]);
     }
+
+    public function test_cliente_no_puede_autoplantar_sentinel_dasam_sf_en_primer_registro(): void
+    {
+        $this->postJson('/api/v1/attendance/mark', $this->gpsPayload('entrada', 'dasam-sf-yo-me-lo-plante'))
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'INVALID_DEVICE_ID');
+
+        $this->assertDatabaseHas('agentes', [
+            'id' => 1,
+            'hash_dispositivo' => null,
+            'hash_facial' => null,
+        ]);
+    }
+
+    public function test_cliente_no_puede_autoplantar_sentinel_dasam_sf_con_hash_previo(): void
+    {
+        DB::table('agentes')->where('id', 1)->update(['hash_dispositivo' => 'kyro-hw-real-device-hash']);
+
+        $this->postJson('/api/v1/attendance/mark', $this->gpsPayload('entrada', 'dasam-sf-otro-plante'))
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'INVALID_DEVICE_ID');
+
+        $this->assertDatabaseHas('agentes', [
+            'id' => 1,
+            'hash_dispositivo' => 'kyro-hw-real-device-hash',
+        ]);
+    }
 }

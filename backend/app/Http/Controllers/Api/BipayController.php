@@ -18,6 +18,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BipayController extends Controller
 {
+    // Tope de días para exportarTransacciones() cuando el rango solicitado (explícito o por
+    // defecto) excede este máximo — evita cargar históricos multi-año en memoria de una sola vez.
+    // Mismo patrón que DashboardController::EXPORT_DIAS_MAX_SIN_FILTRO.
+    private const EXPORT_DIAS_MAX = 90;
+
     private function tablasFaltantes(): array
     {
         $faltantes = [];
@@ -75,7 +80,8 @@ class BipayController extends Controller
             ]);
         }
 
-        [$query] = $this->consultaTransacciones($request);
+        [$desde, $hasta] = $this->resolverRangoFechas($request);
+        $query = $this->consultaTransacciones($request, $desde, $hasta);
 
         $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
 
@@ -93,7 +99,16 @@ class BipayController extends Controller
             return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
         }
 
-        [$query, $desde, $hasta] = $this->consultaTransacciones($request);
+        [$desde, $hasta] = $this->resolverRangoFechas($request);
+
+        $capAplicado = false;
+        $hastaCarbon = Carbon::parse($hasta);
+        if (Carbon::parse($desde)->diffInDays($hastaCarbon) > self::EXPORT_DIAS_MAX) {
+            $desde = $hastaCarbon->copy()->subDays(self::EXPORT_DIAS_MAX)->toDateString();
+            $capAplicado = true;
+        }
+
+        $query = $this->consultaTransacciones($request, $desde, $hasta);
         $historial = $query->orderByDesc('tb.creado_en')->get();
 
         $spreadsheet = new Spreadsheet();
@@ -106,6 +121,17 @@ class BipayController extends Controller
         ]);
 
         $fila = 2;
+
+        if ($capAplicado) {
+            $sheet->setCellValue("A{$fila}", 'Rango acotado a los últimos ' . self::EXPORT_DIAS_MAX . ' días (el rango solicitado excedía el máximo permitido).');
+            $sheet->mergeCells("A{$fila}:G{$fila}");
+            $sheet->getStyle("A{$fila}")->applyFromArray([
+                'font' => ['italic' => true, 'color' => ['rgb' => '92400E']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+            ]);
+            $fila++;
+        }
+
         foreach ($historial as $tx) {
             $detalle = (string) ($tx->observacion ?? '');
             if ($tx->tipo_operacion === 'AJUSTE') {
@@ -142,15 +168,26 @@ class BipayController extends Controller
     }
 
     /**
-     * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
-     * exportarTransacciones() (fecha, cuenta, tipo de operación).
+     * Resuelve fecha_desde/fecha_hasta desde el request (o sus valores por defecto),
+     * sin aplicar ningún tope de rango.
      *
-     * @return array{0: Builder, 1: string, 2: string}
+     * @return array{0: string, 1: string}
      */
-    private function consultaTransacciones(Request $request): array
+    private function resolverRangoFechas(Request $request): array
     {
-        $desde       = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
-        $hasta       = $request->get('fecha_hasta', now()->toDateString());
+        return [
+            $request->get('fecha_desde', now()->startOfMonth()->toDateString()),
+            $request->get('fecha_hasta', now()->toDateString()),
+        ];
+    }
+
+    /**
+     * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
+     * exportarTransacciones() (fecha, cuenta, tipo de operación). El rango de fechas ya
+     * debe venir resuelto (y, si aplica, acotado) por el llamante.
+     */
+    private function consultaTransacciones(Request $request, string $desde, string $hasta): Builder
+    {
         $cuentaId    = $request->get('cuenta_id');
         $tipoOp      = $request->get('tipo_operacion');
         $tiposValidos = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA', 'CIERRE_DIA'];
@@ -177,7 +214,7 @@ class BipayController extends Controller
             $query->where('tb.tipo_operacion', $tipoOp);
         }
 
-        return [$query, $desde, $hasta];
+        return $query;
     }
 
     public function recarga(Request $request): JsonResponse

@@ -783,6 +783,16 @@ class AsistenciaController extends Controller
             return null;
         }
 
+        // El sentinel dasam-sf- (bypass manual de fraude) solo puede originarse por edición directa
+        // en BD por un admin — nunca aceptado como device_id enviado por el cliente, o un agente podría
+        // autoplantarlo en su primer registro y desactivar el antifraude de dispositivo para siempre.
+        if (str_starts_with($deviceId, 'dasam-sf-')) {
+            return response()->json([
+                'error' => 'Identificador de dispositivo inválido.',
+                'code' => 'INVALID_DEVICE_ID',
+            ], 422);
+        }
+
         // Prefijo dasam-face-: hash de reconocimiento facial (dispositivo/app externa), vive en su
         // propia columna independiente de hash_dispositivo (paridad con verificarHashDispositivo() legacy).
         $columnaHash = str_starts_with($deviceId, 'dasam-face-') ? 'hash_facial' : 'hash_dispositivo';
