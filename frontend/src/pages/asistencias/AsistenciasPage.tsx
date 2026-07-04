@@ -12,7 +12,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
-import { AlertCircle, AlertTriangle, Camera, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList, CalendarRange } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Camera, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList, CalendarRange, Receipt } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -298,6 +298,15 @@ export function AsistenciasPage() {
             title="Control mensual de asistencias (matriz por agente)"
           >
             <CalendarRange size={14} /> Control
+          </Link>
+        )}
+        {usuario?.rol === 'admin' && (
+          <Link
+            to="/asistencias/liquidacion"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
+            title="Historial de liquidación de asistencias"
+          >
+            <Receipt size={14} /> Liquidación
           </Link>
         )}
       </PageHeader>

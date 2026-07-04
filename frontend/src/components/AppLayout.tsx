@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, NavLink, Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
@@ -23,30 +23,32 @@ interface NavItem {
   soon?: boolean
 }
 
-// Orden y agrupación reproducen las 5 secciones del legacy sis_bipay
+// Orden y agrupación calcan las 5 secciones del sidebar legacy sis_bipay
 // (includes/header.php): Gerencia / Administración / Inventario / Operaciones /
 // Configuración. Cada item declara su `section`; el separador visual se calcula
 // comparando con el item anterior VISIBLE (no por índice fijo), así el agrupado
-// no se rompe según el rol del usuario. Los ítems que no existen en el sidebar
-// legacy (solo-refactor) se ubican al final de la sección afín.
+// no se rompe según el rol del usuario. Los ítems del legacy lideran cada
+// sección en su orden y label originales; los que solo existen en el refactor
+// (sin equivalente en el sidebar legacy) van al final de la sección afín para
+// no perder acceso. `Control Mensual`, `Liquidacion` y `Revisar Fotos` son
+// pestañas dentro de la página `/asistencias` en el legacy, no entradas de
+// menú: sus rutas siguen vivas, solo se accede a ellas desde la cabecera de
+// Asistencias.
 const NAV_ITEMS: NavItem[] = [
   // ── Gerencia ─────────────────────────────────────────────────────────────
   { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
-  { to: '/crm',            label: 'CRM',             Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia' },
-  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia' },
   { to: '/revisar-stock',  label: 'Precios',         Icon: Package,         roles: ['admin'],           section: 'Gerencia' },
+  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
+  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
+  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Gerencia' },
 
   // ── Administración ───────────────────────────────────────────────────────
   { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
   { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
   { to: '/agentes',        label: 'Personal',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
   { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Administración' },
-  { to: '/asistencias/control', label: 'Control Mensual', Icon: Clock,      roles: ['admin'],           section: 'Administración' },
-  { to: '/asistencias/liquidacion', label: 'Liquidacion', Icon: ClipboardList, roles: ['admin'],         section: 'Administración' },
-  { to: '/revisar-fotos',  label: 'Revisar Fotos',   Icon: UserCheck,       roles: ['admin'],           section: 'Administración' },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Administración' },
   { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Administración' },
   { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'],           section: 'Administración' },
@@ -60,7 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Administración' },
 
   // ── Inventario ───────────────────────────────────────────────────────────
-  { to: '/inventario',     label: 'Inventario',      Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText, roles: ['admin'],           section: 'Inventario' },
@@ -71,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: Clock,           roles: ['admin', 'tienda'], section: 'Operaciones' },
 
   // ── Configuración ────────────────────────────────────────────────────────
-  { to: '/configuracion',  label: 'Configuración',   Icon: Settings,        roles: ['admin'],           section: 'Configuración' },
+  { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Settings,      roles: ['admin'],           section: 'Configuración' },
   { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
 ]
 
@@ -83,9 +85,11 @@ function sectionLabel(section: string, role: string) {
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
   const { isDark, toggleTheme } = useTheme()
+  const location = useLocation()
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [ccOpen, setCcOpen]         = useState(false)
+  const navItemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const { data: cc } = useQuery({
     queryKey: ['control-center'],
@@ -113,6 +117,20 @@ export function AppLayout() {
 
   const userRole     = usuario?.rol ?? 'tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
+
+  /* Auto-scroll al item activo del sidebar (como el legacy) al cambiar de ruta. */
+  useEffect(() => {
+    const path = location.pathname
+    let activeTo: string | null = null
+    for (const item of visibleItems) {
+      const matches = item.to === '/' ? path === '/' : (path === item.to || path.startsWith(item.to + '/'))
+      if (matches && (!activeTo || item.to.length > activeTo.length)) activeTo = item.to
+    }
+    if (activeTo) {
+      navItemRefs.current.get(activeTo)?.scrollIntoView({ block: 'nearest' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, userRole])
 
   /* ── Theme-conditional styles ── */
   const mobileBg = isDark
@@ -209,7 +227,7 @@ export function AppLayout() {
             const showSeparator = idx === 0 || section !== visibleItems[idx - 1].section
 
             return (
-              <div key={to}>
+              <div key={to} ref={(el) => { if (el) navItemRefs.current.set(to, el); else navItemRefs.current.delete(to) }}>
                 {showSeparator && !collapsed && (
                   <div className="pt-3 pb-1 px-3">
                     <span className="block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide text-kyro-muted">
