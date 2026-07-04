@@ -4,6 +4,7 @@ import { FileSpreadsheet, Pencil, Printer, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
+import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
@@ -351,9 +352,11 @@ export function TicketsPage() {
   const { usuario }                        = useAuth()
   const isAdmin                            = usuario?.rol === 'admin'
   const { tiendas }                        = useTiendasSelect()
+  const { agentes }                        = useAgentesSelect()
   const [desde, setDesde]                  = useState('')
   const [hasta, setHasta]                  = useState('')
   const [tienda_id, setTiendaId]           = useState('')
+  const [agenteId, setAgenteId]            = useState('')
   const [q, setQ]                          = useState('')
   const [dniCliente, setDniCliente]        = useState('')
   const [formaPago, setFormaPago]          = useState('')
@@ -369,6 +372,7 @@ export function TicketsPage() {
     desde:       desde       || undefined,
     hasta:       hasta       || undefined,
     tienda_id:   tienda_id   || undefined,
+    agente_id:   agenteId    ? Number(agenteId) : undefined,
     q:           q           || undefined,
     dni_cliente: dniCliente  || undefined,
     forma_pago:  formaPago   || undefined,
@@ -390,12 +394,12 @@ export function TicketsPage() {
   }
 
   const limpiarFiltros = () => {
-    setDesde(''); setHasta(''); setTiendaId('')
+    setDesde(''); setHasta(''); setTiendaId(''); setAgenteId('')
     setQ(''); setDniCliente(''); setFormaPago('')
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
-  const hayFiltros = desde || hasta || tienda_id || q || dniCliente || formaPago
+  const hayFiltros = desde || hasta || tienda_id || agenteId || q || dniCliente || formaPago
 
   const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin, anular.isPending)
 
@@ -406,6 +410,7 @@ export function TicketsPage() {
       if (desde)      params.set('desde', desde)
       if (hasta)      params.set('hasta', hasta)
       if (tienda_id)  params.set('tienda_id', tienda_id)
+      if (agenteId)   params.set('agente_id', agenteId)
       if (q)          params.set('q', q)
       if (dniCliente) params.set('dni_cliente', dniCliente)
       if (formaPago)  params.set('forma_pago', formaPago)
@@ -453,6 +458,12 @@ export function TicketsPage() {
           <option value="">Todas las tiendas</option>
           {tiendas.map((t) => (
             <option key={t.codigo} value={t.codigo}>{t.nombre} — {t.codigo}</option>
+          ))}
+        </Select>
+        <Select value={agenteId} onChange={(e) => { setAgenteId(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-44">
+          <option value="">Todos los agentes</option>
+          {agentes.map((a) => (
+            <option key={a.id} value={a.id}>{a.nombres}</option>
           ))}
         </Select>
         <Input

@@ -16,6 +16,18 @@ class LeadController extends Controller
             ->when($request->estado, fn($q, $v) => $q->where('estado', $v))
             ->when($request->agente_id, fn($q, $v) => $q->where('agente_id', $v))
             ->when($request->tienda_id, fn($q, $v) => $q->where('tienda_id', $v))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $termino = '%'.trim((string) $request->input('q')).'%';
+                $q->where(function ($sub) use ($termino) {
+                    $sub->whereHas('cliente', function ($c) use ($termino) {
+                        $c->where('nombre', 'like', $termino)
+                            ->orWhere('dni_ruc', 'like', $termino)
+                            ->orWhere('telefono', 'like', $termino);
+                    })->orWhereIn('agente_id', function ($aq) use ($termino) {
+                        $aq->select('id')->from('agentes')->where('nombres', 'like', $termino);
+                    });
+                });
+            })
             ->latest('creado_en')
             ->paginate($request->integer('per_page', 50));
 

@@ -68,6 +68,7 @@ export function PanelBipayPage() {
     fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
     fecha_hasta: new Date().toISOString().slice(0, 10),
     cuenta_id: '',
+    tipo_operacion: '',
   })
   const [txApplied, setTxApplied] = useState({ ...txFilters })
 
@@ -271,6 +272,32 @@ export function PanelBipayPage() {
                 onChange={e => setTxFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
                 className={inputCls}
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta</label>
+              <select value={txFilters.cuenta_id}
+                onChange={e => setTxFilters(f => ({ ...f, cuenta_id: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="">Todas las cuentas</option>
+                {(saldoData?.cuentas ?? []).map(c => (
+                  <option key={c.id} value={c.id}>{c.alias}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Tipo</label>
+              <select value={txFilters.tipo_operacion}
+                onChange={e => setTxFilters(f => ({ ...f, tipo_operacion: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="">Todos los tipos</option>
+                <option value="RECARGA">Recarga</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="AJUSTE">Ajuste</option>
+                <option value="DECLARACION_DIA">Declaración día</option>
+                <option value="CIERRE_DIA">Cierre día</option>
+              </select>
             </div>
             <Button variant="gold" onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
           </ListToolbar>

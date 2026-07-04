@@ -624,11 +624,14 @@ export function CrmPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
+  const [busqueda, setBusqueda] = useState('')
   const [tab, setTab] = useState<'pipeline' | 'temperatura' | 'analytics'>('pipeline')
 
-  const params: Record<string, string | number> = filtroTienda
-    ? { tienda_id: filtroTienda, per_page: 200 }
-    : { per_page: 200 }
+  const params: Record<string, string | number> = {
+    ...(filtroTienda ? { tienda_id: filtroTienda } : {}),
+    ...(busqueda ? { q: busqueda } : {}),
+    per_page: 200,
+  }
   const pipelineParams: Record<string, string | number> | undefined = filtroTienda
     ? { tienda_id: filtroTienda }
     : undefined
@@ -667,6 +670,12 @@ export function CrmPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="CRM — Pipeline de Leads" subtitle="Gestión de clientes potenciales">
+        <Input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar cliente, DNI o agente..."
+          className="h-9 w-56"
+        />
         <Select
           value={filtroTienda}
           onChange={e => setFiltroTienda(e.target.value)}

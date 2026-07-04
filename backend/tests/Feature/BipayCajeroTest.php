@@ -227,6 +227,24 @@ class BipayCajeroTest extends TestCase
             ->assertJsonPath('ok', false);
     }
 
+    public function test_transacciones_filtra_por_tipo_operacion(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+
+        DB::table('transacciones_bipay')->insert([
+            ['cuenta_origen_id' => 1, 'monto' => 100, 'tipo_operacion' => 'RECARGA', 'plataforma' => 'BIPAY', 'creado_en' => '2026-06-11 09:00:00'],
+            ['cuenta_origen_id' => 1, 'monto' => 50,  'tipo_operacion' => 'AJUSTE',  'plataforma' => 'BIPAY', 'creado_en' => '2026-06-11 09:30:00'],
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/bipay/transacciones?fecha_desde=2026-06-01&fecha_hasta=2026-06-30&tipo_operacion=AJUSTE')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('AJUSTE', $data[0]['tipo_operacion']);
+    }
+
     private function crearTablasBipay(): void
     {
         Schema::create('cuentas_bipay', function (Blueprint $table) {

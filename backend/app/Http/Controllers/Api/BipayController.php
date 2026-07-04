@@ -69,6 +69,7 @@ class BipayController extends Controller
         $desde    = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
         $hasta    = $request->get('fecha_hasta', now()->toDateString());
         $cuentaId = $request->get('cuenta_id');
+        $tipo     = $request->get('tipo_operacion');
 
         $query = DB::table('transacciones_bipay as tb')
             ->leftJoin('cuentas_bipay as co', 'co.id', '=', 'tb.cuenta_origen_id')
@@ -84,6 +85,10 @@ class BipayController extends Controller
         if ($cuentaId) {
             $query->where(fn($q) => $q->where('tb.cuenta_origen_id', $cuentaId)
                 ->orWhere('tb.cuenta_destino_id', $cuentaId));
+        }
+
+        if ($tipo) {
+            $query->where('tb.tipo_operacion', $tipo);
         }
 
         $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
