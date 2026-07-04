@@ -375,7 +375,7 @@ function AgregarRegistroModal({
   isEdit?: boolean
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
-  const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
+  const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'found_no_verificado' | 'notfound'>('idle')
   const [crmStatus, setCrmStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [carrito, setCarrito] = useState<CarritoEquipoItem[]>([newCarritoItem()])
 
@@ -440,7 +440,9 @@ function AgregarRegistroModal({
             ].filter(Boolean).join(' ')
         if (nombre) {
           setM(prev => ({ ...prev, cliente_nombre: nombre }))
-          setDniStatus('found')
+          // Solo RENIEC_API es una fuente verificada; el cache local del CRM puede
+          // haber guardado un nombre tipeado a mano (MANUAL_CON_FALLBACK).
+          setDniStatus(d.fuente === 'RENIEC_API' ? 'found' : 'found_no_verificado')
         } else { setDniStatus('notfound') }
       })
       .catch(() => setDniStatus('notfound'))
@@ -504,13 +506,14 @@ function AgregarRegistroModal({
               </Label>
               <Input value={m.cliente_dni} onChange={e => { upd('cliente_dni', e.target.value); setDniStatus('idle') }} maxLength={15} placeholder="DNI (8 dígitos) o celular" className="kyro-input mt-0.5 h-8 text-xs font-mono" />
               <p className="mt-0.5 text-[9px] h-3 leading-3">
-                {dniStatus === 'loading'  && <span className="text-kyro-muted animate-pulse">buscando…</span>}
-                {dniStatus === 'found'    && <span className="text-kyro-success">✓ encontrado (RENIEC)</span>}
+                {dniStatus === 'loading'             && <span className="text-kyro-muted animate-pulse">buscando…</span>}
+                {dniStatus === 'found'                && <span className="text-kyro-success">✓ encontrado (RENIEC)</span>}
+                {dniStatus === 'found_no_verificado'  && <span className="text-kyro-warning">✓ encontrado (no verificado)</span>}
                 {dniStatus === 'notfound' && crmStatus === 'idle' && <span className="text-kyro-danger">no encontrado</span>}
                 {crmStatus === 'found'    && <span className="text-kyro-success">✓ recuperado del CRM</span>}
                 {crmStatus === 'notfound' && <span className="text-kyro-danger">sin registro previo en CRM</span>}
               </p>
-              {/^\d{8}$/.test(m.cliente_dni) && dniStatus !== 'found' && (
+              {/^\d{8}$/.test(m.cliente_dni) && dniStatus !== 'found' && dniStatus !== 'found_no_verificado' && (
                 <button type="button" onClick={recuperarClienteCrm} disabled={crmStatus === 'loading'}
                   className="mt-0.5 rounded border border-kyro-gold/40 bg-kyro-gold/10 px-2 py-0.5 text-[9px] font-bold text-kyro-gold disabled:opacity-50">
                   {crmStatus === 'loading' ? 'Buscando…' : 'Recuperar Cliente (CRM)'}

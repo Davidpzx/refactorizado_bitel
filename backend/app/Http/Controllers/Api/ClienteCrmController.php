@@ -80,16 +80,18 @@ class ClienteCrmController extends Controller
         try {
             $clienteId = DB::transaction(function () use ($request, $telefono, $operadoraFinal, $operacion, $observacion, $user) {
                 // ON DUPLICATE KEY + LAST_INSERT_ID(id) evita la carrera contra el índice único de dni.
-                // Solo se actualizan telefono/operadora (no se pisan nombres/apellidos).
+                // Solo se actualizan telefono/operadora (no se pisan nombres/apellidos/fuente_nombre:
+                // la fuente queda fijada por el primer registro, igual que el nombre que describe).
                 DB::statement('
-                    INSERT INTO crm_clientes (dni, nombres, apellidos, telefono, operadora, fecha_registro)
-                    VALUES (?,?,?,?,?, NOW())
+                    INSERT INTO crm_clientes (dni, nombres, apellidos, fuente_nombre, telefono, operadora, fecha_registro)
+                    VALUES (?,?,?,?,?,?, NOW())
                     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id),
                         telefono = VALUES(telefono), operadora = VALUES(operadora)
                 ', [
                     $request->input('dni'),
                     trim($request->input('nombres')),
                     trim($request->input('apellidos')),
+                    $request->input('fuente', 'RENIEC_API'),
                     $telefono,
                     $operadoraFinal,
                 ]);
