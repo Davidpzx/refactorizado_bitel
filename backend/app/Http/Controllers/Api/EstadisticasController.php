@@ -144,7 +144,7 @@ class EstadisticasController extends Controller
             ->where('r.estado', '!=', 'borrador')
             ->where('v.comision_estado', '!=', 'ANULADA');
         // Excluir remates/UPGRADE/PAQUETE: misma regla que Planilla/Postpago.
-        RankingVentaScope::aplicar($ranking, 'v');
+        RankingVentaScope::aplicarSoloPostpago($ranking, 'v');
         $ranking = $ranking
             ->when($tienda, fn($q) => $q->where('r.tienda_id', $tienda))
             ->selectRaw("
@@ -203,7 +203,7 @@ class EstadisticasController extends Controller
             ->where('v.tipo_venta', $tipoVenta)
             ->when($tienda, fn ($q) => $q->where('r.tienda_id', $tienda));
         // Excluir remates/UPGRADE/PAQUETE: misma regla que Planilla/Postpago.
-        RankingVentaScope::aplicar($query, 'v');
+        RankingVentaScope::aplicarSoloPostpago($query, 'v');
 
         // Subcategoría: modelo de equipo o plan de línea.
         if ($subcategoria !== '') {
@@ -353,7 +353,7 @@ class EstadisticasController extends Controller
 
         // ── Ranking por agente (excluye remates/UPGRADE/PAQUETE) ────────────────
         $agNonEqQ = $base()->join('agentes as a', 'a.id', '=', 'v.vendedor_id');
-        RankingVentaScope::aplicar($agNonEqQ, 'v');
+        RankingVentaScope::aplicarSoloPostpago($agNonEqQ, 'v');
         $agNonEq = $agNonEqQ->selectRaw("
                 v.vendedor_id, a.nombres, a.tienda_base,
                 SUM(CASE WHEN v.tipo_venta = 'POSTPAGO'  THEN 1 ELSE 0 END) AS postpago,
@@ -362,7 +362,7 @@ class EstadisticasController extends Controller
             ->groupBy('v.vendedor_id', 'a.nombres', 'a.tienda_base')->get()->keyBy('vendedor_id');
 
         $agEqQ = $base()->join('venta_equipos as ve', 've.venta_id', '=', 'v.id')->where('v.tipo_venta', 'EQUIPO');
-        RankingVentaScope::aplicar($agEqQ, 'v');
+        RankingVentaScope::aplicarSoloPostpago($agEqQ, 'v');
         $agEq = $agEqQ->selectRaw("
                 v.vendedor_id,
                 SUM(CASE WHEN ve.tipo_pago = 'CUOTAS'  THEN 1 ELSE 0 END) AS eq_cuotas,
@@ -371,7 +371,7 @@ class EstadisticasController extends Controller
             ->groupBy('v.vendedor_id')->get()->keyBy('vendedor_id');
 
         $agChipsQ = $base()->join('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')->where('v.tipo_venta', 'PREPAGO');
-        RankingVentaScope::aplicar($agChipsQ, 'v');
+        RankingVentaScope::aplicarSoloPostpago($agChipsQ, 'v');
         $agChips = $agChipsQ->selectRaw('v.vendedor_id, vl.plan_nombre_snap AS plan, SUM(vl.cantidad) AS qty')
             ->groupBy('v.vendedor_id', 'vl.plan_nombre_snap')->get();
 

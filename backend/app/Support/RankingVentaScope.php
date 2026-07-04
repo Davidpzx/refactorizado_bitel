@@ -9,9 +9,10 @@ use Illuminate\Database\Query\Builder;
  *
  * Fuente única de verdad de "qué venta cuenta para el ranking": excluye remates,
  * paquetes y upgrades. Esta condición ya la aplicaba PlanillaController al calcular
- * la comisión de planes (y PostpagoController al segregar KPIs), pero
- * EstadisticasController no la aplicaba a su ranking de agentes — inconsistencia
- * interna. Se centraliza aquí para no mantener una tercera variante.
+ * la comisión de planes, pero EstadisticasController no la aplicaba a su ranking de
+ * agentes — inconsistencia interna. Se centraliza aquí para no mantener una tercera
+ * variante. (PostpagoController segrega upgrades/paquetes/remates en contadores
+ * propios al mostrar KPIs, no los excluye del total — no usa este scope.)
  *
  * Opera sobre el query builder (ambos controladores usan DB::table, no Eloquent),
  * recibiendo el alias de la tabla `ventas` ('ventas' en Planilla, 'v' en Estadísticas).
@@ -44,5 +45,20 @@ class RankingVentaScope
             static::excluirRematesYPaquetes($query, $alias),
             $alias
         );
+    }
+
+    /**
+     * Igual que aplicar(), pero restringido a ventas tipo_venta='POSTPAGO'.
+     *
+     * Paridad con el legacy (obtener_ranking_agentes.php:100-131): las exclusiones de
+     * remate/paquete/UPGRADE solo cortan la rama postpago/plan_online — la rama de
+     * equipos_accesorios (líneas 70-97) cuenta todo sin exclusiones, y chip_prepago está
+     * explícitamente exento (línea 125). Usar aplicar() a secas sobre-excluye PREPAGO/EQUIPO.
+     */
+    public static function aplicarSoloPostpago(Builder $query, string $alias = 'ventas'): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where("{$alias}.tipo_venta", '!=', 'POSTPAGO')
+            ->orWhere(fn (Builder $q2) => static::aplicar($q2, $alias)));
     }
 }

@@ -106,6 +106,71 @@ class EstadisticasExportRankingTest extends TestCase
         $this->assertSame(1, (int) $ranking[0]['total']);
     }
 
+    // Paridad con el legacy (obtener_ranking_agentes.php:70-131): las exclusiones de
+    // remate/paquete/UPGRADE solo cortan la rama postpago/plan_online. La rama de
+    // equipos_accesorios cuenta todo sin exclusiones y chip_prepago está explícitamente
+    // exento — RankingVentaScope::aplicar() a secas sobre-excluía estas categorías.
+    public function test_ranking_general_no_sobre_excluye_equipo_ni_prepago_con_remate_o_upgrade(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $this->agente(1, 'T01');
+        $reporte = $this->reporte('T01');
+
+        // EQUIPO con es_remate=true: debe contar (rama equipos_accesorios sin exclusiones).
+        $this->venta($reporte, ['tipo_venta' => 'EQUIPO', 'es_remate' => true]);
+
+        // PREPAGO (chip) con línea UPGRADE: chip_prepago está exento en el legacy.
+        $chip = $this->venta($reporte, ['tipo_venta' => 'PREPAGO']);
+        $this->linea($chip, 'Chip Prepago', 'UPGRADE');
+
+        // POSTPAGO con es_remate=true: sigue excluido (paridad ya verificada).
+        $this->venta($reporte, ['tipo_venta' => 'POSTPAGO', 'es_remate' => true]);
+
+        $ranking = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/estadisticas/productividad')
+            ->assertOk()
+            ->json('ranking');
+
+        $this->assertCount(1, $ranking);
+        $this->assertSame(2, (int) $ranking[0]['total']);
+        $this->assertSame(1, (int) $ranking[0]['equipos']);
+        $this->assertSame(1, (int) $ranking[0]['prepago']);
+        $this->assertSame(0, (int) $ranking[0]['postpago']);
+    }
+
+    public function test_ranking_categorizado_equipos_no_excluye_remate_ni_upgrade(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $this->agente(1, 'T01');
+        $reporte = $this->reporte('T01');
+        $this->venta($reporte, ['tipo_venta' => 'EQUIPO', 'es_remate' => true]);
+
+        $ranking = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/estadisticas/ranking?categoria=equipos')
+            ->assertOk()
+            ->json('ranking');
+
+        $this->assertCount(1, $ranking);
+        $this->assertSame(1, (int) $ranking[0]['total']);
+    }
+
+    public function test_ranking_categorizado_chips_no_excluye_upgrade(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $this->agente(1, 'T01');
+        $reporte = $this->reporte('T01');
+        $chip = $this->venta($reporte, ['tipo_venta' => 'PREPAGO']);
+        $this->linea($chip, 'Chip Prepago', 'UPGRADE');
+
+        $ranking = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/estadisticas/ranking?categoria=chips')
+            ->assertOk()
+            ->json('ranking');
+
+        $this->assertCount(1, $ranking);
+        $this->assertSame(1, (int) $ranking[0]['total']);
+    }
+
     // ── Gap 1: reasignación cross_selling → tienda_destino ──────────────────────
 
     public function test_por_tienda_reasigna_cross_selling_a_tienda_destino(): void
