@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle, FileSpreadsheet, LayoutDashboard } from 'lucide-react'
+import {
+  AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle,
+  FileSpreadsheet, LayoutDashboard, Store, Users, FilePlus2, Wallet, FileText,
+  Zap, CreditCard, Landmark, RotateCcw, Search,
+} from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
@@ -10,6 +14,8 @@ import { ActionIconButton, TableActions } from '../components/ui/ActionIconButto
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
 import { StatCard } from '../components/ui/StatCard'
+import { MoneyGroup } from '../components/ui/MoneyGroup'
+import { ProfitBanner } from '../components/ui/ProfitBanner'
 import { apiErrorData } from '../lib/httpError'
 import { api } from '../services/api'
 import { Select } from '../components/ui/select'
@@ -54,9 +60,9 @@ const KPI_ACCENT = {
   esperado:   '#0dcaf0',
   declarado:  '#198754',
   neutral:    '#6c757d',
-  yape:       '#a78bfa',
-  bipay:      '#38bdf8',
-  transfer:   '#34d399',
+  yape:       '#a855f7',
+  bipay:      '#3b82f6',
+  transfer:   '#14b8a6',
   ganancia:   '#10b981',
   danger:     '#ef4444',
   warning:    '#f59e0b',
@@ -76,6 +82,7 @@ function KpiCardDiferencia({ value }: { value: number | string | null | undefine
     <StatCard
       title="Diferencia Física"
       accent={accent}
+      align="top"
       valueColorClass={colorClass}
       icon={value !== null ? <Icon size={18} /> : undefined}
       value={value === null ? null : (num > 0 ? '+' : '') + fmt(num)}
@@ -255,9 +262,20 @@ export function DashboardPage() {
         description="Visión consolidada de caja, canales digitales y reportes operativos."
         Icon={LayoutDashboard}
         actions={usuario?.rol === 'admin' ? (
-          <div className="flex items-center gap-2">
-            <Button variant="glassSuccess" size="sm" onClick={exportarExcel} className="gap-1.5">
-              <FileSpreadsheet size={14} /> Exportar Excel
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/tiendas')}
+              className="gap-1.5 border-kyro-gold/40 text-kyro-gold hover:bg-kyro-gold/10 dark:border-kyro-gold/30"
+            >
+              <Store size={14} /> Tiendas
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/usuarios')} className="gap-1.5">
+              <Users size={14} /> Usuarios
+            </Button>
+            <Button size="sm" onClick={() => navigate('/reportes/nuevo')} className="gap-1.5">
+              <FilePlus2 size={14} /> Registrar Cuadre
             </Button>
             <button
               type="button"
@@ -279,7 +297,7 @@ export function DashboardPage() {
 
       <ListToolbar description="Define el período operativo y, para administradores, limita la lectura a una tienda.">
         <div>
-          <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Desde</label>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Desde</label>
           <input
             type="date"
             value={rawFilters.fecha_desde}
@@ -288,7 +306,7 @@ export function DashboardPage() {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Hasta</label>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Hasta</label>
           <input
             type="date"
             value={rawFilters.fecha_hasta}
@@ -298,44 +316,86 @@ export function DashboardPage() {
         </div>
         {usuario?.rol === 'admin' && (
           <div>
-            <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
+            <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
             <Select
               value={rawFilters.tienda}
               onChange={(e) => setRawFilters((f) => ({ ...f, tienda: e.target.value }))}
               className="h-9 w-44"
             >
-              <option value="">Todas</option>
+              <option value="">Todas las tiendas</option>
               {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
             </Select>
           </div>
         )}
-        <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
-        <Button variant="outline" onClick={resetToToday}>Hoy</Button>
+        <Button variant="gold" onClick={applyFilters} className="gap-1.5">
+          <Search size={14} /> Filtrar
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={resetToToday}
+          title="Volver a hoy"
+          aria-label="Volver a hoy"
+        >
+          <RotateCcw size={15} />
+        </Button>
+        {usuario?.rol === 'admin' && (
+          <Button variant="glassSuccess" onClick={exportarExcel} className="gap-1.5">
+            <FileSpreadsheet size={14} /> Exportar
+          </Button>
+        )}
       </ListToolbar>
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}    formatMoney accent={KPI_ACCENT.total}     valueColorClass="text-blue-700 dark:text-blue-400" />
-        <StatCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}  formatMoney accent={KPI_ACCENT.esperado}  valueColorClass="text-green-700 dark:text-green-400" />
-        <StatCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado} formatMoney accent={KPI_ACCENT.declarado} valueColorClass="text-indigo-700 dark:text-indigo-400" />
+        <StatCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}    formatMoney align="top" icon={<Wallet size={18} />}      accent={KPI_ACCENT.total}     valueColorClass="text-blue-700 dark:text-blue-400" />
+        <StatCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}  formatMoney align="top" icon={<CheckCircle size={18} />}  accent={KPI_ACCENT.esperado}  valueColorClass="text-green-700 dark:text-green-400" />
+        <StatCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado} formatMoney align="top" icon={<FileText size={18} />}     accent={KPI_ACCENT.declarado} valueColorClass="text-indigo-700 dark:text-indigo-400" />
         <KpiCardDiferencia                               value={isLoading ? null : totales?.diferencia_fisica} />
       </div>
 
-      {/* KPIs digitales */}
-      <div className={`grid gap-4 ${usuario?.rol === 'admin' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}>
-        <StatCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          formatMoney accent={KPI_ACCENT.yape}     valueColorClass="text-purple-700 dark:text-purple-400" />
-        <StatCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         formatMoney accent={KPI_ACCENT.bipay}    valueColorClass="text-orange-600 dark:text-orange-400" />
-        <StatCard title="Total Transferencia" value={isLoading ? null : totales?.total_transferencia} formatMoney accent={KPI_ACCENT.transfer} valueColorClass="text-teal-600 dark:text-teal-400" />
-        {usuario?.rol === 'admin' && (
-          <StatCard
-            title="Ganancia Total del Período"
-            value={isLoading ? null : data?.ganancia_total}
-            formatMoney
-            accent={KPI_ACCENT.ganancia}
-            valueColorClass="text-emerald-700 dark:text-emerald-400"
-          />
-        )}
-      </div>
+      {/* Dinero digital del período */}
+      <MoneyGroup
+        items={[
+          {
+            key: 'yape',
+            title: 'Total Yape',
+            value: isLoading ? null : totales?.total_yape,
+            formatMoney: true,
+            accent: KPI_ACCENT.yape,
+            valueColorClass: 'text-purple-700 dark:text-purple-400',
+            icon: <Zap size={18} />,
+          },
+          {
+            key: 'bipay',
+            title: 'Total Bipay',
+            value: isLoading ? null : totales?.total_bipay,
+            formatMoney: true,
+            accent: KPI_ACCENT.bipay,
+            valueColorClass: 'text-blue-700 dark:text-blue-400',
+            icon: <CreditCard size={18} />,
+          },
+          {
+            key: 'transferencia',
+            title: 'Total Transferencia',
+            value: isLoading ? null : totales?.total_transferencia,
+            formatMoney: true,
+            accent: KPI_ACCENT.transfer,
+            valueColorClass: 'text-teal-700 dark:text-teal-400',
+            icon: <Landmark size={18} />,
+          },
+        ]}
+      />
+
+      {/* Ganancia total del período */}
+      {usuario?.rol === 'admin' && (
+        <ProfitBanner
+          title="Ganancia Total del Período"
+          subtitle={`Suma de ganancias y comisiones registradas entre el ${new Date(appliedFilters.fecha_desde + 'T00:00:00').toLocaleDateString('es-PE')} y el ${new Date(appliedFilters.fecha_hasta + 'T00:00:00').toLocaleDateString('es-PE')}.`}
+          value={isLoading ? '···' : fmt(data?.ganancia_total)}
+          accent={KPI_ACCENT.ganancia}
+        />
+      )}
 
       {/* Tabla últimos reportes */}
       <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
@@ -366,7 +426,16 @@ export function DashboardPage() {
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-sm">Cargando datos...</td></tr>
               )}
               {!isLoading && reportes.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-sm">Sin reportes en el período seleccionado</td></tr>
+                <tr>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">
+                    <span className="inline-flex flex-col items-center gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.04] dark:text-zinc-500">
+                        <Search size={16} />
+                      </span>
+                      No se encontraron reportes con estos filtros.
+                    </span>
+                  </td>
+                </tr>
               )}
               {reportes.map((r) => {
                 const dif = Number(r.diferencia)
