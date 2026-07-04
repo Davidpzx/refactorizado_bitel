@@ -14,6 +14,7 @@ use App\Models\VentaLinea;
 use App\Services\ComisionService;
 use App\Services\ComisionOperativaService;
 use App\Services\UserAgentResolver;
+use App\Support\PlanillaGuard;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -638,6 +639,22 @@ class ReporteController extends Controller
         // Paridad legacy (sis_bipay/gerencia/eliminar_reporte.php): se puede eliminar
         // cualquier reporte, incluido uno aprobado. El bloqueo por estado==='aprobado'
         // era una regla nueva del refactor que negocio decidió revertir.
+        //
+        // Pero destruir un reporte revierte stock y borra ventas: si la comisión de
+        // alguna de esas ventas ya fue PAGADA en una planilla cerrada (mismo criterio
+        // que InventarioController::restaurar), eliminar dejaría cobrada una comisión
+        // sin la venta que la originó. Se bloquea con 422 antes de tocar nada.
+        $fecha = (string) $reporte->fecha;
+        foreach (Venta::where('reporte_id', $reporte->id)->pluck('vendedor_id')->unique() as $vendedorId) {
+            $boletaPagada = PlanillaGuard::boletaPagada((int) $vendedorId, $fecha);
+            if ($boletaPagada) {
+                return response()->json([
+                    'error' => "No se puede eliminar: la comisión de una venta de este reporte ya fue pagada en la planilla del "
+                        . "{$boletaPagada->fecha_inicio} al {$boletaPagada->fecha_fin} (boleta #{$boletaPagada->id}).",
+                ], 422);
+            }
+        }
+
         DB::transaction(function () use ($reporte) {
             $this->revertirVentas($reporte);
             $reporte->delete();

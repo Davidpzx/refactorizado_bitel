@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
 use App\Models\VentaEquipo;
+use App\Support\PlanillaGuard;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -762,15 +763,10 @@ class InventarioController extends Controller
         $ventaEquipo = VentaEquipo::where('inventario_tienda_id', $id)->latest('id')->first();
         $venta = $ventaEquipo?->venta;
 
-        if ($venta && Schema::hasTable('pagos_planilla')) {
+        if ($venta) {
             $reporteFecha = DB::table('reportes')->where('id', $venta->reporte_id)->value('fecha');
             if ($reporteFecha) {
-                $boletaPagada = DB::table('pagos_planilla')
-                    ->where('agente_id', $venta->vendedor_id)
-                    ->where('estado', 'PAGADO')
-                    ->whereDate('fecha_inicio', '<=', $reporteFecha)
-                    ->whereDate('fecha_fin', '>=', $reporteFecha)
-                    ->first();
+                $boletaPagada = PlanillaGuard::boletaPagada((int) $venta->vendedor_id, $reporteFecha);
 
                 if ($boletaPagada) {
                     return response()->json([

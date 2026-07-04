@@ -93,4 +93,65 @@ class ReporteDestroyAprobadoTest extends TestCase
             'id' => $invId, 'estado' => 'DISPONIBLE', 'cantidad' => 1, 'reporte_venta_id' => null,
         ]);
     }
+
+    /**
+     * Riesgo financiero: destroy() revierte stock y borra ventas. Si la comisión de
+     * esas ventas ya fue PAGADA en una planilla cerrada, eliminar dejaría cobrada una
+     * comisión sin la venta que la originó. Mismo criterio que
+     * InventarioController::restaurar (ver InventarioRestaurarTest).
+     */
+    public function test_eliminar_reporte_bloqueado_si_comision_ya_esta_pagada_en_planilla(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $reporteId = $this->crearReporteAprobado('T01', 999);
+
+        DB::table('agentes')->insert([
+            'id' => 1, 'dni' => '00000001', 'nombres' => 'Vendedor Demo', 'estado' => 'ACTIVO',
+        ]);
+
+        $invId = DB::table('inventario_tiendas')->insertGetId([
+            'tienda_id' => 'T01', 'producto_nombre' => 'Redmi 12', 'tipo' => 'EQUIPO',
+            'imei_serial' => '123456789012345', 'cantidad' => 0, 'estado' => 'VENDIDO',
+            'reporte_venta_id' => $reporteId,
+        ]);
+
+        $ventaId = DB::table('ventas')->insertGetId([
+            'reporte_id' => $reporteId, 'vendedor_id' => 1,
+            'tipo_venta' => 'EQUIPO', 'cross_selling' => false,
+            'monto_total' => 350, 'comision_generada' => 5, 'comision_estado' => 'ACTIVA',
+            'creado_en' => now(),
+        ]);
+        DB::table('venta_equipos')->insert([
+            'venta_id' => $ventaId, 'producto_nombre_snap' => 'Redmi 12', 'imei_serial_snap' => '123456789012345',
+            'tipo_item' => 'EQUIPO', 'tipo_pago' => 'CONTADO', 'precio_venta' => 350, 'costo_snap' => 250,
+            'ganancia_snap' => 100, 'inventario_tienda_id' => $invId,
+        ]);
+
+        DB::table('pagos_planilla')->insert([
+            'agente_id'           => 1,
+            'fecha_inicio'        => '2026-06-01',
+            'fecha_fin'           => '2026-06-30',
+            'sueldo_base'         => 1000,
+            'bonos_comisiones'    => 0,
+            'descuento_tardanza'  => 0,
+            'descuento_adelantos' => 0,
+            'total_pagado'        => 1000,
+            'estado'              => 'PAGADO',
+            'fecha_pago'          => now(),
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/reportes/{$reporteId}")
+            ->assertStatus(422);
+
+        // Nada debe borrarse ni revertirse.
+        $this->assertDatabaseHas('reportes', ['id' => $reporteId]);
+        $this->assertDatabaseHas('ventas', ['id' => $ventaId]);
+        $this->assertDatabaseHas('venta_equipos', ['venta_id' => $ventaId]);
+        $this->assertDatabaseHas('inventario_tiendas', [
+            'id' => $invId, 'estado' => 'VENDIDO', 'cantidad' => 0, 'reporte_venta_id' => $reporteId,
+        ]);
+    }
 }
