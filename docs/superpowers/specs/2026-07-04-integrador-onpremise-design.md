@@ -226,3 +226,16 @@ no está provisionado, en vez de repartir instaladores inertes. Esto es portable
    cubrirlos con TDD y desbloquear el punto 6 del §4 (`last_sync_at`)?
 </content>
 </invoke>
+
+---
+
+## Decisiones del usuario (2026-07-04) — M7 CONGELADO aquí
+
+Módulo 7 se congela en este estado (spec + fix de seguridad de `descargarAgente`). Se retomará como sub-proyecto aparte. Decisiones tomadas para cuando se retome:
+
+1. **Entrega del agente:** restaurar el modelo legacy (lanzador + código ofuscado + marca de agua, token nunca en claro en la PC de la tienda). Implica implementar `POST /v1/integrador/agente-codigo` y rehacer `descargarAgente` con ofuscación. NO implementado ahora — decisión registrada para el sub-proyecto futuro.
+2. **Auth de `recibir-saldo`:** mantener la API key global compartida por ahora (no romper los agentes on-premise ya instalados). Migración a token-por-tienda queda como proyecto futuro coordinado con la actualización en campo de los agentes.
+3. **Provisión de binarios del scraper Bitel** (`agente_bipay.php`, `BitelBipayClient.php`) y **`tipo_operacion` del sync** (SYNC_AUTO vs AJUSTE): pendientes, dependen de si el flujo CAS/HTML de Bitel sigue vigente — a definir al retomar.
+4. **Deuda técnica testeable** (endpoints M2M con SQL crudo MySQL sin cobertura sqlite; `last_sync_at` nunca escrito): documentada, a resolver con suite MySQL o portar a `upsert()`/`insertOrIgnore()` al retomar.
+
+**Estado del resto del gap analysis: COMPLETO.** Módulos 0-6 implementados, revisados y desplegados.
