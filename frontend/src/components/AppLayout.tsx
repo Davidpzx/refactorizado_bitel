@@ -134,8 +134,9 @@ export function AppLayout() {
   const userNameCls     = isDark ? 'text-zinc-200' : 'text-gray-800'
   const userRoleCls     = isDark ? 'text-zinc-600' : 'text-gray-400'
   const logoutCls       = isDark
-    ? 'text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300'
-    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+    ? 'text-red-400 hover:bg-red-500/10'
+    : 'text-red-500 hover:bg-red-50'
+  const mutedToggleIconCls = isDark ? 'text-zinc-600' : 'text-gray-300'
   const soonCls         = isDark ? 'text-zinc-700' : 'text-gray-300'
   const soonBadgeCls    = isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400'
   const mobileMenuCls   = isDark
@@ -153,9 +154,18 @@ export function AppLayout() {
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2 min-w-0">
               <span
-                className="font-orbitron text-base font-bold tracking-widest uppercase text-kyro-gold"
+                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(255,194,0,0.15)' }}
               >
-                SIS-KYRO
+                <Users size={16} className="text-kyro-gold" />
+              </span>
+              <span className="flex flex-col min-w-0 leading-tight">
+                <span className="font-orbitron text-sm font-bold tracking-widest uppercase text-kyro-gold truncate">
+                  SIS-KYRO
+                </span>
+                <span className={`text-[9px] uppercase tracking-wide truncate ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+                  Panel de Gestión
+                </span>
               </span>
               {usuario?.tienda_id && (
                 <span
@@ -212,7 +222,7 @@ export function AppLayout() {
         {/* Nav ─────────────────────────────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visibleItems.map(({ to, label, Icon, soon, section }, idx) => {
-            const showSeparator = idx !== 0 && section !== visibleItems[idx - 1].section
+            const showSeparator = idx === 0 || section !== visibleItems[idx - 1].section
 
             return (
               <div key={to}>
@@ -288,22 +298,87 @@ export function AppLayout() {
         <div className={`border-t ${footerBorder} p-3 shrink-0`}>
           {!collapsed ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
-                >
-                  {(usuario?.nombre ?? 'U').charAt(0).toUpperCase()}
+              {/* Tarjeta de usuario */}
+              <div
+                className="rounded-kyro p-2 space-y-2"
+                style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #ffc200, #d97706)' }}
+                  >
+                    {(usuario?.nombre ?? 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-[12px] font-semibold truncate ${userNameCls}`}>{usuario?.nombre}</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${userRoleCls}`}>{usuario?.rol}</p>
+                    <span
+                      className="inline-block text-[9px] px-1.5 py-0.5 rounded font-semibold mt-0.5"
+                      style={{
+                        background: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)',
+                        color: isDark ? '#a5b4fc' : '#4f46e5',
+                      }}
+                    >
+                      {usuario?.tienda_id ?? 'CENTRAL'}
+                    </span>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className={`text-[12px] font-semibold truncate ${userNameCls}`}>{usuario?.nombre}</p>
-                  <p className={`text-[10px] uppercase tracking-wider ${userRoleCls}`}>{usuario?.rol}</p>
+                {/* Toggle de tema (luna / dorado / sol) */}
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <Moon size={12} className={isDark ? 'text-kyro-gold' : mutedToggleIconCls} />
+                  <button
+                    onClick={toggleTheme}
+                    title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                    className="relative w-9 h-5 rounded-full transition-colors shrink-0"
+                    style={{ background: '#ffc200' }}
+                  >
+                    <span
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                      style={{ transform: isDark ? 'translateX(18px)' : 'translateX(2px)' }}
+                    />
+                  </button>
+                  <Sun size={12} className={!isDark ? 'text-kyro-gold' : mutedToggleIconCls} />
                 </div>
               </div>
+
+              {/* Notificaciones */}
+              <button
+                onClick={() => setCcOpen((o) => !o)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                style={{
+                  background: isDark ? 'rgba(255,194,0,0.12)' : 'rgba(255,194,0,0.15)',
+                  color: isDark ? '#ffc200' : '#b45309',
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <Bell size={13} />
+                  Notificaciones
+                </span>
+                {notifCount > 0 && (
+                  <span className="min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[9px] font-bold rounded-full text-white" style={{ background: '#ef4444' }}>
+                    {notifCount > 99 ? '99+' : notifCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Aprobar Traslados — solo admin */}
+              {isAdmin && (
+                <Link
+                  to="/traslados"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}
+                >
+                  <ArrowLeftRight size={13} />
+                  Aprobar Traslados
+                </Link>
+              )}
+
               <button
                 onClick={() => logout()}
                 disabled={isLoggingOut}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40 ${logoutCls}`}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors disabled:opacity-40 ${logoutCls}`}
               >
                 <LogOut size={12} />
                 {isLoggingOut ? 'Saliendo...' : 'Cerrar sesión'}
