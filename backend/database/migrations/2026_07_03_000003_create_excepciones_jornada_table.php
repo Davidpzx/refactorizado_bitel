@@ -33,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('excepciones_jornada');
+        // Tabla compartida con el legacy: no se elimina en rollback por seguridad.
     }
 };
