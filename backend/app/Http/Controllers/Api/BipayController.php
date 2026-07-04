@@ -80,7 +80,8 @@ class BipayController extends Controller
             ]);
         }
 
-        [$query] = $this->consultaTransacciones($request);
+        [$desde, $hasta] = $this->resolverRangoFechas($request);
+        $query = $this->consultaTransacciones($request, $desde, $hasta);
 
         $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
 
@@ -98,7 +99,16 @@ class BipayController extends Controller
             return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
         }
 
-        [$query, $desde, $hasta, $capAplicado] = $this->consultaTransacciones($request);
+        [$desde, $hasta] = $this->resolverRangoFechas($request);
+
+        $capAplicado = false;
+        $hastaCarbon = Carbon::parse($hasta);
+        if (Carbon::parse($desde)->diffInDays($hastaCarbon) > self::EXPORT_DIAS_MAX) {
+            $desde = $hastaCarbon->copy()->subDays(self::EXPORT_DIAS_MAX)->toDateString();
+            $capAplicado = true;
+        }
+
+        $query = $this->consultaTransacciones($request, $desde, $hasta);
         $historial = $query->orderByDesc('tb.creado_en')->get();
 
         $spreadsheet = new Spreadsheet();
@@ -158,25 +168,29 @@ class BipayController extends Controller
     }
 
     /**
-     * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
-     * exportarTransacciones() (fecha, cuenta, tipo de operación).
+     * Resuelve fecha_desde/fecha_hasta desde el request (o sus valores por defecto),
+     * sin aplicar ningún tope de rango.
      *
-     * @return array{0: Builder, 1: string, 2: string, 3: bool}
+     * @return array{0: string, 1: string}
      */
-    private function consultaTransacciones(Request $request): array
+    private function resolverRangoFechas(Request $request): array
     {
-        $desde       = $request->get('fecha_desde', now()->startOfMonth()->toDateString());
-        $hasta       = $request->get('fecha_hasta', now()->toDateString());
+        return [
+            $request->get('fecha_desde', now()->startOfMonth()->toDateString()),
+            $request->get('fecha_hasta', now()->toDateString()),
+        ];
+    }
+
+    /**
+     * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
+     * exportarTransacciones() (fecha, cuenta, tipo de operación). El rango de fechas ya
+     * debe venir resuelto (y, si aplica, acotado) por el llamante.
+     */
+    private function consultaTransacciones(Request $request, string $desde, string $hasta): Builder
+    {
         $cuentaId    = $request->get('cuenta_id');
         $tipoOp      = $request->get('tipo_operacion');
         $tiposValidos = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA', 'CIERRE_DIA'];
-
-        $capAplicado = false;
-        $hastaCarbon = Carbon::parse($hasta);
-        if (Carbon::parse($desde)->diffInDays($hastaCarbon) > self::EXPORT_DIAS_MAX) {
-            $desde = $hastaCarbon->copy()->subDays(self::EXPORT_DIAS_MAX)->toDateString();
-            $capAplicado = true;
-        }
 
         $query = DB::table('transacciones_bipay as tb')
             ->leftJoin('cuentas_bipay as co', 'co.id', '=', 'tb.cuenta_origen_id')
@@ -200,7 +214,7 @@ class BipayController extends Controller
             $query->where('tb.tipo_operacion', $tipoOp);
         }
 
-        return [$query, $desde, $hasta, $capAplicado];
+        return $query;
     }
 
     public function recarga(Request $request): JsonResponse

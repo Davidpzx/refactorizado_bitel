@@ -259,6 +259,57 @@ class BipayPanelAvanzadoTest extends TestCase
             ->assertStatus(403);
     }
 
+    // ── Regresión: el cap de 90 días es solo para el export, no para la vista paginada ──
+
+    public function test_transacciones_json_no_acota_rango_explicito_mayor_a_90_dias(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $cuenta = DB::table('cuentas_bipay')->insertGetId(['alias' => 'Cta Uno', 'saldo_actual' => 0]);
+
+        DB::table('transacciones_bipay')->insert([
+            ['cuenta_origen_id' => $cuenta, 'tipo_operacion' => 'RECARGA', 'plataforma' => 'BIPAY', 'monto' => 10, 'creado_por' => $admin->id, 'creado_en' => '2026-01-01 09:00:00'],
+            ['cuenta_origen_id' => $cuenta, 'tipo_operacion' => 'RECARGA', 'plataforma' => 'BIPAY', 'monto' => 20, 'creado_por' => $admin->id, 'creado_en' => '2026-07-03 09:00:00'],
+        ]);
+
+        // Rango explícito de más de 180 días: ambas transacciones deben aparecer, sin recorte.
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/bipay/transacciones?' . http_build_query([
+                'fecha_desde' => '2026-01-01',
+                'fecha_hasta' => '2026-07-03',
+            ]))
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_exportar_transacciones_acota_rango_explicito_mayor_a_90_dias_y_anota_excel(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $cuenta = DB::table('cuentas_bipay')->insertGetId(['alias' => 'Cta Uno', 'saldo_actual' => 0]);
+
+        DB::table('transacciones_bipay')->insert([
+            // fuera del cap de 90 días (queda antes de 2026-04-04 aprox.) -> no debe aparecer.
+            ['cuenta_origen_id' => $cuenta, 'tipo_operacion' => 'RECARGA', 'plataforma' => 'BIPAY', 'monto' => 10, 'creado_por' => $admin->id, 'creado_en' => '2026-01-01 09:00:00'],
+            ['cuenta_origen_id' => $cuenta, 'tipo_operacion' => 'RECARGA', 'plataforma' => 'BIPAY', 'monto' => 20, 'creado_por' => $admin->id, 'creado_en' => '2026-07-03 09:00:00'],
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get('/api/v1/bipay/transacciones/exportar?' . http_build_query([
+                'fecha_desde' => '2026-01-01',
+                'fecha_hasta' => '2026-07-03',
+            ]))
+            ->assertOk();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'bipay') . '.xlsx';
+        file_put_contents($tmp, $response->streamedContent());
+        $sheet = IOFactory::load($tmp)->getActiveSheet();
+        unlink($tmp);
+
+        $this->assertStringContainsString('acotado a los últimos 90 días', (string) $sheet->getCell('A2')->getValue());
+        $this->assertSame('RECARGA', $sheet->getCell('B3')->getValue());
+        // Solo la fila de julio (dentro de los últimos 90 días) -> nada más después de la fila 3.
+        $this->assertSame('', (string) $sheet->getCell('A4')->getValue());
+    }
+
     public function test_transacciones_json_filtra_por_tipo_operacion(): void
     {
         $admin = Usuario::factory()->admin()->create();
