@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { ArrowRightLeft } from 'lucide-react'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { api } from '../../services/api'
@@ -738,6 +739,7 @@ export function TrasladosPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={ArrowRightLeft}
         title="Traslados"
         description="Gestión de traslados de equipos, accesorios y chips entre tiendas."
         actions={
