@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\UserAgentResolver;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -127,7 +128,7 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket no encontrado.'], 404);
         }
         abort_if(
-            $request->user()->rol !== 'admin' && $ticket->tienda_id !== $request->user()->tienda_id,
+            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $ticket->tienda_id),
             403,
             'No tienes permisos sobre este ticket.'
         );
@@ -144,7 +145,7 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket no encontrado.'], 404);
         }
         abort_if(
-            $request->user()->rol !== 'admin' && $ticket->tienda_id !== $request->user()->tienda_id,
+            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $ticket->tienda_id),
             403,
             'No tienes permisos sobre este ticket.'
         );
