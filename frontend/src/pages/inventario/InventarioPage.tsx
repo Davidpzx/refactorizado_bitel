@@ -246,6 +246,83 @@ function CampanaCostosWidget() {
   )
 }
 
+// ── Stock Estancado ───────────────────────────────────────────────────────────
+
+interface StockEstancadoItem {
+  tienda_id: string
+  nombre_tienda: string | null
+  tipo: string
+  producto_nombre: string
+  cantidad: number
+  precio_costo: number
+  dias_estancado: number
+  capital: number
+}
+
+interface StockEstancadoResponse {
+  ok: boolean
+  data: StockEstancadoItem[]
+  capital_inmovilizado: number
+}
+
+function StockEstancadoWidget() {
+  const [open, setOpen] = useState(false)
+
+  const { data } = useQuery<StockEstancadoResponse>({
+    queryKey: ['inventario-stock-estancado'],
+    queryFn: () => api.get('/v1/inventario/stock-estancado').then(r => r.data),
+    staleTime: 60_000,
+  })
+
+  const items = data?.data ?? []
+  if (items.length === 0) return null
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        onClick={() => setOpen(true)}
+        className="mb-4 h-auto w-full justify-start gap-2 border-kyro-info/40 bg-kyro-info/10 px-4 py-2.5 text-kyro-info hover:bg-kyro-info/20"
+      >
+        <AlertTriangle size={15} className="shrink-0" />
+        <span>
+          {items.length} {items.length === 1 ? 'ítem estancado' : 'ítems estancados'} (30+ días sin movimiento) — capital inmovilizado S/ {(data?.capital_inmovilizado ?? 0).toFixed(2)}
+        </span>
+      </Button>
+
+      <Dialog open={open} onClose={() => setOpen(false)} title="Stock estancado (30+ días sin movimiento)" maxWidth="lg">
+        <div className="max-h-[60vh] overflow-y-auto pr-1">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="kyro-table-head">
+                {['Tienda', 'Tipo', 'Producto', 'Cant.', 'P. Costo', 'Días', 'Capital'].map(h => (
+                  <th key={h} className="px-3 py-2 text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={i} className="border-t border-kyro-border">
+                  <td className="px-3 py-2 text-xs">{item.nombre_tienda ?? item.tienda_id}</td>
+                  <td className="px-3 py-2 text-xs uppercase">{item.tipo}</td>
+                  <td className="px-3 py-2 text-xs">{item.producto_nombre}</td>
+                  <td className="px-3 py-2 text-xs text-right">{item.cantidad}</td>
+                  <td className="px-3 py-2 text-xs text-right">S/ {item.precio_costo.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-xs text-right">{item.dias_estancado}</td>
+                  <td className="px-3 py-2 text-xs text-right font-semibold">S/ {item.capital.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex justify-end pt-3">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
+        </div>
+      </Dialog>
+    </>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function InventarioPage() {
@@ -411,6 +488,7 @@ export function InventarioPage() {
       />
 
       <CampanaCostosWidget />
+      <StockEstancadoWidget />
 
       <SegmentedToggle
         ariaLabel="Filtrar inventario por tipo"
