@@ -178,8 +178,8 @@ class LeadController extends Controller
         // Ranking agentes CRM (JOIN agentes para nombre) ───────────────────────
         $ranking = $buildBase()
             ->join('agentes as ag', 'ag.id', '=', 'leads.agente_id')
-            ->selectRaw("leads.agente_id, ag.nombres, ag.tienda_id as tienda_base, COUNT(*) as total_leads, SUM(leads.estado = 'CONVERTIDO') as conv")
-            ->groupBy('leads.agente_id', 'ag.nombres', 'ag.tienda_id')
+            ->selectRaw("leads.agente_id, ag.nombres, ag.tienda_base, COUNT(*) as total_leads, SUM(leads.estado = 'CONVERTIDO') as conv")
+            ->groupBy('leads.agente_id', 'ag.nombres', 'ag.tienda_base')
             ->orderByDesc('total_leads')
             ->limit(10)
             ->get()
