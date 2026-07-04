@@ -122,6 +122,51 @@ class LeadTest extends TestCase
         $this->assertEquals(2, $data[0]['agente_id']);
     }
 
+    public function test_index_no_admin_solo_ve_leads_de_su_tienda(): void
+    {
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA99', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+
+        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+
+        $response = $this->actingAs($vendedor, 'sanctum')
+            ->getJson('/api/v1/leads')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('PUNDA50', $data[0]['tienda_id']);
+    }
+
+    public function test_index_no_admin_ignora_tienda_id_del_request_y_usa_la_suya(): void
+    {
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA99', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+
+        $vendedor = Usuario::factory()->vendedor('PUNDA50')->create();
+
+        $response = $this->actingAs($vendedor, 'sanctum')
+            ->getJson('/api/v1/leads?tienda_id=PUNDA99')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('PUNDA50', $data[0]['tienda_id']);
+    }
+
+    public function test_index_no_admin_sin_tienda_asignada_no_ve_nada(): void
+    {
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+
+        $vendedor = Usuario::factory()->vendedor('')->create();
+
+        $response = $this->actingAs($vendedor, 'sanctum')
+            ->getJson('/api/v1/leads')
+            ->assertOk();
+
+        $this->assertCount(0, $response->json('data'));
+    }
+
     // ── Store ────────────────────────────────────────────────────────────────────
 
     public function test_store_crea_lead_correctamente(): void

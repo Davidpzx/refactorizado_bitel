@@ -10,12 +10,27 @@ use Illuminate\Http\Request;
 
 class LeadController extends Controller
 {
+    // Fallar CERRADO: un usuario no-admin sin tienda_id asignada no debe ver nada.
+    // Mismo criterio que EstadisticasController::tiendaScope.
+    private function tiendaScope(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if ($user->rol !== 'admin') {
+            return $user->tienda_id ?: '__SIN_TIENDA__';
+        }
+
+        return $request->get('tienda_id');
+    }
+
     public function index(Request $request): JsonResponse
     {
+        $tienda = $this->tiendaScope($request);
+
         $leads = Lead::with('cliente:id,dni_ruc,nombre,telefono')
             ->when($request->estado, fn($q, $v) => $q->where('estado', $v))
             ->when($request->agente_id, fn($q, $v) => $q->where('agente_id', $v))
-            ->when($request->tienda_id, fn($q, $v) => $q->where('tienda_id', $v))
+            ->when($tienda, fn($q) => $q->where('tienda_id', $tienda))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $termino = '%'.trim((string) $request->input('q')).'%';
                 $q->where(function ($sub) use ($termino) {
