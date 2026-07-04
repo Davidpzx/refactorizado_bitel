@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Agente;
 use App\Models\PlanillaAjuste;
+use App\Support\RankingVentaScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -349,17 +350,16 @@ class PlanillaController extends Controller
     {
         $rangos = $this->rangosProductividad('PLAN');
         if (empty($rangos)) {
-            $rows = DB::table('ventas')
+            $query = DB::table('ventas')
                 ->join('reportes', 'ventas.reporte_id', '=', 'reportes.id')
                 ->whereIn('ventas.vendedor_id', $ids)
                 ->whereIn('ventas.tipo_venta', ['POSTPAGO', 'PREPAGO'])
-                ->where('ventas.es_remate', false)
                 ->where('ventas.comision_estado', '!=', 'ANULADA')
-                ->where(fn($q) => $q->whereNull('ventas.subtipo')->orWhere('ventas.subtipo', '!=', 'PAQUETE'))
                 ->whereBetween('reportes.fecha', [$inicio, $fin])
                 ->groupBy('ventas.vendedor_id')
-                ->selectRaw('ventas.vendedor_id, SUM(ventas.comision_generada) as total')
-                ->get();
+                ->selectRaw('ventas.vendedor_id, SUM(ventas.comision_generada) as total');
+            RankingVentaScope::excluirRematesYPaquetes($query, 'ventas');
+            $rows = $query->get();
 
             return $rows->pluck('total', 'vendedor_id')->map(fn($v) => floatval($v))->all();
         }
