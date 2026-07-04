@@ -60,8 +60,12 @@ class ReporteStoreParityTest extends TestCase
         $this->assertSame('PUNDA11', $rows[2]->tienda_destino);
     }
 
-    public function test_store_mantiene_guardia_anti_duplicado(): void
+    public function test_store_permite_varios_cuadres_el_mismo_dia(): void
     {
+        // La guardia anti-duplicado (agente, tienda, fecha) se eliminó a propósito en
+        // "nuevo reporte 3.0" (36b0e22): el front soporta "cerrar caja y abrir nueva"
+        // (cerrarCajaRef en NuevoReportePage.tsx), por lo que un mismo agente puede
+        // generar más de un reporte el mismo día.
         $usuario = $this->vendedorVinculado('PUNDA50');
         $payload = $this->payload($usuario);
 
@@ -69,11 +73,11 @@ class ReporteStoreParityTest extends TestCase
             ->postJson('/api/v1/reportes', $payload)
             ->assertCreated();
 
-        $this->postJson('/api/v1/reportes', $payload)
-            ->assertUnprocessable()
-            ->assertJsonPath('code', 'DUPLICATE_REPORT');
+        $this->actingAs($usuario, 'sanctum')
+            ->postJson('/api/v1/reportes', $payload)
+            ->assertCreated();
 
-        $this->assertDatabaseCount('reportes', 1);
+        $this->assertDatabaseCount('reportes', 2);
     }
 
     public function test_equipo_cuotas_pendiente_y_desembolso_libera_comision(): void
