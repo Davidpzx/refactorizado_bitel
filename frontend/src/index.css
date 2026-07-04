@@ -13,8 +13,8 @@
   --color-kyro-panel:        rgba(255, 255, 255, 0.78);
   --color-kyro-card:         rgba(255, 255, 255, 0.78);
   --color-kyro-elevated:     #ffffff;
-  --color-kyro-gold:         #ffc200;
-  --color-kyro-gold-dim:     rgba(255, 194, 0, 0.15);
+  --color-kyro-gold:         #6366f1;
+  --color-kyro-gold-dim:     rgba(99, 102, 241, 0.15);
   --color-kyro-indigo:       #6366f1;
   --color-kyro-indigo-dim:   rgba(99, 102, 241, 0.15);
   --color-kyro-border:       rgba(203, 213, 225, 0.72);
@@ -29,7 +29,7 @@
   --color-kyro-danger:       #ef4444;
   --color-kyro-warning:      #f59e0b;
   --color-kyro-info:         #06b6d4;
-  --color-kyro-gold-ink:     #1e293b;
+  --color-kyro-gold-ink:     #ffffff;
 
   /* — Paleta KPI por tipo (border-left del dashboard) — */
   --color-kpi-total:         #0d6efd;
