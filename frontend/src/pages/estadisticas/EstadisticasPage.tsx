@@ -12,7 +12,7 @@ import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { StatCard } from '../../components/ui/StatCard'
-import { Download, TrendingUp, BarChart2 } from 'lucide-react'
+import { Download, TrendingUp, BarChart2, Search } from 'lucide-react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
@@ -24,6 +24,15 @@ const COLORS = {
   equipos:  'var(--color-kyro-warning)',
   accesorios: 'var(--color-kyro-success)',
   otros:    'var(--color-kyro-muted)',
+}
+
+// Color legacy por categoría (headers de tabla coloreados, "Productividad por Tienda").
+// Inline style: gana sobre `.kyro-table-head th { color }` (selector descendente).
+const CAT_HEAD_COLOR: Record<string, string> = {
+  Postpago:   '#3b82f6',
+  Prepago:    '#a855f7',
+  Equipos:    '#f59e0b',
+  Accesorios: '#22c55e',
 }
 
 const RANK_CATS = [
@@ -298,7 +307,7 @@ export function EstadisticasPage() {
               <thead>
                 <tr className="kyro-table-head">
                   {['#', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Total'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left" style={CAT_HEAD_COLOR[h] ? { color: CAT_HEAD_COLOR[h] } : undefined}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -306,16 +315,21 @@ export function EstadisticasPage() {
                 {porTienda.map((t, i) => (
                   <tr key={t.tienda_id} className="border-b border-kyro-border transition-colors hover:bg-kyro-gold/5">
                     <td className="px-4 py-3 text-gray-400 text-xs">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-slate-700">{t.tienda_id}</td>
+                    <td className="px-4 py-3 font-mono font-medium text-slate-700 dark:text-zinc-300">{t.tienda_id}</td>
                     <td className="px-4 py-3 font-bold text-blue-700 dark:text-blue-400">{t.postpago}</td>
-                    <td className="px-4 py-3 font-bold text-purple-700">{t.prepago}</td>
+                    <td className="px-4 py-3 font-bold text-purple-700 dark:text-purple-400">{t.prepago}</td>
                     <td className="px-4 py-3 font-bold text-orange-700 dark:text-orange-400">{t.equipos}</td>
                     <td className="px-4 py-3 font-bold text-green-700 dark:text-green-400">{t.accesorios}</td>
-                    <td className="px-4 py-3 font-bold text-kyro-text">{t.total}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex min-w-8 justify-center rounded-md bg-kyro-elevated px-2 py-0.5 font-bold tabular-nums text-kyro-text">{t.total}</span>
+                    </td>
                   </tr>
                 ))}
                 {porTienda.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Sin datos</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-12 text-center text-kyro-muted">
+                    <Search size={26} className="mx-auto mb-2 opacity-40" />
+                    Sin datos en el período seleccionado
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -367,7 +381,7 @@ export function EstadisticasPage() {
                     ? ['#', 'Agente', 'Tienda', 'Ventas', 'Comisión']
                     : ['#', 'Agente', 'Tienda', 'Postpago', 'Prepago', 'Equipos', 'Accesorios', 'Comisión', 'Total']
                   ).map(h => (
-                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left" style={CAT_HEAD_COLOR[h] ? { color: CAT_HEAD_COLOR[h] } : undefined}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -395,7 +409,10 @@ export function EstadisticasPage() {
                   </tr>
                 ))}
                 {ranking.length === 0 && (
-                  <tr><td colSpan={rankingFiltrado ? 5 : 9} className="px-4 py-10 text-center text-kyro-muted">Sin datos en el período</td></tr>
+                  <tr><td colSpan={rankingFiltrado ? 5 : 9} className="px-4 py-12 text-center text-kyro-muted">
+                    <Search size={26} className="mx-auto mb-2 opacity-40" />
+                    Sin datos en el período
+                  </td></tr>
                 )}
               </tbody>
             </table>
