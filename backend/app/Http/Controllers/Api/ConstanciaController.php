@@ -244,6 +244,7 @@ class ConstanciaController extends Controller
 
         $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
             ->where('reporte_id', $id)
+            ->where('comision_estado', '!=', 'ANULADA')
             ->orderBy('id')
             ->get();
 

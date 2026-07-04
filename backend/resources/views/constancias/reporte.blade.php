@@ -163,9 +163,10 @@
 @if($equipos->count() > 0)
 <table>
     <thead>
-        <tr><th colspan="8" class="titulo-seccion">3. EQUIPOS Y ACCESORIOS</th></tr>
+        <tr><th colspan="9" class="titulo-seccion">3. EQUIPOS Y ACCESORIOS</th></tr>
         <tr>
             <th>Producto</th><th>IMEI/Serial</th><th class="monto">Precio</th>
+            <th class="monto">Cta. Inicial</th>
             <th>Tipo Pago</th><th>Financiera</th><th>Vendedor</th><th>DNI Cliente</th>
             <th class="monto">Ganancia</th>
         </tr>
@@ -176,7 +177,7 @@
             @php
                 $e = $v->equipo;
                 $tp = strtoupper($e?->tipo_pago ?? 'CONTADO');
-                $precio = $tp === 'CUOTAS' ? (float) $v->efectivo_inicial : (float) ($e?->precio_venta ?? $v->monto_total);
+                $precio = (float) $v->monto_total;
                 $ganancia = (float) ($e?->ganancia_snap ?? 0);
                 $totPrecio += $precio;
                 $totGanancia += $ganancia;
@@ -185,6 +186,7 @@
             <td>{{ $e?->producto_nombre_snap ?? '—' }}</td>
             <td class="centro">{{ $e?->imei_serial_snap ?? '—' }}</td>
             <td class="monto">S/ {{ number_format($precio, 2) }}</td>
+            <td class="monto">{{ $tp === 'CUOTAS' ? 'S/ ' . number_format((float) $v->efectivo_inicial, 2) : '—' }}</td>
             <td class="centro">{{ $tp }}</td>
             <td class="centro">{{ $e?->financiera ?? '—' }}</td>
             <td>{{ $nombreVendedor($v) }}</td>
@@ -197,6 +199,7 @@
         <tr class="total-row">
             <td colspan="2">TOTAL EQUIPOS/ACCESORIOS ({{ $equipos->count() }})</td>
             <td class="monto">S/ {{ number_format($totPrecio, 2) }}</td>
+            <td></td>
             <td colspan="4">Comisión: S/ {{ number_format($equipos->sum('comision_generada'), 2) }}</td>
             <td class="monto">S/ {{ number_format($totGanancia, 2) }}</td>
         </tr>

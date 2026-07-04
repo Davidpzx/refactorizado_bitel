@@ -155,6 +155,88 @@ class ConstanciaReporteDetalleTest extends TestCase
         $this->assertStringContainsString('GANANCIA TOTAL', $html);
     }
 
+    public function test_pdf_excluye_ventas_anuladas_igual_que_los_exports_excel(): void
+    {
+        if (! Schema::hasTable('configuraciones')) {
+            Schema::create('configuraciones', function ($table) {
+                $table->id();
+                $table->string('razon_social')->nullable();
+            });
+            DB::table('configuraciones')->insert(['razon_social' => 'BITEL TELECOM S.A.C.']);
+        }
+
+        [$reporteId] = $this->crearReporteConDetalle();
+
+        $ventaEquipoId = DB::table('ventas')
+            ->where('reporte_id', $reporteId)
+            ->where('tipo_venta', 'EQUIPO')
+            ->value('id');
+
+        DB::table('ventas')->where('id', $ventaEquipoId)->update([
+            'comision_estado' => 'ANULADA',
+        ]);
+
+        $reporte = DB::table('reportes as r')
+            ->leftJoin('agentes as a', 'a.id', '=', 'r.agente_id')
+            ->leftJoin('tiendas as t', 't.codigo', '=', 'r.tienda_id')
+            ->where('r.id', $reporteId)
+            ->select('r.*', 'a.nombres as agente_nombre', 'a.dni as agente_dni', 't.nombre as tienda_nombre')
+            ->first();
+
+        $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
+            ->where('reporte_id', $reporteId)
+            ->where('comision_estado', '!=', 'ANULADA')
+            ->orderBy('id')
+            ->get();
+
+        $salidas = DB::table('reporte_salidas')->where('reporte_id', $reporteId)->orderBy('id')->get();
+        $empresa = (object) ['razon_social' => 'BITEL TELECOM S.A.C.'];
+
+        $html = view('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))->render();
+
+        // La venta EQUIPO anulada (iPhone 15, precio 1500) no debe aparecer en la seccion ni sumar.
+        $this->assertStringNotContainsString('iPhone 15', $html);
+        $this->assertSame(0, $ventas->where('tipo_venta', 'EQUIPO')->count());
+        $this->assertStringNotContainsString('S/ 1,500.00', $html);
+
+        // El endpoint real tambien debe filtrar la venta anulada antes de generar el PDF.
+        $response = $this->actingAs($this->vendedorVinculado('PUNDA50'), 'sanctum')
+            ->get("/api/v1/constancias/reporte/{$reporteId}");
+        $response->assertOk();
+    }
+
+    public function test_pdf_muestra_monto_total_como_precio_de_equipo_cuotas_y_cuadra_con_total_calculado(): void
+    {
+        [$reporteId] = $this->crearReporteConDetalle();
+
+        $reporte = DB::table('reportes as r')
+            ->leftJoin('agentes as a', 'a.id', '=', 'r.agente_id')
+            ->leftJoin('tiendas as t', 't.codigo', '=', 'r.tienda_id')
+            ->where('r.id', $reporteId)
+            ->select('r.*', 'a.nombres as agente_nombre', 'a.dni as agente_dni', 't.nombre as tienda_nombre')
+            ->first();
+
+        $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
+            ->where('reporte_id', $reporteId)
+            ->where('comision_estado', '!=', 'ANULADA')
+            ->orderBy('id')
+            ->get();
+
+        $salidas = DB::table('reporte_salidas')->where('reporte_id', $reporteId)->orderBy('id')->get();
+        $empresa = (object) ['razon_social' => 'BITEL TELECOM S.A.C.'];
+
+        $html = view('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))->render();
+
+        // El equipo CUOTAS (contrato S/1500, cuota inicial S/1200) muestra el valor de contrato como
+        // Precio -- igual que los exports Excel (monto_total) -- y la cuota inicial como columna aparte.
+        $this->assertStringContainsString('S/ 1,500.00', $html);
+        $this->assertStringContainsString('S/ 1,200.00', $html);
+
+        // El subtotal itemizado (suma de todas las secciones por monto_total) cuadra con total_calculado.
+        $sumaSecciones = $ventas->sum('monto_total');
+        $this->assertEquals((float) $reporte->total_calculado, $sumaSecciones);
+    }
+
     public function test_endpoint_descarga_pdf_real_sin_error(): void
     {
         if (! Schema::hasTable('configuraciones')) {
