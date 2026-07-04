@@ -152,32 +152,24 @@ export function AppLayout() {
             ${collapsed ? 'justify-center' : 'justify-between'}`}
         >
           {!collapsed && (
-            <Link to="/" className="flex items-center gap-2 min-w-0">
+            <Link to="/" className="flex items-center gap-2 min-w-0 flex-1">
               <span
                 className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(255,194,0,0.15)' }}
               >
                 <Users size={16} className="text-kyro-gold" />
               </span>
-              <span className="flex flex-col min-w-0 leading-tight">
-                <span className="font-orbitron text-sm font-bold tracking-widest uppercase text-kyro-gold truncate">
+              <span className="flex flex-col min-w-0 flex-1 leading-tight">
+                <span className="font-orbitron text-sm font-bold tracking-wide uppercase text-kyro-gold truncate">
                   SIS-KYRO
                 </span>
                 <span className={`text-[9px] uppercase tracking-wide truncate ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
                   Panel de Gestión
                 </span>
               </span>
-              {usuario?.tienda_id && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0"
-                  style={{ background: 'rgba(255,194,0,0.15)', color: isDark ? '#ffc200' : '#d97706' }}
-                >
-                  {usuario.tienda_id}
-                </span>
-              )}
             </Link>
           )}
-          <div className={`flex items-center gap-1 ${collapsed ? '' : 'ml-auto'}`}>
+          <div className={`flex items-center gap-1 shrink-0 ${collapsed ? '' : 'ml-auto'}`}>
             {/* Centro de Control (campana) — solo admin */}
             {isAdmin && (
               <div className="relative">
