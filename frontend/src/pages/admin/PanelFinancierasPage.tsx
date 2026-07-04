@@ -275,7 +275,12 @@ export function PanelFinancierasPage() {
                         <Button
                           size="sm"
                           variant="glassSuccess"
-                          onClick={() => confirmar.mutate(item.id)}
+                          onClick={() => {
+                            if (!window.confirm(
+                              `¿Confirmar desembolso de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)} (${item.vendedor_nombre})? Esta acción no se puede deshacer directamente.`,
+                            )) return
+                            confirmar.mutate(item.id)
+                          }}
                           disabled={confirmar.isPending}
                         >
                           Confirmar Desembolso
@@ -285,7 +290,12 @@ export function PanelFinancierasPage() {
                         <Button
                           size="sm"
                           variant="glassWarning"
-                          onClick={() => revertir.mutate(item.id)}
+                          onClick={() => {
+                            if (!window.confirm(
+                              `¿Revertir el desembolso confirmado de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)} (${item.vendedor_nombre})?`,
+                            )) return
+                            revertir.mutate(item.id)
+                          }}
                           disabled={revertir.isPending}
                         >
                           Revertir
