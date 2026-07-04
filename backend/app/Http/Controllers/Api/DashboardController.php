@@ -86,12 +86,14 @@ class DashboardController extends Controller
 
     public function exportar(Request $request): StreamedResponse
     {
+        $capAplicado = ! $request->fecha_desde && ! $request->fecha_hasta;
+
         $reportes = Reporte::query()
             ->where('reportes.estado', '!=', 'borrador')
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('reportes.fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('reportes.fecha', '<=', $f))
             ->when(
-                ! $request->fecha_desde && ! $request->fecha_hasta,
+                $capAplicado,
                 fn ($q) => $q->whereDate('reportes.fecha', '>=', now()->subDays(self::EXPORT_DIAS_MAX_SIN_FILTRO)->toDateString())
             )
             ->when($request->tienda, fn ($q, $t) => $q->where('reportes.tienda_id', $t))
@@ -122,6 +124,17 @@ class DashboardController extends Controller
         ]);
 
         $fila = 2;
+
+        if ($capAplicado) {
+            $sheet->setCellValue("A{$fila}", 'Período acotado a los últimos ' . self::EXPORT_DIAS_MAX_SIN_FILTRO . ' días (no se aplicó fecha_desde/fecha_hasta).');
+            $sheet->mergeCells("A{$fila}:I{$fila}");
+            $sheet->getStyle("A{$fila}")->applyFromArray([
+                'font' => ['italic' => true, 'color' => ['rgb' => '92400E']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+            ]);
+            $fila++;
+        }
+
         foreach ($reportes as $r) {
             $idStr  = '#' . str_pad((string) $r->id, 4, '0', STR_PAD_LEFT);
             $fecha  = $r->fecha instanceof \DateTimeInterface ? $r->fecha->format('d/m/Y') : date('d/m/Y', strtotime((string) $r->fecha));

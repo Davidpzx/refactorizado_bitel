@@ -151,4 +151,44 @@ class DashboardExportarExcelTest extends TestCase
         $this->assertStringContainsString('ProductoReciente', $texto);
         $this->assertStringNotContainsString('ProductoAntiguoFueraDeVentana', $texto);
     }
+
+    public function test_nota_de_recorte_a_90_dias_solo_aparece_cuando_no_hay_filtro_de_fecha(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $this->crearReporte('T01', now()->subDays(10)->toDateString());
+
+        $sinFiltro = $this->actingAs($admin, 'sanctum')
+            ->get('/api/v1/dashboard/exportar')
+            ->assertOk();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($tmp, $sinFiltro->streamedContent());
+        $spreadsheet = IOFactory::load($tmp);
+        $textoSinFiltro = '';
+        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
+            foreach ($row->getCellIterator() as $cell) {
+                $textoSinFiltro .= $cell->getValue() . ' ';
+            }
+        }
+        unlink($tmp);
+
+        $this->assertStringContainsString('acotado a los últimos 90 días', $textoSinFiltro);
+
+        $conFiltro = $this->actingAs($admin, 'sanctum')
+            ->get('/api/v1/dashboard/exportar?fecha_desde=2026-06-01&fecha_hasta=2026-06-30')
+            ->assertOk();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($tmp, $conFiltro->streamedContent());
+        $spreadsheet = IOFactory::load($tmp);
+        $textoConFiltro = '';
+        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
+            foreach ($row->getCellIterator() as $cell) {
+                $textoConFiltro .= $cell->getValue() . ' ';
+            }
+        }
+        unlink($tmp);
+
+        $this->assertStringNotContainsString('acotado a los últimos 90 días', $textoConFiltro);
+    }
 }
