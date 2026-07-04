@@ -9,7 +9,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale, Lock, Link2, FileSpreadsheet } from 'lucide-react'
+import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale, Lock, Link2, FileSpreadsheet, BellRing } from 'lucide-react'
 import { CuadreBitelPanel } from './CuadreBitelPage'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -72,6 +72,8 @@ export function PanelBipayPage() {
   const { usuario } = useAuth()
   const esAdmin = usuario?.rol === 'admin'
   const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas' | 'locks' | 'cuadre'>('saldo')
+  // "Alertas Webhook" (legacy: botón rojo en cabecera) — salta al panel de Cuadre Bitel, sub-tab Auditoría, con el form de webhook abierto.
+  const [webhookSignal, setWebhookSignal] = useState(0)
 
   // Saldo query
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
@@ -243,6 +245,9 @@ export function PanelBipayPage() {
         Icon={Wallet}
         actions={
           <>
+            <Button variant="glassDanger" size="sm" className="gap-1.5" onClick={() => { setTab('cuadre'); setWebhookSignal(s => s + 1) }}>
+              <BellRing size={14} /> Alertas Webhook
+            </Button>
             <Button variant="glassIndigo" size="sm" className="gap-1.5" onClick={() => setTab('cuentas')}>
               <CreditCard size={14} /> Nueva Cuenta
             </Button>
@@ -275,7 +280,7 @@ export function PanelBipayPage() {
       {/* Tabs ─────────────────────────────────────────────────────────────────── */}
       <div className="kyro-card flex w-fit gap-1 p-1">
         {TABS.map(t => (
-          <Button key={t.id} variant="ghost" size="sm" onClick={() => setTab(t.id)}
+          <Button key={t.id} variant="ghost" size="sm" onClick={() => { setWebhookSignal(0); setTab(t.id) }}
             className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'bg-kyro-elevated text-kyro-text shadow-sm'
@@ -288,7 +293,13 @@ export function PanelBipayPage() {
       </div>
 
       {/* TAB: Cuadre Bitel ERP (conciliación declarado vs scrapeado) ───────────── */}
-      {tab === 'cuadre' && <CuadreBitelPanel />}
+      {tab === 'cuadre' && (
+        <CuadreBitelPanel
+          key={webhookSignal}
+          initialTab={webhookSignal > 0 ? 'auditoria' : undefined}
+          openWebhook={webhookSignal > 0}
+        />
+      )}
 
       {/* TAB: Saldo por cuenta ─────────────────────────────────────────────────── */}
       {tab === 'saldo' && (

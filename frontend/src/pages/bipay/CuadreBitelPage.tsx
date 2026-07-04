@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronLeft, ChevronRight, BellRing } from 'lucide-react'
+import { Button } from '../../components/ui/button'
 import {
   cuadreBitelApi, auditoriaBipayApi, integradorApi,
   type CuadreCategorial, type CierreAuditoria, type WebhookConfig,
@@ -333,12 +335,12 @@ function TabMovimientos({ fecha }: { fecha: string }) {
 
 /* ── Tab: Auditoría Bipay ─────────────────────────────────────────────────── */
 
-function TabAuditoria({ fecha }: { fecha: string }) {
+function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; webhookOpenDefault?: boolean }) {
   const qc = useQueryClient()
   const [detalleId, setDetalleId]     = useState<number | null>(null)
   const [ajusteId, setAjusteId]       = useState<number | null>(null)
   const [observacion, setObservacion] = useState('')
-  const [webhookOpen, setWebhookOpen] = useState(false)
+  const [webhookOpen, setWebhookOpen] = useState(webhookOpenDefault)
   const [webhook, setWebhook]         = useState<WebhookConfig>({})
 
   const invalidar = () => qc.invalidateQueries({ queryKey: ['auditoria-bipay', fecha] })
@@ -377,35 +379,33 @@ function TabAuditoria({ fecha }: { fecha: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-2">
-        <button onClick={() => setWebhookOpen((v) => !v)}
-          className="rounded-lg border border-kyro-danger/40 bg-kyro-danger/10 px-3 py-1.5 text-xs font-semibold text-kyro-danger">
-          Alertas Webhook
-        </button>
-        <button onClick={() => cruce.mutate()} disabled={cruce.isPending}
-          className="rounded-lg bg-kyro-gold px-3 py-1.5 text-xs font-bold text-black disabled:opacity-50">
+        <Button variant="glassDanger" size="sm" className="gap-1.5" onClick={() => setWebhookOpen((v) => !v)}>
+          <BellRing size={14} /> Alertas Webhook
+        </Button>
+        <Button variant="gold" size="sm" disabled={cruce.isPending} onClick={() => cruce.mutate()}>
           {cruce.isPending ? 'Cruzando...' : 'Ejecutar cruce del día'}
-        </button>
+        </Button>
       </div>
 
       {webhookOpen && (
-        <div className="kyro-card space-y-2 p-4">
-          <h3 className="text-xs font-bold uppercase text-kyro-muted">Alertas de descuadre (Discord / Slack)</h3>
-          <input className="w-full rounded border border-white/10 bg-transparent px-2 py-1.5 text-xs"
+        <div className="kyro-card border-t-2 border-t-kyro-danger space-y-2 p-4">
+          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase text-kyro-danger">
+            <BellRing size={13} /> Alertas de descuadre (Discord / Slack)
+          </h3>
+          <input className="kyro-input w-full"
             placeholder="URL del webhook" value={webhook.bipay_webhook_url ?? ''}
             onChange={(e) => setWebhook((w) => ({ ...w, bipay_webhook_url: e.target.value }))} />
-          <div className="flex gap-2">
-            <select className="rounded border border-white/10 bg-transparent px-2 py-1.5 text-xs"
+          <div className="flex flex-wrap gap-2">
+            <select className="kyro-input w-32"
               value={webhook.bipay_webhook_tipo ?? 'discord'}
               onChange={(e) => setWebhook((w) => ({ ...w, bipay_webhook_tipo: e.target.value }))}>
               <option value="discord">Discord</option>
               <option value="slack">Slack</option>
             </select>
-            <input type="number" step="0.01" className="w-32 rounded border border-white/10 bg-transparent px-2 py-1.5 text-xs"
+            <input type="number" step="0.01" className="kyro-input w-32"
               placeholder="Umbral S/" value={webhook.bipay_webhook_umbral ?? ''}
               onChange={(e) => setWebhook((w) => ({ ...w, bipay_webhook_umbral: e.target.value }))} />
-            <button onClick={() => guardarWebhook.mutate()} className="rounded bg-kyro-gold px-3 py-1 text-xs font-bold text-black">
-              Guardar
-            </button>
+            <Button variant="gold" size="sm" onClick={() => guardarWebhook.mutate()}>Guardar</Button>
           </div>
         </div>
       )}
@@ -597,26 +597,40 @@ function TabMorosidad() {
 
 /* ── Panel embebido (pestaña "Cuadre Bitel" del Panel Bipay) ──────────────── */
 
-export function CuadreBitelPanel() {
-  const [tab, setTab]     = useState<Tab>('panel')
+function sumarDias(fecha: string, delta: number): string {
+  const d = new Date(`${fecha}T00:00:00`)
+  d.setDate(d.getDate() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
+export function CuadreBitelPanel({ initialTab, openWebhook = false }: { initialTab?: Tab; openWebhook?: boolean }) {
+  const [tab, setTab]     = useState<Tab>(initialTab ?? 'panel')
   const [fecha, setFecha] = useState(hoy())
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
+        <div className="kyro-card flex w-fit flex-wrap gap-1 p-1">
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                tab === t.id ? 'bg-kyro-gold text-black' : 'border border-white/10 text-kyro-muted hover:text-kyro-body'
+            <Button key={t.id} variant="ghost" size="sm" onClick={() => setTab(t.id)}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                tab === t.id ? 'bg-kyro-elevated text-kyro-text shadow-sm' : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text'
               }`}>
               {t.label}
-            </button>
+            </Button>
           ))}
         </div>
         {tab !== 'morosidad' && (
-          <input type="date" value={fecha} max={hoy()} onChange={(e) => setFecha(e.target.value)}
-            className="rounded-lg border border-white/10 bg-transparent px-3 py-1.5 text-sm" />
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
+              <ChevronLeft size={14} />
+            </Button>
+            <input type="date" value={fecha} max={hoy()} onChange={(e) => setFecha(e.target.value)} className="kyro-input" />
+            <Button variant="outline" size="sm" disabled={fecha >= hoy()} onClick={() => setFecha((f) => sumarDias(f, 1))} aria-label="Día siguiente">
+              <ChevronRight size={14} />
+            </Button>
+            <Button variant="gold" size="sm" onClick={() => setFecha(hoy())}>Hoy</Button>
+          </div>
         )}
       </div>
       <p className="text-[0.7rem] text-kyro-muted">
@@ -626,7 +640,7 @@ export function CuadreBitelPanel() {
       {tab === 'panel'       && <TabPanel fecha={fecha} />}
       {tab === 'global'      && <TabGlobal fecha={fecha} />}
       {tab === 'movimientos' && <TabMovimientos fecha={fecha} />}
-      {tab === 'auditoria'   && <TabAuditoria fecha={fecha} />}
+      {tab === 'auditoria'   && <TabAuditoria fecha={fecha} webhookOpenDefault={openWebhook} />}
       {tab === 'morosidad'   && <TabMorosidad />}
     </div>
   )
