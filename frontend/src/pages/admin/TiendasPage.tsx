@@ -340,7 +340,7 @@ export function TiendasPage() {
               {!isLoading && tiendas.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
                 <tr key={t.id} className="transition-colors hover:bg-kyro-elevated">
-                  <td className="px-4 py-3 font-mono font-bold text-kyro-text">{t.codigo}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-kyro-info">{t.codigo}</td>
                   <td className="px-4 py-3 font-medium text-kyro-text">{t.nombre}</td>
                   <td className="px-4 py-3 text-xs text-kyro-muted">{t.direccion ?? '—'}</td>
                   <td className="px-4 py-3 text-kyro-muted">{t.telefono ?? '—'}</td>
@@ -358,7 +358,7 @@ export function TiendasPage() {
                             'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-40 disabled:pointer-events-none ' +
                             (tieneGps
                               ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-                              : 'border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400')
+                              : 'border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-400')
                           }
                           title={tieneGps ? `Ubicación: ${t.latitud}, ${t.longitud} — actualizar` : 'Añadir ubicación'}
                         >
