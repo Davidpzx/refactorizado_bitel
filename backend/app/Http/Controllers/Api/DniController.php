@@ -22,7 +22,10 @@ class DniController extends Controller
         }
 
         // Caché de primer nivel: si el CRM ya capturó este DNI, se evita la API externa por completo.
-        $local = DB::table('crm_clientes')->where('dni', $dni)->first(['nombres', 'apellidos']);
+        // Honestidad de fuente: nombres/apellidos de crm_clientes pueden venir de un nombre
+        // tipeado a mano (MANUAL_CON_FALLBACK, cuando RENIEC no respondió al capturarlo) — solo
+        // se reporta como RENIEC_API si esa es la fuente real registrada en fuente_nombre.
+        $local = DB::table('crm_clientes')->where('dni', $dni)->first(['nombres', 'apellidos', 'fuente_nombre']);
         if ($local) {
             $ap = explode(' ', trim($local->apellidos), 2);
             return response()->json([
@@ -32,7 +35,7 @@ class DniController extends Controller
                 'numero_documento' => $dni,
                 'tipo_documento'   => 1,
                 'nombre_completo'  => trim($local->nombres . ' ' . $local->apellidos),
-                'fuente'           => 'cache_local',
+                'fuente'           => $local->fuente_nombre === 'RENIEC_API' ? 'RENIEC_API' : 'CRM_NO_VERIFICADO',
             ]);
         }
 
@@ -64,6 +67,7 @@ class DniController extends Controller
                 'numero_documento' => $body['numeroDocumento']  ?? $body['numero_documento'] ?? $dni,
                 'tipo_documento'   => $body['tipoDocumento']    ?? $body['tipo_documento']   ?? 1,
                 'nombre_completo'  => $body['nombre_completo']  ?? null,
+                'fuente'           => 'RENIEC_API',
             ];
 
             // nombre_completo como fallback calculado si la API no lo trae
