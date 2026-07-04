@@ -62,9 +62,6 @@ class TrasladoController extends Controller
         $user    = Auth::user();
         $esAdmin = $user->rol === 'admin';
 
-        // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
-        $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
-
         $authDni = trim($request->input('auth_dni', ''));
 
         if (!$authDni) {
@@ -80,6 +77,10 @@ class TrasladoController extends Controller
         }
 
         $enviadoPorId = $agente->id;
+
+        // Admin o gerente de tienda crean directamente en PENDIENTE; tienda crea en
+        // PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado.php.
+        $estadoTraslado = ($esAdmin || $agente->es_gerencia) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
 
         $tiendaDestino = trim($request->input('tienda_destino', ''));
         $notas         = substr(trim($request->input('notas', '')), 0, 200);
@@ -143,7 +144,7 @@ class TrasladoController extends Controller
                 }
             });
 
-            $msg = $esAdmin
+            $msg = $estadoTraslado === 'PENDIENTE'
                 ? "{$ok} item(s) enviado(s) a {$tiendaDestino} EN TRÁNSITO."
                 : "{$ok} item(s) PENDIENTES DE APROBACIÓN.";
             if (!empty($skip)) $msg .= ' Omitidos: ' . implode('; ', $skip);
@@ -223,7 +224,7 @@ class TrasladoController extends Controller
             return response()->json(['success' => false, 'message' => $result['error']], 422);
         }
 
-        $msg = $esAdmin
+        $msg = $estadoTraslado === 'PENDIENTE'
             ? "\"{$result['producto_nombre']}\" ({$cantidad} ud.) enviado a {$tiendaDestino} EN TRÁNSITO."
             : "\"{$result['producto_nombre']}\" ({$cantidad} ud.) PENDIENTE DE APROBACIÓN.";
 
