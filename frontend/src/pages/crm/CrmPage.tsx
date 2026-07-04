@@ -14,7 +14,8 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { StatCard } from '../../components/ui/StatCard'
-import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone } from 'lucide-react'
+import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star } from 'lucide-react'
+import type { ComponentType } from 'react'
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -24,13 +25,28 @@ import type { CrmDashboardFilters, CrmInteraccionTemp, CrmTemperaturaFiltros, Le
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const ESTADOS: { value: Lead['estado']; label: string; color: string; bg: string }[] = [
-  { value: 'NUEVO',      label: 'Nuevo',      color: 'text-kyro-info',    bg: 'border-kyro-info bg-kyro-panel' },
-  { value: 'CONTACTADO', label: 'Contactado', color: 'text-kyro-warning', bg: 'border-kyro-warning bg-kyro-panel' },
-  { value: 'INTERESADO', label: 'Interesado', color: 'text-kyro-gold',    bg: 'border-kyro-indigo bg-kyro-panel' },
-  { value: 'CONVERTIDO', label: 'Convertido', color: 'text-kyro-success', bg: 'border-kyro-success bg-kyro-panel' },
-  { value: 'PERDIDO',    label: 'Perdido',    color: 'text-kyro-danger',  bg: 'border-kyro-danger bg-kyro-panel' },
+type IconCmp = ComponentType<{ size?: number | string; className?: string }>
+
+const ESTADOS: { value: Lead['estado']; label: string; color: string; bg: string; accent: string; Icon: IconCmp }[] = [
+  { value: 'NUEVO',      label: 'Nuevo',      color: 'text-kyro-info',    bg: 'border-kyro-info bg-kyro-panel',    accent: '#38bdf8', Icon: Users },
+  { value: 'CONTACTADO', label: 'Contactado', color: 'text-kyro-warning', bg: 'border-kyro-warning bg-kyro-panel', accent: '#ffc200', Icon: MessageSquare },
+  { value: 'INTERESADO', label: 'Interesado', color: 'text-kyro-gold',    bg: 'border-kyro-indigo bg-kyro-panel',  accent: '#6366f1', Icon: Star },
+  { value: 'CONVERTIDO', label: 'Convertido', color: 'text-kyro-success', bg: 'border-kyro-success bg-kyro-panel', accent: '#22c55e', Icon: CheckCircle },
+  { value: 'PERDIDO',    label: 'Perdido',    color: 'text-kyro-danger',  bg: 'border-kyro-danger bg-kyro-panel',  accent: '#ef4444', Icon: XCircle },
 ]
+
+/** Ícono en caja redondeada tintada (estilo KPI legacy CRM). */
+function KpiIcon({ accent, Icon }: { accent: string; Icon: IconCmp }) {
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+      style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}
+      aria-hidden
+    >
+      <Icon size={18} />
+    </span>
+  )
+}
 
 const FUENTES: Lead['fuente'][] = ['PRESENCIAL', 'WHATSAPP', 'REFERIDO', 'LLAMADA']
 
@@ -700,10 +716,14 @@ export function CrmPage() {
               {pipeline.pipeline.map(p => {
                 const cfg = ESTADOS.find(e => e.value === p.estado)!
                 return (
-                  <StatCard key={p.estado} title={cfg.label} accent="#0d6efd" value={p.total} valueColorClass={cfg.color} />
+                  <StatCard key={p.estado} title={cfg.label} align="top" accent={cfg.accent}
+                    icon={<KpiIcon accent={cfg.accent} Icon={cfg.Icon} />}
+                    value={p.total} valueColorClass={cfg.color} />
                 )
               })}
-              <StatCard title="Tasa conversión" accent="#22c55e" value={`${pipeline?.tasa_conversion ?? 0}%`} valueColorClass="text-kyro-success" />
+              <StatCard title="Tasa conversión" align="top" accent="#22c55e"
+                icon={<KpiIcon accent="#22c55e" Icon={TrendingUp} />}
+                value={`${pipeline?.tasa_conversion ?? 0}%`} valueColorClass="text-kyro-success" />
             </div>
           )}
 

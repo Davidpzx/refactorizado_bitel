@@ -237,7 +237,21 @@ export function PanelBipayPage() {
   return (
     <div className="space-y-6">
       {/* Header ─────────────────────────────────────────────────────────────── */}
-      <PageHeader title="Panel Bipay / Anypay" subtitle="Saldos consolidados, transacciones y recargas" Icon={Wallet} />
+      <PageHeader
+        title="Panel Bipay / Anypay"
+        subtitle="Saldos consolidados, transacciones y recargas"
+        Icon={Wallet}
+        actions={
+          <>
+            <Button variant="glassIndigo" size="sm" className="gap-1.5" onClick={() => setTab('cuentas')}>
+              <CreditCard size={14} /> Nueva Cuenta
+            </Button>
+            <Button variant="glassSuccess" size="sm" className="gap-1.5" onClick={() => setTab('recarga')}>
+              <RefreshCw size={14} /> Recargar Cuenta
+            </Button>
+          </>
+        }
+      />
 
       {/* KPIs ────────────────────────────────────────────────────────────────── */}
       {saldoData?.kpis && (
@@ -279,8 +293,12 @@ export function PanelBipayPage() {
       {/* TAB: Saldo por cuenta ─────────────────────────────────────────────────── */}
       {tab === 'saldo' && (
         <div className="kyro-card overflow-hidden">
-          <div className="border-b border-kyro-border px-4 py-3">
-            <h2 className="text-sm font-bold text-kpi-bipay">Cuentas Bipay / Anypay</h2>
+          <div
+            className="flex items-center gap-2 border-b px-4 py-3"
+            style={{ borderColor: `color-mix(in srgb, ${BIPAY} 30%, transparent)`, background: `color-mix(in srgb, ${BIPAY} 9%, transparent)` }}
+          >
+            <CreditCard size={15} style={{ color: BIPAY }} />
+            <h2 className="text-sm font-bold" style={{ color: BIPAY }}>Cuentas Bipay / Anypay</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -294,7 +312,10 @@ export function PanelBipayPage() {
               <tbody>
                 {loadingSaldo && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Cargando…</td></tr>}
                 {!loadingSaldo && (saldoData?.cuentas ?? []).length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin cuentas registradas</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400 dark:text-zinc-500">
+                    <CreditCard size={26} className="mx-auto mb-2 opacity-40" />
+                    Sin cuentas registradas
+                  </td></tr>
                 )}
                 {(saldoData?.cuentas ?? []).map(c => (
                   <tr key={c.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-bipay/5">
@@ -365,7 +386,10 @@ export function PanelBipayPage() {
                 <tbody>
                   {loadingTx && <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Cargando…</td></tr>}
                   {!loadingTx && (txData?.data ?? []).length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin transacciones en el período</td></tr>
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-zinc-500">
+                      <ArrowRightLeft size={26} className="mx-auto mb-2 opacity-40" />
+                      Sin transacciones en el período
+                    </td></tr>
                   )}
                   {(txData?.data ?? []).map(tx => (
                     <tr key={tx.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-yape/5">
@@ -538,8 +562,12 @@ export function PanelBipayPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Lista */}
           <div className="kyro-card overflow-hidden lg:col-span-2">
-            <div className="border-b border-kyro-border px-4 py-3">
-              <h2 className="text-sm font-bold text-kpi-bipay">Cuentas registradas</h2>
+            <div
+              className="flex items-center gap-2 border-b px-4 py-3"
+              style={{ borderColor: `color-mix(in srgb, ${BIPAY} 30%, transparent)`, background: `color-mix(in srgb, ${BIPAY} 9%, transparent)` }}
+            >
+              <CreditCard size={15} style={{ color: BIPAY }} />
+              <h2 className="text-sm font-bold" style={{ color: BIPAY }}>Cuentas registradas</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -550,7 +578,10 @@ export function PanelBipayPage() {
                 </thead>
                 <tbody>
                   {(saldoData?.cuentas ?? []).length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400 dark:text-zinc-500">Sin cuentas registradas</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400 dark:text-zinc-500">
+                      <CreditCard size={26} className="mx-auto mb-2 opacity-40" />
+                      Sin cuentas registradas
+                    </td></tr>
                   )}
                   {(saldoData?.cuentas ?? []).map(c => (
                     <tr key={c.id} className="border-t border-kyro-border transition-colors hover:bg-kpi-bipay/5">
