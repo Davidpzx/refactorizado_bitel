@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Venta;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -211,10 +212,16 @@ class ConstanciaController extends Controller
             return response()->json(['message' => 'Reporte no encontrado.'], 404);
         }
 
-        $ventas = DB::table('ventas')->where('reporte_id', $id)->get();
+        $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
+            ->where('reporte_id', $id)
+            ->orderBy('id')
+            ->get();
+
+        $salidas = DB::table('reporte_salidas')->where('reporte_id', $id)->orderBy('id')->get();
+
         $empresa = DB::table('configuraciones')->first();
 
-        $pdf = Pdf::loadView('constancias.reporte', compact('reporte', 'ventas', 'empresa'))
+        $pdf = Pdf::loadView('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->download("reporte_{$id}.pdf");

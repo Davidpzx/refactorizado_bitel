@@ -66,4 +66,9 @@ class Venta extends Model
     {
         return $this->belongsTo(Cliente::class);
     }
+
+    public function vendedor(): BelongsTo
+    {
+        return $this->belongsTo(Agente::class, 'vendedor_id');
+    }
 }
