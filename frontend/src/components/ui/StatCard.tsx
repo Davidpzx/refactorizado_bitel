@@ -18,6 +18,8 @@ interface StatCardProps {
   valueColorClass?: string
   /** Si es `true`, formatea un `value` numérico como moneda PEN. */
   formatMoney?: boolean
+  /** Línea muted bajo el valor (estilo legacy: "Desembolsos aprobados", "0 ventas — 2026-07"). */
+  subtitle?: ReactNode
   className?: string
 }
 
@@ -34,6 +36,7 @@ export function StatCard({
   align = 'left',
   valueColorClass = 'text-gray-900 dark:text-zinc-50',
   formatMoney = false,
+  subtitle,
   className = '',
 }: StatCardProps) {
   const isLoading = value === null || value === undefined
@@ -67,6 +70,9 @@ export function StatCard({
             {title}
           </p>
           <p className={`mt-2 text-xl font-bold tracking-tight ${valueColorClass}`}>{display}</p>
+          {subtitle && (
+            <p className="mt-1 truncate text-[0.7rem] text-gray-500 dark:text-zinc-400">{subtitle}</p>
+          )}
         </div>
       </div>
     </div>
