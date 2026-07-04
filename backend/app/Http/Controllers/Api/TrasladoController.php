@@ -7,6 +7,7 @@ use App\Models\Agente;
 use App\Models\InventarioTienda;
 use App\Models\Tienda;
 use App\Models\TrasladoStock;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -83,7 +84,8 @@ class TrasladoController extends Controller
         // El bypass de gerente solo aplica si el gerente pertenece a la tienda de origen
         // (= tienda del usuario para no-admin): un gerente de otra tienda no debe saltarse
         // la aprobación.
-        $esGerenteDeOrigen = $agente->es_gerencia && $agente->tienda_base === $user->tienda_id;
+        $esGerenteDeOrigen = $agente->es_gerencia
+            && ! TiendaGuard::bloqueaAcceso(false, $user->tienda_id, $agente->tienda_base);
         $estadoTraslado = ($esAdmin || $esGerenteDeOrigen) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
 
         $tiendaDestino = trim($request->input('tienda_destino', ''));
@@ -125,7 +127,7 @@ class TrasladoController extends Controller
 
                     if (!$item)                               { $skip[] = "ID {$pid}: no disponible"; continue; }
                     if ($item->tienda_id === $tiendaDestino)  { $skip[] = "ID {$pid}: ya en destino"; continue; }
-                    if (!$esAdmin && $item->tienda_id !== $user->tienda_id) {
+                    if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $item->tienda_id)) {
                         $skip[] = "ID {$pid}: no pertenece a tu tienda"; continue;
                     }
 
@@ -180,7 +182,7 @@ class TrasladoController extends Controller
             if (!$origen) return ['error' => 'Producto no encontrado o no disponible.'];
             if ($origen->cantidad < $cantidad) return ['error' => "Stock insuficiente. Disponible: {$origen->cantidad} ud."];
             if ($origen->tienda_id === $tiendaDestino) return ['error' => 'Tienda destino igual a origen.'];
-            if (!$esAdmin && $origen->tienda_id !== $user->tienda_id) return ['error' => 'Solo puedes trasladar items de tu propia tienda.'];
+            if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $origen->tienda_id)) return ['error' => 'Solo puedes trasladar items de tu propia tienda.'];
 
             $nuevaCantidad = $origen->cantidad - $cantidad;
 
@@ -270,7 +272,7 @@ class TrasladoController extends Controller
                 ->first();
 
             if (!$traslado) return ['error' => 'Traslado no encontrado o ya fue procesado.'];
-            if (!$esAdmin && $traslado->tienda_destino !== $user->tienda_id) {
+            if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $traslado->tienda_destino)) {
                 return ['error' => 'Solo la tienda destino puede confirmar este traslado.'];
             }
 
@@ -403,7 +405,7 @@ class TrasladoController extends Controller
                     throw new \RuntimeException('El lote contiene mas de una tienda destino.');
                 }
                 $destino = (string) $destinos->first();
-                if (! $esAdmin && $destino !== (string) $user->tienda_id) {
+                if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $destino)) {
                     throw new \RuntimeException('Solo la tienda destino puede confirmar este lote.');
                 }
 
