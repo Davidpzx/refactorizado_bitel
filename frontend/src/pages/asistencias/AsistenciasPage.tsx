@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
+import { adminPaginasApi } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -10,7 +12,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Camera, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList, CalendarRange } from 'lucide-react'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -103,6 +105,14 @@ export function AsistenciasPage() {
     mutationFn: (id: number) => api.post(`/v1/asistencias/${id}/aprobar`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
   })
+
+  const { data: fotosPendientes } = useQuery({
+    queryKey: ['fotos-pendientes'],
+    queryFn: () => adminPaginasApi.fotosPendientes(),
+    enabled: usuario?.rol === 'admin',
+    staleTime: 30_000,
+  })
+  const fotosCount = fotosPendientes?.total ?? 0
 
   // ── Asistencia Manual — paridad legacy acciones_asistencia.php (crear_manual) ──
   const [showManual, setShowManual] = useState(false)
@@ -266,6 +276,29 @@ export function AsistenciasPage() {
           <Button variant="glassWarning" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
             <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
           </Button>
+        )}
+        {usuario?.rol === 'admin' && (
+          <Link
+            to="/revisar-fotos"
+            className="relative inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-500/20 dark:text-amber-400"
+            title="Revisar fotos de marcación pendientes"
+          >
+            <Camera size={14} /> Fotos
+            {fotosCount > 0 && (
+              <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kyro-danger px-1 text-[10px] font-bold text-white">
+                {fotosCount > 99 ? '99+' : fotosCount}
+              </span>
+            )}
+          </Link>
+        )}
+        {usuario?.rol === 'admin' && (
+          <Link
+            to="/asistencias/control"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
+            title="Control mensual de asistencias (matriz por agente)"
+          >
+            <CalendarRange size={14} /> Control
+          </Link>
         )}
       </PageHeader>
 
