@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
+import { StatCard } from '../../components/ui/StatCard'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
@@ -13,9 +14,9 @@ import { CuadreBitelPanel } from './CuadreBitelPage'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
-const BIPAY = 'var(--color-kpi-bipay)'
-const ANYPAY = 'var(--color-kpi-yape)'
-const GOLD = 'var(--color-kyro-gold)'
+const BIPAY = '#38bdf8'
+const ANYPAY = '#a78bfa'
+const GOLD = '#6366f1'
 
 interface Cuenta {
   id: number
@@ -236,29 +237,23 @@ export function PanelBipayPage() {
   return (
     <div className="space-y-6">
       {/* Header ─────────────────────────────────────────────────────────────── */}
-      <PageHeader title="Panel Bipay / Anypay" subtitle="Saldos consolidados, transacciones y recargas">
-        <span className="flex h-10 w-10 items-center justify-center rounded-kyro bg-kpi-bipay/15 text-kpi-bipay">
-          <Wallet size={20} />
-        </span>
-      </PageHeader>
+      <PageHeader title="Panel Bipay / Anypay" subtitle="Saldos consolidados, transacciones y recargas" Icon={Wallet} />
 
       {/* KPIs ────────────────────────────────────────────────────────────────── */}
       {saldoData?.kpis && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { label: 'Total Bipay',  value: saldoData.kpis.total_bipay,  color: BIPAY,  border: 'border-l-kpi-bipay', Icon: CreditCard },
-            { label: 'Total Anypay', value: saldoData.kpis.total_anypay, color: ANYPAY, border: 'border-l-kpi-yape', Icon: Layers },
-            { label: 'Saldo Global', value: saldoData.kpis.total_saldo,  color: GOLD,   border: 'border-l-kpi-total', Icon: Wallet },
+            { label: 'Total Bipay',  value: saldoData.kpis.total_bipay,  color: BIPAY,  Icon: CreditCard },
+            { label: 'Total Anypay', value: saldoData.kpis.total_anypay, color: ANYPAY, Icon: Layers },
+            { label: 'Saldo Global', value: saldoData.kpis.total_saldo,  color: GOLD,   Icon: Wallet },
           ].map(k => (
-            <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
-              <div className="flex items-center justify-between">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-kyro-muted">{k.label}</p>
-                <k.Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div className="mt-2">
-                <MoneyTotal value={k.value} color={k.color} size="1.55rem" />
-              </div>
-            </div>
+            <StatCard
+              key={k.label}
+              title={k.label}
+              accent={k.color}
+              icon={<k.Icon size={20} />}
+              value={<MoneyTotal value={k.value} color={k.color} size="1.4rem" />}
+            />
           ))}
         </div>
       )}
