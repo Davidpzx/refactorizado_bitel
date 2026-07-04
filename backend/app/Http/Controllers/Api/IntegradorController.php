@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\AuditoriaBipayService;
 use App\Services\CuadreBitelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,11 +51,11 @@ class IntegradorController extends Controller
             ->update(['last_config_fetch' => now()]);
 
         return response()->json([
-            'ok'                 => true,
-            'bitel_username'     => $fila->bitel_username,
-            'bitel_password'     => $password,
-            'channel_code'       => $fila->tienda_codigo,
-            'channel_type'       => $fila->channel_type,
+            'ok' => true,
+            'bitel_username' => $fila->bitel_username,
+            'bitel_password' => $password,
+            'channel_code' => $fila->tienda_codigo,
+            'channel_type' => $fila->channel_type,
             'sync_intervalo_min' => (int) $fila->sync_intervalo_min,
         ]);
     }
@@ -74,10 +73,10 @@ class IntegradorController extends Controller
             return response()->json(['ok' => false, 'error' => 'saldo_bipay inválido'], 400);
         }
 
-        $channelCode  = $this->sanearCodigo($data['channel_code'] ?? '');
+        $channelCode = $this->sanearCodigo($data['channel_code'] ?? '');
         $fechaReporte = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['fecha_reporte'] ?? '')
             ? $data['fecha_reporte'] : now()->toDateString();
-        $movimientos  = is_array($data['movimientos'] ?? null) ? $data['movimientos'] : [];
+        $movimientos = is_array($data['movimientos'] ?? null) ? $data['movimientos'] : [];
 
         // ── Identificar / auto-registrar la cuenta Bipay destino ──────────────
         $codigoCanal = $this->sanearCodigo($data['cod_tienda'] ?? '') ?: $channelCode;
@@ -105,18 +104,18 @@ class IntegradorController extends Controller
                     throw new \RuntimeException("La cuenta Bipay con ID {$cuentaId} no existe.");
                 }
 
-                $saldoAnterior       = (float) ($cuenta->saldo_actual ?? 0);
+                $saldoAnterior = (float) ($cuenta->saldo_actual ?? 0);
                 $saldoAnypayAnterior = (float) ($cuenta->saldo_anypay ?? 0);
-                $saldoAnypayNuevo    = isset($data['saldo_anypay']) && $data['saldo_anypay'] !== null
+                $saldoAnypayNuevo = isset($data['saldo_anypay']) && $data['saldo_anypay'] !== null
                     ? (float) $data['saldo_anypay'] : $saldoAnypayAnterior;
                 $saldoNuevo = $saldoBipay + $saldoAnypayNuevo;
                 $diferencia = $saldoNuevo - $saldoAnterior;
 
                 DB::table('cuentas_bipay')->where('id', $cuentaId)->update([
-                    'saldo_bipay'  => $saldoBipay,
+                    'saldo_bipay' => $saldoBipay,
                     'saldo_anypay' => $saldoAnypayNuevo,
                     'saldo_actual' => $saldoNuevo,
-                    'estado_api'   => 'OK',
+                    'estado_api' => 'OK',
                 ]);
 
                 foreach ($grouped as $g) {
@@ -136,23 +135,23 @@ class IntegradorController extends Controller
                     ]);
                 }
 
-                $clientesProcesados  = $this->upsertClientesEstado($data['clientes_estado'] ?? [], $fechaReporte);
+                $clientesProcesados = $this->upsertClientesEstado($data['clientes_estado'] ?? [], $fechaReporte);
                 $morosidadProcesadas = $this->upsertLineasMorosidad($data['lineas_morosidad'] ?? [], date('Y-m', strtotime($fechaReporte)));
 
                 // Historial solo si el saldo realmente se movió (evita filas +0.00)
                 if (abs($diferencia) >= 0.01) {
                     DB::table('transacciones_bipay')->insert([
                         'cuenta_origen_id' => $cuentaId,
-                        'tipo_operacion'   => 'AJUSTE',
-                        'plataforma'       => strtoupper($cuenta->tipo ?? 'BIPAY'),
-                        'monto'            => $diferencia,
+                        'tipo_operacion' => 'AJUSTE',
+                        'plataforma' => strtoupper($cuenta->tipo ?? 'BIPAY'),
+                        'monto' => $diferencia,
                         'saldo_origen_pre' => $saldoAnterior,
                         'saldo_anypay_pre' => $saldoAnypayAnterior,
-                        'observacion'      => sprintf(
+                        'observacion' => sprintf(
                             'Sync automático MSuite | Canal: %s | PC: %s | Movimientos agrupados: %d',
                             $channelCode, $data['hostname'] ?? 'desconocido', count($movimientos)
                         ),
-                        'creado_por'       => 0,
+                        'creado_por' => 0,
                     ]);
                 }
 
@@ -160,15 +159,16 @@ class IntegradorController extends Controller
 
                 return [
                     'saldo_anterior' => $saldoAnterior,
-                    'saldo_nuevo'    => $saldoNuevo,
-                    'diferencia'     => $diferencia,
-                    'alerta_umbral'  => $saldoNuevo < (float) ($cuenta->umbral_alerta ?? 0),
-                    'clientes'       => $clientesProcesados,
-                    'morosidad'      => $morosidadProcesadas,
+                    'saldo_nuevo' => $saldoNuevo,
+                    'diferencia' => $diferencia,
+                    'alerta_umbral' => $saldoNuevo < (float) ($cuenta->umbral_alerta ?? 0),
+                    'clientes' => $clientesProcesados,
+                    'morosidad' => $morosidadProcesadas,
                 ];
             });
         } catch (\Throwable $e) {
-            Log::error('[INTEGRADOR] recibirSaldo: ' . $e->getMessage());
+            Log::error('[INTEGRADOR] recibirSaldo: '.$e->getMessage());
+
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
         }
 
@@ -181,19 +181,19 @@ class IntegradorController extends Controller
             ->orderBy('fecha_solicitud')->limit(7)->get(['id', 'fecha']);
 
         return response()->json([
-            'ok'                          => true,
-            'message'                     => 'Sincronización exitosa',
-            'cuenta_id'                   => $cuentaId,
-            'saldo_anterior'              => $resultado['saldo_anterior'],
-            'saldo_nuevo'                 => $resultado['saldo_nuevo'],
-            'diferencia'                  => $resultado['diferencia'],
-            'alerta_umbral'               => $resultado['alerta_umbral'],
-            'movs_procesados'             => count($movimientos),
-            'clientes_procesados'         => $resultado['clientes'],
-            'morosidad_procesadas'        => $resultado['morosidad'],
-            'pendientes_deudas'           => $pendientesDeudas,
-            'pendientes_bitel_historico'  => $pendientesBitelHist,
-            'timestamp'                   => now()->toDateTimeString(),
+            'ok' => true,
+            'message' => 'Sincronización exitosa',
+            'cuenta_id' => $cuentaId,
+            'saldo_anterior' => $resultado['saldo_anterior'],
+            'saldo_nuevo' => $resultado['saldo_nuevo'],
+            'diferencia' => $resultado['diferencia'],
+            'alerta_umbral' => $resultado['alerta_umbral'],
+            'movs_procesados' => count($movimientos),
+            'clientes_procesados' => $resultado['clientes'],
+            'morosidad_procesadas' => $resultado['morosidad'],
+            'pendientes_deudas' => $pendientesDeudas,
+            'pendientes_bitel_historico' => $pendientesBitelHist,
+            'timestamp' => now()->toDateTimeString(),
         ]);
     }
 
@@ -205,22 +205,23 @@ class IntegradorController extends Controller
         }
         $data = $request->json()->all();
 
-        $periodo     = preg_match('/^\d{4}-\d{2}$/', $data['periodo'] ?? '') ? $data['periodo'] : now()->format('Y-m');
+        $periodo = preg_match('/^\d{4}-\d{2}$/', $data['periodo'] ?? '') ? $data['periodo'] : now()->format('Y-m');
         $solicitudId = (int) ($data['solicitud_id'] ?? 0);
 
         try {
             [$clientes, $morosidad] = DB::transaction(function () use ($data, $periodo, $solicitudId) {
-                $clientes  = $this->upsertClientesEstado($data['clientes_estado'] ?? [], $periodo . '-01');
+                $clientes = $this->upsertClientesEstado($data['clientes_estado'] ?? [], $periodo.'-01');
                 $morosidad = $this->upsertLineasMorosidad($data['lineas_morosidad'] ?? [], $periodo);
 
                 if ($solicitudId > 0) {
                     DB::table('solicitudes_extraccion')->where('id', $solicitudId)->update([
-                        'estado'          => 'LISTO',
-                        'total_lineas'    => $clientes + $morosidad,
+                        'estado' => 'LISTO',
+                        'total_lineas' => $clientes + $morosidad,
                         'fecha_procesado' => now(),
-                        'mensaje'         => null,
+                        'mensaje' => null,
                     ]);
                 }
+
                 return [$clientes, $morosidad];
             });
         } catch (\Throwable $e) {
@@ -242,7 +243,7 @@ class IntegradorController extends Controller
         $data = $request->json()->all();
 
         $queueId = (int) ($data['queue_id'] ?? 0);
-        $fecha   = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['fecha'] ?? '') ? $data['fecha'] : '';
+        $fecha = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['fecha'] ?? '') ? $data['fecha'] : '';
         if (! $queueId || ! $fecha) {
             return response()->json(['ok' => false, 'error' => 'queue_id o fecha inválidos'], 400);
         }
@@ -254,7 +255,7 @@ class IntegradorController extends Controller
             $movs = $this->insertarDetalleOperaciones(
                 is_array($data['movimientos'] ?? null) ? $data['movimientos'] : [],
                 '',
-                $fecha . ' 00:00:00'
+                $fecha.' 00:00:00'
             );
 
             DB::table('bitel_historico_queue')->where('id', $queueId)->update([
@@ -266,6 +267,7 @@ class IntegradorController extends Controller
         } catch (\Throwable $e) {
             DB::table('bitel_historico_queue')->where('id', $queueId)
                 ->update(['estado' => 'ERROR', 'mensaje' => substr($e->getMessage(), 0, 255)]);
+
             return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -292,6 +294,7 @@ class IntegradorController extends Controller
 
         $filas = $q->get()->map(function ($f) {
             $f->estado_agente = $this->estadoAgente($f->last_config_fetch, (int) ($f->sync_intervalo_min ?? 15), $f->configurada ? (bool) $f->activo : true);
+
             return $f;
         });
 
@@ -302,9 +305,9 @@ class IntegradorController extends Controller
     public function guardarCredenciales(Request $request): JsonResponse
     {
         $request->validate([
-            'tienda_codigo'      => 'required|string|max:20',
-            'bitel_username'     => 'required|string|max:80',
-            'bitel_password'     => 'nullable|string|max:200',
+            'tienda_codigo' => 'required|string|max:20',
+            'bitel_username' => 'required|string|max:80',
+            'bitel_password' => 'nullable|string|max:200',
             'sync_intervalo_min' => 'nullable|integer',
         ]);
 
@@ -313,18 +316,19 @@ class IntegradorController extends Controller
             return $err;
         }
 
-        $username  = trim($request->input('bitel_username'));
-        $password  = (string) $request->input('bitel_password', '');
+        $username = trim($request->input('bitel_username'));
+        $password = (string) $request->input('bitel_password', '');
         $intervalo = max(5, min(240, (int) $request->input('sync_intervalo_min', 15)));
 
         $existente = DB::table('integrador_credenciales')->where('tienda_codigo', $codigo)->first();
 
         if ($existente) {
             DB::table('integrador_credenciales')->where('tienda_codigo', $codigo)->update([
-                'bitel_username'     => $username,
+                'bitel_username' => $username,
                 'bitel_password_enc' => $password !== '' ? Crypt::encryptString($password) : $existente->bitel_password_enc,
                 'sync_intervalo_min' => $intervalo,
             ]);
+
             return response()->json(['ok' => true, 'message' => 'Credenciales actualizadas. El agente las usará en su siguiente ciclo.']);
         }
 
@@ -334,18 +338,18 @@ class IntegradorController extends Controller
 
         $token = bin2hex(random_bytes(32));
         DB::table('integrador_credenciales')->insert([
-            'tienda_codigo'      => $codigo,
-            'bitel_username'     => $username,
+            'tienda_codigo' => $codigo,
+            'bitel_username' => $username,
             'bitel_password_enc' => Crypt::encryptString($password),
             'sync_intervalo_min' => $intervalo,
-            'agente_token_hash'  => hash('sha256', $token),
-            'creado_en'          => now(),
+            'agente_token_hash' => hash('sha256', $token),
+            'creado_en' => now(),
         ]);
 
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Credenciales registradas. Copia el token AHORA: no se volverá a mostrar.',
-            'token'   => $token,
+            'token' => $token,
         ]);
     }
 
@@ -366,9 +370,9 @@ class IntegradorController extends Controller
         }
 
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Token regenerado. El anterior quedó invalidado. Copia el nuevo AHORA.',
-            'token'   => $token,
+            'token' => $token,
         ]);
     }
 
@@ -377,6 +381,7 @@ class IntegradorController extends Controller
     {
         $codigo = strtoupper(trim($codigo));
         DB::statement('UPDATE integrador_credenciales SET activo = 1 - activo WHERE tienda_codigo = ?', [$codigo]);
+
         return response()->json(['ok' => true, 'message' => 'Estado actualizado.']);
     }
 
@@ -388,7 +393,7 @@ class IntegradorController extends Controller
     public function descargarAgente(Request $request)
     {
         $codigo = strtoupper(trim($request->query('tienda', '')));
-        $token  = trim($request->query('token', ''));
+        $token = trim($request->query('token', ''));
 
         if ($codigo === '' || ! preg_match('/^[0-9a-f]{64}$/i', $token)) {
             return response()->json(['ok' => false, 'error' => 'Token ausente o inválido.'], 403);
@@ -404,56 +409,70 @@ class IntegradorController extends Controller
             return response()->json(['ok' => false, 'error' => 'El token no corresponde a la tienda (¿fue regenerado?).'], 403);
         }
 
-        $servidorCentral = rtrim(config('app.url'), '/') . '/api/v1/integrador/recibir-saldo';
-        $apiKeyCentral   = config('services.integrador.api_key');
+        // Sin los binarios del agente el instalador es inerte (la tarea programada no
+        // tendría qué ejecutar). Fallar ruidosamente en vez de repartir un ZIP roto.
+        $agenteDir = storage_path('app/integrador/agente');
+        $requeridos = ['agente_bipay.php', 'BitelBipayClient.php', 'ejecutar_agente.bat'];
+        $faltantes = array_values(array_filter(
+            $requeridos,
+            fn ($a) => ! is_file($agenteDir.DIRECTORY_SEPARATOR.$a)
+        ));
+        if ($faltantes) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Los binarios del agente no están provisionados en el servidor '
+                    .'(storage/app/integrador/agente): '.implode(', ', $faltantes)
+                    .'. Contacta al administrador del sistema.',
+            ], 503);
+        }
+
+        $servidorCentral = rtrim(config('app.url'), '/').'/api/v1/integrador/recibir-saldo';
+        $apiKeyCentral = config('services.integrador.api_key');
 
         $configPhp = "<?php\n"
-            . "// Config del agente Bipay — tienda {$codigo}. Generado el " . now()->format('Y-m-d H:i') . ".\n"
-            . "// Las credenciales Bitel NO viven aquí: el agente las descarga del servidor\n"
-            . "// central con AGENTE_TOKEN (gestionar en la web: Integrador Bipay).\n"
-            . "define('AGENTE_TOKEN',     '" . addslashes($token) . "');\n"
-            . "define('SERVIDOR_CENTRAL', '" . addslashes($servidorCentral) . "');\n"
-            . "define('API_KEY_CENTRAL',  '" . addslashes($apiKeyCentral) . "');\n"
-            . "define('CUENTA_BD_ID',      1);\n"
-            . "define('FECHA_REPORTE',    '');\n"
-            . "define('LOG_FILE',         __DIR__ . '/agente_bipay.log');\n"
-            . "define('DEBUG_MODE',       false);\n";
+            ."// Config del agente Bipay — tienda {$codigo}. Generado el ".now()->format('Y-m-d H:i').".\n"
+            ."// Las credenciales Bitel NO viven aquí: el agente las descarga del servidor\n"
+            ."// central con AGENTE_TOKEN (gestionar en la web: Integrador Bipay).\n"
+            ."define('AGENTE_TOKEN',     '".addslashes($token)."');\n"
+            ."define('SERVIDOR_CENTRAL', '".addslashes($servidorCentral)."');\n"
+            ."define('API_KEY_CENTRAL',  '".addslashes($apiKeyCentral)."');\n"
+            ."define('CUENTA_BD_ID',      1);\n"
+            ."define('FECHA_REPORTE',    '');\n"
+            ."define('LOG_FILE',         __DIR__ . '/agente_bipay.log');\n"
+            ."define('DEBUG_MODE',       false);\n";
 
         $instalarBat = "@echo off\r\n"
-            . "REM Instala la Tarea Programada del agente Bipay ({$codigo}) — ejecutar como Administrador\r\n"
-            . "net session >nul 2>&1\r\n"
-            . "if %errorlevel% neq 0 ( echo [ERROR] Ejecuta este archivo como Administrador. & pause & exit /b 1 )\r\n"
-            . "where php >nul 2>&1\r\n"
-            . "if %errorlevel% neq 0 ( echo [ERROR] PHP no esta en el PATH. & pause & exit /b 1 )\r\n"
-            . "set DEST=C:\\BitelSync\r\n"
-            . "if not exist %DEST% mkdir %DEST%\r\n"
-            . "xcopy /y \"%~dp0*\" \"%DEST%\\\" >nul\r\n"
-            . "schtasks /create /tn \"Sync Bipay Bitel - {$codigo}\" /tr \"%DEST%\\ejecutar_agente.bat\" /sc minute /mo 5 /ru SYSTEM /f\r\n"
-            . "if %errorlevel% equ 0 ( echo [OK] Tarea instalada. ) else ( echo [ERROR] No se pudo crear la tarea. )\r\n"
-            . "pause\r\n";
+            ."REM Instala la Tarea Programada del agente Bipay ({$codigo}) — ejecutar como Administrador\r\n"
+            ."net session >nul 2>&1\r\n"
+            ."if %errorlevel% neq 0 ( echo [ERROR] Ejecuta este archivo como Administrador. & pause & exit /b 1 )\r\n"
+            ."where php >nul 2>&1\r\n"
+            ."if %errorlevel% neq 0 ( echo [ERROR] PHP no esta en el PATH. & pause & exit /b 1 )\r\n"
+            ."set DEST=C:\\BitelSync\r\n"
+            ."if not exist %DEST% mkdir %DEST%\r\n"
+            ."xcopy /y \"%~dp0*\" \"%DEST%\\\" >nul\r\n"
+            ."schtasks /create /tn \"Sync Bipay Bitel - {$codigo}\" /tr \"%DEST%\\ejecutar_agente.bat\" /sc minute /mo 5 /ru SYSTEM /f\r\n"
+            ."if %errorlevel% equ 0 ( echo [OK] Tarea instalada. ) else ( echo [ERROR] No se pudo crear la tarea. )\r\n"
+            ."pause\r\n";
 
-        $tmpZip = tempnam(sys_get_temp_dir(), 'agente_') . '.zip';
-        $zip = new \ZipArchive();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'agente_').'.zip';
+        $zip = new \ZipArchive;
         if ($zip->open($tmpZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             return response()->json(['ok' => false, 'error' => 'No se pudo crear el ZIP.'], 500);
         }
 
-        // Binarios del agente (copiarlos una vez a storage/app/integrador/agente/)
-        $agenteDir = storage_path('app/integrador/agente');
-        foreach (['agente_bipay.php', 'BitelBipayClient.php', 'ejecutar_agente.bat'] as $a) {
-            if (is_file($agenteDir . DIRECTORY_SEPARATOR . $a)) {
-                $zip->addFile($agenteDir . DIRECTORY_SEPARATOR . $a, $a);
-            }
+        // Binarios del agente (validados arriba; se copian desde storage/app/integrador/agente/).
+        foreach ($requeridos as $a) {
+            $zip->addFile($agenteDir.DIRECTORY_SEPARATOR.$a, $a);
         }
         $zip->addFromString('config.php', $configPhp);
         $zip->addFromString('instalar_tarea.bat', $instalarBat);
         $zip->addFromString('desinstalar_tarea.bat', "@echo off\r\nschtasks /delete /tn \"Sync Bipay Bitel - {$codigo}\" /f\r\npause\r\n");
         $zip->addFromString('LEEME.txt',
             "AGENTE BIPAY — {$codigo}\r\n"
-            . "1. Copia esta carpeta descomprimida a la PC con MSuite.\r\n"
-            . "2. Clic derecho en instalar_tarea.bat -> Ejecutar como administrador (una sola vez).\r\n"
-            . "3. Listo: sincroniza solo cada N minutos (configurable en la web).\r\n"
-            . "Para desinstalar: desinstalar_tarea.bat.\r\n");
+            ."1. Copia esta carpeta descomprimida a la PC con MSuite.\r\n"
+            ."2. Clic derecho en instalar_tarea.bat -> Ejecutar como administrador (una sola vez).\r\n"
+            ."3. Listo: sincroniza solo cada N minutos (configurable en la web).\r\n"
+            ."Para desinstalar: desinstalar_tarea.bat.\r\n");
         $zip->close();
 
         return response()->download($tmpZip, "agente_bipay_{$codigo}.zip")->deleteFileAfterSend(true);
@@ -507,9 +526,9 @@ class IntegradorController extends Controller
             ? $request->query('periodo') : now()->format('Y-m');
 
         return response()->json([
-            'periodo'   => $periodo,
+            'periodo' => $periodo,
             'solicitud' => DB::table('solicitudes_extraccion')->where('periodo', $periodo)->where('tipo', 'deudas')->first(),
-            'lineas'    => DB::table('lineas_morosidad')->where('periodo', $periodo)
+            'lineas' => DB::table('lineas_morosidad')->where('periodo', $periodo)
                 ->orderByDesc('monto_deuda')->limit(1000)->get(),
             'clientes_estado' => DB::table('clientes_estado')->where('periodo', $periodo)
                 ->selectRaw("COUNT(*) total, SUM(es_churn) churn, SUM(estado_linea = 'SUSPENDIDO') suspendidos, SUM(monto_deuda) deuda_total")
@@ -532,6 +551,7 @@ class IntegradorController extends Controller
         if (abs(time() - (int) ($data['timestamp'] ?? 0)) > 300) {
             return response()->json(['ok' => false, 'error' => 'Timestamp expirado (desincronización de reloj)'], 400);
         }
+
         return null;
     }
 
@@ -540,6 +560,7 @@ class IntegradorController extends Controller
         $user = $request->user();
         $ok = $user->rol === 'admin'
             || ($user->rol === 'tienda' && $codigo !== '' && $codigo === strtoupper((string) ($user->tienda_id ?? '')));
+
         return $ok ? null : response()->json(['ok' => false, 'error' => 'No tienes permiso sobre esa tienda.'], 403);
     }
 
@@ -557,7 +578,8 @@ class IntegradorController extends Controller
             return ['estado' => 'SIN_CONTACTO', 'minutos' => null];
         }
         $mins = (time() - strtotime($lastFetch)) / 60;
-        $lim  = max(10, 2 * ($intervalo ?: 15));
+        $lim = max(10, 2 * ($intervalo ?: 15));
+
         return $mins <= $lim
             ? ['estado' => 'EN_LINEA', 'minutos' => (int) round($mins)]
             : ['estado' => 'CAIDO', 'minutos' => (int) round($mins)];
@@ -577,28 +599,29 @@ class IntegradorController extends Controller
         }
 
         $nuevaCuentaId = (int) DB::table('cuentas_bipay')->insertGetId([
-            'alias'          => 'Tienda ' . $codigoCanal,
-            'tipo'           => 'HIJO',
-            'numero_cuenta'  => $codigoCanal,
+            'alias' => 'Tienda '.$codigoCanal,
+            'tipo' => 'HIJO',
+            'numero_cuenta' => $codigoCanal,
             'nombre_titular' => 'Auto-Registro',
-            'razon_social'   => 'Nueva Cuenta ' . $codigoCanal,
-            'saldo_bipay'    => $saldoBipay,
-            'saldo_anypay'   => 0.0,
-            'saldo_actual'   => $saldoBipay,
-            'umbral_alerta'  => 0.0,
-            'activa'         => 1,
+            'razon_social' => 'Nueva Cuenta '.$codigoCanal,
+            'saldo_bipay' => $saldoBipay,
+            'saldo_anypay' => 0.0,
+            'saldo_actual' => $saldoBipay,
+            'umbral_alerta' => 0.0,
+            'activa' => 1,
         ]);
 
         if ($tienda) {
             DB::table('tiendas')->where('id', $tienda->id)->update(['cuenta_bipay_id' => $nuevaCuentaId]);
         } else {
             DB::table('tiendas')->insert([
-                'codigo'          => $codigoCanal,
-                'nombre'          => 'Tienda Nueva',
+                'codigo' => $codigoCanal,
+                'nombre' => 'Tienda Nueva',
                 'cuenta_bipay_id' => $nuevaCuentaId,
                 'radio_permitido' => 60,
             ]);
         }
+
         return $nuevaCuentaId;
     }
 
@@ -623,7 +646,7 @@ class IntegradorController extends Controller
             }
             $fechaMov ??= $fechaReporte;
 
-            $key = $tienda . '_' . $fechaMov;
+            $key = $tienda.'_'.$fechaMov;
             $grouped[$key] ??= [
                 'tienda_codigo' => $tienda, 'fecha' => $fechaMov,
                 'postpago' => 0.0, 'paquetes' => 0.0, 'recargas' => 0.0, 'prepago' => 0.0,
@@ -632,16 +655,17 @@ class IntegradorController extends Controller
 
             $monto = abs((float) ($mov['cantidad'] ?? 0));
             $slot = match ($categoria) {
-                'postpago'                      => 'postpago',
-                'paquetes'                      => 'paquetes',
-                'recarga_bipay', 'recargas'     => 'recargas',
-                'prepago'                       => 'prepago',
-                'portabilidad'                  => 'portabilidad',
+                'postpago' => 'postpago',
+                'paquetes' => 'paquetes',
+                'recarga_bipay', 'recargas' => 'recargas',
+                'prepago' => 'prepago',
+                'portabilidad' => 'portabilidad',
                 'reembolsos_bipay', 'reembolsos' => 'reembolsos',
-                default                         => 'otros',
+                default => 'otros',
             };
             $grouped[$key][$slot] += $monto;
         }
+
         return $grouped;
     }
 
@@ -652,8 +676,8 @@ class IntegradorController extends Controller
             $fechaHora = ! empty($m['tiempo'])
                 ? date('Y-m-d H:i:s', strtotime($m['tiempo']))
                 : ($fallbackFechaHora ?? now()->toDateTimeString());
-            $tienda  = ! empty($m['cod_tienda']) ? $m['cod_tienda'] : $channelCode;
-            $descRaw = trim(($m['descripcion'] ?? '') . ' ' . ($m['isdn_cliente'] ?? '') . ' ' . ($m['nota'] ?? ''));
+            $tienda = ! empty($m['cod_tienda']) ? $m['cod_tienda'] : $channelCode;
+            $descRaw = trim(($m['descripcion'] ?? '').' '.($m['isdn_cliente'] ?? '').' '.($m['nota'] ?? ''));
 
             $insertados += DB::affectingStatement('
                 INSERT IGNORE INTO bitel_operaciones_detalle
@@ -667,6 +691,7 @@ class IntegradorController extends Controller
                 CuadreBitelService::extraerCodigoPersonal($descRaw),
             ]);
         }
+
         return $insertados;
     }
 
@@ -683,7 +708,7 @@ class IntegradorController extends Controller
             $periodo = preg_match('/^\d{4}-\d{2}$/', $c['periodo'] ?? '')
                 ? $c['periodo'] : date('Y-m', strtotime($fechaBase));
 
-            DB::statement("
+            DB::statement('
                 INSERT INTO clientes_estado
                     (numero_linea, dni_cliente, cod_tienda, plan, fecha_alta,
                      estado_linea, estado_bloqueo, dias_mora, monto_deuda, es_churn, periodo)
@@ -693,7 +718,7 @@ class IntegradorController extends Controller
                     fecha_alta = VALUES(fecha_alta), estado_linea = VALUES(estado_linea),
                     estado_bloqueo = VALUES(estado_bloqueo), dias_mora = VALUES(dias_mora),
                     monto_deuda = VALUES(monto_deuda), es_churn = VALUES(es_churn)
-            ", [
+            ', [
                 substr($linea, 0, 20),
                 substr(preg_replace('/\D/', '', (string) ($c['dni_cliente'] ?? '')), 0, 12),
                 $this->sanearCodigo($c['cod_tienda'] ?? ''),
@@ -708,6 +733,7 @@ class IntegradorController extends Controller
             ]);
             $n++;
         }
+
         return $n;
     }
 
@@ -723,7 +749,7 @@ class IntegradorController extends Controller
                 ? $lm['estado_linea'] : 'ACTIVO';
             $periodo = preg_match('/^\d{4}-\d{2}$/', $lm['periodo'] ?? '') ? $lm['periodo'] : $periodoDefault;
 
-            DB::statement("
+            DB::statement('
                 INSERT INTO lineas_morosidad
                     (numero_linea, cliente, cod_tienda, plan, fecha_alta,
                      estado_linea, fecha_cancelacion, dias_mora, monto_deuda, es_churn, periodo)
@@ -733,7 +759,7 @@ class IntegradorController extends Controller
                     fecha_alta = VALUES(fecha_alta), estado_linea = VALUES(estado_linea),
                     fecha_cancelacion = VALUES(fecha_cancelacion), dias_mora = VALUES(dias_mora),
                     monto_deuda = VALUES(monto_deuda), es_churn = VALUES(es_churn)
-            ", [
+            ', [
                 substr($linea, 0, 20),
                 substr((string) ($lm['cliente'] ?? ''), 0, 150),
                 $this->sanearCodigo($lm['cod_tienda'] ?? ''),
@@ -748,6 +774,7 @@ class IntegradorController extends Controller
             ]);
             $n++;
         }
+
         return $n;
     }
 }
