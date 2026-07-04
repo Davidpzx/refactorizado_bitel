@@ -250,12 +250,12 @@ export function AsistenciasPage() {
     <div className="space-y-6">
       <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes" Icon={Clock}>
         {usuario?.rol === 'admin' && (
-          <Button variant="glassInfo" size="sm" onClick={() => setShowManual(s => !s)}>
+          <Button variant="glassIndigo" size="sm" onClick={() => setShowManual(s => !s)}>
             <ClipboardList size={14} /> Asistencia Manual
           </Button>
         )}
         {usuario?.rol === 'admin' && (
-          <Button variant="outline" size="sm" onClick={() => setShowExc(s => !s)}>
+          <Button variant="glassInfo" size="sm" onClick={() => setShowExc(s => !s)}>
             <AlertCircle size={14} /> Registrar excepción
           </Button>
         )}
@@ -263,7 +263,7 @@ export function AsistenciasPage() {
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
         {usuario?.rol === 'admin' && (
-          <Button variant="outline" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
+          <Button variant="glassWarning" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
             <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
           </Button>
         )}
@@ -376,14 +376,14 @@ export function AsistenciasPage() {
       <ListToolbar description="Acota el periodo y el agente que deseas revisar">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs text-kyro-muted mb-1">Desde</label>
+            <label className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-wide text-kyro-muted">Desde</label>
             <Input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
               className="kyro-input"
             />
           </div>
           <div>
-            <label className="block text-xs text-kyro-muted mb-1">Hasta</label>
+            <label className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-wide text-kyro-muted">Hasta</label>
             <Input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
               className="kyro-input"
@@ -391,7 +391,7 @@ export function AsistenciasPage() {
           </div>
           {usuario?.rol === 'admin' && (
             <div>
-              <label className="block text-xs text-kyro-muted mb-1">Agente</label>
+              <label className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-wide text-kyro-muted">Agente</label>
               <Select value={filters.agente_id} onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))} className="w-44">
                 <option value="">Todos</option>
                 {agentesLista.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
