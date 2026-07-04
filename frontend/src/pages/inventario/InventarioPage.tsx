@@ -2,13 +2,14 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History, LayoutGrid, Package } from 'lucide-react'
+import { FileSpreadsheet, Pencil, Trash2, SlidersHorizontal, Tag, History, LayoutGrid, Package } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { AlertBanner } from '../../components/ui/AlertBanner'
 import { Dialog } from '../../components/ui/dialog'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Button } from '../../components/ui/button'
@@ -192,14 +193,13 @@ function CampanaCostosWidget() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => setOpen(true)}
-        className="mb-4 h-auto w-full justify-start gap-2 border-kyro-warning/40 bg-kyro-warning/10 px-4 py-2.5 text-kyro-warning hover:bg-kyro-warning/20"
-      >
-        <AlertTriangle size={15} className="shrink-0" />
-        <span>{count} {count === 1 ? 'venta sin' : 'ventas sin'} precio de costo — Haz clic para corregir</span>
-      </Button>
+      <AlertBanner
+        tone="warning"
+        title="Ventas sin precio de costo"
+        subtitle={`${count} ${count === 1 ? 'venta' : 'ventas'} sin precio de costo registrado`}
+        action={<Button variant="glassWarning" size="sm" onClick={() => setOpen(true)}>Corregir</Button>}
+        className="mb-4"
+      />
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Ventas sin precio de costo" maxWidth="lg">
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -279,16 +279,13 @@ function StockEstancadoWidget() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => setOpen(true)}
-        className="mb-4 h-auto w-full justify-start gap-2 border-kyro-info/40 bg-kyro-info/10 px-4 py-2.5 text-kyro-info hover:bg-kyro-info/20"
-      >
-        <AlertTriangle size={15} className="shrink-0" />
-        <span>
-          {items.length} {items.length === 1 ? 'ítem estancado' : 'ítems estancados'} (30+ días sin movimiento) — capital inmovilizado S/ {(data?.capital_inmovilizado ?? 0).toFixed(2)}
-        </span>
-      </Button>
+      <AlertBanner
+        tone="danger"
+        title="Alerta: Stock Estancado (>30 días)"
+        subtitle={`${items.length} ${items.length === 1 ? 'ítem estancado' : 'ítems estancados'} sin movimiento — capital inmovilizado S/ ${(data?.capital_inmovilizado ?? 0).toFixed(2)}`}
+        action={<Button variant="glassDanger" size="sm" onClick={() => setOpen(true)}>Ver detalle</Button>}
+        className="mb-4"
+      />
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Stock estancado (30+ días sin movimiento)" maxWidth="lg">
         <div className="max-h-[60vh] overflow-y-auto pr-1">
