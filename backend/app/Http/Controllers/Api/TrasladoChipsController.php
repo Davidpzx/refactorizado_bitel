@@ -7,6 +7,7 @@ use App\Models\Agente;
 use App\Models\InventarioChip;
 use App\Models\Tienda;
 use App\Models\TrasladoChip;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -169,7 +170,7 @@ class TrasladoChipsController extends Controller
                 ->first();
 
             if (!$traslado) return ['error' => 'Traslado no encontrado o ya fue procesado.'];
-            if (!$esAdmin && $traslado->tienda_destino !== $user->tienda_id) {
+            if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $traslado->tienda_destino)) {
                 return ['error' => 'Solo la tienda destino puede confirmar este traslado.'];
             }
 
