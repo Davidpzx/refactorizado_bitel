@@ -296,7 +296,7 @@
     <tbody>
         <tr>
             <td>TOTAL VENTAS BRUTAS:</td>
-            <td class="monto">S/ {{ number_format($reporte->total_calculado, 2) }}</td>
+            <td class="monto">S/ {{ number_format($ventas->sum('monto_total'), 2) }}</td>
         </tr>
         <tr>
             <td>(+) Sencillo Inicial (Caja Base):</td>

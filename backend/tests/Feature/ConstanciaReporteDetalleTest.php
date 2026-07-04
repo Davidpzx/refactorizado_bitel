@@ -237,6 +237,60 @@ class ConstanciaReporteDetalleTest extends TestCase
         $this->assertEquals((float) $reporte->total_calculado, $sumaSecciones);
     }
 
+    public function test_total_ventas_brutas_se_recalcula_en_vivo_tras_anular_venta_post_cierre(): void
+    {
+        [$reporteId] = $this->crearReporteConDetalle();
+
+        $reporte = DB::table('reportes as r')
+            ->leftJoin('agentes as a', 'a.id', '=', 'r.agente_id')
+            ->leftJoin('tiendas as t', 't.codigo', '=', 'r.tienda_id')
+            ->where('r.id', $reporteId)
+            ->select('r.*', 'a.nombres as agente_nombre', 'a.dni as agente_dni', 't.nombre as tienda_nombre')
+            ->first();
+
+        // total_calculado del cierre: 50 + 30 + 1500 + 20 + 40 = 1640.
+        $this->assertEquals(1640.0, (float) $reporte->total_calculado);
+
+        // Simula "Restaurar equipo" del Kardex (InventarioController::restaurar): anula la venta
+        // EQUIPO *despues* del cierre del reporte, sin tocar reportes.total_calculado.
+        $ventaEquipoId = DB::table('ventas')
+            ->where('reporte_id', $reporteId)
+            ->where('tipo_venta', 'EQUIPO')
+            ->value('id');
+        DB::table('ventas')->where('id', $ventaEquipoId)->update(['comision_estado' => 'ANULADA']);
+
+        // total_calculado sigue "stale": nada lo recalcula ante una anulacion post-hoc.
+        $this->assertEquals(1640.0, (float) DB::table('reportes')->where('id', $reporteId)->value('total_calculado'));
+
+        $ventas = Venta::with(['equipo', 'linea', 'cliente', 'vendedor'])
+            ->where('reporte_id', $reporteId)
+            ->where('comision_estado', '!=', 'ANULADA')
+            ->orderBy('id')
+            ->get();
+
+        $salidas = DB::table('reporte_salidas')->where('reporte_id', $reporteId)->orderBy('id')->get();
+        $empresa = (object) ['razon_social' => 'BITEL TELECOM S.A.C.'];
+
+        $html = view('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))->render();
+
+        // Subtotal itemizado en vivo (sin la venta anulada): 1640 - 1500 = 140.
+        $sumaItemizada = $ventas->sum('monto_total');
+        $this->assertEquals(140.0, $sumaItemizada);
+
+        // "TOTAL VENTAS BRUTAS" debe cuadrar con el subtotal itemizado en vivo del PDF,
+        // no con el total_calculado stale del cierre (que arrastraria la venta ya anulada).
+        // Nota: el campo "Total Calculado" de la cabecera (fuera de alcance de este fix) sigue
+        // mostrando el valor historico 1,640.00 a proposito, por eso se aisla la fila del cuadre.
+        $this->assertMatchesRegularExpression(
+            '/TOTAL VENTAS BRUTAS:<\/td>\s*<td class="monto">S\/ ' . preg_quote(number_format($sumaItemizada, 2), '/') . '<\/td>/',
+            $html
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/TOTAL VENTAS BRUTAS:<\/td>\s*<td class="monto">S\/ 1,640\.00<\/td>/',
+            $html
+        );
+    }
+
     public function test_endpoint_descarga_pdf_real_sin_error(): void
     {
         if (! Schema::hasTable('configuraciones')) {
