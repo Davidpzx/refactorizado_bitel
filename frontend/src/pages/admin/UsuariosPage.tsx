@@ -320,19 +320,21 @@ export function UsuariosPage() {
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                {['ID', 'Nombre', 'Email', 'Rol', 'Tienda', 'Agente', 'Estado', 'BCP', 'Acciones'].map(h => (
+                {['ID', 'Usuario', 'Rol', 'Tienda', 'Agente', 'Estado', 'BCP', 'Acciones'].map(h => (
                   <th key={h} className="kyro-table-head px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-kyro-border">
-              {isLoading && <tr><td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
-              {!isLoading && usuarios.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">Sin resultados</td></tr>}
+              {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
+              {!isLoading && usuarios.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Sin resultados</td></tr>}
               {usuarios.map(u => (
                 <tr key={u.id} className="transition-colors hover:bg-kyro-elevated">
                   <td className="px-4 py-3 text-xs text-kyro-muted">#{u.id}</td>
-                  <td className="px-4 py-3 font-medium text-kyro-text">{u.nombre}</td>
-                  <td className="px-4 py-3 text-kyro-body">{u.email}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-kyro-text">{u.nombre}</p>
+                    <p className="text-xs text-kyro-muted">{u.email}</p>
+                  </td>
                   <td className="px-4 py-3">
                     <Badge variant={u.rol === 'admin' ? 'gold' : 'cyan'}>{u.rol}</Badge>
                   </td>

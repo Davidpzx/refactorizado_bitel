@@ -43,6 +43,40 @@ function getColumns(
       ),
     },
     {
+      id: 'jornada',
+      header: 'Jornada y descanso',
+      cell: ({ row }) => {
+        const { hora_ingreso, hora_salida, dia_descanso } = row.original
+        if (!hora_ingreso && !hora_salida && !dia_descanso) {
+          return <span className="text-xs text-kyro-muted">—</span>
+        }
+        return (
+          <div className="text-xs">
+            <p className="font-mono tabular-nums text-kyro-body">
+              {hora_ingreso?.slice(0, 5) ?? '--:--'} → {hora_salida?.slice(0, 5) ?? '--:--'}
+            </p>
+            <p className="text-kyro-muted">{dia_descanso ? `Libre ${dia_descanso}` : 'Sin día libre'}</p>
+          </div>
+        )
+      },
+    },
+    {
+      id: 'baja_retorno',
+      header: 'Baja / retorno',
+      cell: ({ row }) => {
+        const { fecha_retorno, motivo_baja } = row.original
+        if (!fecha_retorno && !motivo_baja) {
+          return <span className="text-xs text-kyro-muted">—</span>
+        }
+        return (
+          <div className="text-xs">
+            {motivo_baja && <p className="font-medium text-kyro-danger">{motivo_baja}</p>}
+            {fecha_retorno && <p className="text-kyro-muted">Retorno: {formatearFechaCorta(fecha_retorno)}</p>}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: 'sueldo_base',
       header: 'Sueldo',
       cell: ({ row }) => (
