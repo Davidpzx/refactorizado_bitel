@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react'
+import { Building2, KeyRound, Landmark, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react'
 import {
   sanitizarNombreUsuario,
   validarUsuario,
@@ -336,12 +336,20 @@ export function UsuariosPage() {
                   <td className="px-4 py-3">
                     <Badge variant={u.rol === 'admin' ? 'gold' : 'cyan'}>{u.rol}</Badge>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-kyro-body">{u.tienda_id ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    {u.tienda_id
+                      ? <Badge variant="outline" className="gap-1 font-mono"><Building2 size={11} /> {u.tienda_id}</Badge>
+                      : <span className="text-xs text-kyro-muted">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-xs text-kyro-body">{u.agente?.nombres ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge variant={u.activo ? 'success' : 'warning'}>{u.activo ? 'Activo' : 'Inactivo'}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-center text-kyro-body">{u.tiene_bcp ? '✓' : '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    {u.tiene_bcp
+                      ? <Badge variant="cyan" className="gap-1"><Landmark size={11} /> BCP</Badge>
+                      : <span className="text-xs text-kyro-muted">—</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <TableActions>
                       <ActionIconButton tone="edit" label="Editar usuario" icon={<Pencil size={15} />} onClick={() => { setEditando(u); setDialogOpen(true) }} />
