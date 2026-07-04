@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle, FileSpreadsheet } from 'lucide-react'
+import { AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle, FileSpreadsheet, LayoutDashboard } from 'lucide-react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button'
 import { ActionIconButton, TableActions } from '../components/ui/ActionIconButton'
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
+import { StatCard } from '../components/ui/StatCard'
 import { apiErrorData } from '../lib/httpError'
 import { api } from '../services/api'
 import { Select } from '../components/ui/select'
@@ -47,28 +48,19 @@ const DESTINOS = [
 ]
 
 // ── Sub-components ─────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  title, value, colorClass = 'text-blue-600 dark:text-blue-400', borderClass, highlight = false,
-}: {
-  title: string
-  value: number | string | null | undefined
-  colorClass?: string
-  borderClass: string
-  highlight?: boolean
-}) {
-  return (
-    <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
-
-      <div aria-hidden className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]" />
-      <p className="relative text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">{title}</p>
-      <p className={`relative mt-2 text-xl font-bold tracking-tight ${colorClass}`}>
-        {value === null ? <span className="text-gray-300 animate-pulse">···</span> : fmt(value)}
-      </p>
-      {highlight && <div className="relative mt-2 h-0.5 w-8 rounded bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />}
-    </div>
-  )
-}
+// Colores de acento de KPI (paridad legacy `panel_gerencia.php`).
+const KPI_ACCENT = {
+  total:      '#0d6efd',
+  esperado:   '#0dcaf0',
+  declarado:  '#198754',
+  neutral:    '#6c757d',
+  yape:       '#a78bfa',
+  bipay:      '#38bdf8',
+  transfer:   '#34d399',
+  ganancia:   '#10b981',
+  danger:     '#ef4444',
+  warning:    '#f59e0b',
+} as const
 
 function KpiCardDiferencia({ value }: { value: number | string | null | undefined }) {
   const num = Number(value ?? 0)
@@ -77,20 +69,17 @@ function KpiCardDiferencia({ value }: { value: number | string | null | undefine
     : num < 0
     ? 'text-red-600 dark:text-red-400'
     : 'text-yellow-600 dark:text-yellow-400'
-  const borderClass = num === 0 ? 'border-l-kpi-neutral' : num < 0 ? 'border-l-kyro-danger' : 'border-l-kyro-warning'
+  const accent = num === 0 ? KPI_ACCENT.neutral : num < 0 ? KPI_ACCENT.danger : KPI_ACCENT.warning
   const Icon = num < 0 ? TrendingDown : TrendingUp
 
   return (
-    <div className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 border-l-4 ${borderClass} transition-all duration-200 hover:-translate-y-0.5`}>
-
-      <p className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-gray-500 dark:text-zinc-400">Diferencia Física</p>
-      <div className="mt-2 flex items-center gap-2">
-        {value !== null && <Icon size={18} className={colorClass} />}
-        <p className={`text-xl font-bold tracking-tight ${colorClass}`}>
-          {value === null ? <span className="text-gray-300 animate-pulse">···</span> : (num > 0 ? '+' : '') + fmt(num)}
-        </p>
-      </div>
-    </div>
+    <StatCard
+      title="Diferencia Física"
+      accent={accent}
+      valueColorClass={colorClass}
+      icon={value !== null ? <Icon size={18} /> : undefined}
+      value={value === null ? null : (num > 0 ? '+' : '') + fmt(num)}
+    />
   )
 }
 
@@ -264,6 +253,7 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard Gerencial"
         description="Visión consolidada de caja, canales digitales y reportes operativos."
+        Icon={LayoutDashboard}
         actions={usuario?.rol === 'admin' ? (
           <div className="flex items-center gap-2">
             <Button variant="glassSuccess" size="sm" onClick={exportarExcel} className="gap-1.5">
@@ -325,24 +315,24 @@ export function DashboardPage() {
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}     colorClass="text-blue-700 dark:text-blue-400"    borderClass="border-l-kpi-total" />
-        <KpiCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}   colorClass="text-green-700 dark:text-green-400"   borderClass="border-l-kpi-esperado" />
-        <KpiCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado}  colorClass="text-indigo-700 dark:text-indigo-400"  borderClass="border-l-kpi-declarado" />
-        <KpiCardDiferencia                              value={isLoading ? null : totales?.diferencia_fisica} />
+        <StatCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}    formatMoney accent={KPI_ACCENT.total}     valueColorClass="text-blue-700 dark:text-blue-400" />
+        <StatCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}  formatMoney accent={KPI_ACCENT.esperado}  valueColorClass="text-green-700 dark:text-green-400" />
+        <StatCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado} formatMoney accent={KPI_ACCENT.declarado} valueColorClass="text-indigo-700 dark:text-indigo-400" />
+        <KpiCardDiferencia                               value={isLoading ? null : totales?.diferencia_fisica} />
       </div>
 
       {/* KPIs digitales */}
       <div className={`grid gap-4 ${usuario?.rol === 'admin' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}>
-        <KpiCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          colorClass="text-purple-700 dark:text-purple-400" borderClass="border-l-kpi-yape" />
-        <KpiCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         colorClass="text-orange-600 dark:text-orange-400" borderClass="border-l-kpi-bipay" />
-        <KpiCard title="Total Transferencia" value={isLoading ? null : totales?.total_transferencia} colorClass="text-teal-600 dark:text-teal-400"     borderClass="border-l-kpi-transfer" />
+        <StatCard title="Total Yape"          value={isLoading ? null : totales?.total_yape}          formatMoney accent={KPI_ACCENT.yape}     valueColorClass="text-purple-700 dark:text-purple-400" />
+        <StatCard title="Total Bipay"         value={isLoading ? null : totales?.total_bipay}         formatMoney accent={KPI_ACCENT.bipay}    valueColorClass="text-orange-600 dark:text-orange-400" />
+        <StatCard title="Total Transferencia" value={isLoading ? null : totales?.total_transferencia} formatMoney accent={KPI_ACCENT.transfer} valueColorClass="text-teal-600 dark:text-teal-400" />
         {usuario?.rol === 'admin' && (
-          <KpiCard
+          <StatCard
             title="Ganancia Total del Período"
             value={isLoading ? null : data?.ganancia_total}
-            colorClass="text-emerald-700 dark:text-emerald-400"
-            borderClass="border-l-kpi-ganancia"
-            highlight
+            formatMoney
+            accent={KPI_ACCENT.ganancia}
+            valueColorClass="text-emerald-700 dark:text-emerald-400"
           />
         )}
       </div>
