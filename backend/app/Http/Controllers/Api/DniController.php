@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class DniController extends Controller
@@ -18,6 +19,21 @@ class DniController extends Controller
     {
         if (!preg_match('/^\d{8}$/', $dni)) {
             return response()->json(['success' => false, 'message' => 'DNI debe tener exactamente 8 dígitos.'], 422);
+        }
+
+        // Caché de primer nivel: si el CRM ya capturó este DNI, se evita la API externa por completo.
+        $local = DB::table('crm_clientes')->where('dni', $dni)->first(['nombres', 'apellidos']);
+        if ($local) {
+            $ap = explode(' ', trim($local->apellidos), 2);
+            return response()->json([
+                'nombres'          => $local->nombres,
+                'apellido_paterno' => $ap[0] ?? '',
+                'apellido_materno' => $ap[1] ?? '',
+                'numero_documento' => $dni,
+                'tipo_documento'   => 1,
+                'nombre_completo'  => trim($local->nombres . ' ' . $local->apellidos),
+                'fuente'           => 'cache_local',
+            ]);
         }
 
         $cacheKey = "reniec_dni_{$dni}";
