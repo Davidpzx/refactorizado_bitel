@@ -67,9 +67,7 @@ class TrasladoChipsController extends Controller
             return response()->json(['success' => false, 'message' => 'Solo puedes trasladar chips de tu propia tienda.'], 403);
         }
 
-        // Admin crea directamente en PENDIENTE; tienda crea en PENDIENTE_APROBACION (admin aprueba)
-        $estadoTraslado = $esAdmin ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
-        $authDni        = trim($request->input('auth_dni', ''));
+        $authDni = trim($request->input('auth_dni', ''));
 
         if (!$authDni) {
             return response()->json(['success' => false, 'message' => 'Tu DNI es requerido.'], 422);
@@ -84,6 +82,10 @@ class TrasladoChipsController extends Controller
         }
 
         $enviadoPorId = $agente->id;
+
+        // Admin o gerente de tienda crean directamente en PENDIENTE; tienda crea en
+        // PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado_chips.php.
+        $estadoTraslado = ($esAdmin || $agente->es_gerencia) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
 
         $chip = InventarioChip::find($chipId);
         if (!$chip) {
@@ -122,7 +124,7 @@ class TrasladoChipsController extends Controller
             return response()->json(['success' => false, 'message' => 'Stock insuficiente. Intenta de nuevo.'], 422);
         }
 
-        $msg = $esAdmin
+        $msg = $estadoTraslado === 'PENDIENTE'
             ? "{$cantidad} chip(s) enviados a {$tiendaDestino} EN TRÁNSITO."
             : "{$cantidad} chip(s) PENDIENTES DE APROBACIÓN.";
 
