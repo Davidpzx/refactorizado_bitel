@@ -92,6 +92,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Dashboard ────────────────────────────────────────────────────────────
     Route::get('dashboard/kpis',      [DashboardController::class, 'kpis']);
     Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias'])->middleware('role:admin');
+    Route::get('dashboard/exportar',  [DashboardController::class, 'exportar'])->middleware('role:admin');
     Route::get('control-center',      [ControlCenterController::class, 'index']);
     Route::post('marcar-notificacion', [ControlCenterController::class, 'marcarNotificacion']);
 
@@ -123,6 +124,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('reportes/{reporte}/denegar-edicion',         [ReporteController::class, 'denegarEdicion']);
     Route::put('reportes/{reporte}/reprocesar',             [ReporteController::class, 'reprocesar']);
     Route::get('reportes/{reporte}/historial',              [ReporteController::class, 'historial']);
+    Route::get('reportes/{reporte}/exportar-excel',          [ReporteController::class, 'exportarExcel']);
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
 
     Route::get('reportes', [ReporteController::class, 'index'])->middleware('role:admin');

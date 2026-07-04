@@ -19,6 +19,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReporteController extends Controller
 {
@@ -46,6 +50,345 @@ class ReporteController extends Controller
         $this->autorizarPropietarioOAdmin($request, $reporte);
         $reporte->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
         return response()->json($reporte);
+    }
+
+    /**
+     * Export XLSX de auditoría de UN reporte (paridad con gerencia/exportar_excel.php del legacy):
+     * postpago/prepago/equipos/servicios/apoyo/salidas/dinero digital/cuadre financiero/historial de ediciones.
+     */
+    public function exportarExcel(Request $request, Reporte $reporte): StreamedResponse
+    {
+        $this->autorizarPropietarioOAdmin($request, $reporte);
+
+        $reporte->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']);
+
+        $historialEdiciones = $reporte->historialReportes()
+            ->whereIn('accion', ['edicion_reporte', 'edicion_critica', 'edicion_restaurada'])
+            ->with('usuario')
+            ->orderBy('created_at')
+            ->get();
+
+        $mapaAgentes = DB::table('agentes')->pluck('nombres', 'id');
+        $nomAg = static function ($id) use ($mapaAgentes) {
+            $nombre = $mapaAgentes[$id] ?? null;
+            if (! $nombre) {
+                return 'N/A';
+            }
+            $partes = array_values(array_filter(explode(' ', trim($nombre))));
+            return ucwords(strtolower(implode(' ', array_slice($partes, 0, 2))));
+        };
+
+        $postpago = [];
+        $prepago  = [];
+        $equipos  = [];
+        $apoyo    = [];
+        $servicios = [];
+
+        $nombresServicio = [
+            'recarga_bipay'  => 'Recarga Bipay',
+            'pago_servicio'  => 'Pago de Servicio',
+            'pago_krece'     => 'Pago Krece',
+            'pago_payjoy'    => 'Pago Payjoy',
+            'tickets_tusamy' => 'Tickets Tusamy',
+        ];
+
+        foreach ($reporte->ventas as $venta) {
+            if ($venta->comision_estado === 'ANULADA') {
+                continue;
+            }
+
+            $dni = $venta->cliente->dni_ruc ?? 'N/A';
+            $esApoyo = (bool) $venta->cross_selling || $venta->tipo_venta === 'APOYO';
+
+            if (in_array($venta->tipo_venta, ['POSTPAGO', 'PREPAGO', 'APOYO'], true)) {
+                $l = $venta->linea;
+                $tipoAlta = ($l?->tipo_alta ?? '') === 'MNP' ? 'PORT.' : ($l?->tipo_alta ?? '');
+                $flagMigracion = $venta->es_remate
+                    ? 'Remate'
+                    : ($l?->es_migracion ? 'Migración' : ($l?->es_upgrade ? 'Upgrade' : '—'));
+                if ($venta->es_extranjero) {
+                    $flagMigracion .= ' Extranjero';
+                }
+
+                $fila = [
+                    'plan'      => $l?->plan_nombre_snap ?? 'Plan',
+                    'tipo'      => $tipoAlta,
+                    'cantidad'  => $l?->cantidad ?? 1,
+                    'cobrado'   => (float) ($l ? $l->cobrado_unitario * max(1, $l->cantidad) : $venta->monto_total),
+                    'vendedor'  => $nomAg($venta->vendedor_id),
+                    'dni'       => $dni,
+                    'destino'   => $venta->tienda_destino ?? '—',
+                    'migracion' => $flagMigracion,
+                ];
+
+                if ($esApoyo) {
+                    $apoyo[] = $fila;
+                } elseif ($venta->tipo_venta === 'POSTPAGO') {
+                    $postpago[] = $fila;
+                } else {
+                    $prepago[] = $fila;
+                }
+            } elseif (in_array($venta->tipo_venta, ['EQUIPO', 'ACCESORIO'], true)) {
+                $e = $venta->equipo;
+                $equipos[] = [
+                    'producto'   => $e?->producto_nombre_snap ?? '—',
+                    'imei'       => $e?->imei_serial_snap ?: '—',
+                    'precio'     => (float) $venta->monto_total,
+                    'tipo_pago'  => $e?->tipo_pago ?? 'CONTADO',
+                    'financiera' => $e?->financiera ?: '—',
+                    'vendedor'   => $nomAg($venta->vendedor_id),
+                    'dni'        => $dni,
+                ];
+            } elseif ($venta->tipo_venta === 'OTROS_FLUJO') {
+                $servicios[] = ['label' => 'Otros Ingresos: ' . ($venta->subtipo ?: '—'), 'monto' => (float) $venta->monto_total];
+            }
+        }
+
+        foreach ($nombresServicio as $campo => $label) {
+            $monto = (float) ($reporte->{$campo} ?? 0);
+            if ($monto != 0) {
+                $servicios[] = ['label' => $label, 'monto' => $monto];
+            }
+        }
+
+        // ── Cálculos de cuadre (paridad exacta con exportar_excel.php) ──────────
+        $totalSistema = (float) $reporte->total_calculado;
+        $totalDigital = (float) $reporte->yape + (float) $reporte->bipay
+            + (float) $reporte->transferencia + (float) $reporte->retiro_bipay;
+        $gastos       = (float) $reporte->total_salidas;
+        $efectivoNeto = $totalSistema - $totalDigital - $gastos;
+        $base         = (float) $reporte->caja_inicial;
+        $totalCajon   = $efectivoNeto + $base;
+        $entregado    = (float) $reporte->efectivo_entregado;
+        $diferencia   = (float) $reporte->diferencia;
+
+        $destinoLabels = [
+            'BANCO'     => 'Depositado en Banco',
+            'GERENCIA'  => 'Entregado a Supervisor/Gerencia',
+            'EN_CAJA'   => 'Guardado en Caja Fuerte Central',
+            'AGENTE'    => 'Usado para Pagos/Gastos (Agente)',
+            'TIENDA'    => 'Sigue en Tienda (No Entregado)',
+            'ENTREGADO' => 'Entregado / Depositado',
+        ];
+        $destinoLabel = $destinoLabels[$reporte->destino_efectivo ?? ''] ?? ($reporte->destino_efectivo ?? '—');
+
+        $estadoCuadre = abs($diferencia) < 0.01 ? 'CUADRE EXACTO' : ($diferencia < 0 ? 'FALTANTE' : 'SOBRANTE');
+
+        $numReporte = str_pad((string) $reporte->id, 5, '0', STR_PAD_LEFT);
+        $empresa = Schema::hasTable('configuraciones')
+            ? (DB::table('configuraciones')->value('razon_social') ?? 'BITEL')
+            : 'BITEL';
+
+        // ── Construcción del XLSX ────────────────────────────────────────────────
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Reporte ' . $numReporte);
+
+        $fila = 1;
+        $sheet->setCellValue("A{$fila}", "REPORTE DETALLADO DE VENTAS — {$empresa}");
+        $sheet->mergeCells("A{$fila}:H{$fila}");
+        $sheet->getStyle("A{$fila}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0D6EFD']],
+        ]);
+        $fila++;
+        $sheet->setCellValue("A{$fila}", "Reporte #{$numReporte}  |  Fecha: " . ($reporte->fecha instanceof \DateTimeInterface ? $reporte->fecha->format('d/m/Y') : (string) $reporte->fecha) . "  |  Tienda: {$reporte->tienda_id}");
+        $sheet->mergeCells("A{$fila}:H{$fila}");
+        $fila += 2;
+
+        $seccion = function (string $titulo, string $color) use ($sheet, &$fila) {
+            $sheet->setCellValue("A{$fila}", $titulo);
+            $sheet->mergeCells("A{$fila}:H{$fila}");
+            $sheet->getStyle("A{$fila}")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $color]],
+            ]);
+            $fila++;
+        };
+
+        $cabecera = function (array $cols) use ($sheet, &$fila) {
+            $sheet->fromArray($cols, null, "A{$fila}");
+            $ultima = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cols));
+            $sheet->getStyle("A{$fila}:{$ultima}{$fila}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E0E0E0']],
+            ]);
+            $fila++;
+        };
+
+        $totalRow = function (string $label, float $monto, int $colMonto = 4) use ($sheet, &$fila) {
+            $colLetra = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colMonto);
+            $sheet->setCellValue("A{$fila}", $label);
+            $sheet->setCellValue("{$colLetra}{$fila}", round($monto, 2));
+            $sheet->getStyle("A{$fila}:{$colLetra}{$fila}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D4EDDA']],
+            ]);
+            $fila++;
+        };
+
+        // 1. Postpago
+        $seccion('1. VENTAS POSTPAGO (LÍNEAS)', '0D6EFD');
+        $cabecera(['Plan', 'Tipo Alta', 'Cant.', 'Cobrado', 'Vendedor', 'DNI/Cel. Cliente', 'Migración/Upgrade']);
+        if (empty($postpago)) {
+            $sheet->setCellValue("A{$fila}", 'Sin ventas postpago registradas.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($postpago as $d) {
+                $tot += $d['cobrado'];
+                $sheet->fromArray([$d['plan'], $d['tipo'], $d['cantidad'], round($d['cobrado'], 2), $d['vendedor'], $d['dni'], $d['migracion']], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL POSTPAGO (' . count($postpago) . ')', $tot);
+        }
+        $fila++;
+
+        // 2. Prepago
+        $seccion('2. VENTAS PREPAGO (CHIPS)', '0DCAF0');
+        $cabecera(['Plan/Chip', 'Tipo Alta', 'Cant.', 'Cobrado', 'Vendedor', 'DNI/Cel. Cliente']);
+        if (empty($prepago)) {
+            $sheet->setCellValue("A{$fila}", 'Sin ventas prepago registradas.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($prepago as $d) {
+                $tot += $d['cobrado'];
+                $sheet->fromArray([$d['plan'], $d['tipo'], $d['cantidad'], round($d['cobrado'], 2), $d['vendedor'], $d['dni']], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL PREPAGO (' . count($prepago) . ')', $tot);
+        }
+        $fila++;
+
+        // 3. Equipos
+        $seccion('3. EQUIPOS Y ACCESORIOS', '198754');
+        $cabecera(['Producto', 'IMEI/Serial', 'Precio', 'Tipo Pago', 'Financiera', 'Vendedor', 'DNI Cliente']);
+        if (empty($equipos)) {
+            $sheet->setCellValue("A{$fila}", 'Sin ventas de equipos registradas.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($equipos as $d) {
+                $tot += $d['precio'];
+                $sheet->fromArray([$d['producto'], $d['imei'], round($d['precio'], 2), $d['tipo_pago'], $d['financiera'], $d['vendedor'], $d['dni']], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL EQUIPOS/ACCESORIOS (' . count($equipos) . ')', $tot, 3);
+        }
+        $fila++;
+
+        // 4. Servicios
+        $seccion('4. RECARGAS, PAGOS Y OTROS SERVICIOS', 'FD7E14');
+        $cabecera(['Concepto', 'Monto']);
+        if (empty($servicios)) {
+            $sheet->setCellValue("A{$fila}", 'Sin pagos o recargas registrados.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($servicios as $s) {
+                $tot += $s['monto'];
+                $sheet->fromArray([$s['label'], round($s['monto'], 2)], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL SERVICIOS (' . count($servicios) . ')', $tot, 2);
+        }
+        $fila++;
+
+        // 5. Apoyo
+        $seccion('5. VENTAS PARA OTRAS TIENDAS (APOYO)', '6610F2');
+        $cabecera(['Plan', 'Tipo', 'Cant.', 'Cobrado', 'Tienda Destino', 'Vendedor', 'DNI/Cel. Cliente']);
+        if (empty($apoyo)) {
+            $sheet->setCellValue("A{$fila}", 'Sin apoyos inter-tienda registrados.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($apoyo as $d) {
+                $tot += $d['cobrado'];
+                $sheet->fromArray([$d['plan'], $d['tipo'], $d['cantidad'], round($d['cobrado'], 2), $d['destino'], $d['vendedor'], $d['dni']], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL APOYO (' . count($apoyo) . ')', $tot);
+        }
+        $fila++;
+
+        // 6. Salidas
+        $seccion('6. SALIDAS Y GASTOS', 'DC3545');
+        $cabecera(['Tipo', 'Monto', 'Observación']);
+        if ($reporte->salidas->isEmpty()) {
+            $sheet->setCellValue("A{$fila}", 'Sin salidas registradas.');
+            $fila++;
+        } else {
+            $tot = 0;
+            foreach ($reporte->salidas as $s) {
+                $tot += (float) $s->monto;
+                $sheet->fromArray([strtoupper($s->tipo), round((float) $s->monto, 2), $s->observacion ?? ''], null, "A{$fila}");
+                $fila++;
+            }
+            $totalRow('TOTAL SALIDAS', $tot, 2);
+        }
+        $fila++;
+
+        // 7. Dinero digital y retiros
+        $seccion('7. DINERO DIGITAL Y RETIROS', '0DCAF0');
+        $cabecera(['Concepto', 'Monto']);
+        $huboDigital = false;
+        foreach ([['Yape', $reporte->yape], ['Bipay', $reporte->bipay], ['Transferencia', $reporte->transferencia], ['Retiro Bipay', $reporte->retiro_bipay]] as [$label, $monto]) {
+            if ((float) $monto > 0) {
+                $huboDigital = true;
+                $sheet->fromArray([$label, round((float) $monto, 2)], null, "A{$fila}");
+                $fila++;
+            }
+        }
+        if (! $huboDigital) {
+            $sheet->setCellValue("A{$fila}", 'Sin ingresos digitales registrados.');
+            $fila++;
+        }
+        $fila++;
+
+        // 8. Cuadre financiero
+        $seccion("8. CUADRE FINANCIERO — REPORTE #{$numReporte}", '495057');
+        $sheet->fromArray(['(+) TOTAL VENTAS BRUTAS', round($totalSistema, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['(-) GASTOS DE EFECTIVO', round($gastos, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['(=) EFECTIVO NETO DE VENTAS', round($efectivoNeto, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['(+) SENCILLO INICIAL (CAJA BASE)', round($base, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['(=) TOTAL CONTADO EN CAJÓN', round($totalCajon, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['DESTINO DECLARADO', $destinoLabel], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['EFECTIVO ENTREGADO', round($entregado, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['DIFERENCIA FINAL', round($diferencia, 2)], null, "A{$fila}"); $fila++;
+        $sheet->fromArray(['ESTADO', $estadoCuadre], null, "A{$fila}"); $fila++;
+        $fila++;
+
+        // 9. Historial de ediciones
+        if ($historialEdiciones->isNotEmpty()) {
+            $seccion('HISTORIAL DE EDICIONES', '495057');
+            $cabecera(['Fecha / Editor', 'Tipo', 'Detalle']);
+            $tipoLabel = [
+                'edicion_critica'    => 'Edición con cambio de comisión',
+                'edicion_restaurada' => 'Comisión restaurada',
+            ];
+            foreach ($historialEdiciones as $h) {
+                $sheet->fromArray([
+                    $h->created_at->format('d/m/Y H:i') . ' — ' . ($h->usuario->nombre ?? 'N/A'),
+                    $tipoLabel[$h->accion] ?? 'Edición de datos',
+                    $h->detalle ?? '',
+                ], null, "A{$fila}");
+                $fila++;
+            }
+        }
+
+        foreach (range(1, 8) as $col) {
+            $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+        }
+
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            "Reporte_Detallado_{$numReporte}.xlsx",
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     public function vendedores(Request $request): JsonResponse
