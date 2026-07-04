@@ -28,6 +28,7 @@ interface Usuario {
   agente?: { id: number; nombres: string; dni: string } | null
   activo: boolean
   tiene_bcp: boolean
+  formato_ticket: '58' | '80'
 }
 
 interface ApiError {
@@ -88,6 +89,7 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
     agente_id: usuario?.agente_id ? String(usuario.agente_id) : '',
     activo:    usuario?.activo    ?? true,
     tiene_bcp: usuario?.tiene_bcp ?? false,
+    formato_ticket: usuario?.formato_ticket ?? '80',
   })
   const [err, setErr]         = useState('')
   const [errores, setErrores] = useState<ErroresUsuario>({})
@@ -250,6 +252,17 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
             <input type="checkbox" checked={form.tiene_bcp} onChange={e => setForm(f => ({ ...f, tiene_bcp: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
             Módulo BCP
           </label>
+          <div>
+            <label htmlFor="usuario-formato-ticket" className="mb-1 block text-xs text-kyro-muted">Formato de ticket (impresión)</label>
+            <Select
+              id="usuario-formato-ticket"
+              value={form.formato_ticket}
+              onChange={e => setForm(f => ({ ...f, formato_ticket: e.target.value as '58' | '80' }))}
+            >
+              <option value="80">80mm</option>
+              <option value="58">58mm</option>
+            </Select>
+          </div>
         </div>
       </section>
       <div className="flex flex-col-reverse gap-2 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">

@@ -87,6 +87,41 @@ class LeadTest extends TestCase
             ->assertJsonStructure(['data', 'current_page', 'total', 'per_page']);
     }
 
+    public function test_index_filtra_por_texto_libre_en_cliente(): void
+    {
+        DB::table('clientes')->insert([
+            ['id' => 1, 'dni_ruc' => '12345678', 'nombre' => 'Juan Perez', 'telefono' => '987654321'],
+            ['id' => 2, 'dni_ruc' => '87654321', 'nombre' => 'Maria Lopez', 'telefono' => '999888777'],
+        ]);
+        Lead::create(['cliente_id' => 1, 'agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+        Lead::create(['cliente_id' => 2, 'agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/leads?q=Perez')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals(1, $data[0]['cliente_id']);
+    }
+
+    public function test_index_filtra_por_texto_libre_en_nombre_de_agente(): void
+    {
+        DB::table('agentes')->insert([
+            'id' => 2, 'nombres' => 'Carlos Ramirez', 'estado' => 'ACTIVO', 'tienda_base' => 'PUNDA50', 'sueldo_base' => 1200.00,
+        ]);
+        Lead::create(['agente_id' => 1, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+        Lead::create(['agente_id' => 2, 'tienda_id' => 'PUNDA50', 'estado' => 'NUEVO', 'fuente' => 'PRESENCIAL']);
+
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/leads?q=Ramirez')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals(2, $data[0]['agente_id']);
+    }
+
     // ── Store ────────────────────────────────────────────────────────────────────
 
     public function test_store_crea_lead_correctamente(): void

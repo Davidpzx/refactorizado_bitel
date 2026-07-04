@@ -6,6 +6,7 @@ export interface Usuario {
   tienda_id: string
   agente_id: number | null
   activo?: boolean
+  formato_ticket?: '58' | '80'
 }
 
 export interface LoginCredentials {

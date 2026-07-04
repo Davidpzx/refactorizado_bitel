@@ -46,12 +46,13 @@ class AuthController extends Controller
         return response()->json([
             'token'   => $token,
             'usuario' => [
-                'id'        => $usuario->id,
-                'nombre'    => $usuario->nombre,
-                'email'     => $usuario->email,
-                'rol'       => $usuario->rol,
-                'tienda_id' => $usuario->tienda_id,
-                'agente_id' => $agente?->id,
+                'id'             => $usuario->id,
+                'nombre'         => $usuario->nombre,
+                'email'          => $usuario->email,
+                'rol'            => $usuario->rol,
+                'tienda_id'      => $usuario->tienda_id,
+                'agente_id'      => $agente?->id,
+                'formato_ticket' => $usuario->formato_ticket ?? '80',
             ],
         ]);
     }
@@ -62,13 +63,14 @@ class AuthController extends Controller
         $agente = $this->userAgentResolver->resolve($usuario);
 
         return response()->json([
-            'id'        => $usuario->id,
-            'nombre'    => $usuario->nombre,
-            'email'     => $usuario->email,
-            'rol'       => $usuario->rol,
-            'tienda_id' => $usuario->tienda_id,
-            'agente_id' => $agente?->id,
-            'activo'    => $usuario->activo,
+            'id'             => $usuario->id,
+            'nombre'         => $usuario->nombre,
+            'email'          => $usuario->email,
+            'rol'            => $usuario->rol,
+            'tienda_id'      => $usuario->tienda_id,
+            'agente_id'      => $agente?->id,
+            'activo'         => $usuario->activo,
+            'formato_ticket' => $usuario->formato_ticket ?? '80',
         ]);
     }
 
