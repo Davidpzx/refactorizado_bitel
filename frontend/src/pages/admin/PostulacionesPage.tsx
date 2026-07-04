@@ -1,4 +1,4 @@
-import { Eye, Trash2 } from 'lucide-react'
+import { Eye, Trash2, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import {
@@ -326,6 +326,7 @@ export function PostulacionesPage() {
       <PageHeader
         title="Postulantes"
         description="Gestión de postulaciones recibidas."
+        Icon={UserCheck}
       />
 
       <ListToolbar description="Busca postulantes y filtra por etapa del proceso.">

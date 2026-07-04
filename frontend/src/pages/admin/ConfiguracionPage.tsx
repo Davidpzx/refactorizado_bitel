@@ -9,6 +9,7 @@ import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
+import { PageHeader } from '../../components/PageHeader'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -151,28 +152,11 @@ export function ConfiguracionPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header ─────────────────────────────────────────────────────────────── */}
-      <div className="flex items-stretch gap-3">
-        <span
-          aria-hidden
-          className="w-1 shrink-0 self-stretch rounded-full bg-kyro-gold"
-        />
-        <div className="flex items-center gap-3">
-          <span
-            className="flex h-11 w-11 items-center justify-center rounded-kyro-lg bg-kyro-gold/10 text-kyro-gold"
-          >
-            <Building2 size={22} />
-          </span>
-          <div>
-            <h1
-              className="font-orbitron text-[1.35rem] font-bold leading-tight tracking-[0.02em] text-kyro-text"
-            >
-              Configuración de la Empresa
-            </h1>
-            <p className="text-sm text-kyro-muted">Datos de identificación fiscal y contacto</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Configuración de la Empresa"
+        description="Datos de identificación fiscal y contacto"
+        Icon={Building2}
+      />
 
       {saved && (
         <div className="flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 px-4 py-3 text-sm text-kyro-success">

@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { KeyRound, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react'
 import {
   sanitizarNombreUsuario,
   validarUsuario,
@@ -298,6 +298,7 @@ export function UsuariosPage() {
       <PageHeader
         title="Usuarios del Sistema"
         description="Gestión de accesos y roles."
+        Icon={Users}
         actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nuevo usuario</Button>}
       />
 

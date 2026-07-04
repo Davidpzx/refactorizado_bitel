@@ -119,7 +119,7 @@ export function ComprobantesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT">
+      <PageHeader title="Comprobantes Electrónicos" subtitle="Gestión de boletas y facturas enviadas a SUNAT" Icon={FileCheck}>
         <Button variant="glassInfo" onClick={() => qc.invalidateQueries({ queryKey: ['comprobantes'] })}>
           <RefreshCw size={14} className="mr-2" /> Actualizar
         </Button>

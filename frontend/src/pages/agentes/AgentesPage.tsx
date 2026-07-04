@@ -12,7 +12,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
 import type { Agente } from '../../types/agente'
-import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
+import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound, Users } from 'lucide-react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAuth } from '../../hooks/useAuth'
@@ -141,6 +141,7 @@ export function AgentesPage() {
       <PageHeader
         title="Agentes"
         description="Gestión del personal de ventas registrado en el sistema."
+        Icon={Users}
         actions={
           <div className="flex gap-2">
             {isAdmin && (

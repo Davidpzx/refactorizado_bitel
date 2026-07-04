@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
+import { Stethoscope } from 'lucide-react'
 
 interface DiagnosticoSesion {
   user_id: number
@@ -69,7 +70,7 @@ export function DiagnosticoPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real">
+        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real" Icon={Stethoscope}>
           <div className="flex flex-wrap items-center gap-2">
             {data.traslados_pendientes > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-kyro-warning/30 bg-kyro-warning/10 px-3 py-1.5 text-xs font-semibold text-kyro-warning">

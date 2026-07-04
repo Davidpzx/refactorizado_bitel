@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { format, startOfMonth } from 'date-fns'
-import { ChevronDown, ChevronUp, FileText, RotateCcw } from 'lucide-react'
+import { ChevronDown, ChevronUp, DollarSign, FileText, RotateCcw } from 'lucide-react'
 import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } from '../../hooks/usePlanilla'
 import { PageHeader } from '../../components/PageHeader'
+import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -22,17 +23,6 @@ const fmt = (n: number) =>
 const fmtSol = (n: number) => `S/ ${fmt(n)}`
 
 const mesActual = format(startOfMonth(new Date()), 'yyyy-MM')
-
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, valor, color, border }: { label: string; valor: string; color: string; border: string }) {
-  return (
-    <div className={`kyro-card min-w-[120px] border-l-4 px-4 py-3.5 text-center transition-all duration-200 hover:-translate-y-0.5 ${border}`}>
-      <p className="text-[0.65rem] font-semibold uppercase leading-tight tracking-[0.08em] text-kyro-muted">{label}</p>
-      <p className={`mt-1.5 text-sm font-bold tracking-tight ${color}`}>{valor}</p>
-    </div>
-  )
-}
 
 // ── Celda editable con debounce AJAX ─────────────────────────────────────────
 
@@ -429,6 +419,7 @@ export function PlanillaPage() {
       <PageHeader
         title="Planilla CD08"
         subtitle={`Cálculo mensual de remuneraciones y comisiones`}
+        Icon={DollarSign}
       >
         <div className="flex items-center gap-2">
           <Select value={tiendaFiltro} onChange={e => setTiendaFiltro(e.target.value)} className="h-9 w-44">
@@ -450,14 +441,14 @@ export function PlanillaPage() {
       {/* KPIs */}
       {t && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-          <KpiCard label="Agentes" valor={tiendaFiltro ? `${agentesVisibles.length} / ${data.agentes.length}` : String(data.agentes.length)} color="text-kyro-text" border="border-l-kpi-neutral" />
-          <KpiCard label="Total Remun." valor={fmtSol(t.total_remuneracion)} color="text-kyro-gold" border="border-l-kpi-total" />
-          <KpiCard label="Com. Planes" valor={fmtSol(t.com_planes)} color="text-kyro-info" border="border-l-kpi-ganancia" />
-          <KpiCard label="Com. Equipos" valor={fmtSol(t.com_equipo)} color="text-kyro-info" border="border-l-kpi-ganancia" />
-          <KpiCard label="Com. Online" valor={fmtSol(t.com_online)} color="text-kyro-info" border="border-l-kpi-ganancia" />
-          <KpiCard label="Descuentos" valor={fmtSol(t.total_descuentos)} color="text-kyro-danger" border="border-l-kyro-danger" />
-          <KpiCard label="Adelantos" valor={fmtSol(t.adelantos)} color="text-kyro-warning" border="border-l-kyro-warning" />
-          <KpiCard label="TOTAL A PAGAR" valor={fmtSol(t.total_pagar)} color="text-base text-kyro-success" border="border-l-kpi-ganancia" />
+          <StatCard title="Agentes" value={tiendaFiltro ? `${agentesVisibles.length} / ${data.agentes.length}` : String(data.agentes.length)} accent="#6c757d" />
+          <StatCard title="Total Remun." value={fmtSol(t.total_remuneracion)} accent="#6366f1" valueColorClass="text-kyro-gold" />
+          <StatCard title="Com. Planes" value={fmtSol(t.com_planes)} accent="#10b981" valueColorClass="text-kyro-info" />
+          <StatCard title="Com. Equipos" value={fmtSol(t.com_equipo)} accent="#10b981" valueColorClass="text-kyro-info" />
+          <StatCard title="Com. Online" value={fmtSol(t.com_online)} accent="#10b981" valueColorClass="text-kyro-info" />
+          <StatCard title="Descuentos" value={fmtSol(t.total_descuentos)} accent="#ef4444" valueColorClass="text-kyro-danger" />
+          <StatCard title="Adelantos" value={fmtSol(t.adelantos)} accent="#f59e0b" valueColorClass="text-kyro-warning" />
+          <StatCard title="TOTAL A PAGAR" value={fmtSol(t.total_pagar)} accent="#10b981" valueColorClass="text-kyro-success" />
         </div>
       )}
 

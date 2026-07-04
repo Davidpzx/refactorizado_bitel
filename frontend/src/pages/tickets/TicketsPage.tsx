@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { FileSpreadsheet, Pencil, Printer, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, Pencil, Printer, Ticket as TicketIcon, Trash2 } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
@@ -435,6 +435,7 @@ export function TicketsPage() {
       <PageHeader
         title="Tickets"
         description="Gestión de tickets emitidos."
+        Icon={TicketIcon}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
