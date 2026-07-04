@@ -129,6 +129,63 @@ class PhaseBBusinessParityTest extends TestCase
             'minutos_deuda' => 30,
             'horas_extras_aprobadas' => 1.5,
         ]);
+
+        $this->assertDatabaseHas('log_ediciones_asistencia', [
+            'asistencia_id' => $asistenciaId,
+            'agente_id' => $agenteId,
+            'admin_id' => $admin->id,
+            'campo_modificado' => 'hora_ingreso',
+            'valor_anterior' => '09:00:00',
+            'valor_nuevo' => '09:10:00',
+        ]);
+        $this->assertDatabaseHas('log_ediciones_asistencia', [
+            'asistencia_id' => $asistenciaId,
+            'campo_modificado' => 'observacion_admin',
+            'valor_nuevo' => 'Corrección validada',
+        ]);
+        $this->assertDatabaseHas('log_ediciones_asistencia', [
+            'asistencia_id' => $asistenciaId,
+            'campo_modificado' => 'horas_extras_aprobadas',
+            'valor_nuevo' => '1.5',
+        ]);
+        $this->assertDatabaseMissing('log_ediciones_asistencia', [
+            'asistencia_id' => $asistenciaId,
+            'campo_modificado' => 'minutos_tardanza',
+        ]);
+    }
+
+    public function test_eliminar_asistencia_registra_auditoria(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $agenteId = DB::table('agentes')->insertGetId([
+            'dni' => '87654321',
+            'nombres' => 'Agente a eliminar',
+            'tienda_base' => 'PUNDA50',
+            'estado' => 'ACTIVO',
+            'hora_ingreso' => '09:00:00',
+            'hora_salida' => '18:00:00',
+        ]);
+        $asistenciaId = DB::table('asistencias')->insertGetId([
+            'agente_id' => $agenteId,
+            'tienda_id' => 'PUNDA50',
+            'fecha' => '2026-06-15',
+            'hora_ingreso' => '09:00:00',
+            'hora_salida' => '18:00:00',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/asistencias/{$asistenciaId}")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('asistencias', ['id' => $asistenciaId]);
+        $this->assertDatabaseHas('log_ediciones_asistencia', [
+            'asistencia_id' => $asistenciaId,
+            'agente_id' => $agenteId,
+            'admin_id' => $admin->id,
+            'campo_modificado' => 'ELIMINACION',
+            'valor_nuevo' => 'ELIMINADO',
+        ]);
     }
 
     public function test_confirmar_desembolso_usa_esquema_tipo_monto(): void
