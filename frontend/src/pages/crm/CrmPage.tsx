@@ -12,9 +12,9 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
-import { Card } from '../../components/ui/card'
 import { Dialog } from '../../components/ui/dialog'
-import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare } from 'lucide-react'
+import { StatCard } from '../../components/ui/StatCard'
+import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -316,11 +316,11 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
   const totalActividad  = tendencia.reduce((s, d) => s + d.leads, 0)
 
   const kpis = [
-    { label: 'Leads en período',   value: data?.total_leads   ?? 0, icon: <Users size={16} />,        color: 'border-l-kpi-total',      text: 'text-kyro-text' },
-    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, icon: <TrendingUp size={16} />, color: 'border-l-kyro-success', text: 'text-kyro-success' },
-    { label: 'Convertidos',        value: data?.convertidos   ?? 0, icon: <CheckCircle size={16} />,  color: 'border-l-kyro-success',   text: 'text-kyro-success' },
-    { label: 'Perdidos',           value: data?.perdidos      ?? 0, icon: <XCircle size={16} />,      color: 'border-l-kyro-danger',    text: 'text-kyro-danger' },
-    { label: 'Interacciones',      value: totalActividad,           icon: <MessageSquare size={16} />, color: 'border-l-kyro-indigo',   text: 'text-kyro-body' },
+    { label: 'Leads en período',   value: data?.total_leads   ?? 0, icon: <Users size={16} />,        accent: '#0d6efd', text: 'text-kyro-text' },
+    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, icon: <TrendingUp size={16} />, accent: '#22c55e', text: 'text-kyro-success' },
+    { label: 'Convertidos',        value: data?.convertidos   ?? 0, icon: <CheckCircle size={16} />,  accent: '#22c55e', text: 'text-kyro-success' },
+    { label: 'Perdidos',           value: data?.perdidos      ?? 0, icon: <XCircle size={16} />,      accent: '#ef4444', text: 'text-kyro-danger' },
+    { label: 'Interacciones',      value: totalActividad,           icon: <MessageSquare size={16} />, accent: '#6366f1', text: 'text-kyro-body' },
   ]
 
   return (
@@ -363,12 +363,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
           {/* KPI Strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {kpis.map(k => (
-              <Card key={k.label} className={`kyro-card border-l-4 px-4 py-3 ${k.color}`}>
-                <div className={`mb-1 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted`}>
-                  {k.icon}{k.label}
-                </div>
-                <p className={`text-2xl font-bold tracking-tight ${k.text}`}>{k.value}</p>
-              </Card>
+              <StatCard key={k.label} title={k.label} accent={k.accent} icon={k.icon} value={k.value} valueColorClass={k.text} />
             ))}
           </div>
 
@@ -669,7 +664,7 @@ export function CrmPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="CRM — Pipeline de Leads" subtitle="Gestión de clientes potenciales">
+      <PageHeader title="CRM — Pipeline de Leads" subtitle="Gestión de clientes potenciales" Icon={Megaphone}>
         <Input
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
@@ -705,16 +700,10 @@ export function CrmPage() {
               {pipeline.pipeline.map(p => {
                 const cfg = ESTADOS.find(e => e.value === p.estado)!
                 return (
-                  <Card key={p.estado} className="kyro-card relative overflow-hidden border-l-4 border-l-kpi-total px-4 py-3 text-center">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">{cfg.label}</p>
-                    <p className={`mt-1 text-xl font-bold tracking-tight ${cfg.color}`}>{p.total}</p>
-                  </Card>
+                  <StatCard key={p.estado} title={cfg.label} accent="#0d6efd" value={p.total} valueColorClass={cfg.color} />
                 )
               })}
-              <Card className="kyro-card relative overflow-hidden border-l-4 border-l-kyro-success px-4 py-3 text-center">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Tasa conversión</p>
-                <p className="mt-1 text-xl font-bold tracking-tight text-kyro-success">{pipeline?.tasa_conversion ?? 0}%</p>
-              </Card>
+              <StatCard title="Tasa conversión" accent="#22c55e" value={`${pipeline?.tasa_conversion ?? 0}%`} valueColorClass="text-kyro-success" />
             </div>
           )}
 
