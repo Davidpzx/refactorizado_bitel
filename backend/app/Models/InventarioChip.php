@@ -36,6 +36,12 @@ class InventarioChip extends Model
         }
     }
 
+    // Serializa a JSON antes de guardar: la columna es text, no admite arrays directamente.
+    public function setSeriesInfoAttribute(mixed $value): void
+    {
+        $this->attributes['series_info'] = is_array($value) ? json_encode($value) : $value;
+    }
+
     public function tienda()
     {
         return $this->belongsTo(Tienda::class, 'tienda_id', 'id');
