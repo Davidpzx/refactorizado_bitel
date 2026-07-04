@@ -29,7 +29,7 @@
 
 <div class="campo"><span class="label">Nombres Completos:</span><span class="valor">{{ $agente->nombres }}</span></div>
 <div class="campo"><span class="label">DNI:</span><span class="valor">{{ $agente->dni }}</span></div>
-<div class="campo"><span class="label">Tienda:</span><span class="valor">{{ $agente->tienda_id }} @if($agente->tienda_nombre)({{ $agente->tienda_nombre }})@endif</span></div>
+<div class="campo"><span class="label">Tienda:</span><span class="valor">{{ $agente->tienda_base }} @if($agente->tienda_nombre)({{ $agente->tienda_nombre }})@endif</span></div>
 <div class="campo"><span class="label">Estado:</span><span class="valor estado-{{ $agente->estado }}">{{ $agente->estado }}</span></div>
 @if($agente->fecha_ingreso)
 <div class="campo"><span class="label">Fecha Ingreso:</span><span class="valor">{{ \Carbon\Carbon::parse($agente->fecha_ingreso)->format('d/m/Y') }}</span></div>

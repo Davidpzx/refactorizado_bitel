@@ -9,6 +9,7 @@ use App\Models\Agente;
 use App\Models\Reporte;
 use App\Services\AgenteService;
 use App\Services\HistorialAgenteService;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +45,7 @@ class AgenteController extends Controller
     {
         $user = Auth::user();
         abort_if(
-            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $agente->tienda_base),
             403,
             'No tienes permisos sobre este agente.'
         );

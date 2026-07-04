@@ -67,4 +67,21 @@ class AgenteShowAuthTest extends TestCase
             ->getJson("/api/v1/agentes/{$agente->id}")
             ->assertForbidden();
     }
+
+    /**
+     * Hueco null === null: un agente sin tienda_base asignada + un usuario sin
+     * tienda_id no deben hacer match. Antes del fix, ambos null hacian que
+     * `$agente->tienda_base !== $user->tienda_id` fuera false y se colaba.
+     */
+    public function test_usuario_sin_tienda_id_y_agente_sin_tienda_base_recibe_403(): void
+    {
+        $agente = $this->crearAgente('PUNDA50');
+        $agente->update(['tienda_base' => null]);
+
+        $usuarioSinTienda = Usuario::factory()->vendedor('PUNDA50')->create(['tienda_id' => null]);
+
+        $this->actingAs($usuarioSinTienda, 'sanctum')
+            ->getJson("/api/v1/agentes/{$agente->id}")
+            ->assertForbidden();
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
+use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,7 +146,7 @@ class ChipsController extends Controller
             // Verificar propiedad
             if (!$esAdmin) {
                 $tiendaCodigo = DB::table('tiendas')->where('id', $origen->tienda_id)->value('codigo');
-                if ($tiendaCodigo !== $user->tienda_id) {
+                if (TiendaGuard::bloqueaAcceso($esAdmin, $user->tienda_id, $tiendaCodigo)) {
                     return ['error' => 'No tienes permiso sobre este registro.'];
                 }
             }
