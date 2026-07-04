@@ -83,9 +83,12 @@ class TrasladoChipsController extends Controller
 
         $enviadoPorId = $agente->id;
 
-        // Admin o gerente de tienda crean directamente en PENDIENTE; tienda crea en
-        // PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado_chips.php.
-        $estadoTraslado = ($esAdmin || $agente->es_gerencia) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        // Admin o gerente de la tienda de origen crean directamente en PENDIENTE; tienda
+        // crea en PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado_chips.php.
+        // El bypass de gerente solo aplica si el gerente pertenece a la tienda de origen del
+        // traslado: un gerente de otra tienda no debe saltarse la aprobación.
+        $esGerenteDeOrigen = $agente->es_gerencia && $agente->tienda_base === $tiendaOrigen;
+        $estadoTraslado = ($esAdmin || $esGerenteDeOrigen) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
 
         $chip = InventarioChip::find($chipId);
         if (!$chip) {

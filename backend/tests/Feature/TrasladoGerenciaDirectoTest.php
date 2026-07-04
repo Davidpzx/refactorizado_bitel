@@ -59,6 +59,25 @@ class TrasladoGerenciaDirectoTest extends TestCase
         ]);
     }
 
+    public function test_tienda_con_dni_de_gerente_de_otra_tienda_no_activa_bypass_en_traslado_de_equipo(): void
+    {
+        $usuarioTienda = Usuario::factory()->vendedor('T01')->create();
+        $gerenteOtraTienda = $this->crearAgente('55566666', true, 'T02');
+        $id = $this->crearProductoDisponible('T01');
+
+        $response = $this->actingAs($usuarioTienda, 'sanctum')
+            ->postJson('/api/v1/traslados', [
+                'producto_id' => $id, 'cantidad' => 1, 'tienda_destino' => 'T02', 'auth_dni' => '55566666',
+            ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertStringContainsString('PENDIENTE DE APROBACIÓN', $response->json('message'));
+
+        $this->assertDatabaseHas('traslados_stock', [
+            'tienda_destino' => 'T02', 'estado' => 'PENDIENTE_APROBACION', 'enviado_por_id' => $gerenteOtraTienda->id,
+        ]);
+    }
+
     public function test_tienda_con_dni_de_agente_normal_crea_traslado_de_equipo_pendiente_aprobacion(): void
     {
         $usuarioTienda = Usuario::factory()->vendedor('T01')->create();
@@ -144,6 +163,31 @@ class TrasladoGerenciaDirectoTest extends TestCase
 
         $this->assertDatabaseHas('traslados_chips', [
             'tienda_destino' => 'T02', 'estado' => 'PENDIENTE_APROBACION', 'enviado_por_id' => $agente->id,
+        ]);
+    }
+
+    public function test_tienda_con_dni_de_gerente_de_otra_tienda_no_activa_bypass_en_traslado_de_chips(): void
+    {
+        DB::table('tiendas')->insertOrIgnore(['codigo' => 'T01', 'nombre' => 'Origen']);
+        DB::table('tiendas')->insertOrIgnore(['codigo' => 'T02', 'nombre' => 'Destino']);
+
+        $usuarioTienda = Usuario::factory()->vendedor('T01')->create();
+        $gerenteOtraTienda = $this->crearAgente('55577777', true, 'T02');
+        $chipId = (int) InventarioChip::create([
+            'tienda_id' => 1, 'tienda_origen' => 'T01', 'stock_actual' => 10,
+        ])->id;
+
+        $response = $this->actingAs($usuarioTienda, 'sanctum')
+            ->postJson('/api/v1/traslados-chips', [
+                'chip_id' => $chipId, 'tienda_origen' => 'T01', 'tienda_destino' => 'T02', 'cantidad' => 2,
+                'auth_dni' => '55577777',
+            ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertStringContainsString('PENDIENTES DE APROBACIÓN', $response->json('message'));
+
+        $this->assertDatabaseHas('traslados_chips', [
+            'tienda_destino' => 'T02', 'estado' => 'PENDIENTE_APROBACION', 'enviado_por_id' => $gerenteOtraTienda->id,
         ]);
     }
 }

@@ -78,9 +78,13 @@ class TrasladoController extends Controller
 
         $enviadoPorId = $agente->id;
 
-        // Admin o gerente de tienda crean directamente en PENDIENTE; tienda crea en
-        // PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado.php.
-        $estadoTraslado = ($esAdmin || $agente->es_gerencia) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
+        // Admin o gerente de la tienda de origen crean directamente en PENDIENTE; tienda
+        // crea en PENDIENTE_APROBACION (admin aprueba). Paridad legacy procesar_traslado.php.
+        // El bypass de gerente solo aplica si el gerente pertenece a la tienda de origen
+        // (= tienda del usuario para no-admin): un gerente de otra tienda no debe saltarse
+        // la aprobación.
+        $esGerenteDeOrigen = $agente->es_gerencia && $agente->tienda_base === $user->tienda_id;
+        $estadoTraslado = ($esAdmin || $esGerenteDeOrigen) ? 'PENDIENTE' : 'PENDIENTE_APROBACION';
 
         $tiendaDestino = trim($request->input('tienda_destino', ''));
         $notas         = substr(trim($request->input('notas', '')), 0, 200);
