@@ -190,7 +190,7 @@ export function DashboardPage() {
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const [rawFilters, setRawFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr, tienda: '' })
-  const [appliedFilters, setAppliedFilters] = useState({ fecha_desde: todayStr, fecha_hasta: todayStr })
+  const [appliedFilters, setAppliedFilters] = useState<{ fecha_desde: string; fecha_hasta: string; tienda?: string }>({ fecha_desde: todayStr, fecha_hasta: todayStr })
   const [showAnomalias, setShowAnomalias] = useState(false)
   const [editingDestino, setEditingDestino] = useState<{ id: number; current: string } | null>(null)
   const qc = useQueryClient()
@@ -227,7 +227,7 @@ export function DashboardPage() {
       fecha_desde: rawFilters.fecha_desde,
       fecha_hasta: rawFilters.fecha_hasta,
       ...(rawFilters.tienda ? { tienda: rawFilters.tienda } : {}),
-    } as typeof appliedFilters)
+    })
   }
 
   function resetToToday() {
@@ -240,7 +240,7 @@ export function DashboardPage() {
     const params = new URLSearchParams()
     if (appliedFilters.fecha_desde) params.set('fecha_desde', appliedFilters.fecha_desde)
     if (appliedFilters.fecha_hasta) params.set('fecha_hasta', appliedFilters.fecha_hasta)
-    if ('tienda' in appliedFilters && appliedFilters.tienda) params.set('tienda', appliedFilters.tienda)
+    if (appliedFilters.tienda) params.set('tienda', appliedFilters.tienda)
     const token = localStorage.getItem('auth_token')
     const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
     const url = `${base}/v1/dashboard/exportar?${params.toString()}`
