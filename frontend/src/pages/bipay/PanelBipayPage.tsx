@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale } from 'lucide-react'
+import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale, Lock, Link2, FileSpreadsheet } from 'lucide-react'
 import { CuadreBitelPanel } from './CuadreBitelPage'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -24,6 +25,7 @@ interface Cuenta {
   saldo_actual: number
   saldo_bipay: number
   saldo_anypay: number
+  cuenta_madre_id?: number | null
 }
 
 interface Kpis {
@@ -53,9 +55,22 @@ interface TransaccionesData {
   data: BipayTransaction[]
 }
 
+interface LockActivo {
+  cuenta_bipay_id: number
+  tienda_codigo: string
+  tienda_nombre: string
+  cuenta_alias: string
+  expira_en: string
+  cooldown_segs: number
+}
+
+const TIPOS_OPERACION = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA', 'CIERRE_DIA'] as const
+
 export function PanelBipayPage() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas' | 'cuadre'>('saldo')
+  const { usuario } = useAuth()
+  const esAdmin = usuario?.rol === 'admin'
+  const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas' | 'locks' | 'cuadre'>('saldo')
 
   // Saldo query
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
@@ -68,13 +83,58 @@ export function PanelBipayPage() {
     fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
     fecha_hasta: new Date().toISOString().slice(0, 10),
     cuenta_id: '',
+    tipo_operacion: '',
   })
   const [txApplied, setTxApplied] = useState({ ...txFilters })
+  const [exportando, setExportando] = useState(false)
 
   const { data: txData, isLoading: loadingTx } = useQuery<TransaccionesData>({
     queryKey: ['bipay-transacciones', txApplied],
     queryFn: () => api.get<TransaccionesData>('/v1/bipay/transacciones', { params: txApplied }).then(r => r.data),
     enabled: tab === 'transacciones',
+  })
+
+  async function exportarTransaccionesExcel() {
+    setExportando(true)
+    try {
+      const params = new URLSearchParams()
+      Object.entries(txApplied).forEach(([k, v]) => { if (v) params.set(k, v) })
+      const token = localStorage.getItem('auth_token')
+      const base = (api.defaults.baseURL ?? '').replace(/\/$/, '')
+      const url = `${base}/v1/bipay/transacciones/exportar?${params.toString()}`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const blob = await res.blob()
+      const burl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = burl
+      link.download = `bipay_historial_${new Date().toISOString().slice(0, 10)}.xlsx`
+      link.click()
+      URL.revokeObjectURL(burl)
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  // Locks activos (admin)
+  const { data: locksData, isLoading: loadingLocks } = useQuery<{ locks: LockActivo[] }>({
+    queryKey: ['bipay-locks-activos'],
+    queryFn: () => api.get<{ locks: LockActivo[] }>('/v1/bipay/locks-activos').then(r => r.data),
+    enabled: tab === 'locks' && esAdmin,
+  })
+
+  // Vincular cuenta huérfana → convertir a MADRE
+  const [vincularId, setVincularId] = useState<number | null>(null)
+  const [vincularForm, setVincularForm] = useState({ razon_social: '', alias: '' })
+  const [vincularMsg, setVincularMsg] = useState(''); const [vincularErr, setVincularErr] = useState('')
+  const vincularHuerfana = useMutation({
+    mutationFn: (p: { razon_social: string; alias?: string }) =>
+      api.post(`/v1/bipay/cuentas/${vincularId}/vincular-huerfana`, p).then(r => r.data),
+    onSuccess: (res: { message?: string }) => {
+      setVincularMsg(res.message ?? 'Cuenta vinculada.'); setVincularErr('')
+      setVincularId(null); setVincularForm({ razon_social: '', alias: '' })
+      qc.invalidateQueries({ queryKey: ['bipay-saldo'] })
+    },
+    onError: (error: unknown) => setVincularErr(apiErrorData(error).message ?? 'Error al vincular la cuenta.'),
   })
 
   // Recarga form
@@ -149,6 +209,7 @@ export function PanelBipayPage() {
   })
 
   const warning = saldoData?.warning
+  const huerfanas = (saldoData?.cuentas ?? []).filter(c => c.tipo === 'HIJO' && !c.cuenta_madre_id)
 
   if (warning) {
     return (
@@ -158,15 +219,17 @@ export function PanelBipayPage() {
     )
   }
 
-  const TABS = [
+  type TabDef = { id: typeof tab; label: string; Icon: typeof Wallet }
+  const TABS: TabDef[] = [
     { id: 'saldo',         label: 'Saldos',        Icon: Wallet },
     { id: 'transacciones', label: 'Transacciones',  Icon: ArrowRightLeft },
     { id: 'recarga',       label: 'Nueva Recarga',  Icon: RefreshCw },
     { id: 'transferir',    label: 'Transferir',     Icon: Send },
     { id: 'ajustar',       label: 'Ajustar Saldo',  Icon: SlidersHorizontal },
     { id: 'cuentas',       label: 'Cuentas',        Icon: CreditCard },
+    ...(esAdmin ? [{ id: 'locks', label: 'Locks Activos', Icon: Lock }] as TabDef[] : []),
     { id: 'cuadre',        label: 'Cuadre Bitel',   Icon: Scale },
-  ] as const
+  ]
 
   const inputCls = 'kyro-input'
 
@@ -272,7 +335,26 @@ export function PanelBipayPage() {
                 className={inputCls}
               />
             </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Cuenta</label>
+              <select value={txFilters.cuenta_id} onChange={e => setTxFilters(f => ({ ...f, cuenta_id: e.target.value }))} className={inputCls}>
+                <option value="">Todas</option>
+                {(saldoData?.cuentas ?? []).map(c => <option key={c.id} value={c.id}>[{c.tipo}] {c.alias}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Tipo</label>
+              <select value={txFilters.tipo_operacion} onChange={e => setTxFilters(f => ({ ...f, tipo_operacion: e.target.value }))} className={inputCls}>
+                <option value="">Todos</option>
+                {TIPOS_OPERACION.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
             <Button variant="gold" onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
+            {esAdmin && (
+              <Button variant="outline" onClick={exportarTransaccionesExcel} disabled={exportando} className="gap-2">
+                <FileSpreadsheet size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
+              </Button>
+            )}
           </ListToolbar>
 
           <div className="kyro-card overflow-hidden">
@@ -568,6 +650,79 @@ export function PanelBipayPage() {
                 </Button>
                 {editandoCuenta && <Button variant="outline" onClick={resetCuenta}>Cancelar</Button>}
               </div>
+            </div>
+          </div>
+
+          {/* Cuentas Huérfanas (HIJO sin cuenta_madre_id) — pendientes de vincular a MADRE */}
+          {huerfanas.length > 0 && (
+            <div className="kyro-card border-t-2 border-t-kyro-muted p-6 lg:col-span-3">
+              <div className="mb-3 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-kyro-muted" />
+                <div>
+                  <h2 className="text-sm font-bold text-kyro-text">Cuentas Huérfanas (Pendientes de Vincular)</h2>
+                  <p className="text-xs text-kyro-muted">Cuentas auto-registradas sin una cuenta MADRE asignada.</p>
+                </div>
+              </div>
+              {vincularMsg && (<div className="mb-3 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success"><CheckCircle2 size={15} /> {vincularMsg}</div>)}
+              {vincularErr && (<div className="mb-3 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger"><XCircle size={15} /> {vincularErr}</div>)}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {huerfanas.map(h => (
+                  <div key={h.id} className="rounded-kyro border border-dashed border-kyro-border p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-kyro-muted/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase text-kyro-muted">Huérfana</span>
+                      <span className="text-sm font-medium text-kyro-text">{h.alias}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-kyro-muted">{h.numero_cuenta}</div>
+                    <div className="mt-1 font-mono text-sm text-kyro-text">{pen.format(h.saldo_actual)}</div>
+                    {vincularId === h.id ? (
+                      <div className="mt-2 space-y-2">
+                        <input type="text" placeholder="Razón social *" value={vincularForm.razon_social}
+                          onChange={e => setVincularForm(f => ({ ...f, razon_social: e.target.value }))} className={inputCls} />
+                        <input type="text" placeholder="Alias (opcional)" value={vincularForm.alias}
+                          onChange={e => setVincularForm(f => ({ ...f, alias: e.target.value }))} className={inputCls} />
+                        <div className="flex gap-2">
+                          <Button variant="gold" size="sm" disabled={vincularHuerfana.isPending || !vincularForm.razon_social.trim()}
+                            onClick={() => vincularHuerfana.mutate({ razon_social: vincularForm.razon_social, alias: vincularForm.alias || undefined })}>
+                            {vincularHuerfana.isPending ? 'Vinculando…' : 'Confirmar'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => { setVincularId(null); setVincularForm({ razon_social: '', alias: '' }) }}>Cancelar</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="mt-2 gap-1"
+                        onClick={() => { setVincularErr(''); setVincularMsg(''); setVincularId(h.id); setVincularForm({ razon_social: '', alias: '' }) }}>
+                        <Link2 size={13} /> Vincular
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Locks Activos (admin) ────────────────────────────────────────────── */}
+      {tab === 'locks' && (
+        <div className="kyro-card overflow-hidden">
+          <div className="border-b border-kyro-border px-4 py-3">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-kyro-danger"><Lock size={15} /> Locks Activos (tiendas operando)</h2>
+          </div>
+          <div className="p-4">
+            {loadingLocks && <p className="py-6 text-center text-sm text-gray-400 dark:text-zinc-500">Cargando…</p>}
+            {!loadingLocks && (locksData?.locks ?? []).length === 0 && (
+              <p className="py-6 text-center text-sm text-gray-400 dark:text-zinc-500">Sin locks activos — todas las tiendas pueden declarar.</p>
+            )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(locksData?.locks ?? []).map(lk => (
+                <div key={`${lk.cuenta_bipay_id}-${lk.tienda_codigo}`} className="rounded-kyro border border-kyro-danger/25 bg-kyro-danger/5 p-3">
+                  <div className="text-sm font-bold text-kyro-danger">{lk.tienda_nombre}</div>
+                  <div className="text-xs text-kyro-muted">{lk.cuenta_alias}</div>
+                  <div className="mt-1 text-xs text-kyro-danger">
+                    Expira en {Math.floor(lk.cooldown_segs / 60)}:{String(lk.cooldown_segs % 60).padStart(2, '0')} min
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
