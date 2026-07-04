@@ -35,7 +35,13 @@ function getColumns(
   return [
     { accessorKey: 'dni',         header: 'DNI' },
     { accessorKey: 'nombres',     header: 'Nombres' },
-    { accessorKey: 'tienda_base', header: 'Tienda' },
+    {
+      accessorKey: 'tienda_base',
+      header: 'Tienda',
+      cell: ({ row }) => (
+        <Badge variant="purple">{row.original.tienda_base}</Badge>
+      ),
+    },
     {
       accessorKey: 'sueldo_base',
       header: 'Sueldo',
@@ -181,6 +187,8 @@ export function AgentesPage() {
         onPaginationChange={setPagination}
         isLoading={isLoading}
         total={data?.total}
+        emptyIcon={<Users size={16} />}
+        emptyLabel="Sin agentes registrados"
       />
 
       <Dialog

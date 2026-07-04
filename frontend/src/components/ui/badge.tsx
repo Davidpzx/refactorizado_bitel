@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react'
 
-type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan'
+type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan' | 'purple'
 
 const variantClasses: Record<Variant, string> = {
   default:     'border-blue-200/70 bg-blue-50 text-blue-700 dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300',
@@ -11,6 +11,8 @@ const variantClasses: Record<Variant, string> = {
   // Identidad legacy Bitel: dorado (rol ADMIN, PIN) y cian (rol TIENDA, BCP, códigos)
   gold:        'border-kyro-gold/30 bg-kyro-gold/10 text-kyro-gold',
   cyan:        'border-kyro-info/30 bg-kyro-info/10 text-kyro-info',
+  // Chip de tienda junto al agente (legacy: pill púrpura)
+  purple:      'border-purple-200/70 bg-purple-50 text-purple-700 dark:border-purple-400/15 dark:bg-purple-500/10 dark:text-purple-300',
 }
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
