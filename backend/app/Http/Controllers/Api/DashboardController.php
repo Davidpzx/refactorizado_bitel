@@ -23,8 +23,10 @@ class DashboardController extends Controller
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('r.fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('r.fecha', '<=', $f));
 
-        if ($user->rol === 'tienda') {
-            $base->where('r.tienda_id', $user->tienda_id);
+        if ($user->rol !== 'admin') {
+            // Fallar CERRADO: un usuario tienda/vendedor sin tienda_id asignada no debe ver nada.
+            // Mismo criterio que EstadisticasController::tiendaScope.
+            $base->where('r.tienda_id', $user->tienda_id ?: '__SIN_TIENDA__');
         } elseif ($request->tienda) {
             $base->where('r.tienda_id', $request->tienda);
         }
