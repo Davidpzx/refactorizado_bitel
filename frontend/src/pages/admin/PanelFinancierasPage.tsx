@@ -7,9 +7,9 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
-import { Card, CardContent } from '../../components/ui/card'
+import { StatCard } from '../../components/ui/StatCard'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Filter, Handshake, Search } from 'lucide-react'
 
 const DIAS_ALERTA_AMARILLA = 15
 const DIAS_ALERTA_ROJA     = 30
@@ -128,6 +128,8 @@ export function PanelFinancierasPage() {
       <PageHeader
         title="Panel de Financieras"
         description="Seguimiento de desembolsos y comisiones por financiera."
+        Icon={Handshake}
+        accent="#6366f1"
       />
 
       {pendientesVencidos.length > 0 && (
@@ -139,71 +141,93 @@ export function PanelFinancierasPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="kyro-card border-l-4 border-l-kpi-esperado">
-          <CardContent className="pt-4">
-            <p className="text-xs uppercase tracking-wider text-kyro-muted">Pendiente de cobro</p>
-            <p className="mt-1 text-2xl font-bold text-kyro-warning">
-              S/ {totales ? Number(totales.pendiente).toFixed(2) : '—'}
-            </p>
-            <p className="mt-1 text-xs text-kyro-subtle">{totales?.count_pendiente ?? 0} registros</p>
-          </CardContent>
-        </Card>
-        <Card className="kyro-card border-l-4 border-l-kpi-declarado">
-          <CardContent className="pt-4">
-            <p className="text-xs uppercase tracking-wider text-kyro-muted">Confirmado este mes</p>
-            <p className="mt-1 text-2xl font-bold text-kyro-success">
-              S/ {totales ? Number(totales.confirmado).toFixed(2) : '—'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="kyro-card border-l-4 border-l-kpi-total">
-          <CardContent className="pt-4">
-            <p className="text-xs uppercase tracking-wider text-kyro-muted">Total facturado</p>
-            <p className="mt-1 text-2xl font-bold text-kyro-text">
-              S/ {totales ? Number(totales.total).toFixed(2) : '—'}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
+        <StatCard
+          title="Pendiente de cobro"
+          value={totales ? Number(totales.pendiente) : null}
+          formatMoney
+          align="top"
+          accent="#ffc200"
+          valueColorClass="text-amber-600 dark:text-amber-400"
+          subtitle={`${totales?.count_pendiente ?? 0} venta${(totales?.count_pendiente ?? 0) === 1 ? '' : 's'} — ${mes}`}
+        />
+        <StatCard
+          title="Confirmado este mes"
+          value={totales ? Number(totales.confirmado) : null}
+          formatMoney
+          align="top"
+          accent="#10b981"
+          valueColorClass="text-emerald-700 dark:text-emerald-400"
+          subtitle="Desembolsos aprobados"
+        />
+        <StatCard
+          title="Total facturado (cuotas)"
+          value={totales ? Number(totales.total) : null}
+          formatMoney
+          align="top"
+          accent="#6366f1"
+          valueColorClass="text-indigo-700 dark:text-indigo-400"
+          subtitle="Inicial + Saldo financieras"
+        />
       </div>
 
       <ListToolbar description="Segmenta desembolsos por periodo, financiera, tienda y estado.">
-        <Input
-          type="month"
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-          className="w-40"
-        />
+        <div>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Mes</label>
+          <Input
+            type="month"
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+            className="w-40"
+          />
+        </div>
 
-        <Select
-          value={financiera}
-          onChange={(e) => setFinanciera(e.target.value)}
-          className="w-44"
+        <div>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Financiera</label>
+          <Select
+            value={financiera}
+            onChange={(e) => setFinanciera(e.target.value)}
+            className="w-44"
+          >
+            <option value="">Todas las financieras</option>
+            {filtros?.financieras.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
+          <Select
+            value={tienda}
+            onChange={(e) => setTienda(e.target.value)}
+            className="w-44"
+          >
+            <option value="">Todas las tiendas</option>
+            {filtros?.tiendas.map((t) => (
+              <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Estado</label>
+          <SegmentedToggle
+            ariaLabel="Filtrar financieras por estado"
+            size="sm"
+            options={ESTADOS}
+            value={estado}
+            onChange={setEstado}
+          />
+        </div>
+
+        <Button
+          variant="glassInfo"
+          onClick={() => qc.invalidateQueries({ queryKey: ['financieras'] })}
+          className="gap-1.5"
         >
-          <option value="">Todas las financieras</option>
-          {filtros?.financieras.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </Select>
-
-        <Select
-          value={tienda}
-          onChange={(e) => setTienda(e.target.value)}
-          className="w-44"
-        >
-          <option value="">Todas las tiendas</option>
-          {filtros?.tiendas.map((t) => (
-            <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>
-          ))}
-        </Select>
-
-        <SegmentedToggle
-          ariaLabel="Filtrar financieras por estado"
-          size="sm"
-          options={ESTADOS}
-          value={estado}
-          onChange={setEstado}
-        />
+          <Filter size={14} /> Filtrar
+        </Button>
       </ListToolbar>
 
       {isLoading ? (
@@ -211,7 +235,12 @@ export function PanelFinancierasPage() {
           Cargando...
         </div>
       ) : (
-        <div className="kyro-card overflow-x-auto">
+        <div className="kyro-card relative overflow-x-auto">
+          <div
+            aria-hidden
+            className="absolute top-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.55), transparent 60%)' }}
+          />
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead className="kyro-table-head">
               <tr>
@@ -229,8 +258,13 @@ export function PanelFinancierasPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-kyro-muted">
-                    Sin registros para los filtros seleccionados
+                  <td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">
+                    <span className="inline-flex flex-col items-center gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.04] dark:text-zinc-500">
+                        <Search size={16} />
+                      </span>
+                      Sin registros para los filtros seleccionados
+                    </span>
                   </td>
                 </tr>
               ) : (
