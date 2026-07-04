@@ -1702,6 +1702,7 @@ class AsistenciaController extends Controller
 
         if (! empty($update)) {
             DB::table('asistencias')->where('id', $id)->update($update);
+            $this->registrarEdicionAsistencia($asistencia, $update, $user->id, $request->ip());
         }
 
         return response()->json([
@@ -1711,6 +1712,48 @@ class AsistenciaController extends Controller
             'minutos_deuda' => $minutosDeuda,
             'minutos_tardanza_refrigerio' => $tardanzaRefrigerio,
         ]);
+    }
+
+    // ── Auditoría: registra en log_ediciones_asistencia cada campo que cambió ──
+    // Paridad legacy: gerencia/admin_editar_asistencia.php y acciones_asistencia.php.
+    private function registrarEdicionAsistencia(object $anterior, array $update, int $adminId, ?string $ip): void
+    {
+        if (! Schema::hasTable('log_ediciones_asistencia')) {
+            return;
+        }
+
+        $camposAuditables = [
+            'fecha', 'hora_ingreso', 'hora_salida', 'inicio_refrigerio', 'fin_refrigerio',
+            'omitio_refrigerio', 'observacion_admin', 'observacion_tardanza', 'observacion',
+            'horas_extras_aprobadas', 'minutos_refrigerio_asignado',
+        ];
+        $normalizar = fn ($valor) => is_bool($valor) ? ($valor ? '1' : '0') : (string) ($valor ?? '');
+        $ahora = now();
+        $filas = [];
+        foreach ($camposAuditables as $campo) {
+            if (! array_key_exists($campo, $update)) {
+                continue;
+            }
+            $valorAnterior = $normalizar($anterior->$campo ?? null);
+            $valorNuevo = $normalizar($update[$campo]);
+            if ($valorAnterior === $valorNuevo) {
+                continue;
+            }
+            $filas[] = [
+                'asistencia_id' => $anterior->id,
+                'agente_id' => $anterior->agente_id,
+                'admin_id' => $adminId,
+                'campo_modificado' => $campo,
+                'valor_anterior' => $valorAnterior,
+                'valor_nuevo' => $valorNuevo,
+                'fecha_cambio' => $ahora,
+                'ip_admin' => $ip ?? '',
+            ];
+        }
+
+        if (! empty($filas)) {
+            DB::table('log_ediciones_asistencia')->insert($filas);
+        }
     }
 
     private function recalcularTiemposAsistencia(object $asistencia): array
@@ -1777,11 +1820,40 @@ class AsistenciaController extends Controller
         if ($user->rol !== 'admin') {
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
-        $deleted = DB::table('asistencias')->where('id', $id)->delete();
-        if (! $deleted) {
+        $asistencia = DB::table('asistencias')->where('id', $id)->first();
+        if (! $asistencia) {
             return response()->json(['success' => false, 'message' => 'Asistencia no encontrada.'], 404);
         }
+
+        DB::table('asistencias')->where('id', $id)->delete();
+        $this->registrarEliminacionAsistencia($asistencia, $user->id, $request->ip());
+
         return response()->json(['success' => true, 'message' => 'Registro de asistencia eliminado.']);
+    }
+
+    // ── Auditoría: registra en log_ediciones_asistencia la eliminación de un registro ──
+    // Paridad legacy: gerencia/acciones_asistencia.php (accion 'eliminar_registro').
+    private function registrarEliminacionAsistencia(object $asistencia, int $adminId, ?string $ip): void
+    {
+        if (! Schema::hasTable('log_ediciones_asistencia')) {
+            return;
+        }
+
+        DB::table('log_ediciones_asistencia')->insert([
+            'asistencia_id' => $asistencia->id,
+            'agente_id' => $asistencia->agente_id,
+            'admin_id' => $adminId,
+            'campo_modificado' => 'ELIMINACION',
+            'valor_anterior' => sprintf(
+                'fecha=%s entrada=%s salida=%s',
+                $asistencia->fecha,
+                $asistencia->hora_ingreso,
+                $asistencia->hora_salida
+            ),
+            'valor_nuevo' => 'ELIMINADO',
+            'fecha_cambio' => now(),
+            'ip_admin' => $ip ?? '',
+        ]);
     }
 
     // ── GET /asistencias/mis-tardanzas?dni= — Tardanzas de la semana del agente ──
