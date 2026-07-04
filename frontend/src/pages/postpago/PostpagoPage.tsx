@@ -7,11 +7,12 @@ import {
 } from 'recharts'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
-import { Card } from '../../components/ui/card'
-import { FileSpreadsheet, AlertTriangle, TrendingUp, Phone, RefreshCw, Zap, Star } from 'lucide-react'
+import { StatCard } from '../../components/ui/StatCard'
+import { FileSpreadsheet, AlertTriangle, TrendingUp, Phone, RefreshCw, Zap, Star, Signal } from 'lucide-react'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -268,6 +269,7 @@ export function PostpagoPage() {
       <PageHeader
         title="Monitor Postpago"
         subtitle="Seguimiento de activaciones, portabilidades y riesgo de churn"
+        Icon={Signal}
       >
         <Button variant="glassSuccess" size="sm" onClick={exportarExcel} disabled={exportando}>
           <FileSpreadsheet size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
@@ -275,7 +277,7 @@ export function PostpagoPage() {
       </PageHeader>
 
       {/* Filtros */}
-      <div className="kyro-card flex flex-wrap items-end gap-3 p-3">
+      <ListToolbar>
         <div>
           <label className="mb-1 block text-xs text-kyro-muted">Desde</label>
           <input type="date" value={filters.desde}
@@ -312,26 +314,21 @@ export function PostpagoPage() {
         }}>
           Este mes
         </Button>
-      </div>
+      </ListToolbar>
 
       {/* KPI Strip */}
       {loadingResumen && <div className="py-6 text-center text-sm text-kyro-muted">Cargando resumen...</div>}
       {!loadingResumen && t && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
-            { label: 'Activaciones',   value: t.total_activaciones, icon: <Zap size={14} />,          border: 'border-l-kpi-total',    text: 'text-kyro-text' },
-            { label: 'Portabilidades', value: t.portabilidades,     icon: <Phone size={14} />,         border: 'border-l-kpi-total',    text: 'text-kyro-text' },
-            { label: 'Altas Nuevas',   value: t.altas_nuevas,       icon: <Star size={14} />,          border: 'border-l-kyro-success', text: 'text-kyro-success' },
-            { label: 'Renovaciones',   value: t.renovaciones,       icon: <RefreshCw size={14} />,     border: 'border-l-kyro-indigo',  text: 'text-kyro-body' },
-            { label: 'Remates ⚠️',    value: t.remates,            icon: <AlertTriangle size={14} />, border: 'border-l-kyro-danger',  text: 'text-kyro-danger' },
-            { label: 'Comisión activa', value: pen.format(Number(t.comision_activa)), icon: <TrendingUp size={14} />, border: 'border-l-kyro-success', text: 'text-kyro-success' },
+            { label: 'Activaciones',   value: t.total_activaciones, icon: <Zap size={14} />,          accent: '#0d6efd', text: 'text-kyro-text' },
+            { label: 'Portabilidades', value: t.portabilidades,     icon: <Phone size={14} />,         accent: '#0d6efd', text: 'text-kyro-text' },
+            { label: 'Altas Nuevas',   value: t.altas_nuevas,       icon: <Star size={14} />,          accent: '#22c55e', text: 'text-kyro-success' },
+            { label: 'Renovaciones',   value: t.renovaciones,       icon: <RefreshCw size={14} />,     accent: '#6366f1', text: 'text-kyro-body' },
+            { label: 'Remates ⚠️',    value: t.remates,            icon: <AlertTriangle size={14} />, accent: '#ef4444', text: 'text-kyro-danger' },
+            { label: 'Comisión activa', value: pen.format(Number(t.comision_activa)), icon: <TrendingUp size={14} />, accent: '#22c55e', text: 'text-kyro-success' },
           ].map(k => (
-            <Card key={k.label} className={`kyro-card border-l-4 px-4 py-3 ${k.border}`}>
-              <div className="mb-1 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">
-                {k.icon}{k.label}
-              </div>
-              <p className={`text-xl font-bold tracking-tight ${k.text}`}>{k.value}</p>
-            </Card>
+            <StatCard key={k.label} title={k.label} accent={k.accent} icon={k.icon} value={k.value} valueColorClass={k.text} />
           ))}
         </div>
       )}
