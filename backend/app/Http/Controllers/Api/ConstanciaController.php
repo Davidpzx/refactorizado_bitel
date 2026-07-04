@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Venta;
+use App\Support\TiendaGuard;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -89,9 +90,7 @@ class ConstanciaController extends Controller
 
         $user = Auth::user();
         abort_if(
-            $user->rol !== 'admin'
-                && $traslado->tienda_origen !== $user->tienda_id
-                && $traslado->tienda_destino !== $user->tienda_id,
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $traslado->tienda_origen, $traslado->tienda_destino),
             403,
             'No tienes permisos sobre este traslado.'
         );
@@ -120,7 +119,7 @@ class ConstanciaController extends Controller
 
         $user = Auth::user();
         abort_if(
-            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $agente->tienda_base),
             403,
             'No tienes permisos sobre este agente.'
         );
@@ -149,7 +148,7 @@ class ConstanciaController extends Controller
 
         $user = Auth::user();
         abort_if(
-            $user->rol !== 'admin' && $agente->tienda_base !== $user->tienda_id,
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $agente->tienda_base),
             403,
             'No tienes permisos sobre esta boleta.'
         );
@@ -237,7 +236,7 @@ class ConstanciaController extends Controller
 
         $user = Auth::user();
         abort_if(
-            $user->rol !== 'admin' && $reporte->tienda_id !== $user->tienda_id,
+            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $reporte->tienda_id),
             403,
             'No tienes permisos sobre este reporte.'
         );
