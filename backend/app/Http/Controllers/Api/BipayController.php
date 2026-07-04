@@ -18,6 +18,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BipayController extends Controller
 {
+    // Tope de días para exportarTransacciones() cuando el rango solicitado (explícito o por
+    // defecto) excede este máximo — evita cargar históricos multi-año en memoria de una sola vez.
+    // Mismo patrón que DashboardController::EXPORT_DIAS_MAX_SIN_FILTRO.
+    private const EXPORT_DIAS_MAX = 90;
+
     private function tablasFaltantes(): array
     {
         $faltantes = [];
@@ -93,7 +98,7 @@ class BipayController extends Controller
             return response()->json(['error' => 'Tablas Bipay no configuradas.'], 422);
         }
 
-        [$query, $desde, $hasta] = $this->consultaTransacciones($request);
+        [$query, $desde, $hasta, $capAplicado] = $this->consultaTransacciones($request);
         $historial = $query->orderByDesc('tb.creado_en')->get();
 
         $spreadsheet = new Spreadsheet();
@@ -106,6 +111,17 @@ class BipayController extends Controller
         ]);
 
         $fila = 2;
+
+        if ($capAplicado) {
+            $sheet->setCellValue("A{$fila}", 'Rango acotado a los últimos ' . self::EXPORT_DIAS_MAX . ' días (el rango solicitado excedía el máximo permitido).');
+            $sheet->mergeCells("A{$fila}:G{$fila}");
+            $sheet->getStyle("A{$fila}")->applyFromArray([
+                'font' => ['italic' => true, 'color' => ['rgb' => '92400E']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+            ]);
+            $fila++;
+        }
+
         foreach ($historial as $tx) {
             $detalle = (string) ($tx->observacion ?? '');
             if ($tx->tipo_operacion === 'AJUSTE') {
@@ -145,7 +161,7 @@ class BipayController extends Controller
      * Consulta filtrada de transacciones_bipay, compartida por transacciones() y
      * exportarTransacciones() (fecha, cuenta, tipo de operación).
      *
-     * @return array{0: Builder, 1: string, 2: string}
+     * @return array{0: Builder, 1: string, 2: string, 3: bool}
      */
     private function consultaTransacciones(Request $request): array
     {
@@ -154,6 +170,13 @@ class BipayController extends Controller
         $cuentaId    = $request->get('cuenta_id');
         $tipoOp      = $request->get('tipo_operacion');
         $tiposValidos = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA', 'CIERRE_DIA'];
+
+        $capAplicado = false;
+        $hastaCarbon = Carbon::parse($hasta);
+        if (Carbon::parse($desde)->diffInDays($hastaCarbon) > self::EXPORT_DIAS_MAX) {
+            $desde = $hastaCarbon->copy()->subDays(self::EXPORT_DIAS_MAX)->toDateString();
+            $capAplicado = true;
+        }
 
         $query = DB::table('transacciones_bipay as tb')
             ->leftJoin('cuentas_bipay as co', 'co.id', '=', 'tb.cuenta_origen_id')
@@ -177,7 +200,7 @@ class BipayController extends Controller
             $query->where('tb.tipo_operacion', $tipoOp);
         }
 
-        return [$query, $desde, $hasta];
+        return [$query, $desde, $hasta, $capAplicado];
     }
 
     public function recarga(Request $request): JsonResponse
