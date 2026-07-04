@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { Eye, Trash2 } from 'lucide-react'
+import { Eye, Trash2, ClipboardList } from 'lucide-react'
 import type { Reporte } from '../../types/reporte'
 
 const TIENDAS = [
@@ -139,6 +139,7 @@ export function ReportesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        Icon={ClipboardList}
         title="Reportes Diarios"
         description="Historial de reportes de caja por tienda."
         actions={<Link to="/reportes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-kyro-gold px-4 text-sm font-semibold text-[#1a1a1a] shadow-sm transition-all hover:opacity-90">+ Nuevo reporte</Link>}

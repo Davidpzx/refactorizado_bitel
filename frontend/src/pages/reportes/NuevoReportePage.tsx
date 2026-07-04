@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer, Plus, Pencil } from 'lucide-react'
+import { Receipt, X, FileText, Cpu, Package, Coins, Users, Save, UploadCloud, FolderDown, Printer, Plus, Pencil, ClipboardList } from 'lucide-react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -1699,6 +1699,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   return (
     <div className="max-w-[1100px] mx-auto space-y-4">
       <PageHeader
+        Icon={ClipboardList}
         title={esEdicion ? `Editar Cuadre #${reporteId}` : 'Registrar Cuadre Diario'}
         description="Cierre de caja y ventas del día."
         actions={

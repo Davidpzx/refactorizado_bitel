@@ -11,7 +11,8 @@ import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, Edit, PenLine } from 'lucide-react'
+import { StatCard } from '../../components/ui/StatCard'
+import { ChevronLeft, ChevronRight, Eye, Edit, PenLine, UserCircle } from 'lucide-react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -486,7 +487,7 @@ export function MiHistorialPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mi Historial Personal" subtitle="Consulta tus cierres, diferencias y solicitudes de edición" />
+      <PageHeader Icon={UserCircle} title="Mi Historial Personal" subtitle="Consulta tus cierres, diferencias y solicitudes de edición" />
 
       <SalvavidasPanel />
       <HistorialOperativoPanel data={historialOperativo} />
@@ -494,22 +495,24 @@ export function MiHistorialPage() {
       {/* KPIs personales de la página actual */}
       {!isLoading && reportes.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
-            <p className="text-xs text-kyro-muted mb-1">Total vendido (página)</p>
-            <p className="text-lg font-bold text-kyro-text">{fmt(totalVendido)}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-neutral p-4">
-            <p className="text-xs text-kyro-muted mb-1">Diferencia acumulada</p>
-            <p className={`text-lg font-bold ${totalDiferencia < 0 ? 'text-kyro-danger' : totalDiferencia > 0 ? 'text-kyro-warning' : 'text-kyro-muted'}`}>
-              {totalDiferencia > 0 ? '+' : ''}{fmt(totalDiferencia)}
-            </p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-declarado p-4">
-            <p className="text-xs text-kyro-muted mb-1">Reportes con descuadre</p>
-            <p className={`text-lg font-bold ${reportesConDif > 0 ? 'text-kyro-danger' : 'text-kyro-success'}`}>
-              {reportesConDif} de {reportes.length}
-            </p>
-          </div>
+          <StatCard
+            title="Total vendido (página)"
+            accent="var(--color-kpi-total)"
+            valueColorClass="font-mono text-kyro-text"
+            value={fmt(totalVendido)}
+          />
+          <StatCard
+            title="Diferencia acumulada"
+            accent="var(--color-kpi-neutral)"
+            valueColorClass={`font-mono ${totalDiferencia < 0 ? 'text-kyro-danger' : totalDiferencia > 0 ? 'text-kyro-warning' : 'text-kyro-muted'}`}
+            value={`${totalDiferencia > 0 ? '+' : ''}${fmt(totalDiferencia)}`}
+          />
+          <StatCard
+            title="Reportes con descuadre"
+            accent="var(--color-kpi-declarado)"
+            valueColorClass={`font-mono ${reportesConDif > 0 ? 'text-kyro-danger' : 'text-kyro-success'}`}
+            value={`${reportesConDif} de ${reportes.length}`}
+          />
         </div>
       )}
 
