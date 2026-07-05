@@ -151,6 +151,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('inventario/stock-estancado', [InventarioController::class, 'stockEstancado']);
     Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos']);
     Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes']);
+    Route::get('inventario/precios-matriz',     [InventarioController::class, 'preciosMatriz'])->middleware('role:admin');
     Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex']);
     Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index']);
     Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar']);
