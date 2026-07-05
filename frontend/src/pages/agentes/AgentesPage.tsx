@@ -11,8 +11,9 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { AgenteForm } from './AgenteForm'
+import { AgenteSeguridadDialog } from './AgenteSeguridadDialog'
 import type { Agente } from '../../types/agente'
-import { Download, Eye, Pencil, Plus, Search, Trash2, UserRound, Users } from 'lucide-react'
+import { Check, Copy, Download, Eye, FileText, KeyRound, Pencil, Plus, Search, Trash2, UserRound, Users } from 'lucide-react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAuth } from '../../hooks/useAuth'
@@ -30,6 +31,8 @@ function getColumns(
   onVer: (a: Agente) => void,
   onEditar: (a: Agente) => void,
   onEliminar: (a: Agente) => void,
+  onExportarPdf: (a: Agente) => void,
+  onSeguridad: (a: Agente) => void,
   eliminando: boolean,
 ): ColumnDef<Agente>[] {
   return [
@@ -110,6 +113,8 @@ function getColumns(
         <TableActions>
           <ActionIconButton tone="view" label="Ver perfil" icon={<Eye size={15} />} onClick={() => onVer(row.original)} />
           <ActionIconButton tone="edit" label="Editar agente" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
+          <ActionIconButton tone="excel" label="Exportar PDF (constancia)" icon={<FileText size={15} />} onClick={() => onExportarPdf(row.original)} />
+          <ActionIconButton tone="edit" label="Token de seguridad" icon={<KeyRound size={15} />} onClick={() => onSeguridad(row.original)} />
           <ActionIconButton tone="delete" label="Eliminar agente" icon={<Trash2 size={15} />} onClick={() => onEliminar(row.original)} disabled={eliminando} />
         </TableActions>
       ),
@@ -117,14 +122,30 @@ function getColumns(
   ]
 }
 
-async function descargarFicha() {
-  const res = await api.get('/v1/agentes/exportar-ficha', { responseType: 'blob' })
+async function descargarBlob(path: string, filename: string) {
+  const res = await api.get(path, { responseType: 'blob' })
   const url = URL.createObjectURL(res.data as Blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'ficha_tecnica_personal.xlsx'
+  a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+async function descargarFicha() {
+  await descargarBlob('/v1/agentes/exportar-ficha', 'ficha_tecnica_personal.xlsx')
+}
+
+async function descargarConstancia(agente: Agente) {
+  const nombres = agente.nombres.replace(/\s+/g, '_')
+  await descargarBlob(`/v1/constancias/agente/${agente.id}`, `certificado_${nombres}_${agente.id}.pdf`)
+}
+
+type UrlPublica = 'onboarding' | 'asistencia'
+
+const urlsPublicas: Record<UrlPublica, string> = {
+  onboarding: '/postular',
+  asistencia: '/terminal',
 }
 
 export function AgentesPage() {
@@ -138,6 +159,8 @@ export function AgentesPage() {
   const { tiendas } = useTiendasSelect()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando]     = useState<Agente | undefined>()
+  const [seguridadAgente, setSeguridadAgente] = useState<Agente | undefined>()
+  const [urlCopiada, setUrlCopiada] = useState<UrlPublica | null>(null)
 
   const { data, isLoading } = useAgentes({
     q:        query || undefined,
@@ -169,10 +192,19 @@ export function AgentesPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
+  const copiarUrlPublica = async (tipo: UrlPublica) => {
+    const url = `${window.location.origin}${urlsPublicas[tipo]}`
+    await navigator.clipboard.writeText(url)
+    setUrlCopiada(tipo)
+    setTimeout(() => setUrlCopiada((actual) => (actual === tipo ? null : actual)), 2500)
+  }
+
   const columns = getColumns(
     (a) => navigate(`/agentes/${a.id}`),
     abrirEditar,
     handleEliminar,
+    descargarConstancia,
+    setSeguridadAgente,
     eliminar.isPending,
   )
 
@@ -183,10 +215,18 @@ export function AgentesPage() {
         description="Gestión del personal de ventas registrado en el sistema."
         Icon={Users}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="glassWarning" onClick={() => copiarUrlPublica('onboarding')}>
+              {urlCopiada === 'onboarding' ? <Check size={15} /> : <Copy size={15} />}
+              {urlCopiada === 'onboarding' ? '¡Copiado!' : 'URL Registro de Datos'}
+            </Button>
+            <Button variant="glassInfo" onClick={() => copiarUrlPublica('asistencia')}>
+              {urlCopiada === 'asistencia' ? <Check size={15} /> : <Copy size={15} />}
+              {urlCopiada === 'asistencia' ? '¡Copiado!' : 'URL Asistencia'}
+            </Button>
             {isAdmin && (
               <Button variant="glassSuccess" onClick={descargarFicha}>
-                <Download size={15} /> Ficha técnica
+                <Download size={15} /> Excel + Fichas
               </Button>
             )}
             <Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
@@ -246,6 +286,8 @@ export function AgentesPage() {
         </div>
         <AgenteForm agente={editando} onSuccess={cerrar} onCancel={cerrar} />
       </Dialog>
+
+      <AgenteSeguridadDialog agente={seguridadAgente} onClose={() => setSeguridadAgente(undefined)} />
     </div>
   )
 }
