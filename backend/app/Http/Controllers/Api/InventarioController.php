@@ -70,6 +70,48 @@ class InventarioController extends Controller
         ]);
     }
 
+    // ── GET /inventario/precios-matriz — Matriz COMPLETA de precios (admin) ──────
+    // Paridad legacy gerencia/revisar_stock.php pero SIN el filtro de "solo pendientes":
+    // devuelve TODOS los items DISPONIBLE no-CHIP con su precio actual, ordenados por
+    // tienda_id + tipo (control-break del legacy) + producto_nombre, con filtros
+    // tienda / tipo (categoría) / q (búsqueda). Reusa inventario_tiendas igual que
+    // preciosPendientes; el guardado de precios se hace vía PUT /inventario/{id}.
+    public function preciosMatriz(Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('inventario_tiendas')) {
+            return response()->json(['data' => [], 'total' => 0, 'tiendas' => []]);
+        }
+
+        $base = DB::table('inventario_tiendas')
+            ->where('estado', 'DISPONIBLE')
+            ->where('tipo', '!=', 'CHIP');
+
+        $q = trim((string) $request->input('q', ''));
+
+        $items = (clone $base)
+            ->when($request->filled('tienda'), fn ($qb) => $qb->where('tienda_id', $request->tienda))
+            ->when($request->filled('tipo'), fn ($qb) => $qb->where('tipo', strtoupper((string) $request->tipo)))
+            ->when($q !== '', function ($qb) use ($q) {
+                $like = '%'.$q.'%';
+                $qb->where(fn ($w) => $w->where('producto_nombre', 'like', $like)
+                    ->orWhere('imei_serial', 'like', $like));
+            })
+            ->select([
+                'id', 'tienda_id', 'producto_nombre', 'tipo', 'imei_serial',
+                'cantidad', 'precio_costo', 'precio_minimo', 'precio_normal', 'fecha_registro',
+            ])
+            ->orderBy('tienda_id')->orderBy('tipo')->orderBy('producto_nombre')
+            ->get();
+
+        $tiendas = (clone $base)->distinct()->orderBy('tienda_id')->pluck('tienda_id');
+
+        return response()->json([
+            'data' => $items,
+            'total' => $items->count(),
+            'tiendas' => $tiendas,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();

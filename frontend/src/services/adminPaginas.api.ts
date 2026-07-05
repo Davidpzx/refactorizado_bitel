@@ -47,6 +47,14 @@ export const adminPaginasApi = {
   preciosPendientes: (tienda?: string) =>
     api.get<PreciosPendientesResponse>('/v1/inventario/precios-pendientes', { params: tienda ? { tienda } : {} }).then((r) => r.data),
 
+  preciosMatriz: (filtros: { tienda?: string; tipo?: string; q?: string } = {}) => {
+    const params: Record<string, string> = {}
+    if (filtros.tienda) params.tienda = filtros.tienda
+    if (filtros.tipo) params.tipo = filtros.tipo
+    if (filtros.q) params.q = filtros.q
+    return api.get<PreciosPendientesResponse>('/v1/inventario/precios-matriz', { params }).then((r) => r.data)
+  },
+
   guardarPrecios: (id: number, precios: { precio_costo: number; precio_minimo: number; precio_normal: number }) =>
     api.put(`/v1/inventario/${id}`, precios).then((r) => r.data),
 
