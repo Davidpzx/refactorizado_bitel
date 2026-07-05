@@ -67,3 +67,13 @@ export interface AgenteParams {
   page?: number
   per_page?: number
 }
+
+export interface EstadoSeguridad {
+  dispositivo_vinculado: boolean
+  fecha_registro_dispositivo: string | null
+  tienda_registro_inicial: string | null
+  tiene_token: boolean
+  token: string | null
+  tipo_token: 'diario' | 'permanente' | null
+  expiracion_token: string | null
+}

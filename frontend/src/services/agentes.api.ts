@@ -1,6 +1,8 @@
 import { api } from './api'
-import type { Agente, AgenteFormData, AgenteParams, HistorialAgenteEvento } from '../types/agente'
+import type { Agente, AgenteFormData, AgenteParams, EstadoSeguridad, HistorialAgenteEvento } from '../types/agente'
 import type { PaginatedResponse } from '../types/pagination'
+
+export type TipoTokenAccion = 'diario' | 'permanente' | 'revocar'
 
 export const agentesApi = {
   list: (params?: AgenteParams) =>
@@ -20,4 +22,16 @@ export const agentesApi = {
 
   historial: (id: number) =>
     api.get<{ data: HistorialAgenteEvento[] }>(`/v1/agentes/${id}/historial`).then((r) => r.data.data),
+
+  seguridad: (id: number) =>
+    api.get<EstadoSeguridad>(`/v1/agentes/${id}/seguridad`).then((r) => r.data),
+
+  tokenSeguridad: (id: number, tipo: TipoTokenAccion) =>
+    api.post<{ success: boolean; token?: string; expiracion?: string; tipo?: string; accion?: string }>(
+      `/v1/agentes/${id}/token-seguridad`,
+      { tipo },
+    ).then((r) => r.data),
+
+  resetDispositivo: (id: number) =>
+    api.post<{ message: string }>(`/v1/agentes/${id}/reset-dispositivo`).then((r) => r.data),
 }
