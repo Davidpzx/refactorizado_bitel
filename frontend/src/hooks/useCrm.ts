@@ -84,7 +84,7 @@ export function useCrmDashboard(params?: CrmDashboardFilters) {
   })
 }
 
-export function useCrmTemperatura(params?: CrmTemperaturaFiltros & { per_page?: number }) {
+export function useCrmTemperatura(params?: CrmTemperaturaFiltros) {
   return useQuery({
     queryKey: ['crm-temperatura', params],
     queryFn: () => crmApi.temperatura.list(params),
