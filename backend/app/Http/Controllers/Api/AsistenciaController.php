@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agente;
+use App\Services\HistorialAgenteService;
 use App\Services\UserAgentResolver;
 use Carbon\Carbon;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -21,8 +23,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AsistenciaController extends Controller
 {
-    public function __construct(private readonly UserAgentResolver $userAgentResolver)
-    {
+    public function __construct(
+        private readonly UserAgentResolver $userAgentResolver,
+        private readonly HistorialAgenteService $historial,
+    ) {
     }
 
     private function tablaExiste(): bool
@@ -739,12 +743,7 @@ class AsistenciaController extends Controller
             && $fechaRetorno
             && Carbon::parse($fechaRetorno, $this->zonaHoraria())->startOfDay()->lte($this->ahora()->startOfDay())
         ) {
-            DB::table('agentes')->where('id', $agente->id)->update([
-                'estado' => 'ACTIVO',
-                'permiso_largo' => 0,
-                'fecha_retorno' => null,
-            ]);
-            $agente->estado = 'ACTIVO';
+            $this->reactivarPorPermisoLargoVencido($agente);
 
             return null;
         }
@@ -757,6 +756,31 @@ class AsistenciaController extends Controller
         }
 
         return null;
+    }
+
+    // Reactivación automática al marcar asistencia (paridad legacy procesar_asistencia.php,
+    // api/registrar_marcacion.php y api/registrar_asistencia.php): solo agentes con permiso_largo
+    // vencido, nunca un cese definitivo (permiso_largo=0 no entra por esta rama).
+    private function reactivarPorPermisoLargoVencido(object $agente): void
+    {
+        $modelo = Agente::find($agente->id);
+        if (! $modelo) {
+            return;
+        }
+
+        $antes = clone $modelo;
+        $modelo->update([
+            'estado' => 'ACTIVO',
+            'permiso_largo' => 0,
+            'fecha_retorno' => null,
+            'clasificacion_baja' => null,
+            'motivo_baja' => null,
+            'fecha_baja' => null,
+            'observacion' => null,
+        ]);
+        $this->historial->auditarActualizacion($antes, $modelo, null);
+
+        $agente->estado = 'ACTIVO';
     }
 
     private function validarSeguridad(object $agente, string $deviceId, string $token, string $tienda): ?JsonResponse
