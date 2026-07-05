@@ -1961,15 +1961,19 @@ class AsistenciaController extends Controller
 
         $rolJefe = strtolower(trim((string) ($agente->es_gerencia ?? '0')));
         $esJefe = ! in_array($rolJefe, ['', '0', 'false', 'no'], true);
+        $tiendaJefe = trim((string) ($agente->tienda_base ?? ''));
         $equipo = collect();
 
-        if ($esJefe) {
+        // Fail-closed: el jefe SOLO ve el equipo de su propia tienda. Sin tienda_base
+        // no hay equipo — evita que ->where('tienda_base', null) degenere en whereNull
+        // y termine listando agentes de otras tiendas (paridad TiendaGuard).
+        if ($esJefe && $tiendaJefe !== '') {
             $equipo = DB::table('agentes as a')
                 ->leftJoin('asistencias as asi', function ($join) use ($desde, $hasta) {
                     $join->on('asi.agente_id', '=', 'a.id')
                         ->whereBetween('asi.fecha', [$desde, $hasta]);
                 })
-                ->where('a.tienda_base', $agente->tienda_base)
+                ->where('a.tienda_base', $tiendaJefe)
                 ->where('a.estado', 'ACTIVO')
                 ->groupBy('a.id', 'a.nombres', 'a.dni', 'a.tienda_base')
                 ->orderBy('a.nombres')
