@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import {
   useLeads, usePipeline, useCrearLead, useActualizarLead, useEliminarLead, useCrmDashboard, useCrmTemperatura,
 } from '../../hooks/useCrm'
 import { PageHeader } from '../../components/PageHeader'
 import { PageTabs } from '../../components/ui/PageTabs'
+import { DataTable } from '../../components/DataTable'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
@@ -14,7 +16,7 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { StatCard } from '../../components/ui/StatCard'
-import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star } from 'lucide-react'
+import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star, MessageCircle } from 'lucide-react'
 import type { ComponentType } from 'react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie,
@@ -638,9 +640,158 @@ function CrmTemperaturaTab({ tiendaId }: { tiendaId: string }) {
   )
 }
 
+// ── Tabla — Registro Completo (paridad legacy crm_dashboard.php:809-877) ──────
+
+const OPERACION_COLORS: { match: string; bg: string; text: string; border: string }[] = [
+  { match: 'Postpago',      bg: 'rgba(96,165,250,.15)', text: '#60a5fa', border: 'rgba(96,165,250,.35)' },
+  { match: 'Prepago',       bg: 'rgba(34,197,94,.12)',  text: '#4ade80', border: 'rgba(34,197,94,.3)' },
+  { match: 'Portabilidad',  bg: 'rgba(251,191,36,.12)', text: '#fbbf24', border: 'rgba(251,191,36,.3)' },
+  { match: 'Recarga',       bg: 'rgba(6,182,212,.12)',  text: '#22d3ee', border: 'rgba(6,182,212,.3)' },
+  { match: 'Krece',         bg: 'rgba(253,126,20,.12)', text: '#fd7e14', border: 'rgba(253,126,20,.3)' },
+  { match: 'Renovación',    bg: 'rgba(245,158,11,.12)', text: '#f59e0b', border: 'rgba(245,158,11,.3)' },
+  { match: 'Consulta',      bg: 'rgba(148,163,184,.1)', text: '#94a3b8', border: 'rgba(148,163,184,.25)' },
+]
+
+function colorOperacion(tipo: string) {
+  return OPERACION_COLORS.find(o => tipo.includes(o.match))
+    ?? { bg: 'rgba(255,255,255,.06)', text: '#e4e4e7', border: 'rgba(255,255,255,.15)' }
+}
+
+function getColumnasTabla(): ColumnDef<CrmInteraccionTemp>[] {
+  return [
+    {
+      accessorKey: 'fecha_hora',
+      header: 'Fecha / Hora',
+      cell: ({ row }) => {
+        const f = new Date(row.original.fecha_hora)
+        return (
+          <span className="whitespace-nowrap text-kyro-subtle">
+            {f.toLocaleDateString('es-PE')}
+            <span className="mt-0.5 block text-[0.68rem] text-kyro-muted">
+              {f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'tienda_codigo',
+      header: 'Tienda',
+      cell: ({ row }) => <Badge variant="cyan">{row.original.tienda_codigo}</Badge>,
+    },
+    {
+      accessorKey: 'agente_nombre',
+      header: 'Agente',
+      cell: ({ row }) => <span className="text-kyro-subtle">{row.original.agente_nombre}</span>,
+    },
+    {
+      accessorKey: 'dni',
+      header: 'DNI',
+      cell: ({ row }) => <span className="font-mono text-xs font-bold tracking-wide text-kyro-text">{row.original.dni}</span>,
+    },
+    {
+      accessorKey: 'nombres',
+      header: 'Nombres',
+      cell: ({ row }) => <span className="text-kyro-text">{row.original.nombres}</span>,
+    },
+    {
+      accessorKey: 'apellidos',
+      header: 'Apellidos',
+      cell: ({ row }) => <span className="text-kyro-text">{row.original.apellidos}</span>,
+    },
+    {
+      id: 'temp',
+      header: 'Temp',
+      cell: ({ row }) => {
+        const t = row.original.temperatura
+        return (
+          <span
+            className="rounded-full border px-2 py-0.5 text-[0.68rem] font-bold"
+            style={{ background: t.bg, color: t.text, borderColor: t.border }}
+          >
+            {t.etiqueta}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'producto_interes',
+      header: 'Producto',
+      cell: ({ row }) => <span className="text-kyro-text">{row.original.producto_interes ?? '—'}</span>,
+    },
+    {
+      accessorKey: 'motivo_rechazo',
+      header: 'Rechazo',
+      cell: ({ row }) => <span className="font-medium text-kyro-danger">{row.original.motivo_rechazo ?? '—'}</span>,
+    },
+    {
+      id: 'whatsapp',
+      header: 'WhatsApp',
+      cell: ({ row }) => {
+        const tel = row.original.telefono
+        if (!tel) return <span className="text-xs text-kyro-muted">—</span>
+        return (
+          <a
+            href={`https://wa.me/51${tel}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-kyro border border-kyro-success/35 bg-kyro-success/10 px-2 py-1 text-xs font-medium text-kyro-success transition-colors hover:underline"
+          >
+            <MessageCircle size={13} /> Contactar
+          </a>
+        )
+      },
+    },
+    {
+      accessorKey: 'tipo_operacion',
+      header: 'Operación',
+      cell: ({ row }) => {
+        const c = colorOperacion(row.original.tipo_operacion)
+        return (
+          <span
+            className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold"
+            style={{ background: c.bg, color: c.text, borderColor: c.border }}
+          >
+            {row.original.tipo_operacion}
+          </span>
+        )
+      },
+    },
+  ]
+}
+
+const columnasTabla = getColumnasTabla()
+
+function CrmTablaTab({ tiendaId }: { tiendaId: string }) {
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 })
+
+  const { data, isLoading } = useCrmTemperatura({
+    tienda_codigo: tiendaId || undefined,
+    page:          pagination.pageIndex + 1,
+    per_page:      pagination.pageSize,
+  })
+
+  const total     = data?.total ?? 0
+  const pageCount = pagination.pageSize > 0 ? Math.ceil(total / pagination.pageSize) : 0
+
+  return (
+    <DataTable
+      data={data?.data ?? []}
+      columns={columnasTabla}
+      pageCount={pageCount}
+      pagination={pagination}
+      onPaginationChange={setPagination}
+      isLoading={isLoading}
+      total={total}
+      emptyLabel="Sin registros en el CRM"
+    />
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 const CRM_TABS = [
+  { id: 'tabla',       label: 'Tabla' },
   { id: 'pipeline',    label: 'Pipeline Kanban' },
   { id: 'temperatura', label: 'Temperatura' },
   { id: 'analytics',   label: 'Analytics' },
@@ -652,7 +803,7 @@ export function CrmPage() {
   const [filtroTienda, setFiltroTienda] = useState('')
   const [busqueda, setBusqueda] = useState('')
   // Landing en "Analytics": el legacy ("CRM y Marketing") abre directo en KPIs + gráficos + registro.
-  const [tab, setTab] = useState<'pipeline' | 'temperatura' | 'analytics'>('analytics')
+  const [tab, setTab] = useState<'tabla' | 'pipeline' | 'temperatura' | 'analytics'>('analytics')
 
   const params: Record<string, string | number> = {
     ...(filtroTienda ? { tienda_id: filtroTienda } : {}),
@@ -720,6 +871,9 @@ export function CrmPage() {
         active={tab}
         onChange={(id) => setTab(id as typeof tab)}
       />
+
+      {/* ── Tab Tabla (Registro Completo) ───────────────────────────────────── */}
+      {tab === 'tabla' && <CrmTablaTab tiendaId={filtroTienda} />}
 
       {/* ── Tab Pipeline ─────────────────────────────────────────────────── */}
       {tab === 'pipeline' && (

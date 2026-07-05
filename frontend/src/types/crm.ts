@@ -127,4 +127,13 @@ export interface CrmTemperaturaFiltros {
   desde?: string
   hasta?: string
   temperatura?: TemperaturaEtiqueta
+  page?: number
+  per_page?: number
+}
+
+export interface CrmTemperaturaResponse {
+  data: CrmInteraccionTemp[]
+  total: number
+  current_page: number
+  per_page: number
 }
