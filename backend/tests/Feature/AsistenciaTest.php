@@ -223,6 +223,70 @@ class AsistenciaTest extends TestCase
         );
     }
 
+    public function test_agente_inactivo_por_permiso_largo_vencido_se_reactiva_al_marcar(): void
+    {
+        DB::table('agentes')->where('id', 1)->update([
+            'estado' => 'INACTIVO',
+            'permiso_largo' => 1,
+            'fecha_retorno' => '2026-06-10',
+            'clasificacion_baja' => 'TEMPORAL',
+            'motivo_baja' => 'Permiso largo',
+            'fecha_baja' => '2026-05-01',
+            'observacion' => 'En permiso',
+        ]);
+
+        $this->postJson('/api/v1/attendance/mark', $this->gpsPayload('entrada'))
+            ->assertOk()
+            ->assertJsonPath('tipo', 'entrada');
+
+        $this->assertDatabaseHas('agentes', [
+            'id' => 1,
+            'estado' => 'ACTIVO',
+            'permiso_largo' => 0,
+            'fecha_retorno' => null,
+            'clasificacion_baja' => null,
+            'motivo_baja' => null,
+            'fecha_baja' => null,
+            'observacion' => null,
+        ]);
+        $this->assertDatabaseHas('historial_agentes', [
+            'id_agente' => 1,
+            'estado' => 'ACTIVO',
+            'tipo_cambio' => 'REINGRESO',
+        ]);
+        $this->assertDatabaseHas('asistencias', [
+            'agente_id' => 1,
+            'hora_ingreso' => '08:00:00',
+        ]);
+    }
+
+    public function test_agente_cesado_definitivamente_no_se_reactiva_al_marcar(): void
+    {
+        DB::table('agentes')->where('id', 1)->update([
+            'estado' => 'INACTIVO',
+            'permiso_largo' => 0,
+            'fecha_retorno' => null,
+            'clasificacion_baja' => 'DEFINITIVO',
+            'motivo_baja' => 'Cese definitivo',
+        ]);
+
+        $this->postJson('/api/v1/attendance/mark', $this->gpsPayload('entrada'))
+            ->assertForbidden()
+            ->assertJsonPath('code', 'AGENT_INACTIVE');
+
+        $this->assertDatabaseHas('agentes', [
+            'id' => 1,
+            'estado' => 'INACTIVO',
+        ]);
+        $this->assertDatabaseMissing('historial_agentes', [
+            'id_agente' => 1,
+            'tipo_cambio' => 'REINGRESO',
+        ]);
+        $this->assertDatabaseMissing('asistencias', [
+            'agente_id' => 1,
+        ]);
+    }
+
     private function gpsPayload(string $tipo): array
     {
         return [
