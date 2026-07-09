@@ -250,4 +250,34 @@ class CrmTemperaturaTest extends TestCase
 
         $this->assertEquals('Upselling', $resultado['etiqueta']);
     }
+
+    // ── Export (T4.1 — paridad gerencia/exportar_crm_excel.php) ─────────────────
+
+    public function test_endpoint_exportar_crm_sin_autenticar_devuelve_401(): void
+    {
+        $this->getJson('/api/v1/crm/temperatura/exportar')->assertStatus(401);
+    }
+
+    public function test_endpoint_exportar_crm_genera_xlsx_respetando_filtro_de_tienda(): void
+    {
+        $id1 = $this->crearCliente('40000001');
+        $id2 = $this->crearCliente('40000002');
+        $this->crearInteraccion($id1, ['tienda_codigo' => 'PUNDA50']);
+        $this->crearInteraccion($id2, ['tienda_codigo' => 'TACDA13']);
+
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->get('/api/v1/crm/temperatura/exportar?tienda_codigo=PUNDA50')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $contenido = $response->streamedContent();
+        $tmp = tempnam(sys_get_temp_dir(), 'crm_export').'.xlsx';
+        file_put_contents($tmp, $contenido);
+
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmp)->getActiveSheet();
+        $this->assertSame('40000001', (string) $sheet->getCell('D3')->getValue());
+        $this->assertNull($sheet->getCell('D4')->getValue());
+
+        unlink($tmp);
+    }
 }

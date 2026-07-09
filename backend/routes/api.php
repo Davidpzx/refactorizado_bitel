@@ -238,8 +238,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
 
     // ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
-    Route::get('crm/temperatura',        [CrmTemperaturaController::class, 'index']);
-    Route::get('crm/temperatura/{dni}',  [CrmTemperaturaController::class, 'porDni']);
+    Route::get('crm/temperatura',           [CrmTemperaturaController::class, 'index']);
+    Route::get('crm/temperatura/exportar',  [CrmTemperaturaController::class, 'exportar']);
+    Route::get('crm/temperatura/{dni}',     [CrmTemperaturaController::class, 'porDni']);
 
     // ── Estadísticas (admin ve todo; tienda ve solo su propia tienda) ─────────
     Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin,tienda');
