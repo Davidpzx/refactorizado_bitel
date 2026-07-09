@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { useTiendasSelect } from '../../hooks/useTiendasSelect'
+import { Select } from '../../components/ui/select'
 
 interface QrData {
   token: string
@@ -57,12 +59,16 @@ function Reloj() {
 
 export function QrDisplayPage() {
   const { usuario } = useAuth()
-  const tiendaId = usuario?.tienda_id ?? 'DEFAULT'
+  const { tiendas } = useTiendasSelect()
+  const [tiendaSeleccionada, setTiendaSeleccionada] = useState('')
+  const requiereSeleccion = !usuario?.tienda_id
+  const tiendaId = usuario?.tienda_id ?? tiendaSeleccionada
   const [nowMs, setNowMs] = useState(() => Date.now())
 
   const { data, dataUpdatedAt } = useQuery<QrData>({
     queryKey: ['qr-stream', tiendaId],
     queryFn: () => api.get<QrData>(`/v1/attendance/qr-stream/${tiendaId}`).then(r => r.data),
+    enabled: !!tiendaId,
     refetchInterval: 5000,
     staleTime: 0,
   })
@@ -85,14 +91,34 @@ export function QrDisplayPage() {
           <span className="text-red-400 text-xs font-bold tracking-wide">QR EN VIVO</span>
         </div>
         <Reloj />
-        <p className="text-zinc-400 text-sm mt-1">
-          Tienda: <span className="text-white font-semibold">{tiendaId}</span>
-        </p>
+        {requiereSeleccion ? (
+          <div className="mt-2 flex items-center justify-center gap-2 text-sm">
+            <label className="text-zinc-400">Tienda:</label>
+            <Select
+              value={tiendaSeleccionada}
+              onChange={e => setTiendaSeleccionada(e.target.value)}
+              className="w-48 bg-zinc-800 text-white border-zinc-700"
+            >
+              <option value="">-- Seleccionar tienda --</option>
+              {tiendas.map(t => (
+                <option key={t.codigo} value={t.codigo}>{t.nombre} — {t.codigo}</option>
+              ))}
+            </Select>
+          </div>
+        ) : (
+          <p className="text-zinc-400 text-sm mt-1">
+            Tienda: <span className="text-white font-semibold">{tiendaId}</span>
+          </p>
+        )}
       </div>
 
       {/* QR */}
       <div className="flex flex-col items-center gap-4">
-        {data?.image_data_uri ? (
+        {!tiendaId ? (
+          <div className="w-[300px] h-[300px] bg-zinc-800 rounded-2xl flex items-center justify-center text-center text-sm text-zinc-500 px-6">
+            Selecciona una tienda para generar el QR de asistencias.
+          </div>
+        ) : data?.image_data_uri ? (
           <QrImage dataUri={data.image_data_uri} size={300} />
         ) : (
           <div className="w-[300px] h-[300px] bg-zinc-800 rounded-2xl animate-pulse" />

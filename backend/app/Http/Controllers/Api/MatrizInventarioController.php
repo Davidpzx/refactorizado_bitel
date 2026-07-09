@@ -54,26 +54,28 @@ class MatrizInventarioController extends Controller
         ksort($matrizAccesorios);
 
         // 4. Matriz chips
+        // codigo_origen se resuelve en PHP (no en SQL) porque REGEXP y CAST(...AS UNSIGNED)
+        // son sintaxis MySQL-only y rompen contra SQLite (tests/QA local).
+        $tiendaCodigoPorId = DB::table('tiendas')->pluck('codigo', 'id');
+
         $rawChips = DB::table('inventario_chips as c')
             ->join('tiendas as t', 'c.tienda_id', '=', 't.id')
             ->where('c.stock_actual', '>', 0)
-            ->select(
-                'c.stock_actual',
-                't.codigo as tienda_codigo',
-                DB::raw("
-                    CASE
-                        WHEN c.tienda_origen IS NULL OR c.tienda_origen = '' THEN t.codigo
-                        WHEN c.tienda_origen REGEXP '^[0-9]+$' THEN
-                            (SELECT codigo FROM tiendas WHERE id = CAST(c.tienda_origen AS UNSIGNED) LIMIT 1)
-                        ELSE c.tienda_origen
-                    END AS codigo_origen
-                ")
-            )
+            ->select('c.stock_actual', 'c.tienda_origen', 't.codigo as tienda_codigo')
             ->get();
 
         $matrizChips = [];
         foreach ($rawChips as $row) {
-            $origen = trim($row->codigo_origen ?? '');
+            $tiendaOrigen = trim((string)($row->tienda_origen ?? ''));
+            if ($tiendaOrigen === '') {
+                $origen = $row->tienda_codigo;
+            } elseif (ctype_digit($tiendaOrigen)) {
+                $origen = $tiendaCodigoPorId[(int)$tiendaOrigen] ?? $tiendaOrigen;
+            } else {
+                $origen = $tiendaOrigen;
+            }
+
+            $origen = trim($origen);
             $tienda = trim($row->tienda_codigo);
             if (!isset($matrizChips[$origen][$tienda])) {
                 $matrizChips[$origen][$tienda] = 0;

@@ -217,14 +217,6 @@ export function PanelBipayPage() {
   const warning = saldoData?.warning
   const huerfanas = (saldoData?.cuentas ?? []).filter(c => c.tipo === 'HIJO' && !c.cuenta_madre_id)
 
-  if (warning) {
-    return (
-      <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
-        <AlertTriangle size={18} /> {warning}
-      </div>
-    )
-  }
-
   type TabDef = { id: typeof tab; label: string; Icon: typeof Wallet }
   const TABS: TabDef[] = [
     { id: 'saldo',         label: 'Saldos',        Icon: Wallet },
@@ -260,6 +252,13 @@ export function PanelBipayPage() {
           </>
         }
       />
+
+      {/* Aviso ──────────────────────────────────────────────────────────────── */}
+      {warning && (
+        <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
+          <AlertTriangle size={18} /> {warning}
+        </div>
+      )}
 
       {/* KPIs ────────────────────────────────────────────────────────────────── */}
       {saldoData?.kpis && (
