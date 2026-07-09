@@ -6,13 +6,14 @@ import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
 import {
-  LayoutDashboard, History, BarChart2, CreditCard, FileText,
-  Users, Clock, DollarSign, Package, BookOpen, Settings,
+  LayoutDashboard, History, BarChart2, CircleDollarSign, QrCode, CalendarCheck,
+  Users, DollarSign, Package, BookOpen, Building2, IdCard, Handshake, Wallet, Settings2,
   UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, TrendingUp, Menu, Receipt, Sun, Moon, ArrowLeftRight,
-  Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, Activity,
+  ClipboardList, Menu, Receipt, Sun, Moon, ArrowLeftRight,
+  Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, MapPin,
   Plug,
 } from 'lucide-react'
+import { api } from '../services/api'
 
 interface NavItem {
   to: string
@@ -39,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia' },
-  { to: '/revisar-stock',  label: 'Precios',         Icon: Package,         roles: ['admin'],           section: 'Gerencia' },
+  { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: ['admin'],          section: 'Gerencia' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
   { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Gerencia' },
@@ -47,16 +48,16 @@ const NAV_ITEMS: NavItem[] = [
   // ── Administración ───────────────────────────────────────────────────────
   { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
   { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
-  { to: '/agentes',        label: 'Personal',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
-  { to: '/asistencias',    label: 'Asistencias',     Icon: Clock,           roles: ['admin'],           section: 'Administración' },
+  { to: '/agentes',        label: 'Personal',        Icon: IdCard,          roles: ['admin'],           section: 'Administración' },
+  { to: '/asistencias',    label: 'Asistencias',     Icon: CalendarCheck,   roles: ['admin'],           section: 'Administración' },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Administración' },
   { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Administración' },
-  { to: '/comisiones',     label: 'Comisiones',      Icon: TrendingUp,      roles: ['admin'],           section: 'Administración' },
-  { to: '/financieras',    label: 'Financieras',     Icon: Landmark,        roles: ['admin'],           section: 'Administración' },
-  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: FileText,        roles: ['admin', 'tienda'], section: 'Administración' },
-  { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: CreditCard,      roles: ['admin'],           section: 'Administración' },
+  { to: '/comisiones',     label: 'Comisiones',      Icon: Settings2,       roles: ['admin'],           section: 'Administración' },
+  { to: '/financieras',    label: 'Financieras',     Icon: Handshake,       roles: ['admin'],           section: 'Administración' },
+  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: Landmark,        roles: ['admin', 'tienda'], section: 'Administración' },
+  { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: Wallet,          roles: ['admin'],           section: 'Administración' },
   { to: '/postpago',       label: 'Churn / Postpago', Icon: Signal,         roles: ['admin'],           section: 'Administración' },
-  { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: Activity,        roles: ['admin'],           section: 'Administración' },
+  { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: MapPin,          roles: ['admin'],           section: 'Administración' },
   { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
   { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
   { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Administración' },
@@ -70,10 +71,10 @@ const NAV_ITEMS: NavItem[] = [
 
   // ── Operaciones ──────────────────────────────────────────────────────────
   { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
-  { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: Clock,           roles: ['admin', 'tienda'], section: 'Operaciones' },
+  { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: QrCode,          roles: ['admin', 'tienda'], section: 'Operaciones' },
 
   // ── Configuración ────────────────────────────────────────────────────────
-  { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Settings,      roles: ['admin'],           section: 'Configuración' },
+  { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Building2,     roles: ['admin'],           section: 'Configuración' },
   { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
 ]
 
@@ -100,6 +101,15 @@ export function AppLayout() {
     enabled: usuario?.rol === 'admin',
   })
   const anomaliasCount = cc?.anomalias_caja.count ?? 0
+
+  /* Logo de marca: logo de empresa configurable (ConfiguracionPage) si existe,
+     SVG dorado del legacy como fallback. El endpoint con-logo es solo admin. */
+  const { data: logoEmpresa } = useQuery({
+    queryKey: ['configuracion-con-logo'],
+    queryFn: () => api.get<{ logo_base64?: string | null }>('/v1/configuracion/con-logo').then((r) => r.data.logo_base64 ?? null),
+    staleTime: 5 * 60_000,
+    enabled: usuario?.rol === 'admin',
+  })
 
   /* Conteo de badge por ruta del sidebar (Control Center vivo) */
   const badgeByRoute: Record<string, number> = {
@@ -171,12 +181,24 @@ export function AppLayout() {
         >
           {!collapsed && (
             <Link to="/" className="flex items-center gap-2 min-w-0 flex-1">
-              <span
-                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
-                style={{ background: 'rgba(255,194,0,0.15)' }}
-              >
-                <Users size={16} className="text-kyro-gold" />
-              </span>
+              {logoEmpresa ? (
+                <img
+                  src={logoEmpresa}
+                  alt="Logo empresa"
+                  className="w-8 h-8 rounded-md object-contain shrink-0"
+                  style={{ background: 'rgba(255,194,0,0.15)' }}
+                />
+              ) : (
+                <span
+                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(255,194,0,0.15)' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12.5C5 7.5 8 5 12 5C16 5 18 7 18 9.5C18 11.5 16.5 13 14 13H5V12.5Z" fill="#ffc200" />
+                    <path d="M5 21.5C5 16.5 8 14 12 14C16 14 18 16 18 18.5C18 20.5 16.5 22 14 22H5V21.5Z" fill="#ffc200" />
+                  </svg>
+                </span>
+              )}
               <span className="flex flex-col min-w-0 flex-1 leading-tight">
                 <span className="font-orbitron text-sm font-bold tracking-wide uppercase text-kyro-gold truncate">
                   SIS-KYRO
