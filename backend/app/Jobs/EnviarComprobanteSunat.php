@@ -11,6 +11,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Ruta Greenter, apagada por DECISIÓN-001 tras `facturacion.greenter_activo`.
+ * La emisión activa vive en `ProcesadorColaComprobantes` + `facturacion:procesar-cola`.
+ * No se borra en este ticket; se conserva por si hubiera que volver atrás.
+ */
 class EnviarComprobanteSunat implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -36,6 +41,14 @@ class EnviarComprobanteSunat implements ShouldQueue
 
     public function handle(GreenterService $greenter): void
     {
+        // Red de seguridad: si un job viejo sigue en la cola de Redis tras el
+        // despliegue, no debe emitir contra SUNAT por la ruta apagada.
+        if (! config('facturacion.greenter_activo')) {
+            Log::warning("EnviarComprobanteSunat #{$this->comprobanteId} descartado: la ruta Greenter está desactivada (DECISIÓN-001).");
+
+            return;
+        }
+
         $comprobante = Comprobante::findOrFail($this->comprobanteId);
 
         // Idempotencia: si ya fue aceptado, salir sin error

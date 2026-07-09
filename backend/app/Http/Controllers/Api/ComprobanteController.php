@@ -9,8 +9,29 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+/**
+ * Ruta Greenter (emisión directa contra SUNAT sobre la tabla `comprobantes`).
+ *
+ * DECISIÓN-001 la reemplaza por la API externa de facturación, que se emite
+ * drenando `comprobantes_cola`. Los dos verbos que disparaban una emisión —`store`
+ * y `reenviar`— quedan apagados tras `facturacion.greenter_activo`; el código no se
+ * borra todavía. Consultar y eliminar comprobantes históricos sigue funcionando.
+ */
 class ComprobanteController extends Controller
 {
+    /** Respuesta 410 mientras la ruta Greenter esté apagada, o `null` si está activa. */
+    private function greenterApagado(): ?JsonResponse
+    {
+        if (config('facturacion.greenter_activo')) {
+            return null;
+        }
+
+        return response()->json([
+            'error' => 'La emisión vía Greenter está desactivada (DECISIÓN-001). '
+                .'Los comprobantes se emiten por la cola: POST /api/v1/comprobantes-cola/emitir-ahora.',
+        ], 410);
+    }
+
     public function index(Request $request): JsonResponse
     {
         if ($request->estado_sunat) {
@@ -39,6 +60,10 @@ class ComprobanteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($apagado = $this->greenterApagado()) {
+            return $apagado;
+        }
+
         $data = $request->validate([
             'venta_id'         => ['required', 'integer', 'exists:ventas,id'],
             'tipo_comprobante' => ['required', Rule::in(['03', '01'])],
@@ -67,6 +92,10 @@ class ComprobanteController extends Controller
 
     public function reenviar(Comprobante $comprobante): JsonResponse
     {
+        if ($apagado = $this->greenterApagado()) {
+            return $apagado;
+        }
+
         if ($comprobante->estaAceptado()) {
             return response()->json(['error' => 'El comprobante ya fue aceptado por SUNAT.'], 422);
         }

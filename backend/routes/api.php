@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BitacoraStockController;
 use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ConfigComisionesController;
+use App\Http\Controllers\Api\ComprobanteColaController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\ConfiguracionController;
 use App\Http\Controllers\Api\ControlCenterController;
@@ -185,6 +186,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('configuracion',             [ConfiguracionController::class, 'update'])->middleware('role:admin');
     Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo'])->middleware('role:admin');
     Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo'])->middleware('role:admin');
+
+    // ── Facturación electrónica — emisión ─────────────────────────────────────
+    // Único camino de emisión síncrona: encola y drena esa misma fila. Cualquier
+    // usuario autenticado puede pedirlo (el cajero entrega la boleta en el acto);
+    // el resto de la cola la drena `facturacion:procesar-cola` cada minuto.
+    Route::post('comprobantes-cola/emitir-ahora', [ComprobanteColaController::class, 'emitirAhora']);
 
     // ── Facturación electrónica — configuración multi-emisor ──────────────────
     // `configure-sunat` va antes del wildcard `{facturacionConfig}` para que no

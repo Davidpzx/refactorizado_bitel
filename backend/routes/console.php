@@ -3,6 +3,7 @@
 use App\Console\Commands\AuditoriaNocturnaBipay;
 use App\Console\Commands\AutoRetornoAgentes;
 use App\Console\Commands\LimpiarFotosAsistencia;
+use App\Console\Commands\ProcesarColaComprobantes;
 use App\Console\Commands\SalidaAutomaticaAsistencias;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -32,6 +33,15 @@ Schedule::command(SalidaAutomaticaAsistencias::class)
 // Cruce nocturno Bipay: declarado (ERP) vs scrapeado (agente) de todas las tiendas
 Schedule::command(AuditoriaNocturnaBipay::class)
     ->dailyAt('23:30')
+    ->timezone('America/Lima')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Drenar la cola de comprobantes electrónicos contra la API externa de facturación.
+// Cada minuto, sin solaparse: dos drenadores a la vez competirían por las mismas
+// filas (el lock optimista lo aguanta, pero el trabajo se desperdicia).
+Schedule::command(ProcesarColaComprobantes::class)
+    ->everyMinute()
     ->timezone('America/Lima')
     ->withoutOverlapping()
     ->runInBackground();

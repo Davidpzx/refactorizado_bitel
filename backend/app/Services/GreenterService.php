@@ -14,6 +14,14 @@ use Greenter\Ws\Services\SunatEndpoints;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Emisión directa contra SUNAT con Greenter. Fuera del flujo activo desde
+ * DECISIÓN-001: hoy se emite contra la API externa de facturación
+ * (`App\Services\Facturacion\ProcesadorColaComprobantes`).
+ *
+ * Su único llamador es `EnviarComprobanteSunat`, que no corre mientras
+ * `facturacion.greenter_activo` sea `false`. Se conserva, no se usa.
+ */
 class GreenterService
 {
     private See $see;

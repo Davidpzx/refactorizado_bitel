@@ -248,9 +248,15 @@ class ComprobanteCola extends Model
         return (int) min(self::BACKOFF_MAX_MINUTOS, 2 ** $intentos);
     }
 
+    /**
+     * El número fiscal (`serie`/`correlativo`) lo asigna la API externa y llega en
+     * `$resultado`: es ella la que lleva la numeración ante SUNAT. Ver
+     * `ComprobanteCorrelativo` para la secuencia local, que hoy no alimenta la API.
+     */
     public function marcarAceptado(array $resultado = []): static
     {
         $this->forceFill(array_intersect_key($resultado, array_flip([
+            'serie', 'correlativo',
             'api_doc_id', 'sunat_ticket', 'cdr_estado', 'cdr_hash', 'xml_path', 'cdr_path', 'pdf_path',
         ])) + [
             'estado'             => self::ESTADO_ACEPTADO,
