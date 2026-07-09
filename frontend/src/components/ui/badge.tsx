@@ -1,6 +1,7 @@
 import type { HTMLAttributes } from 'react'
 
-type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan' | 'purple' | 'indigo'
+export type BadgeVariant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan' | 'purple' | 'indigo'
+type Variant = BadgeVariant
 
 const variantClasses: Record<Variant, string> = {
   default:     'border-blue-200/70 bg-blue-50 text-blue-700 dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300',

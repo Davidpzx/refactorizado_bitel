@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Storefront } from '@phosphor-icons/react'
 import { adminPaginasApi, type PrecioPendienteItem } from '../../services/adminPaginas.api'
 import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { Badge, type BadgeVariant } from '../../components/ui/badge'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
@@ -16,6 +18,12 @@ const num = (v: number | string | null) => (v === null || v === '' ? '' : String
 
 const TIPOS = ['EQUIPO', 'ACCESORIO', 'CHIP'] as const
 const TIPOS_MATRIZ = ['EQUIPO', 'ACCESORIO'] as const
+
+const TIPO_BADGE: Record<string, BadgeVariant> = {
+  EQUIPO: 'success',
+  ACCESORIO: 'warning',
+  CHIP: 'purple',
+}
 
 export function RevisarStockPage() {
   const qc = useQueryClient()
@@ -89,12 +97,13 @@ export function RevisarStockPage() {
   }
 
   // ── Fila de edición reutilizada por ambas vistas ───────────────────────────────
-  function FilaPrecio({ item, showTienda }: { item: PrecioPendienteItem; showTienda: boolean }) {
+  function FilaPrecio({ item }: { item: PrecioPendienteItem }) {
     return (
       <tr className="border-b border-kyro-border text-kyro-body hover:bg-kyro-elevated">
-        {showTienda && <td className="px-3 py-2 font-semibold text-kyro-text">{item.tienda_id}</td>}
         <td className="px-3 py-2 text-kyro-body">{item.producto_nombre}</td>
-        <td className="px-3 py-2 text-[10px] text-kyro-muted">{item.tipo}</td>
+        <td className="px-3 py-2">
+          <Badge variant={TIPO_BADGE[item.tipo] ?? 'outline'}>{item.tipo}</Badge>
+        </td>
         <td className="px-3 py-2 text-center font-mono text-xs">
           <span className={(item.cantidad ?? 0) === 0 ? 'text-kyro-danger font-bold' : 'text-kyro-text'}>
             {item.cantidad ?? 0}
@@ -104,24 +113,24 @@ export function RevisarStockPage() {
         {(['precio_costo', 'precio_minimo', 'precio_normal'] as const).map((campo) => (
           <td key={campo} className="px-2 py-1">
             <Input type="number" step="0.01" min="0" placeholder="0.00"
+              className="text-amber-600 font-semibold dark:text-amber-400"
               value={valor(item, campo)}
               onChange={(e) => setCampo(item.id, campo, e.target.value, item)} />
           </td>
         ))}
         <td className="px-3 py-1">
-          <Button type="button" variant="gold" size="sm" disabled={guardar.isPending} onClick={() => onGuardar(item)}>
-            {okId === item.id ? '✓' : 'Guardar'}
+          <Button type="button" variant="glassIndigo" size="sm" disabled={guardar.isPending} onClick={() => onGuardar(item)}>
+            {okId === item.id ? '✓' : 'Fijar'}
           </Button>
         </td>
       </tr>
     )
   }
 
-  function Cabecera({ showTienda }: { showTienda: boolean }) {
+  function Cabecera() {
     return (
       <thead className="kyro-table-head">
         <tr className="text-left text-[11px] uppercase tracking-wider">
-          {showTienda && <th className="px-3 py-2">Tienda</th>}
           <th className="px-3 py-2">Producto</th>
           <th className="px-3 py-2">Tipo</th>
           <th className="px-3 py-2 text-center">Cant.</th>
@@ -140,6 +149,14 @@ export function RevisarStockPage() {
   if (tipo)           pendientes = pendientes.filter(i => i.tipo === tipo)
   if (soloSinStock)   pendientes = pendientes.filter(i => (i.cantidad ?? 0) === 0)
   if (cantMax !== '') pendientes = pendientes.filter(i => (i.cantidad ?? 0) <= Number(cantMax))
+
+  // Agrupación por tienda (control-break del legacy): el backend ya ordena por tienda_id ASC.
+  const gruposPendientes: { tienda: string; items: PrecioPendienteItem[] }[] = []
+  for (const item of pendientes) {
+    const last = gruposPendientes[gruposPendientes.length - 1]
+    if (last && last.tienda === item.tienda_id) last.items.push(item)
+    else gruposPendientes.push({ tienda: item.tienda_id, items: [item] })
+  }
 
   // ── Vista «Matriz»: agrupada por tienda + tipo (control-break del legacy) ──────
   const matrizItems = matrizData?.data ?? []
@@ -239,9 +256,19 @@ export function RevisarStockPage() {
               <p className="p-6 text-sm text-kyro-success">✓ Sin resultados para los filtros seleccionados.</p>
             ) : (
               <table className="w-full text-sm">
-                <Cabecera showTienda />
+                <Cabecera />
                 <tbody>
-                  {pendientes.map((item) => <FilaPrecio key={item.id} item={item} showTienda />)}
+                  {gruposPendientes.map((g) => (
+                    <Fragment key={g.tienda}>
+                      <tr className="bg-[rgba(255,194,0,0.04)]">
+                        <td colSpan={8} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-kyro-gold">
+                          <Storefront size={12} weight="bold" className="-mt-0.5 mr-1.5 inline" />
+                          {g.tienda}
+                        </td>
+                      </tr>
+                      {g.items.map((item) => <FilaPrecio key={item.id} item={item} />)}
+                    </Fragment>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -310,9 +337,9 @@ export function RevisarStockPage() {
                   </div>
                   <Card className="kyro-card overflow-x-auto p-0">
                     <table className="w-full text-sm">
-                      <Cabecera showTienda={false} />
+                      <Cabecera />
                       <tbody>
-                        {g.items.map((item) => <FilaPrecio key={item.id} item={item} showTienda={false} />)}
+                        {g.items.map((item) => <FilaPrecio key={item.id} item={item} />)}
                       </tbody>
                     </table>
                   </Card>
