@@ -9,7 +9,7 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { StatCard } from '../../components/ui/StatCard'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { Warning as AlertTriangle, Funnel as Filter, Handshake, ArrowCounterClockwise as RotateCcw, MagnifyingGlass as Search } from '@phosphor-icons/react'
+import { Warning as AlertTriangle, Funnel as Filter, Handshake, ArrowCounterClockwise as RotateCcw, MagnifyingGlass as Search, Clock, CheckCircle } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const DIAS_ALERTA_AMARILLA = 15
@@ -47,6 +47,8 @@ interface FinancieraItem {
   tienda_id: number
   tienda_nombre: string
   vendedor_nombre: string
+  precio_venta: number
+  efectivo_inicial: number
   por_cobrar: number
   detalle: {
     producto_nombre?: string
@@ -149,8 +151,7 @@ export function PanelFinancierasPage() {
           title="Pendiente de cobro"
           value={totales ? Number(totales.pendiente) : null}
           formatMoney
-          align="top"
-          accent="#ffc200"
+          topAccentColor="amber"
           valueColorClass="text-amber-600 dark:text-amber-400"
           subtitle={`${totales?.count_pendiente ?? 0} venta${(totales?.count_pendiente ?? 0) === 1 ? '' : 's'} — ${mes}`}
         />
@@ -158,8 +159,7 @@ export function PanelFinancierasPage() {
           title="Confirmado este mes"
           value={totales ? Number(totales.confirmado) : null}
           formatMoney
-          align="top"
-          accent="#10b981"
+          topAccentColor="green"
           valueColorClass="text-emerald-700 dark:text-emerald-400"
           subtitle="Desembolsos aprobados"
         />
@@ -167,8 +167,7 @@ export function PanelFinancierasPage() {
           title="Total facturado (cuotas)"
           value={totales ? Number(totales.total) : null}
           formatMoney
-          align="top"
-          accent="#6366f1"
+          topAccentColor="indigo"
           valueColorClass="text-indigo-700 dark:text-indigo-400"
           subtitle="Inicial + Saldo financieras"
         />
@@ -252,16 +251,18 @@ export function PanelFinancierasPage() {
                 <th className="px-4 py-3 text-left font-semibold">Financiera</th>
                 <th className="px-4 py-3 text-left font-semibold">Vendedor</th>
                 <th className="px-4 py-3 text-left font-semibold">Equipo</th>
+                <th className="px-4 py-3 text-right font-semibold">Precio venta</th>
+                <th className="px-4 py-3 text-right font-semibold">Inicial (tienda)</th>
+                <th className="px-4 py-3 text-right font-semibold">Saldo financiera</th>
                 <th className="px-4 py-3 text-center font-semibold">Estado</th>
                 <th className="px-4 py-3 text-center font-semibold">Antigüedad</th>
-                <th className="px-4 py-3 text-right font-semibold">Por cobrar</th>
                 <th className="px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-kyro-muted">
+                  <td colSpan={11} className="px-4 py-10 text-center text-kyro-muted">
                     <span className="inline-flex flex-col items-center gap-2">
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.04] dark:text-zinc-500">
                         <Search size={16} />
@@ -279,13 +280,31 @@ export function PanelFinancierasPage() {
                       {item.fecha?.slice(0, 10) ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-kyro-text">{item.tienda_nombre}</td>
-                    <td className="px-4 py-3 text-kyro-body">{item.financiera}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="indigo">{item.financiera}</Badge>
+                    </td>
                     <td className="px-4 py-3 text-kyro-body">{item.vendedor_nombre}</td>
                     <td className="px-4 py-3 text-kyro-body">
                       {item.detalle?.producto_nombre ?? '—'}
                     </td>
+                    <td className="px-4 py-3 text-right font-semibold text-amber-600 dark:text-amber-400">
+                      S/ {Number(item.precio_venta).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">
+                      S/ {Number(item.efectivo_inicial).toFixed(2)}
+                    </td>
+                    <td
+                      className={`px-4 py-3 text-right font-semibold ${
+                        item.comision_estado === 'PENDIENTE'
+                          ? 'text-red-500 dark:text-red-400'
+                          : 'text-kyro-subtle'
+                      }`}
+                    >
+                      S/ {Number(item.por_cobrar).toFixed(2)}
+                    </td>
                     <td className="px-4 py-3 text-center">
-                      <Badge variant={estadoBadge[item.comision_estado] ?? 'default'}>
+                      <Badge variant={estadoBadge[item.comision_estado] ?? 'default'} className="gap-1">
+                        {item.comision_estado === 'PENDIENTE' ? <Clock size={11} weight="bold" /> : <CheckCircle size={11} weight="bold" />}
                         {item.comision_estado}
                       </Badge>
                       {item.comision_estado === 'APROBADA' && item.desembolso_confirmado_por_nombre && (
@@ -304,14 +323,12 @@ export function PanelFinancierasPage() {
                         <span className="text-xs text-kyro-subtle">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-kyro-text">
-                      S/ {Number(item.por_cobrar).toFixed(2)}
-                    </td>
                     <td className="px-4 py-3 text-right">
                       {item.comision_estado === 'PENDIENTE' && (
                         <Button
                           size="sm"
                           variant="glassSuccess"
+                          className="gap-1"
                           onClick={async () => {
                             const ok = await confirmDialog({
                               title: `¿Confirmar desembolso de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)}?`,
@@ -325,7 +342,7 @@ export function PanelFinancierasPage() {
                           }}
                           disabled={confirmar.isPending}
                         >
-                          Confirmar Desembolso
+                          <CheckCircle size={14} weight="bold" /> Confirmar Desembolso
                         </Button>
                       )}
                       {item.comision_estado === 'APROBADA' && (

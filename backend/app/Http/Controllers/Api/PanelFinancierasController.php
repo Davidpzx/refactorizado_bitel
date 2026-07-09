@@ -41,7 +41,9 @@ class PanelFinancierasController extends Controller
                 'v.id',
                 'v.comision_estado',
                 'v.comision_generada',
+                'v.efectivo_inicial',
                 've.financiera',
+                've.precio_venta',
                 've.por_cobrar_financiera',
                 've.producto_nombre_snap',
                 'r.fecha',
@@ -90,6 +92,8 @@ class PanelFinancierasController extends Controller
                 'vendedor_nombre'   => $v->vendedor_nombre,
                 'comision_estado'   => $v->comision_estado,
                 'comision_generada' => (float) $v->comision_generada,
+                'precio_venta'      => (float) $v->precio_venta,
+                'efectivo_inicial'  => (float) $v->efectivo_inicial,
                 'por_cobrar'        => $porCobrar,
                 // Compat con el front (item.detalle?.producto_nombre).
                 'detalle'           => ['producto_nombre' => $v->producto_nombre_snap],

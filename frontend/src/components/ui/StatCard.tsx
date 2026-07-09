@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CardTopAccent, type TopAccentColor } from './CardTopAccent'
 
 // Formateo de moneda PEN (mismo que usan las páginas de cuadre/dashboard).
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -8,12 +9,14 @@ interface StatCardProps {
   title: string
   /** Valor a mostrar. `null`/`undefined` renderiza un placeholder de carga. */
   value: ReactNode
-  /** Color del acento (borde). Por defecto oro Kyro. */
+  /** Color del acento (borde). Por defecto oro Kyro. Ignorado si se pasa `topAccentColor`. */
   accent?: string
   /** Ícono opcional a la izquierda del contenido (variante `d-flex gap-3` del legacy). */
   icon?: ReactNode
-  /** Posición del acento: `left` (border-left, por defecto) o `top` (border-top). */
+  /** Posición del acento: `left` (border-left, por defecto) o `top` (border-top). Ignorado si se pasa `topAccentColor`. */
   align?: 'left' | 'top'
+  /** Si se define, reemplaza el borde plano por el hairline con glow de `CardTopAccent` (patrón ticket-021). */
+  topAccentColor?: TopAccentColor
   /** Clase Tailwind para el color del valor. */
   valueColorClass?: string
   /** Si es `true`, formatea un `value` numérico como moneda PEN. */
@@ -34,6 +37,7 @@ export function StatCard({
   accent = '#ffc200',
   icon,
   align = 'left',
+  topAccentColor,
   valueColorClass = 'text-gray-900 dark:text-zinc-50',
   formatMoney = false,
   subtitle,
@@ -47,14 +51,18 @@ export function StatCard({
   ) : (
     value
   )
-  const borderStyle =
-    align === 'top' ? { borderTop: `4px solid ${accent}` } : { borderLeft: `4px solid ${accent}` }
+  const borderStyle = topAccentColor
+    ? undefined
+    : align === 'top'
+      ? { borderTop: `4px solid ${accent}` }
+      : { borderLeft: `4px solid ${accent}` }
 
   return (
     <div
       className={`group relative overflow-hidden premium-kpi rounded-kyro-lg p-3 transition-all duration-200 hover:-translate-y-0.5 ${className}`}
       style={borderStyle}
     >
+      {topAccentColor && <CardTopAccent color={topAccentColor} />}
       <div
         aria-hidden
         className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.05] blur-2xl dark:bg-indigo-500/[0.10]"

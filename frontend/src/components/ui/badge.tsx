@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react'
 
-type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan' | 'purple'
+type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'gold' | 'cyan' | 'purple' | 'indigo'
 
 const variantClasses: Record<Variant, string> = {
   default:     'border-blue-200/70 bg-blue-50 text-blue-700 dark:border-blue-400/15 dark:bg-blue-500/10 dark:text-blue-300',
@@ -13,6 +13,8 @@ const variantClasses: Record<Variant, string> = {
   cyan:        'border-kyro-info/30 bg-kyro-info/10 text-kyro-info',
   // Chip de tienda junto al agente (legacy: pill púrpura)
   purple:      'border-purple-200/70 bg-purple-50 text-purple-700 dark:border-purple-400/15 dark:bg-purple-500/10 dark:text-purple-300',
+  // Badge financiera (legacy: .badge-glass-indigo — Krece/PayJoy)
+  indigo:      'border-indigo-200/70 bg-indigo-50 text-indigo-700 dark:border-indigo-400/15 dark:bg-indigo-500/10 dark:text-indigo-300',
 }
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
