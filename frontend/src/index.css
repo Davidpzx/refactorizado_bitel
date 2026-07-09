@@ -135,6 +135,14 @@ html.dark textarea:focus-visible {
 }
 .badge-pulse { animation: kyro-pulse 1.8s ease-in-out infinite; }
 
+@keyframes kyro-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.animate-kyro-shake { animation: kyro-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
 /* ── Componentes premium ───────────────────────────────────────────────────── */
 .kyro-glass {
   background: rgba(255, 255, 255, 0.72);
