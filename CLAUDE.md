@@ -101,3 +101,33 @@ Commit `10a00f5` en `main` cierra 9 gaps Tier 1+2. Detalle completo: `docs/compa
 - **Hecho (backend+frontend, lint+tsc limpios):** T1.1 chips, T1.4 adelantos, T2.1 excepciones asistencia, T2.2 CRUD cuentas Bipay, T2.3 fijar precio agente, T2.4 ranking por categoría.
 - **Parcial (backend listo, falta UI):** T1.2 panel "jefe de tienda"; T1.3 editores de rangos (PLAN/EQUIPO, bipay/krece/payjoy); T2.5 boletas/ficha RRHH en VerAgente.
 - **PENDIENTE en VPS:** correr `php artisan migrate` en el contenedor backend para las 4 migraciones nuevas (`ventas.chips_descontados`, `adelantos`, `config_comisiones`, `comisiones_rangos`). Las pruebas se hacen en el VPS, no en local.
+
+---
+
+## Delegación multi-cuenta Claude (orquesta de cuotas)
+
+Hay **5 cuentas Claude**, cada una en su propio `CLAUDE_CONFIG_DIR` (perfil aislado, **cuota independiente**). Este bloque está a nivel de proyecto, así que **cualquier cuenta que abra este repo lo lee** y sabe delegar.
+
+| Perfil (`CLAUDE_CONFIG_DIR`) | Correo | Rol |
+|---|---|---|
+| `C:\Users\Usuario\.claude` | david365dgxd@gmail.com | orquestador default (modelo libre) |
+| `C:\Users\Usuario\.claude-titan` | nashelitls@gmail.com | orquestador / cerebro |
+| `C:\Users\Usuario\.claude-dev1` | comomellamotunosabes@gmail.com | worker (sonnet) |
+| `C:\Users\Usuario\.claude-dev2` | tutorialesdavid3@gmail.com | worker (sonnet) |
+| `C:\Users\Usuario\.claude-dev3` | joan.achenquipa@gmail.com | worker (sonnet) |
+
+**Cuándo delegar:** cuando la cuenta actual se acerca a su límite, o para paralelizar subtareas. Cada llamada gasta la cuota de la cuenta **destino**, no la del orquestador.
+
+**Comando (una línea, vía Bash tool):**
+```
+CLAUDE_CONFIG_DIR="C:/Users/Usuario/.claude-dev1" claude -p "<tarea autocontenida>" --model sonnet
+```
+- El **directorio actual** define el proyecto. Para otro repo: `cd <ruta> && CLAUDE_CONFIG_DIR=... claude -p "..."`.
+- **Solo lectura/análisis:** basta lo de arriba.
+- **Si va a editar archivos:** añadir `--dangerously-skip-permissions` (o `--permission-mode acceptEdits`), si no se cuelga pidiendo permiso.
+
+**Reglas de la orquesta de cuotas:**
+1. Cada `claude -p` arranca en **frío** (sin memoria del chat) → el prompt debe ser autocontenido: qué archivo, qué cambio, qué criterio de aceptación.
+2. Reparte a cuentas **frescas** (dev1/2/3) las subtareas pesadas; el orquestador (titan/david) **verifica e integra**.
+3. Recoge el `stdout` de cada worker y revisa el diff/resultado antes de dar la tarea por buena.
+4. Los workers **no** necesitan conocer esta orquesta — solo ejecutan el prompt recibido.
