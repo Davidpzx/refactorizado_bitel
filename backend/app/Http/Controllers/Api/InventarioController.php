@@ -124,9 +124,10 @@ class InventarioController extends Controller
             'imei_serial'       => 'nullable|string|max:50|unique:inventario_tiendas,imei_serial',
             'imei_seriales'     => 'nullable|array|max:200',
             'imei_seriales.*'   => 'required|string|max:50|distinct',
-            'precio_costo'      => 'required|numeric|min:0',
-            'precio_minimo'     => 'required|numeric|min:0',
-            'precio_normal'     => 'required|numeric|min:0',
+            // Precios opcionales: paso 1 del flujo de 2 pasos (ver comentario abajo).
+            'precio_costo'      => 'nullable|numeric|min:0',
+            'precio_minimo'     => 'nullable|numeric|min:0',
+            'precio_normal'     => 'nullable|numeric|min:0',
             'cantidad'          => 'required|integer|min:1',
             'estado'            => 'required|in:DISPONIBLE,VENDIDO,TRASLADO',
             'comision_especial' => 'nullable|numeric|min:0',
@@ -137,8 +138,6 @@ class InventarioController extends Controller
             'tipo.required'            => 'El tipo es obligatorio.',
             'tipo.in'                  => 'El tipo debe ser EQUIPO, ACCESORIO o CHIP.',
             'imei_serial.unique'       => 'Este IMEI/serie ya está registrado.',
-            'precio_costo.required'    => 'El precio de costo es obligatorio.',
-            'precio_normal.required'   => 'El precio normal es obligatorio.',
             'cantidad.required'        => 'La cantidad es obligatoria.',
             'estado.required'          => 'El estado es obligatorio.',
             'estado.in'                => 'El estado debe ser DISPONIBLE, VENDIDO o TRASLADO.',
@@ -165,6 +164,17 @@ class InventarioController extends Controller
         }
 
         unset($validated['dni_autoriza']);
+
+        // Paso 1 del flujo legacy de 2 pasos (tienda/guardar_stock.php): la tienda
+        // ingresa stock SIN precio de venta y gerencia lo fija después desde
+        // "Precios pendientes". Un precio omitido o null se deja fuera del insert
+        // para que aplique el default 0 de la columna, que es justamente lo que
+        // busca preciosPendientes() (precio <= 0 OR NULL).
+        foreach (['precio_costo', 'precio_minimo', 'precio_normal'] as $campoPrecio) {
+            if (($validated[$campoPrecio] ?? null) === null) {
+                unset($validated[$campoPrecio]);
+            }
+        }
 
         if ($validated['tipo'] === 'CHIP') {
             $tiendaCodigo = (string) $validated['tienda_id'];

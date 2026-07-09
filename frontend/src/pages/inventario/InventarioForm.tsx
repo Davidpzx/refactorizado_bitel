@@ -11,15 +11,26 @@ import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
 import type { InventarioItem } from '../../types/inventario'
 
+/**
+ * Precio opcional: el ingreso de stock es el paso 1 del flujo de 2 pasos del legacy
+ * (la tienda registra sin precio y gerencia lo fija después en "Precios pendientes").
+ * El input vacío se normaliza a `undefined` en el register (setValueAs), así el
+ * campo se omite del payload y el backend lo deja como precio pendiente.
+ */
+const precioOpcional = z.number().min(0, 'El precio no puede ser negativo').optional()
+
+const comoNumeroOpcional = (v: unknown) =>
+  v === '' || v === null || v === undefined || Number.isNaN(Number(v)) ? undefined : Number(v)
+
 const schema = z.object({
   tienda_id:         z.string().min(1, 'La tienda es obligatoria'),
   producto_nombre:   z.string().min(1, 'El nombre del producto es obligatorio').max(150),
   tipo:              z.enum(['EQUIPO', 'ACCESORIO', 'CHIP']),
   imei_serial:       z.string().max(50).optional().or(z.literal('')),
   imei_seriales_text:z.string().optional(),
-  precio_costo:      z.number().min(0, 'El precio no puede ser negativo'),
-  precio_minimo:     z.number().min(0, 'El precio no puede ser negativo'),
-  precio_normal:     z.number().min(0, 'El precio no puede ser negativo'),
+  precio_costo:      precioOpcional,
+  precio_minimo:     precioOpcional,
+  precio_normal:     precioOpcional,
   cantidad:          z.number().int().min(1, 'La cantidad mínima es 1'),
   estado:            z.enum(['DISPONIBLE', 'VENDIDO', 'TRASLADO']),
   comision_especial: z.number().min(0).optional(),
@@ -67,13 +78,14 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
           tipo: 'EQUIPO',
           estado: 'DISPONIBLE',
           cantidad: 1,
-          precio_costo: 0,
-          precio_minimo: 0,
-          precio_normal: 0,
           tienda_id: usuario?.tienda_id ?? '',
         },
   })
   const tipo = watch('tipo')
+
+  // El form de ingreso de la tienda no lleva precios (paridad tienda/registrar_stock.php):
+  // los fija gerencia después. Admin y edición sí los ven, y ahí siguen siendo opcionales.
+  const mostrarPrecios = esAdmin || esEdicion
 
   const onSubmit = (data: FormData) => {
     const dniAutoriza = (data.dni_autoriza ?? '').trim()
@@ -174,44 +186,53 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="precio_costo">Precio costo (S/) *</Label>
-          <Input
-            id="precio_costo"
-            type="number"
-            step="0.01"
-            min="0"
-            {...register('precio_costo', { valueAsNumber: true })}
-            className="mt-1"
-          />
-          {errors.precio_costo && <p className="text-red-500 text-xs mt-1">{errors.precio_costo.message}</p>}
+      {mostrarPrecios ? (
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="precio_costo">Precio costo (S/)</Label>
+            <Input
+              id="precio_costo"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Pendiente"
+              {...register('precio_costo', { setValueAs: comoNumeroOpcional })}
+              className="mt-1"
+            />
+            {errors.precio_costo && <p className="text-red-500 text-xs mt-1">{errors.precio_costo.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="precio_minimo">Precio mínimo (S/)</Label>
+            <Input
+              id="precio_minimo"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Pendiente"
+              {...register('precio_minimo', { setValueAs: comoNumeroOpcional })}
+              className="mt-1"
+            />
+            {errors.precio_minimo && <p className="text-red-500 text-xs mt-1">{errors.precio_minimo.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="precio_normal">Precio normal (S/)</Label>
+            <Input
+              id="precio_normal"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Pendiente"
+              {...register('precio_normal', { setValueAs: comoNumeroOpcional })}
+              className="mt-1"
+            />
+            {errors.precio_normal && <p className="text-red-500 text-xs mt-1">{errors.precio_normal.message}</p>}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="precio_minimo">Precio mínimo (S/) *</Label>
-          <Input
-            id="precio_minimo"
-            type="number"
-            step="0.01"
-            min="0"
-            {...register('precio_minimo', { valueAsNumber: true })}
-            className="mt-1"
-          />
-          {errors.precio_minimo && <p className="text-red-500 text-xs mt-1">{errors.precio_minimo.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="precio_normal">Precio normal (S/) *</Label>
-          <Input
-            id="precio_normal"
-            type="number"
-            step="0.01"
-            min="0"
-            {...register('precio_normal', { valueAsNumber: true })}
-            className="mt-1"
-          />
-          {errors.precio_normal && <p className="text-red-500 text-xs mt-1">{errors.precio_normal.message}</p>}
-        </div>
-      </div>
+      ) : (
+        <p className="rounded-kyro-lg border border-kyro-info/30 bg-kyro-info/10 p-3 text-xs text-kyro-info">
+          Los precios de venta serán asignados por gerencia tras el registro.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -230,7 +251,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
             type="number"
             step="0.01"
             min="0"
-            {...register('comision_especial', { valueAsNumber: true })}
+            {...register('comision_especial', { setValueAs: comoNumeroOpcional })}
             className="mt-1"
           />
         </div>

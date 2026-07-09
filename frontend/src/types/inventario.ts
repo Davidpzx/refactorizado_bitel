@@ -23,12 +23,15 @@ export interface InventarioPayload {
   tipo: 'EQUIPO' | 'ACCESORIO' | 'CHIP'
   imei_serial?: string | null
   imei_seriales?: string[]
-  precio_costo: number
-  precio_minimo: number
-  precio_normal: number
+  // Precios opcionales: el ingreso de tienda va sin precio y gerencia lo fija
+  // después en Precios pendientes (flujo de 2 pasos del legacy).
+  precio_costo?: number
+  precio_minimo?: number
+  precio_normal?: number
   cantidad: number
   estado: 'DISPONIBLE' | 'VENDIDO' | 'TRASLADO'
   comision_especial?: number
+  dni_autoriza?: string
 }
 
 export interface InventarioFilters {

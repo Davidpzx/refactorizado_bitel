@@ -43,6 +43,23 @@ export interface FotosPendientesResponse {
   total: number
 }
 
+// ── Monitor de fraude de dispositivos ───────────────────────────────────────────
+
+export interface AlertaFraudeItem {
+  id: number
+  fecha_hora: string
+  nombre_agente: string | null
+  dni_ingresado: string | null
+  /** DNI del dueño real del celular; null cuando no se pudo identificar. */
+  dni_duenio_hash: string | null
+  tienda_intento: string | null
+}
+
+export interface FraudeDispositivosResponse {
+  data: AlertaFraudeItem[]
+  total: number
+}
+
 export const adminPaginasApi = {
   preciosPendientes: (tienda?: string) =>
     api.get<PreciosPendientesResponse>('/v1/inventario/precios-pendientes', { params: tienda ? { tienda } : {} }).then((r) => r.data),
@@ -63,4 +80,7 @@ export const adminPaginasApi = {
 
   photoAction: (id: number, accion: 'aprobar' | 'rechazar') =>
     api.post(`/v1/asistencias/${id}/photo-action`, { accion }).then((r) => r.data),
+
+  fraudeDispositivos: () =>
+    api.get<FraudeDispositivosResponse>('/v1/asistencias/fraude-dispositivos').then((r) => r.data),
 }

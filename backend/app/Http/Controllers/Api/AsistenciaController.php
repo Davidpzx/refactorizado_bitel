@@ -1311,6 +1311,26 @@ class AsistenciaController extends Controller
         return response()->json($rows);
     }
 
+    // ── Monitor de fraude de dispositivos (admin) ──────────────────────────────
+    // Paridad legacy gerencia/panel_asistencias.php: últimas 50 alertas, más
+    // recientes primero. Solo lectura — el legacy no ofrece acciones sobre el log.
+    // Si la tabla aún no existe, responde estado vacío en vez de reventar.
+    public function fraudeDispositivos(Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('log_fraude_dispositivo')) {
+            return response()->json(['data' => [], 'total' => 0]);
+        }
+
+        $rows = DB::table('log_fraude_dispositivo')
+            ->select(['id', 'fecha_hora', 'nombre_agente', 'dni_ingresado', 'dni_duenio_hash', 'tienda_intento'])
+            ->orderByDesc('fecha_hora')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $rows, 'total' => $rows->count()]);
+    }
+
     // ── Aprobar/rechazar foto ──────────────────────────────────────────────────
     public function photoAction(Request $request, int $id): JsonResponse
     {

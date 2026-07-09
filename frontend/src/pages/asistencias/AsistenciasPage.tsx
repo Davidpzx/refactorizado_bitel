@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { PageHeader } from '../../components/PageHeader'
 import { AsistenciasTabs } from './AsistenciasTabs'
+import { MonitorFraudePanel } from './MonitorFraudePanel'
 import { ListToolbar } from '../../components/ListToolbar'
 import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
@@ -524,6 +525,9 @@ export function AsistenciasPage() {
           </div>
         )}
       </div>
+
+      {/* Monitor de fraude: al pie de la gestión, igual que el legacy. Se auto-oculta si no eres admin. */}
+      <MonitorFraudePanel />
 
       {editando && editForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">

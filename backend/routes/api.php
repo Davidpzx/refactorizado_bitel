@@ -422,6 +422,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar'])->middleware('role:admin');
     Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar'])->middleware('role:admin');
     Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes'])->middleware('role:admin');
+    Route::get('asistencias/fraude-dispositivos',    [AsistenciaController::class, 'fraudeDispositivos'])->middleware('role:admin');
     Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction'])->middleware('role:admin');
     Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
     Route::get('asistencias/mis-tardanzas',           [AsistenciaController::class, 'misTardanzas']);
