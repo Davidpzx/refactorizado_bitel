@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
-import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ClipboardText as ClipboardList, List as Menu, Receipt, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -15,6 +15,8 @@ interface NavItem {
   roles: string[]
   section: string
   soon?: boolean
+  /** Color de acento propio (calca legacy `style="color:#c084fc"` en `sidebar-link`), p.ej. CRM. */
+  accent?: string
 }
 
 // Orden y agrupación calcan las 5 secciones del sidebar legacy sis_bipay
@@ -32,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   // ── Gerencia ─────────────────────────────────────────────────────────────
   { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia' },
+  { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia', accent: '#c084fc' },
   { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: ['admin'],          section: 'Gerencia' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
@@ -53,7 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: MapPin,          roles: ['admin'],           section: 'Administración' },
   { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
   { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
-  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Receipt,         roles: ['admin'],           section: 'Administración' },
+  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Files,           roles: ['admin'],           section: 'Administración' },
 
   // ── Inventario ───────────────────────────────────────────────────────────
   { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
@@ -244,7 +246,7 @@ export function AppLayout() {
 
         {/* Nav ─────────────────────────────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {visibleItems.map(({ to, label, Icon, soon, section }, idx) => {
+          {visibleItems.map(({ to, label, Icon, soon, section, accent }, idx) => {
             const showSeparator = idx === 0 || section !== visibleItems[idx - 1].section
 
             return (
@@ -284,13 +286,20 @@ export function AppLayout() {
                         isActive ? navActive : navInactive,
                       ].join(' ')
                     }
+                    style={({ isActive }) =>
+                      accent
+                        ? isActive
+                          ? { borderLeftColor: accent, color: accent, background: `${accent}1a` }
+                          : { color: accent }
+                        : undefined
+                    }
                   >
                     {({ isActive }) => {
                       const badgeCount = badgeByRoute[to] ?? 0
-                      const iconColor = isActive ? 'text-kyro-gold' : ''
+                      const iconColor = accent ? '' : isActive ? 'text-kyro-gold' : ''
                       return (
                         <>
-                          <span className="relative shrink-0">
+                          <span className="relative shrink-0" style={accent ? { color: accent } : undefined}>
                             <Icon size={18} className={iconColor} />
                             {badgeCount > 0 && collapsed && (
                               <span className="badge-pulse absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />

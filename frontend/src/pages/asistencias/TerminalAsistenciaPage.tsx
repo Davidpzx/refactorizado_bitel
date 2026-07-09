@@ -117,7 +117,7 @@ function TecladoPIN({ onSubmit }: { onSubmit: (pin: string) => void }) {
     <div className="flex flex-col items-center gap-4">
       <div className="flex gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${pin.length > i ? 'bg-red-500 border-red-500' : 'border-zinc-500'}`} />
+          <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${pin.length > i ? 'bg-kyro-gold border-kyro-gold' : 'border-zinc-500'}`} />
         ))}
       </div>
       <div className="grid grid-cols-3 gap-3">
@@ -125,7 +125,7 @@ function TecladoPIN({ onSubmit }: { onSubmit: (pin: string) => void }) {
           <button key={i} onClick={() => d === '⌫' ? borrar() : d ? press(d) : undefined}
             className={`w-16 h-16 rounded-2xl text-xl font-bold transition-all
               ${d ? 'bg-zinc-700 hover:bg-zinc-600 text-white active:scale-95' : 'pointer-events-none'}
-              ${d === '⌫' ? 'text-red-400' : ''}`}>
+              ${d === '⌫' ? 'text-zinc-300' : ''}`}>
             {d}
           </button>
         ))}
@@ -162,10 +162,10 @@ function CapturaFoto({ onCaptura }: { onCaptura: (base64: string) => void }) {
     <div className="flex flex-col items-center gap-4">
       <div className="relative overflow-hidden rounded-2xl border-2 border-zinc-600 w-64 h-64">
         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        <div className="absolute inset-0 border-[3px] border-red-500/60 rounded-2xl pointer-events-none" />
+        <div className="absolute inset-0 border-[3px] border-kyro-gold/60 rounded-2xl pointer-events-none" />
       </div>
       <canvas ref={canvasRef} className="hidden" />
-      <button onClick={capturar} className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-2xl text-lg active:scale-95 transition-all">
+      <button onClick={capturar} className="bg-gradient-to-b from-[#ffd028] to-[#ffc200] hover:brightness-105 text-[#1a1a1a] font-bold px-8 py-3 rounded-2xl text-lg active:scale-95 transition-all">
         Tomar foto
       </button>
     </div>
@@ -243,11 +243,11 @@ function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
         <div className="relative w-64 h-64 rounded-2xl overflow-hidden border border-zinc-700 bg-black">
           <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
           <div className="absolute inset-0 pointer-events-none">
-            <span className="absolute left-7 top-7 w-7 h-7 border-l-[3px] border-t-[3px] border-red-500 rounded-tl-lg" />
-            <span className="absolute right-7 top-7 w-7 h-7 border-r-[3px] border-t-[3px] border-red-500 rounded-tr-lg" />
-            <span className="absolute left-7 bottom-7 w-7 h-7 border-l-[3px] border-b-[3px] border-red-500 rounded-bl-lg" />
-            <span className="absolute right-7 bottom-7 w-7 h-7 border-r-[3px] border-b-[3px] border-red-500 rounded-br-lg" />
-            <span className="absolute left-8 right-8 h-0.5 bg-red-500/80 shadow-[0_0_12px_2px_rgba(239,68,68,0.7)]"
+            <span className="absolute left-7 top-7 w-7 h-7 border-l-[3px] border-t-[3px] border-kyro-gold rounded-tl-lg" />
+            <span className="absolute right-7 top-7 w-7 h-7 border-r-[3px] border-t-[3px] border-kyro-gold rounded-tr-lg" />
+            <span className="absolute left-7 bottom-7 w-7 h-7 border-l-[3px] border-b-[3px] border-kyro-gold rounded-bl-lg" />
+            <span className="absolute right-7 bottom-7 w-7 h-7 border-r-[3px] border-b-[3px] border-kyro-gold rounded-br-lg" />
+            <span className="absolute left-8 right-8 h-0.5 bg-kyro-gold/80 shadow-[0_0_12px_2px_rgba(255,194,0,0.7)]"
               style={{ top: '2rem', animation: 'kyroScan 2.2s ease-in-out infinite alternate' }} />
           </div>
           {expirado && (
@@ -267,9 +267,9 @@ function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
           <input autoFocus value={input} onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) onToken(input.trim()) }}
             placeholder="Pega o escribe el token QR"
-            className="w-full bg-zinc-700 text-white border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500" />
+            className="w-full bg-zinc-700 text-white border border-zinc-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-kyro-gold" />
           <button onClick={() => input.trim() && onToken(input.trim())} disabled={!input.trim() || expirado}
-            className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold px-8 py-3 rounded-2xl text-base active:scale-95 transition-all">
+            className="bg-gradient-to-b from-[#ffd028] to-[#ffc200] hover:brightness-105 disabled:opacity-40 text-[#1a1a1a] font-bold px-8 py-3 rounded-2xl text-base active:scale-95 transition-all">
             {expirado ? 'QR expirado' : 'Verificar QR'}
           </button>
         </>
@@ -439,8 +439,8 @@ export function TerminalAsistenciaPage() {
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-red-600/10 border border-red-600/30 rounded-2xl px-5 py-2 mb-3">
-            <span className="text-red-500 font-black text-lg tracking-tight">KYRO</span>
+          <div className="inline-flex items-center gap-2 bg-kyro-gold/10 border border-kyro-gold/30 rounded-2xl px-5 py-2 mb-3">
+            <span className="text-kyro-gold font-black text-lg tracking-tight">KYRO</span>
             <span className="text-zinc-400 text-xs">Terminal de Asistencias</span>
           </div>
           <Reloj />
@@ -454,9 +454,9 @@ export function TerminalAsistenciaPage() {
               onChange={(e) => setDniInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
               onKeyDown={(e) => { if (e.key === 'Enter') buscarDNI(dniInput) }}
               placeholder="Número de DNI (8 dígitos)" inputMode="numeric"
-              className="w-full bg-zinc-800 text-white border border-zinc-700 rounded-2xl px-5 py-4 text-xl text-center tracking-widest font-mono focus:outline-none focus:border-red-500" />
+              className="w-full bg-zinc-800 text-white border border-zinc-700 rounded-2xl px-5 py-4 text-xl text-center tracking-widest font-mono focus:outline-none focus:border-kyro-gold" />
             <button onClick={() => buscarDNI(dniInput)} disabled={dniInput.length !== 8 || loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all">
+              className="w-full bg-gradient-to-b from-[#ffd028] to-[#ffc200] hover:brightness-105 disabled:opacity-40 text-[#1a1a1a] font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all">
               {loading ? 'Buscando...' : 'Continuar'}
             </button>
           </div>
@@ -480,14 +480,14 @@ export function TerminalAsistenciaPage() {
           <div className="flex flex-col gap-4">
             <div className="text-center">
               <p className="text-lg font-bold">{status.agente.nombre}</p>
-              <p className="text-sm text-zinc-400">Marcación: <span className="text-red-400 font-semibold">{TIPO_LABEL[tipo]}</span></p>
+              <p className="text-sm text-zinc-400">Marcación: <span className="text-kyro-gold font-semibold">{TIPO_LABEL[tipo]}</span></p>
             </div>
 
             {/* Selector de sede */}
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Sede donde te encuentras</label>
               <select value={tiendaSel} onChange={(e) => setTiendaSel(e.target.value)}
-                className="w-full bg-zinc-800 text-white border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500">
+                className="w-full bg-zinc-800 text-white border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-kyro-gold">
                 {tiendaSel === '' && <option value="">Selecciona tu tienda</option>}
                 {tiendas.map((t) => {
                   const val = t.codigo ?? String(t.id)
@@ -507,7 +507,7 @@ export function TerminalAsistenciaPage() {
             )}
 
             <button onClick={marcarGPS} disabled={!tiendaSel || loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all">
+              className="w-full bg-gradient-to-b from-[#ffd028] to-[#ffc200] hover:brightness-105 disabled:opacity-40 text-[#1a1a1a] font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all">
               {loading ? 'Procesando...' : `MARCAR ${TIPO_LABEL[tipo].toUpperCase()}`}
             </button>
             <button onClick={() => setPaso('fallback')} className="text-xs text-zinc-500 hover:text-amber-400">¿Problemas con el GPS? Usar otra forma</button>
@@ -525,7 +525,7 @@ export function TerminalAsistenciaPage() {
         {/* ── GPS (espera) ── */}
         {paso === 'gps' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <div className="w-16 h-16 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />
+            <div className="w-16 h-16 rounded-full border-4 border-kyro-gold border-t-transparent animate-spin" />
             <p className="text-zinc-400 text-sm">Validando tu ubicación en {nombreTienda(tiendaSel)}...</p>
           </div>
         )}

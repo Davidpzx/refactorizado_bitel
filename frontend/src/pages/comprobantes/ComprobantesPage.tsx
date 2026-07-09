@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowsClockwise as RefreshCw,
   ArrowCounterClockwise as RotateCcw,
-  Receipt,
+  Files,
   FilePdf,
   FileCode,
   FileZip,
@@ -286,7 +286,7 @@ export function ComprobantesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Comprobantes Electrónicos" subtitle="Cola de emisión SUNAT: boletas, facturas y notas de crédito" Icon={Receipt}>
+      <PageHeader title="Comprobantes Electrónicos" subtitle="Cola de emisión SUNAT: boletas, facturas y notas de crédito" Icon={Files}>
         <Button variant="glassInfo" onClick={invalidar}>
           <RefreshCw size={14} className="mr-2" /> Actualizar
         </Button>

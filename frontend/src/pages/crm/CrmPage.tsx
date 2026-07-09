@@ -872,6 +872,8 @@ export function CrmPage() {
         tabs={CRM_TABS.map(t => ({ id: t.id, label: t.label }))}
         active={tab}
         onChange={(id) => setTab(id as typeof tab)}
+        activeColor="#c084fc"
+        activeTextColor="#1a1033"
       />
 
       {/* ── Tab Tabla (Registro Completo) ───────────────────────────────────── */}

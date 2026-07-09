@@ -13,9 +13,13 @@ interface PageTabsProps {
   active: string
   onChange: (id: string) => void
   className?: string
+  /** Color del tab activo (fondo). Por defecto el dorado kyro; CRM usa el púrpura `#c084fc` del legacy. */
+  activeColor?: string
+  /** Color de texto sobre `activeColor`. Por defecto ink oscuro (para fondos claros como el dorado). */
+  activeTextColor?: string
 }
 
-export function PageTabs({ tabs, active, onChange, className = '' }: PageTabsProps) {
+export function PageTabs({ tabs, active, onChange, className = '', activeColor, activeTextColor }: PageTabsProps) {
   const { isDark } = useTheme()
 
   return (
@@ -31,10 +35,11 @@ export function PageTabs({ tabs, active, onChange, className = '' }: PageTabsPro
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
+            style={isActive && activeColor ? { background: activeColor, color: activeTextColor ?? '#1a1a1a' } : undefined}
             className={[
               'inline-flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all',
               isActive
-                ? 'bg-[#ffc200] text-[#1a1a1a] font-semibold'
+                ? activeColor ? 'font-semibold' : 'bg-[#ffc200] text-[#1a1a1a] font-semibold'
                 : isDark
                   ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200',
