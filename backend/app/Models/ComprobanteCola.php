@@ -58,13 +58,14 @@ class ComprobanteCola extends Model
 
     protected $fillable = [
         'venta_id', 'reporte_id', 'ticket_id',
-        'tienda_id', 'agente_id', 'facturacion_config_id',
+        'tienda_id', 'agente_id', 'facturacion_config_id', 'comprobante_afectado_id',
         'clave_idempotencia', 'tipo_comprobante',
         'tipo_doc_cliente', 'num_doc_cliente', 'razon_social',
         'direccion_cliente', 'email_cliente', 'moneda', 'total',
         'payload', 'estado', 'intentos', 'max_intentos', 'proximo_intento_at',
         'ultimo_error', 'serie', 'correlativo', 'api_doc_id',
         'sunat_ticket', 'cdr_estado', 'cdr_hash', 'xml_path', 'cdr_path', 'pdf_path',
+        'anulado_por_usuario_id', 'anulado_en', 'anulado_motivo',
     ];
 
     /** Los mismos defaults que la tabla, para que la fila recién creada no los lea como null. */
@@ -75,20 +76,23 @@ class ComprobanteCola extends Model
     ];
 
     protected $casts = [
-        'venta_id'              => 'integer',
-        'reporte_id'            => 'integer',
-        'ticket_id'             => 'integer',
-        'agente_id'             => 'integer',
-        'facturacion_config_id' => 'integer',
-        'payload'               => 'array',
-        'total'                 => 'decimal:2',
-        'intentos'              => 'integer',
-        'max_intentos'          => 'integer',
-        'correlativo'           => 'integer',
-        'api_doc_id'            => 'integer',
-        'proximo_intento_at'    => 'datetime',
-        'creado_en'             => 'datetime',
-        'actualizado_en'        => 'datetime',
+        'venta_id'                => 'integer',
+        'reporte_id'              => 'integer',
+        'ticket_id'               => 'integer',
+        'agente_id'               => 'integer',
+        'facturacion_config_id'   => 'integer',
+        'comprobante_afectado_id' => 'integer',
+        'anulado_por_usuario_id'  => 'integer',
+        'anulado_en'              => 'datetime',
+        'payload'                 => 'array',
+        'total'                   => 'decimal:2',
+        'intentos'                => 'integer',
+        'max_intentos'            => 'integer',
+        'correlativo'             => 'integer',
+        'api_doc_id'              => 'integer',
+        'proximo_intento_at'      => 'datetime',
+        'creado_en'               => 'datetime',
+        'actualizado_en'          => 'datetime',
     ];
 
     /** El snapshot fiscal es inmutable una vez encolado. */
@@ -278,12 +282,21 @@ class ComprobanteCola extends Model
         return $this;
     }
 
-    public function marcarAnulado(?string $motivo = null): static
+    /**
+     * `$mensaje` es lo que devolvió la API de baja (p.ej. "BAJA ticket=123"), igual
+     * que el legacy lo guardaba en `ultimo_error`. `$motivo` es el motivo que
+     * escribió el admin al pedir la anulación: es la auditoría (quién/cuándo la
+     * lleva `$usuarioId` + `now()`, por qué la lleva `$motivo`).
+     */
+    public function marcarAnulado(?string $mensaje = null, ?int $usuarioId = null, ?string $motivo = null): static
     {
         $this->forceFill([
-            'estado'             => self::ESTADO_ANULADO,
-            'ultimo_error'       => $motivo,
-            'proximo_intento_at' => null,
+            'estado'                 => self::ESTADO_ANULADO,
+            'ultimo_error'           => $mensaje,
+            'proximo_intento_at'     => null,
+            'anulado_por_usuario_id' => $usuarioId,
+            'anulado_en'             => now(),
+            'anulado_motivo'         => $motivo,
         ])->save();
 
         return $this;
@@ -324,6 +337,12 @@ class ComprobanteCola extends Model
     public function facturacionConfig(): BelongsTo
     {
         return $this->belongsTo(FacturacionConfig::class, 'facturacion_config_id');
+    }
+
+    /** El comprobante que esta NOTA_CREDITO afecta. */
+    public function comprobanteAfectado(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'comprobante_afectado_id');
     }
 
     /** Config del emisor: la ya fijada al emitir, o la que resuelve la tienda. */

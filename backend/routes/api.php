@@ -193,6 +193,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // el resto de la cola la drena `facturacion:procesar-cola` cada minuto.
     Route::post('comprobantes-cola/emitir-ahora', [ComprobanteColaController::class, 'emitirAhora']);
 
+    // ── Facturación electrónica — nota de crédito, anulación y descarga (admin) ─
+    // Todas operan sobre `comprobantes_cola` (ticket 005), no sobre la tabla
+    // Greenter `comprobantes`. La NC/anulación SOLO encolan o confirman contra la
+    // API; nunca cambian el estado local antes de que la API responda.
+    Route::middleware('role:admin')->group(function () {
+        Route::post('comprobantes-cola/{id}/nota-credito',   [ComprobanteColaController::class, 'notaCredito']);
+        Route::post('comprobantes-cola/{id}/anular',         [ComprobanteColaController::class, 'anular']);
+        Route::get('comprobantes-cola/{id}/descargar/{tipo}', [ComprobanteColaController::class, 'descargar']);
+    });
+
     // ── Facturación electrónica — configuración multi-emisor ──────────────────
     // `configure-sunat` va antes del wildcard `{facturacionConfig}` para que no
     // lo capture como id.

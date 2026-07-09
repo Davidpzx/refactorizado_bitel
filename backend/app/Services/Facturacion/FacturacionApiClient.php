@@ -59,8 +59,8 @@ class FacturacionApiClient
      */
     public function emitir(string $tipoComprobante, array $doc, ?int $apiDocId = null): ResultadoEmision
     {
-        $tipo     = strtolower(trim(str_replace('-', '_', $tipoComprobante)));
-        $endpoint = $this->config->endpoints()[$tipo] ?? null;
+        $tipo     = $this->tipoNormalizado($tipoComprobante);
+        $endpoint = $this->endpointDe($tipo);
 
         if ($endpoint === null) {
             return ResultadoEmision::rechazado("Endpoint no configurado para tipo_comprobante '{$tipoComprobante}'.");
@@ -89,6 +89,68 @@ class FacturacionApiClient
                 campos: $apiDocId !== null ? ['api_doc_id' => $apiDocId] : [],
             );
         }
+    }
+
+    // ── Nota de crédito / anulación / descarga (TICKET-007) ────────────────────
+
+    /**
+     * POST `{endpoint}/{apiDocId}/anular` — comunicación de baja de una boleta.
+     *
+     * Solo boletas: una factura ACEPTADA se afecta con nota de crédito, nunca con
+     * baja (regla del ticket: la anulación fiscal va por NC/baja según el tipo).
+     */
+    public function anular(string $tipoComprobante, int $apiDocId): Response
+    {
+        $endpoint = $this->endpointDeOFallar($tipoComprobante);
+
+        return $this->peticion()->asJson()->post($this->urlBase().$endpoint.'/'.$apiDocId.'/anular', []);
+    }
+
+    /**
+     * POST `{endpoint}/{apiDocId}/generate-pdf` — el PDF no se genera solo al
+     * emitir el CPE, hay que pedirlo antes de poder descargarlo.
+     */
+    public function generarPdf(string $tipoComprobante, int $apiDocId): Response
+    {
+        $endpoint = $this->endpointDeOFallar($tipoComprobante);
+
+        return $this->peticion()->asJson()->post($this->urlBase().$endpoint.'/'.$apiDocId.'/generate-pdf', []);
+    }
+
+    /**
+     * GET `{endpoint}/{apiDocId}/download-{formato}` (pdf|xml|cdr). El cuerpo de
+     * la respuesta es binario: el controlador lo reenvía tal cual, sin persistirlo.
+     */
+    public function descargar(string $tipoComprobante, int $apiDocId, string $formato): Response
+    {
+        $endpoint = $this->endpointDeOFallar($tipoComprobante);
+
+        return Http::withToken((string) $this->config->api_token)
+            ->accept('*/*')
+            ->connectTimeout(self::CONNECT_TIMEOUT)
+            ->timeout(self::TIMEOUT)
+            ->get($this->urlBase().$endpoint.'/'.$apiDocId.'/download-'.$formato);
+    }
+
+    private function endpointDeOFallar(string $tipoComprobante): string
+    {
+        $endpoint = $this->endpointDe($this->tipoNormalizado($tipoComprobante));
+
+        if ($endpoint === null) {
+            throw new \InvalidArgumentException("Endpoint no configurado para tipo_comprobante '{$tipoComprobante}'.");
+        }
+
+        return $endpoint;
+    }
+
+    private function tipoNormalizado(string $tipoComprobante): string
+    {
+        return strtolower(trim(str_replace('-', '_', $tipoComprobante)));
+    }
+
+    private function endpointDe(string $tipoNormalizado): ?string
+    {
+        return $this->config->endpoints()[$tipoNormalizado] ?? null;
     }
 
     /**
