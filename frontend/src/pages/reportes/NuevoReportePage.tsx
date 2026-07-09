@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
-import { Receipt, X, FileText, Cpu, Package, Coins, Users, FloppyDisk as Save, CloudArrowUp as UploadCloud, DownloadSimple as FolderDown, Printer, Plus, PencilSimple as Pencil, ClipboardText as ClipboardList } from '@phosphor-icons/react'
+import { Receipt, X, DeviceMobile, SimCard, Package, Coins, Storefront, ArrowsIn, Sigma, Money, DeviceTablet, Export, CheckCircle, Bank, Vault, NotePencil, FloppyDisk as Save, CloudArrowUp as UploadCloud, DownloadSimple as FolderDown, Printer, Plus, PencilSimple as Pencil, ClipboardText as ClipboardList } from '@phosphor-icons/react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -30,15 +30,25 @@ import type { ReporteConVentas, VendedorReporte } from '../../types/reporte'
 import { TicketIngresoModal } from './cuadre/TicketIngresoModal'
 import { PostVentaModal } from './cuadre/PostVentaModal'
 
-// ── Acentos por sección (paridad legacy includes/estilos.css) ──────────────────
+// ── Acentos por sección ────────────────────────────────────────────────────────
+// Hex exactos del legacy `reportes/nuevo_reporte.php` (los estilos van inline en
+// cada cabecera de sección, no en includes/estilos.css).
 const ACCENT = {
-  postpago: 'var(--color-kyro-indigo)',
-  prepago:  'var(--color-kyro-info)',
-  equipos:  'var(--color-kyro-warning)',
-  otros:    'var(--color-kyro-body)',
-  apoyo:    'var(--color-kyro-indigo)',
-  total:    'var(--color-kyro-info)',
+  postpago: '#60a5fa',
+  prepago:  '#22d3ee',
+  equipos:  '#fbbf24',
+  otros:    '#e2e8f0',
+  flujo:    '#c084fc',
+  apoyo:    '#a78bfa',
+  total:    '#22d3ee',
+  cajon:    '#fbbf24',
+  esperado: '#4ade80',
 } as const
+
+// Cabecera del panel Cuadre Final: verde al registrar, dorada al editar
+// (legacy: `nuevo_reporte.php` usa rgba(34,197,94,…) y `editar_reporte.php` rgba(251,191,36,…)).
+const CUADRE_CREAR  = { line: '#4ade80', rgb: '34, 197, 94'  } as const
+const CUADRE_EDITAR = { line: '#fbbf24', rgb: '251, 191, 36' } as const
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -158,6 +168,41 @@ const newCarritoItem = (): CarritoEquipoItem => ({
   tipo_venta: 'EQUIPO', tipo_pago: 'CONTADO', precio_venta: 0,
   financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
 })
+
+// ── Primitivas visuales del cuadre (paridad legacy) ───────────────────────────
+
+/** Cabecera de panel: icono + título sobre hairline, como `px-3 py-2 fw-bold text-light`. */
+function PanelHead({ icon, title, color }: { icon: ReactNode; title: string; color?: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 border-b border-white/5 px-3 py-2 text-sm font-bold"
+      style={{ color: color ?? 'var(--color-kyro-text)' }}
+    >
+      {icon}
+      <span>{title}</span>
+    </div>
+  )
+}
+
+const GROUP_INPUT =
+  'h-8 min-w-0 flex-1 rounded-r-md border border-l-0 bg-transparent px-2 text-sm text-kyro-body outline-none'
+
+/** Réplica del `input-group` de Bootstrap: etiqueta 50% + prefijo "S/" + input. */
+function InputGroup({ label, tone = 'default', children }: {
+  label: string; tone?: 'default' | 'danger'; children: ReactNode
+}) {
+  const border = tone === 'danger' ? 'border-kyro-danger/40' : 'border-kyro-border'
+  const text   = tone === 'danger' ? 'text-kyro-danger' : 'text-kyro-muted'
+  return (
+    <div className="flex w-full items-stretch">
+      <span className={`flex w-1/2 items-center rounded-l-md border border-r-0 ${border} bg-black/20 px-2 text-xs ${text}`}>
+        {label}
+      </span>
+      <span className={`flex items-center border-y ${border} bg-black/20 px-2 text-xs ${text}`}>S/</span>
+      {children}
+    </div>
+  )
+}
 
 // ── Lista compacta de ventas ──────────────────────────────────────────────────
 
@@ -873,6 +918,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const confirmDialog = useConfirmDialog()
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
+  const cuadreTone = esEdicion ? CUADRE_EDITAR : CUADRE_CREAR
   const reporteId = Number(id ?? 0)
   const inicializadoRef        = useRef(false)
   const lastTicketedCount      = useRef(0)       // cuántas ventas ya tienen ticket
@@ -1818,8 +1864,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             )}
 
             <SectionPanel
-              title="Ventas Postpago" accent={ACCENT.postpago} icon={<FileText size={15} />} number={1}
-              count={postpagoRows.length} subtotal={totalPostpago}
+              title="Ventas Postpago (Líneas)" accent={ACCENT.postpago} icon={<DeviceMobile size={15} weight="fill" />} number={1}
+              count={postpagoRows.length} subtotal={totalPostpago} subtotalLabel="Subtotal Postpago"
             >
               {postpagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
@@ -1831,8 +1877,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas Prepago / Chips" accent={ACCENT.prepago} icon={<Cpu size={15} />} number={2}
-              count={prepagoRows.length} subtotal={totalPrepago}
+              title="Ventas Prepago (Chips)" accent={ACCENT.prepago} icon={<SimCard size={15} weight="fill" />} number={2}
+              count={prepagoRows.length} subtotal={totalPrepago} subtotalLabel="Subtotal Prepago"
             >
               {prepagoRows.length === 0
                 ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
@@ -1844,8 +1890,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} />} number={3}
-              count={equipoRows.length} subtotal={totalEquipos}
+              title="Ventas de Equipos y Accesorios" accent={ACCENT.equipos} icon={<Package size={15} weight="fill" />} number={3}
+              count={equipoRows.length} subtotal={totalEquipos} subtotalLabel="Subtotal Equipos"
             >
               <datalist id="inv-equipos-datalist">
                 {inventarioItems.map(it => (
@@ -1864,20 +1910,70 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
             <SectionPanel
-              title="Otros Ingresos (Flujo)" accent={ACCENT.otros} icon={<Coins size={15} />} number={4}
-              count={otrosRows.length} subtotal={totalOtrosFlujo}
+              title="Otros Ingresos Fijos" accent={ACCENT.otros} icon={<Coins size={15} weight="fill" />} number={4}
+              count={otrosRows.length} subtotal={otrosFijos} subtotalLabel="Subtotal Ingresos Fijos"
             >
-              {otrosRows.length === 0
-                ? <p className="text-[11px] text-kyro-muted py-2 text-center italic">Sin registros.</p>
-                : otrosRows.map(v => (
-                    <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
-                      onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)} />
-                  ))}
+              {([
+                ['recarga_bipay', 'Recarga Bipay'],
+                ['pago_servicio', 'Pago de Servicio'],
+                ['pago_krece',    'Pago Krece'],
+                ['pago_payjoy',   'Pago Payjoy'],
+                ['tickets_tusamy','Tickets Tusamy'],
+              ] as const).map(([field, label]) => (
+                <div key={field} className="mb-2 flex items-stretch gap-1">
+                  <div className="flex min-w-0 flex-1 items-stretch">
+                    <InputGroup label={label}>
+                      <input
+                        type="number" step="0.01" min="0"
+                        {...register(field, { valueAsNumber: true })}
+                        placeholder="0.00"
+                        className={`${GROUP_INPUT} border-kyro-border focus:border-kyro-info`}
+                      />
+                    </InputGroup>
+                  </div>
+                  {esTienda && (
+                    <Button
+                      type="button"
+                      title="Generar ticket de ingreso"
+                      aria-label={`Generar ticket de ingreso: ${label}`}
+                      variant="glassInfo"
+                      size="iconSm"
+                      onClick={() => setTicketDesc(label)}
+                      className="shrink-0"
+                    >
+                      <Receipt size={14} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+
+              {/* Sub-bloque: Otros Ingresos (Flujo) — púrpura punteado (paridad legacy) */}
+              <div
+                className="mt-3 rounded-lg p-3"
+                style={{ background: 'rgba(168,85,247,0.05)', border: '1px dashed rgba(168,85,247,0.35)' }}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[0.85rem] font-bold" style={{ color: ACCENT.flujo }}>
+                    <ArrowsIn size={14} weight="fill" /> Otros Ingresos (Flujo)
+                  </span>
+                  {otrosRows.length > 0 && (
+                    <span className="text-[0.73rem] text-kyro-muted">
+                      Subtotal: <b style={{ color: ACCENT.flujo }}>S/ {totalOtrosFlujo.toFixed(2)}</b>
+                    </span>
+                  )}
+                </div>
+                {otrosRows.length === 0
+                  ? <p className="py-1 text-center text-[11px] italic text-kyro-muted">Sin registros de flujo.</p>
+                  : otrosRows.map(v => (
+                      <VentaFila key={v.id} venta={ventas[v.idx]} index={v.idx} vendedores={vendedores}
+                        onEdit={() => openEdit(v.idx)} onRemove={() => handleRemoveVenta(v.idx)} />
+                    ))}
+              </div>
             </SectionPanel>
 
             <SectionPanel
-              title="Ventas de Apoyo (otras tiendas)" accent={ACCENT.apoyo} icon={<Users size={15} />} number={5}
-              count={apoyoRows.length} subtotal={totalApoyo}
+              title="Ventas para Otras Tiendas (Apoyo)" accent={ACCENT.apoyo} icon={<Storefront size={15} weight="fill" />} number={5}
+              count={apoyoRows.length} subtotal={totalApoyo} subtotalLabel="Subtotal Apoyo"
             >
               {apoyoRows.length > 0 && (
                 <div className="grid grid-cols-[150px_130px_1fr_70px_90px_auto] gap-1.5 py-1 text-[10px] text-kyro-muted font-medium border-b border-dashed border-kyro-border">
@@ -1893,98 +1989,76 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </SectionPanel>
 
 
-            {/* ── Consolidado de ventas (Total Sistema) ── */}
-            <GlassPanel className="kyro-card p-3 bg-kyro-info/10 border-l-4 border-l-kpi-total">
-              <p className="text-xs uppercase tracking-widest mb-2 font-medium text-kyro-info">Total Sistema Consolidado</p>
-              <div className="grid grid-cols-5 gap-2 text-center text-xs mb-3">
+            {/* ── TOTAL SISTEMA (Consolidado) ── */}
+            <div
+              className="mb-4 rounded-lg p-3 text-center shadow-sm"
+              style={{ background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.35)' }}
+            >
+              <p className="mb-1 flex items-center justify-center gap-1.5 text-[0.78rem] uppercase tracking-[2px] text-slate-400">
+                <Sigma size={14} weight="fill" style={{ color: ACCENT.total }} /> Total Sistema (Consolidado)
+              </p>
+              <div className="mb-2 flex flex-wrap justify-around gap-x-3 gap-y-1 text-[0.75rem] text-slate-500">
                 {[
-                  { label: 'Postpago', val: totalPostpago, n: postpagoRows.length },
-                  { label: 'Prepago',  val: totalPrepago,  n: prepagoRows.length },
-                  { label: 'Equipos',  val: totalEquipos,  n: equipoRows.length },
-                  { label: 'Otros',    val: otrosFijos,    n: otrosRows.length },
-                  { label: 'Apoyo',    val: totalApoyo,    n: apoyoRows.length },
-                ].map(({ label, val, n }) => (
-                  <div key={label} className="rounded-kyro px-2 py-1 bg-kyro-elevated border border-kyro-border">
-                    <div className="text-[10px] text-kyro-muted">{label}{n > 0 && ` (${n})`}</div>
-                    <div className="font-semibold text-kyro-body">S/ {val.toFixed(2)}</div>
-                  </div>
+                  { label: 'Postpago', val: totalPostpago, n: postpagoRows.length, c: ACCENT.postpago },
+                  { label: 'Prepago',  val: totalPrepago,  n: prepagoRows.length,  c: ACCENT.prepago  },
+                  { label: 'Equipos',  val: totalEquipos,  n: equipoRows.length,   c: ACCENT.equipos  },
+                  { label: 'Fijos',    val: otrosFijos,    n: otrosRows.length,    c: ACCENT.otros    },
+                  { label: 'Apoyo',    val: totalApoyo,    n: apoyoRows.length,    c: ACCENT.apoyo    },
+                ].map(({ label, val, n, c }) => (
+                  <span key={label}>
+                    {label}: S/ <b style={{ color: c }}>{val.toFixed(2)}</b>{' '}
+                    (<b style={{ color: c }}>{n}</b>)
+                  </span>
                 ))}
               </div>
-              <div className="text-center">
-                <span className="text-kyro-muted text-xs">TOTAL DEL DÍA</span>
-                <div><MoneyTotal value={totalSistema} color={ACCENT.total} size="2rem" /></div>
-              </div>
-            </GlassPanel>
+              <MoneyTotal value={totalSistema} color={ACCENT.total} size="1.9rem" />
+            </div>
 
           </div>
 
           {/* ═══════════ COLUMNA DERECHA: Caja y Dinero ═══════════ */}
           <div className="space-y-3 lg:sticky lg:top-4">
 
-            <GlassPanel className="kyro-card p-3 border-l-4 border-l-kpi-esperado">
-              <Label className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Caja Inicial (Sencillo)</Label>
-              <Input id="caja_inicial" type="number" step="0.01" min="0"
-                {...register('caja_inicial', { valueAsNumber: true })}
-                className="kyro-input mt-1.5 h-9 text-sm font-medium" placeholder="S/ 0.00" />
+            <GlassPanel className="overflow-hidden">
+              <PanelHead icon={<Money size={15} weight="fill" />} title="Caja Inicial (Sencillo)" />
+              <div className="p-3">
+                <InputGroup label="Sencillo Inicial">
+                  <input id="caja_inicial" type="number" step="0.01" min="0"
+                    {...register('caja_inicial', { valueAsNumber: true })}
+                    placeholder="0.00"
+                    className={`${GROUP_INPUT} border-kyro-border font-medium focus:border-kyro-info`} />
+                </InputGroup>
+              </div>
             </GlassPanel>
 
-            <GlassPanel className="kyro-card p-3 space-y-2">
-              <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Dinero No Físico</p>
-              {([
-                ['yape',          'Yape / Plin'],
-                ['bipay',         'Bipay'],
-                ['transferencia', 'Transferencia'],
-              ] as const).map(([field, label]) => (
-                <div key={field} className="flex items-center gap-2">
-                  <Label className="text-xs text-kyro-body w-28 shrink-0">{label}</Label>
-                  <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
-                    className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
+            <GlassPanel className="overflow-hidden">
+              <PanelHead icon={<DeviceTablet size={15} weight="fill" />} title="Dinero No Físico y Retiros" />
+              <div className="space-y-2 p-3">
+                {([
+                  ['yape',          'Yape / Plin'],
+                  ['bipay',         'Bipay'],
+                  ['transferencia', 'Transferencia'],
+                ] as const).map(([field, label]) => (
+                  <InputGroup key={field} label={label}>
+                    <input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
+                      placeholder="0.00"
+                      className={`${GROUP_INPUT} border-kyro-border text-right focus:border-kyro-info`} />
+                  </InputGroup>
+                ))}
+                <InputGroup label="Retiro Bipay" tone="danger">
+                  <input type="number" step="0.01" min="0" {...register('retiro_bipay', { valueAsNumber: true })}
+                    placeholder="0.00"
+                    className={`${GROUP_INPUT} border-kyro-danger/40 text-right text-kyro-danger focus:border-kyro-danger`} />
+                </InputGroup>
+                <div className="pt-1 text-right text-xs text-kyro-muted">
+                  Total no físico: <span className="font-semibold text-kyro-body">S/ {totalNoFisico.toFixed(2)}</span>
                 </div>
-              ))}
-              <div className="flex items-center gap-2 border-t border-kyro-border pt-2">
-                <Label className="text-xs text-kyro-danger w-28 shrink-0 font-medium">Retiro Bipay</Label>
-                <Input type="number" step="0.01" min="0" {...register('retiro_bipay', { valueAsNumber: true })}
-                  className="kyro-input h-7 text-xs text-right border-kyro-danger/40 focus:border-kyro-danger" placeholder="0.00" />
-              </div>
-              <div className="text-right text-xs text-kyro-muted pt-1">
-                Total no físico: <span className="font-semibold text-kyro-body">S/ {totalNoFisico.toFixed(2)}</span>
               </div>
             </GlassPanel>
 
-            <GlassPanel className="kyro-card p-3 space-y-2">
-              <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Ingresos Fijos</p>
-              {([
-                ['recarga_bipay', 'Recarga Bipay'],
-                ['pago_servicio', 'Pago de Servicio'],
-                ['pago_krece',    'Pago Krece'],
-                ['pago_payjoy',   'Pago Payjoy'],
-                ['tickets_tusamy','Tickets Tusamy'],
-              ] as const).map(([field, label]) => (
-                <div key={field} className="flex items-center gap-2">
-                  <Label className="text-xs text-kyro-body w-28 shrink-0">{label}</Label>
-                  <Input type="number" step="0.01" min="0" {...register(field, { valueAsNumber: true })}
-                    className="kyro-input h-7 text-xs text-right" placeholder="0.00" />
-                  {esTienda && (
-                    <Button
-                      type="button"
-                      title="Generar ticket de ingreso"
-                      aria-label="Generar ticket de ingreso"
-                      variant="glassInfo"
-                      size="iconSm"
-                      onClick={() => setTicketDesc(label)}
-                      className="shrink-0"
-                    >
-                      <Receipt size={14} />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </GlassPanel>
-
-            <GlassPanel className="kyro-card p-3">
-              <div className="mb-2">
-                <p className="text-xs font-semibold text-kyro-text uppercase tracking-wide">Salidas de Efectivo</p>
-              </div>
+            <GlassPanel className="overflow-hidden">
+              <PanelHead icon={<Export size={15} weight="fill" />} title="Salidas de Efectivo" color="var(--color-kyro-danger)" />
+              <div className="p-3">
               {salidaItems.length === 0
                 ? <p className="text-[11px] text-kyro-muted italic text-center py-1">Sin salidas registradas</p>
                 : (
@@ -2013,90 +2087,144 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 )
               }
               <AddRowButton label="Agregar Salida" accent="#ef4444" onClick={agregarSalida} className="mt-2" />
+              </div>
             </GlassPanel>
 
-            {/* ── Cuadre Final ── */}
-            <GlassPanel className="kyro-card p-3 border-kyro-success/40 border-l-4 border-l-kpi-declarado">
-              <p className="text-xs font-bold uppercase tracking-wide mb-3 text-kyro-success">Cuadre Final</p>
+            {/* ── Cuadre Final ──────────────────────────────────────────────────
+                Panel plano (no GlassPanel): el `[&_.premium-surface]:!border-*`
+                del <form> pisaría el borde y el resplandor de color. */}
+            <div
+              className="overflow-hidden rounded-xl bg-kyro-panel"
+              style={{
+                border: `1px solid rgba(${cuadreTone.rgb}, 0.4)`,
+                boxShadow: `0 0 20px rgba(${cuadreTone.rgb}, 0.1)`,
+              }}
+            >
+              <div
+                className="flex items-center justify-center gap-1.5 p-2 text-center text-[0.85rem] font-bold uppercase tracking-[2px]"
+                style={{ background: `rgba(${cuadreTone.rgb}, 0.15)`, color: cuadreTone.line }}
+              >
+                <CheckCircle size={15} weight="fill" /> Cuadre Final
+              </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-kyro-muted">Total en cajón:</span>
-                  <span className="font-semibold text-kyro-body">S/ {totalEnCajon.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-kyro-muted">Efectivo esperado:</span>
-                  <span className="font-semibold text-kyro-text">S/ {efectivoEsperado.toFixed(2)}</span>
+              <div className="p-4" style={{ background: 'rgba(0,0,0,0.3)' }}>
+
+                <div className="mb-4 border-b border-white/10 pb-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[0.85rem] text-kyro-muted">Total en Cajón (Efectivo + Caja):</span>
+                    <span className="font-bold" style={{ color: ACCENT.cajon }}>S/ {totalEnCajon.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-white/10 pt-3">
+                    <span className="text-[0.9rem] font-bold uppercase tracking-wide" style={{ color: ACCENT.esperado }}>
+                      Efectivo Esperado:
+                    </span>
+                    <MoneyTotal value={efectivoEsperado} color={ACCENT.esperado} size="1.6rem" />
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs font-medium text-kyro-body">Mi Efectivo (entrego):</Label>
-                  <Input type="number" step="0.01" min="0" {...register('efectivo_entregado', { valueAsNumber: true })}
-                    className="kyro-input h-8 w-32 text-sm text-right font-semibold" placeholder="0.00" />
+                {/* MI EFECTIVO */}
+                <div className="mb-4 flex w-full items-stretch">
+                  <span
+                    className="flex w-1/2 items-center rounded-l-md border border-r-0 px-2 text-[0.85rem] font-bold"
+                    style={{ background: 'rgba(34,197,94,0.15)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
+                  >
+                    MI EFECTIVO
+                  </span>
+                  <span
+                    className="flex items-center border-y px-2 text-sm font-bold"
+                    style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
+                  >
+                    S/
+                  </span>
+                  <input
+                    type="number" step="0.01" min="0"
+                    {...register('efectivo_entregado', { valueAsNumber: true })}
+                    placeholder="0.00"
+                    aria-label="Mi efectivo entregado"
+                    className="h-10 min-w-0 flex-1 rounded-r-md border border-l-0 px-2 text-lg font-bold outline-none"
+                    style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
+                  />
                 </div>
 
-                <div className="flex justify-between items-center pt-1 border-t border-kyro-success/20">
-                  <span className="text-xs font-bold text-kyro-body">Diferencia:</span>
-                  <span className="font-mono font-bold text-base" style={{
-                    color: Math.abs(diferencia) < 0.01 ? 'var(--color-kyro-body)' : diferencia < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-warning)',
+                {/* Destino del efectivo — toggles con resplandor (paridad legacy) */}
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'ENTREGADO', label: 'Lo Entregué', accent: '#22c55e', ink: '#052e16', glow: '34, 197, 94',  Icon: Bank  },
+                    { value: 'EN_CAJA',   label: 'En Tienda',   accent: '#fbbf24', ink: '#451a03', glow: '251, 191, 36', Icon: Vault },
+                  ] as const).map(({ value, label, accent, ink, glow, Icon }) => {
+                    const active = destino === value
+                    return (
+                      <label
+                        key={value}
+                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md py-2 text-xs font-bold transition-all duration-200"
+                        style={active
+                          ? { background: accent, color: ink, border: `2px solid ${accent}`,
+                              boxShadow: `0 0 20px rgba(${glow}, 0.4)`, opacity: 1 }
+                          : { background: 'rgba(255,255,255,0.03)', color: accent, border: `2px solid ${accent}`, opacity: 0.4 }}
+                      >
+                        <input type="radio" value={value} {...register('destino_efectivo')} className="sr-only" />
+                        <Icon size={15} weight="fill" /> {label}
+                      </label>
+                    )
+                  })}
+                </div>
+
+                {/* Observaciones condicionales del destino */}
+                {destino === 'ENTREGADO' && (
+                  <div className="mb-3">
+                    <Label className="mb-1 block text-[0.8rem] text-kyro-muted">
+                      ¿A quién se entregó / Datos del depósito? <span className="text-kyro-danger">*</span>
+                    </Label>
+                    <input
+                      {...register('observaciones')}
+                      placeholder="Ej: Entregado a Supervisor Juan / Dep. BCP N°123456"
+                      className="h-9 w-full rounded-md border px-2 text-xs text-white outline-none"
+                      style={{ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.4)' }}
+                    />
+                  </div>
+                )}
+                {destino === 'EN_CAJA' && (
+                  <div className="mb-3">
+                    <Label className="mb-1 block text-[0.8rem] text-kyro-muted">
+                      Observaciones de cierre <span className="text-kyro-subtle">(opcional)</span>
+                    </Label>
+                    <textarea
+                      {...register('observaciones')} rows={2}
+                      placeholder="Ej: El efectivo quedó en caja para el turno de mañana..."
+                      className="w-full resize-none rounded-md border px-2 py-1.5 text-xs text-white outline-none"
+                      style={{ background: 'rgba(251,191,36,0.05)', borderColor: 'rgba(251,191,36,0.4)' }}
+                    />
+                  </div>
+                )}
+
+                {/* Diferencia */}
+                <div
+                  className="flex items-center justify-between rounded-lg p-3"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  <span className="text-[0.8rem] font-bold uppercase tracking-wide text-kyro-muted">Diferencia:</span>
+                  <span className="font-mono text-lg font-bold" style={{
+                    color: Math.abs(diferencia) < 0.01 ? '#ffffff' : diferencia < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-warning)',
                   }}>
                     S/ {diferencia.toFixed(2)}{requiereAprobacion && ' ⚠'}
                   </span>
                 </div>
 
                 {requiereAprobacion && (
-                  <p className="text-[10px] text-kyro-warning rounded-kyro px-2 py-1 bg-kyro-warning/10 border border-kyro-warning/30">
+                  <p className="mt-2 rounded-kyro border border-kyro-warning/30 bg-kyro-warning/10 px-2 py-1 text-[10px] text-kyro-warning">
                     Diferencia mayor a S/10 — el reporte quedará en espera de aprobación.
                   </p>
                 )}
               </div>
+            </div>
 
-              {/* Destino del efectivo — toggles glow (paridad legacy) */}
-              <div className="mt-3">
-                <p className="text-xs font-medium text-kyro-body mb-1.5">Destino del efectivo:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { value: 'ENTREGADO', label: 'Lo Entregué', accent: 'var(--color-kyro-success)' },
-                    { value: 'EN_CAJA',   label: 'En Tienda',   accent: 'var(--color-kyro-warning)' },
-                  ] as const).map(opt => {
-                    const active = destino === opt.value
-                    return (
-                      <label key={opt.value}
-                        className="flex items-center justify-center gap-1.5 cursor-pointer text-xs font-semibold rounded-md py-2 transition-all"
-                        style={active
-                          ? { background: opt.accent, color: 'var(--color-kyro-gold-ink)', border: `2px solid ${opt.accent}`,
-                              boxShadow: `0 0 20px color-mix(in srgb, ${opt.accent} 50%, transparent)`, transform: 'scale(1.02)' }
-                          : { background: 'transparent', color: 'var(--color-kyro-muted)', border: `2px solid ${opt.accent}`, opacity: 0.45 }}>
-                        <input type="radio" value={opt.value} {...register('destino_efectivo')} className="hidden" />
-                        {opt.label}
-                      </label>
-                    )
-                  })}
-                </div>
+            <GlassPanel className="overflow-hidden">
+              <PanelHead icon={<NotePencil size={15} weight="fill" />} title="Observaciones del Día" />
+              <div className="p-3">
+                <textarea {...register('obs_dia')} rows={2}
+                  className="kyro-input w-full resize-none px-3 py-1.5 text-xs"
+                  placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)" />
               </div>
-
-              {/* Observaciones condicionales del destino */}
-              {destino === 'ENTREGADO' && (
-                <div className="mt-2">
-                  <Label className="text-xs text-kyro-muted">A quién / referencia de depósito *</Label>
-                  <Input {...register('observaciones')} placeholder="Nombre o número de operación" className="kyro-input mt-1 h-8 text-xs" />
-                </div>
-              )}
-              {destino === 'EN_CAJA' && (
-                <div className="mt-2">
-                  <Label className="text-xs text-kyro-muted">Observación de caja (opcional)</Label>
-                  <textarea {...register('observaciones')} rows={2}
-                    className="kyro-input mt-1 w-full px-3 py-1.5 text-xs focus:ring-kyro-warning/40 resize-none"
-                    placeholder="Detalle de por qué el efectivo queda en tienda" />
-                </div>
-              )}
-            </GlassPanel>
-
-            <GlassPanel className="kyro-card p-3">
-              <Label className="text-xs font-semibold text-kyro-text">Observaciones del Día</Label>
-              <textarea {...register('obs_dia')} rows={2}
-                className="kyro-input mt-1.5 w-full px-3 py-1.5 text-xs resize-none"
-                placeholder="Anotaciones relevantes del día (incidentes, notas, etc.)" />
             </GlassPanel>
 
           </div>
