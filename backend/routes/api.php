@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ClienteController;
 use App\Http\Controllers\Api\ComisionPlanController;
 use App\Http\Controllers\Api\ConfigComisionesController;
 use App\Http\Controllers\Api\ComprobanteColaController;
+use App\Http\Controllers\Api\ComprobanteColaPublicoController;
 use App\Http\Controllers\Api\ComprobanteController;
 use App\Http\Controllers\Api\ConfiguracionController;
 use App\Http\Controllers\Api\ControlCenterController;
@@ -84,6 +85,14 @@ Route::prefix('v1/integrador')->middleware('throttle:120,1')->group(function () 
     Route::post('recibir-saldo',           [IntegradorController::class, 'recibirSaldo']);
     Route::post('recibir-morosidad',       [IntegradorController::class, 'recibirMorosidad']);
     Route::post('recibir-bitel-historico', [IntegradorController::class, 'recibirBitelHistorico']);
+});
+
+// ── CPE público — link firmado HMAC para WhatsApp (sin sesión) ───────────────
+// Port de `reportes/cpe_publico.php` / `reportes/imprimir_comprobante.php`. La
+// autorización es la firma (exp+firma), no un middleware de auth.
+Route::prefix('v1/cpe')->middleware('throttle:60,1')->group(function () {
+    Route::get('{id}',                  [ComprobanteColaPublicoController::class, 'show']);
+    Route::get('{id}/descargar/{tipo}', [ComprobanteColaPublicoController::class, 'descargar']);
 });
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
@@ -193,6 +202,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // usuario autenticado puede pedirlo (el cajero entrega la boleta en el acto);
     // el resto de la cola la drena `facturacion:procesar-cola` cada minuto.
     Route::post('comprobantes-cola/emitir-ahora', [ComprobanteColaController::class, 'emitirAhora']);
+
+    // Link público firmado (WhatsApp): cualquier autenticado puede generarlo, igual
+    // que puede "emitir ahora" — es el mismo cajero entregando el comprobante.
+    Route::post('comprobantes-cola/{id}/link', [ComprobanteColaController::class, 'link']);
 
     // ── Facturación electrónica — nota de crédito, anulación y descarga (admin) ─
     // Todas operan sobre `comprobantes_cola` (ticket 005), no sobre la tabla

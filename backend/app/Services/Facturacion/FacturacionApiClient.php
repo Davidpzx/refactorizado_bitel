@@ -109,12 +109,21 @@ class FacturacionApiClient
     /**
      * POST `{endpoint}/{apiDocId}/generate-pdf` — el PDF no se genera solo al
      * emitir el CPE, hay que pedirlo antes de poder descargarlo.
+     *
+     * `$formato` (A4|a5|80mm|ticket) es el mismo parámetro que el legacy
+     * reenviaba tal cual en `reportes/imprimir_comprobante.php`: el layout lo
+     * decide la API externa (Greenter), no este cliente.
      */
-    public function generarPdf(string $tipoComprobante, int $apiDocId): Response
+    public function generarPdf(string $tipoComprobante, int $apiDocId, ?string $formato = null): Response
     {
         $endpoint = $this->endpointDeOFallar($tipoComprobante);
+        $url      = $this->urlBase().$endpoint.'/'.$apiDocId.'/generate-pdf';
 
-        return $this->peticion()->asJson()->post($this->urlBase().$endpoint.'/'.$apiDocId.'/generate-pdf', []);
+        if ($formato !== null) {
+            $url .= '?format='.urlencode($formato);
+        }
+
+        return $this->peticion()->asJson()->post($url, []);
     }
 
     /**

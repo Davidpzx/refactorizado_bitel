@@ -44,6 +44,8 @@ const PostulacionesPage  = lazy(() => import('./pages/admin/PostulacionesPage').
 const TicketsPage        = lazy(() => import('./pages/tickets/TicketsPage').then(m => ({ default: m.TicketsPage })))
 const PostulacionPublicaPage = lazy(() => import('./pages/PostulacionPublicaPage').then(m => ({ default: m.PostulacionPublicaPage })))
 const TicketImpresionPage   = lazy(() => import('./pages/tickets/TicketImpresionPage').then(m => ({ default: m.TicketImpresionPage })))
+const CpePublicoPage     = lazy(() => import('./pages/cpe/CpePublicoPage').then(m => ({ default: m.CpePublicoPage })))
+const CpeImpresionPage   = lazy(() => import('./pages/cpe/CpeImpresionPage').then(m => ({ default: m.CpeImpresionPage })))
 const RevisarStockPage   = lazy(() => import('./pages/admin/RevisarStockPage').then(m => ({ default: m.RevisarStockPage })))
 const RevisarFotosPage   = lazy(() => import('./pages/admin/RevisarFotosPage').then(m => ({ default: m.RevisarFotosPage })))
 const PostpagoPage       = lazy(() => import('./pages/postpago/PostpagoPage').then(m => ({ default: m.PostpagoPage })))
@@ -74,6 +76,8 @@ export default function App() {
           <Route path="/terminal"           element={<Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>} />
           <Route path="/postular"           element={<Suspense fallback={<PageLoader />}><PostulacionPublicaPage /></Suspense>} />
           <Route path="/tickets/imprimir/:id" element={<Suspense fallback={<PageLoader />}><TicketImpresionPage /></Suspense>} />
+          <Route path="/cpe/:id"           element={<Suspense fallback={<PageLoader />}><CpePublicoPage /></Suspense>} />
+          <Route path="/cpe/:id/imprimir"  element={<Suspense fallback={<PageLoader />}><CpeImpresionPage /></Suspense>} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>

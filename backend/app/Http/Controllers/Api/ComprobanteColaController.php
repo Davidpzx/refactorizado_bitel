@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ComprobanteCola;
 use App\Models\FacturacionConfig;
+use App\Services\Facturacion\CpeLinkService;
 use App\Services\Facturacion\FacturacionApiClient;
 use App\Services\Facturacion\ProcesadorColaComprobantes;
 use App\Services\Facturacion\ResultadoProceso;
@@ -217,6 +218,42 @@ class ComprobanteColaController extends Controller
             'Content-Type'        => $respuesta->header('Content-Type') ?: $formatos[$tipo],
             'Content-Disposition' => 'attachment; filename="'.$nombre.'"',
         ]);
+    }
+
+    /**
+     * Genera el link público firmado + texto de WhatsApp.
+     *
+     * Port de `reportes/ajax_link_cpe.php`. Solo un comprobante con desenlace
+     * fiscal (ACEPTADO o ANULADO) tiene un CPE que mostrar/descargar en público:
+     * uno PENDIENTE/ERROR aún no existe ante SUNAT, y compartirlo prematuramente
+     * confundiría al cliente con un link que nunca va a resolver.
+     */
+    public function link(Request $request, int $id, CpeLinkService $links): JsonResponse
+    {
+        $cola = ComprobanteCola::findOrFail($id);
+
+        if (!in_array($cola->estado, [ComprobanteCola::ESTADO_ACEPTADO, ComprobanteCola::ESTADO_ANULADO], true)) {
+            return response()->json(['error' => 'El comprobante aún no tiene un CPE emitido para compartir.'], 422);
+        }
+
+        $enlace = $links->generarLink($cola->getKey());
+
+        $tipoLabel = $cola->tipo_comprobante === ComprobanteCola::TIPO_FACTURA ? 'Factura' : 'Boleta';
+
+        $texto = sprintf(
+            'Hola%s, aquí tienes tu %s %s por S/ %s: %s',
+            $cola->razon_social ? ' '.$cola->razon_social : '',
+            $tipoLabel,
+            $cola->numero_completo ?? '',
+            number_format((float) $cola->total, 2),
+            $enlace['url'],
+        );
+
+        return response()->json([
+            'url'          => $enlace['url'],
+            'exp'          => $enlace['exp'],
+            'whatsapp_url' => 'https://wa.me/?text='.rawurlencode($texto),
+        ] + $this->identidad($cola));
     }
 
     /** Punto de extensión para los tests: un cliente por emisor, no un singleton. */
