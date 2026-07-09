@@ -2,6 +2,7 @@ export interface Agente {
   id: number
   dni: string
   nombres: string
+  apellidos: string | null
   tienda_base: string
   hora_ingreso: string | null
   hora_salida: string | null

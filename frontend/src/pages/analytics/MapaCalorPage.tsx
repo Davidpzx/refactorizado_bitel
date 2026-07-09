@@ -75,7 +75,7 @@ const DIAS_SEMANA = ['L','M','X','J','V','S','D']
 function TabCalendario({ year, setYear }: { year: number; setYear: (y: number) => void }) {
   const { data, isFetching, refetch } = useQuery<CalendarioResp>({
     queryKey: ['heatmap-calendario', year],
-    queryFn: () => api.get(`/heatmap/calendario?year=${year}`).then(r => r.data),
+    queryFn: () => api.get(`/v1/heatmap/calendario?year=${year}`).then(r => r.data),
     staleTime: 5 * 60_000,
   })
 
@@ -240,7 +240,7 @@ function TabGeografico() {
 
   const { data, isFetching, refetch } = useQuery<GeograficoResp>({
     queryKey: ['heatmap-geo', desde, hasta],
-    queryFn: () => api.get(`/heatmap/geografico?fecha_desde=${desde}&fecha_hasta=${hasta}`).then(r => r.data),
+    queryFn: () => api.get(`/v1/heatmap/geografico?fecha_desde=${desde}&fecha_hasta=${hasta}`).then(r => r.data),
     staleTime: 5 * 60_000,
   })
 
@@ -400,7 +400,7 @@ function TabHorario() {
 
   const { data, isFetching, refetch } = useQuery<HorarioResp>({
     queryKey: ['heatmap-horario', desde, hasta],
-    queryFn: () => api.get(`/heatmap/horario?fecha_desde=${desde}&fecha_hasta=${hasta}`).then(r => r.data),
+    queryFn: () => api.get(`/v1/heatmap/horario?fecha_desde=${desde}&fecha_hasta=${hasta}`).then(r => r.data),
     staleTime: 5 * 60_000,
   })
 

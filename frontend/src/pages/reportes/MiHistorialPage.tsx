@@ -582,7 +582,7 @@ export function MiHistorialPage() {
                 return (
                   <tr key={r.id} className={`border-b border-kyro-border ${dif < 0 ? 'bg-kyro-danger/5' : 'hover:bg-kyro-elevated/60'}`}>
                     <td className="px-4 py-3 font-mono text-xs text-kyro-muted">#{String(r.id).padStart(4, '0')}</td>
-                    <td className="px-4 py-3 text-kyro-body">{new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}</td>
+                    <td className="px-4 py-3 text-kyro-body">{new Date(r.fecha.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-PE')}</td>
                     <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.total_calculado)}</td>
                     <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">

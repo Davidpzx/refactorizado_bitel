@@ -38,7 +38,11 @@ function getColumns(
 ): ColumnDef<Agente>[] {
   return [
     { accessorKey: 'dni',         header: 'DNI' },
-    { accessorKey: 'nombres',     header: 'Nombres' },
+    {
+      id: 'nombres',
+      header: 'Nombres',
+      cell: ({ row }) => [row.original.nombres, row.original.apellidos].filter(Boolean).join(' '),
+    },
     {
       accessorKey: 'tienda_base',
       header: 'Tienda',

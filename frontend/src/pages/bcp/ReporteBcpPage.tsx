@@ -207,7 +207,7 @@ export function ReporteBcpPage() {
               {[
                 { label: 'Total Efectivo',    value: pen.format(data.kpis.total_efectivo), border: 'border-l-kpi-transfer' },
                 { label: 'Total Tarjeta',     value: pen.format(data.kpis.total_tarjeta), border: 'border-l-kpi-total' },
-                { label: 'Total Operaciones', value: String(data.kpis.total_operaciones), border: 'border-l-kpi-total' },
+                { label: 'Total Operaciones', value: String(data.kpis.total_operaciones ?? 0), border: 'border-l-kpi-total' },
                 { label: 'Registros',         value: String(data.kpis.total_registros), border: 'border-l-kpi-neutral' },
               ].map(k => (
                 <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>

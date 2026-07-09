@@ -21,7 +21,7 @@ class ReporteBcpController extends Controller
             return response()->json([
                 'warning' => 'La tabla reportes_bcp no existe en esta base de datos.',
                 'data'    => [],
-                'kpis'    => ['total_efectivo' => 0, 'total_tarjeta' => 0, 'total_registros' => 0],
+                'kpis'    => ['total_efectivo' => 0, 'total_tarjeta' => 0, 'total_operaciones' => 0, 'total_registros' => 0],
             ]);
         }
 
