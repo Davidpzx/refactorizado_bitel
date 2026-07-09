@@ -9,7 +9,8 @@ import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, CurrencyDollar as DollarSign, Phone, EnvelopeSimple as Mail, Calendar, Key, ShieldCheck, FileText, ChartLineUp as TrendingUp, DownloadSimple as Download, DeviceMobile as Smartphone, FloppyDisk as Save, Receipt, Trash as Trash2, Eye, Plus, ClockCounterClockwise as History, X, Prohibit as Ban } from '@phosphor-icons/react'
+import { CardTopAccent } from '../../components/ui/CardTopAccent'
+import { ArrowLeft, User, MapPin, CurrencyDollar as DollarSign, Phone, EnvelopeSimple as Mail, Calendar, Key, ShieldCheck, FileText, ChartLineUp as TrendingUp, DownloadSimple as Download, DeviceMobile as Smartphone, FloppyDisk as Save, Receipt, Trash as Trash2, Eye, Plus, ClockCounterClockwise as History, X, Prohibit as Ban, PencilSimple as Pencil, Certificate as Award, PhoneCall as ContactPhone } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react'
 import { useAuth } from '../../hooks/useAuth'
@@ -63,6 +64,7 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
 
   return (
     <section className="kyro-card relative overflow-hidden p-5">
+      <CardTopAccent color="amber" />
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
         <Calendar size={15} className="text-kyro-gold" /> Fechas laborales
       </h3>
@@ -325,7 +327,8 @@ function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: Pe
   const set = (key: keyof PerfilRrhh, value: string | boolean) => setForm(current => ({ ...current, [key]: value }))
 
   return (
-    <section className="kyro-card p-5 lg:col-span-2">
+    <section id="ficha-rrhh" className="kyro-card relative overflow-hidden p-5 lg:col-span-2">
+      <CardTopAccent color="purple" />
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-kyro-text">Ficha RRHH</h3>
@@ -360,9 +363,22 @@ function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: Pe
           </label>
         ))}
       </div>
+      <div className="relative mt-4 overflow-hidden rounded-kyro border border-kyro-border bg-kyro-elevated p-4">
+        <CardTopAccent color="orange" />
+        <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-kyro-body">
+          <ContactPhone size={14} className="text-orange-500" /> Contactos emergencia
+        </label>
+        <textarea
+          rows={3}
+          value={listas.contactos}
+          onChange={e => setListas(current => ({ ...current, contactos: e.target.value }))}
+          className="kyro-input w-full text-sm"
+          placeholder="nombre | parentesco | telefono"
+        />
+        <p className="mt-1 text-[11px] text-kyro-muted">Una fila por registro: nombre | parentesco | telefono</p>
+      </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {([
-          ['contactos', 'Contactos emergencia', 'nombre | parentesco | telefono'],
           ['familia', 'Carga familiar', 'nombre | parentesco | edad'],
           ['formacion', 'Formacion academica', 'nivel | institucion | carrera | anio'],
           ['experiencia', 'Experiencia laboral', 'empresa | cargo | desde | hasta'],
@@ -534,7 +550,8 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
   const confirmDialog = useConfirmDialog()
 
   return (
-    <section className="kyro-card p-5">
+    <section id="dispositivo" className="kyro-card relative overflow-hidden p-5">
+      <CardTopAccent color="indigo" />
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Smartphone size={15} className="text-kyro-gold" /> Dispositivo</h3>
       <p className="mb-3 text-xs text-kyro-muted">Vinculacion del celular y token activo.</p>
       <div className="space-y-2 text-xs text-kyro-body">
@@ -618,6 +635,9 @@ function HistorialAgenteModal({ agenteId, onClose }: { agenteId: string; onClose
   )
 }
 
+const scrollToId = (elementId: string) =>
+  document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
 export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
   const navigate     = useNavigate()
@@ -672,7 +692,7 @@ export function VerAgentePage() {
       </Link>
 
       <section className="kyro-card relative overflow-hidden p-5 sm:p-6">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-indigo via-kyro-gold to-transparent" />
+        <CardTopAccent color="cyan" />
         <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-kyro-indigo/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start gap-5">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-kyro-lg bg-kyro-indigo text-2xl font-bold text-kyro-text shadow-kyro-card">
@@ -713,12 +733,18 @@ export function VerAgentePage() {
             <p className="mt-1 font-mono text-lg font-bold tabular-nums text-kyro-text">{fmt(agente.sueldo_base)}</p>
             {isAdmin && id && (
               <div className="mt-3 flex flex-col items-end gap-2">
+                <Button size="sm" variant="glassSuccess" onClick={() => scrollToId('ficha-rrhh')}>
+                  <Pencil size={13} /> Editar Ficha
+                </Button>
                 <Button
                   size="sm"
-                  variant="glassInfo"
+                  variant="glassWarning"
                   onClick={() => descargar(`/v1/constancias/agente/${id}`, `certificado_${agente.nombres.replace(/\s+/g, '_')}.pdf`)}
                 >
-                  <Download size={13} /> Certificado
+                  <Award size={13} /> Certificado
+                </Button>
+                <Button size="sm" variant="glassIndigo" onClick={() => scrollToId('dispositivo')}>
+                  <Smartphone size={13} /> Dispositivo
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setMostrarHistorial(true)}>
                   <History size={13} /> Historial
