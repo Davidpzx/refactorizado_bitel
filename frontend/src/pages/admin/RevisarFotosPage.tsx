@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminPaginasApi, type FotoPendienteItem } from '../../services/adminPaginas.api'
 import { PageHeader } from '../../components/PageHeader'
+import { AsistenciasTabs } from '../asistencias/AsistenciasTabs'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Camera } from '@phosphor-icons/react'
@@ -37,6 +38,8 @@ export function RevisarFotosPage() {
         description="Audita las marcaciones del Protocolo de Local Cerrado. Aprobar elimina la foto (zero-retention)."
         Icon={Camera}
       />
+
+      <AsistenciasTabs />
 
       {isLoading ? (
         <Card className="kyro-card p-6"><p className="text-sm text-kyro-muted">Cargando…</p></Card>

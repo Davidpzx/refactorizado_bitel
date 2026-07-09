@@ -1,10 +1,10 @@
 import { Fragment, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { AsistenciasTabs } from './AsistenciasTabs'
 import { Input } from '../../components/ui/input'
-import { ArrowLeft, CalendarCheck } from '@phosphor-icons/react'
+import { CalendarCheck } from '@phosphor-icons/react'
 
 interface CeldaMatriz {
   fecha: string
@@ -89,17 +89,11 @@ export function ControlAsistenciasPage() {
         subtitle="Matriz mensual agente x dia, agrupada por tienda"
         Icon={CalendarCheck}
         actions={
-          <div className="flex items-center gap-2">
-            <Link
-              to="/asistencias"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
-            >
-              <ArrowLeft size={14} /> Volver
-            </Link>
-            <Input type="month" value={mes} onChange={e => setMes(e.target.value)} className="kyro-input w-40" />
-          </div>
+          <Input type="month" value={mes} onChange={e => setMes(e.target.value)} className="kyro-input w-40" />
         }
       />
+
+      <AsistenciasTabs />
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-kyro-subtle">
         <span className="flex items-center gap-1"><span className="text-kyro-success">■</span> OK</span>

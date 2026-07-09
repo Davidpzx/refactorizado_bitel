@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { AsistenciasTabs } from './AsistenciasTabs'
 import { StatCard } from '../../components/ui/StatCard'
 import { Select } from '../../components/ui/select'
 import { Label } from '../../components/ui/label'
@@ -88,6 +89,8 @@ export function HistorialLiquidacionPage() {
           </div>
         </div>
       </PageHeader>
+
+      <AsistenciasTabs />
 
       {isLoading && (
         <div className="flex items-center gap-2 py-6 text-sm text-kyro-muted">

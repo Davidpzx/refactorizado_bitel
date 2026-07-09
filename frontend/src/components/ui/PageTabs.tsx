@@ -1,9 +1,11 @@
+import type { ComponentType } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 
 interface Tab {
   id: string
   label: string
   count?: number
+  icon?: ComponentType<{ size?: number | string; className?: string }>
 }
 
 interface PageTabsProps {
@@ -24,6 +26,7 @@ export function PageTabs({ tabs, active, onChange, className = '' }: PageTabsPro
     >
       {tabs.map((tab) => {
         const isActive = tab.id === active
+        const Icon = tab.icon
         return (
           <button
             key={tab.id}
@@ -37,6 +40,7 @@ export function PageTabs({ tabs, active, onChange, className = '' }: PageTabsPro
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200',
             ].join(' ')}
           >
+            {Icon && <Icon size={15} className="mr-1.5" />}
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
               <span className="ml-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full px-1 min-w-[16px] h-[16px] flex items-center justify-center">
