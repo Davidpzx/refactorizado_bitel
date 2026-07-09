@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
 use App\Models\VentaEquipo;
+use App\Services\ReporteDetalleNormalizer;
 use App\Support\PlanillaGuard;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
@@ -470,22 +471,22 @@ class InventarioController extends Controller
         DB::beginTransaction();
         try {
             foreach ($filas as $fila) {
-                $detalle = json_decode($fila->detalle, true);
-                if (json_last_error() !== JSON_ERROR_NONE || !is_array($detalle)) continue;
+                // Normalizador único: decodifica el blob (objeto o lista) y recuerda
+                // la forma original para preservarla al guardar (paridad legacy).
+                $detalle = ReporteDetalleNormalizer::decodificar($fila->detalle);
+                if (!$detalle['valido']) continue;
 
-                $items = isset($detalle[0]) ? $detalle : [$detalle];
+                $items = $detalle['items'];
                 foreach ($items as &$item) {
-                    if (!is_array($item)) continue;
                     $pv = floatval($item['precio_normal_agente'] ?? $item['precio_total'] ?? 0);
                     $item['costo_al_registrar'] = $nuevoCosto;
                     $item['ganancia']           = $pv - $nuevoCosto;
                     $item['precio_costo']       = $nuevoCosto;
                 }
                 unset($item);
-                $nuevo = isset($detalle[0]) ? $items : $items[0];
 
                 DB::table('reporte_categorias')->where('id', $fila->id)
-                    ->update(['detalle' => json_encode($nuevo, JSON_UNESCAPED_UNICODE)]);
+                    ->update(['detalle' => ReporteDetalleNormalizer::encodearPreservandoForma($items, $detalle['eraLista'])]);
                 $updated++;
             }
             DB::commit();
