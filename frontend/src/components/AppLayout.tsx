@@ -68,6 +68,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // ── Configuración ────────────────────────────────────────────────────────
   { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Building2,     roles: ['admin'],           section: 'Configuración' },
+  { to: '/configuracion/facturacion', label: 'Facturación Electrónica', Icon: Receipt, roles: ['admin'], section: 'Configuración' },
   { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
 ]
 

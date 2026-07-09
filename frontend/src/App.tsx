@@ -49,6 +49,7 @@ const RevisarFotosPage   = lazy(() => import('./pages/admin/RevisarFotosPage').t
 const PostpagoPage       = lazy(() => import('./pages/postpago/PostpagoPage').then(m => ({ default: m.PostpagoPage })))
 const MapaCalorPage      = lazy(() => import('./pages/analytics/MapaCalorPage'))
 const IntegradorPage     = lazy(() => import('./pages/admin/IntegradorPage').then(m => ({ default: m.IntegradorPage })))
+const ConfiguracionFacturacionPage = lazy(() => import('./pages/admin/ConfiguracionFacturacionPage').then(m => ({ default: m.ConfiguracionFacturacionPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -122,6 +123,7 @@ export default function App() {
                 <Route path="/usuarios"            element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
                 <Route path="/tiendas"             element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
                 <Route path="/configuracion"       element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
+                <Route path="/configuracion/facturacion" element={<Suspense fallback={<PageLoader />}><ConfiguracionFacturacionPage /></Suspense>} />
               </Route>
             </Route>
           </Route>
