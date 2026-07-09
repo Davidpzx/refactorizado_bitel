@@ -164,8 +164,11 @@ export function HistorialPage() {
       })
   }
 
-  const tableHeaders = ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
-  const rightAligned = new Set(['Total', 'F. Esperado', 'F. Entregado', 'Diferencia'])
+  const esAdmin = usuario?.rol === 'admin'
+  const tableHeaders = esAdmin
+    ? ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'Ganancia', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
+    : ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
+  const rightAligned = new Set(['Total', 'Ganancia', 'F. Esperado', 'F. Entregado', 'Diferencia'])
 
   return (
     <div className="space-y-6">
@@ -321,14 +324,14 @@ export function HistorialPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={tableHeaders.length} className="px-4 py-10 text-center text-gray-400 text-sm">
                     Cargando...
                   </td>
                 </tr>
               )}
               {!isLoading && reportes.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={tableHeaders.length} className="px-4 py-10 text-center text-gray-400 text-sm">
                     Sin resultados para los filtros aplicados
                   </td>
                 </tr>
@@ -357,6 +360,9 @@ export function HistorialPage() {
                       <div className="text-xs text-kyro-subtle">{r.tienda_id}</div>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.total_calculado)}</td>
+                    {esAdmin && (
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-kyro-success">{fmt(r.ganancia)}</td>
+                    )}
                     <td className="px-4 py-3 text-right font-mono text-kyro-body">{fmt(r.efectivo_esperado)}</td>
                     <td className="px-4 py-3 text-right font-mono text-kyro-text">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">

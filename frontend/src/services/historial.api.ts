@@ -4,6 +4,8 @@ import type { Reporte } from '../types/reporte'
 
 export interface HistorialReporte extends Reporte {
   agente_nombre: string
+  /** Ganancia de la empresa por reporte (equipos + comisión de líneas). Solo viene para rol admin. */
+  ganancia?: number | string | null
 }
 
 export interface HistorialFilters {

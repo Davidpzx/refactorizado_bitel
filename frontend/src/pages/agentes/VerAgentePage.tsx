@@ -400,7 +400,14 @@ function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: Pe
   )
 }
 
-function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }) {
+interface ResumenComisiones { comisiones: { total_comision: string; total_ventas: number } }
+interface ResumenAsistenciaDia { estado: string }
+interface ResumenAsistencias {
+  dias: ResumenAsistenciaDia[]
+  resumen: { total_tardanzas_min: number; deuda_acumulada_min: number; total_descuento_soles: number }
+}
+
+function BoletasPanel({ agenteId, nombre, sueldoBase }: { agenteId: string; nombre: string; sueldoBase: number }) {
   const qc = useQueryClient()
   const { data } = useQuery({
     queryKey: ['agente-boletas', agenteId],
@@ -413,6 +420,33 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
 
   const confirmDialog = useConfirmDialog()
 
+  // Resumen del mes en curso (paridad legacy: KPIs Sueldo Base/Bonos/Descuentos/Adelantos de ver_agente.php),
+  // reutiliza endpoints ya existentes de comisiones, asistencias y adelantos — sin lógica nueva.
+  const hoy = new Date()
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10)
+  const finMes = hoy.toISOString().slice(0, 10)
+  const mesActual = inicioMes.slice(0, 7)
+
+  const { data: comisionesData } = useQuery({
+    queryKey: ['agente-comisiones-mes', agenteId, mesActual],
+    queryFn: () => api.get<ResumenComisiones>(`/v1/agentes/${agenteId}/comisiones`, { params: { fecha_desde: inicioMes, fecha_hasta: finMes } }).then(r => r.data),
+  })
+  const { data: asistenciaData } = useQuery({
+    queryKey: ['agente-liquidacion-asistencias', agenteId, mesActual],
+    queryFn: () => api.get<ResumenAsistencias>(`/v1/agentes/${agenteId}/liquidacion-asistencias`, { params: { mes: mesActual } }).then(r => r.data),
+  })
+  const { data: adelantosMesData } = useQuery({
+    queryKey: ['agente-adelantos-mes', agenteId, mesActual],
+    queryFn: () => api.get<{ total: number }>(`/v1/agentes/${agenteId}/adelantos`, { params: { desde: inicioMes, hasta: finMes } }).then(r => r.data),
+  })
+
+  const bonosMes       = Number(comisionesData?.comisiones.total_comision ?? 0)
+  const descuentosMes  = asistenciaData?.resumen.total_descuento_soles ?? 0
+  const tardanzaMin    = asistenciaData?.resumen.total_tardanzas_min ?? 0
+  const deudaMin       = asistenciaData?.resumen.deuda_acumulada_min ?? 0
+  const faltasMes      = asistenciaData?.dias.filter(d => d.estado === 'FALTA_INJUSTIFICADA').length ?? 0
+  const adelantosMes   = Number(adelantosMesData?.total ?? 0)
+
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ fecha_inicio: '', fecha_fin: '', sueldo_base: '', bonos: '0', dscto_tardanza: '0', dscto_adelantos: '0' })
   const totalNeto = Math.max(0,
@@ -421,6 +455,18 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
     (parseFloat(form.dscto_tardanza) || 0) -
     (parseFloat(form.dscto_adelantos) || 0)
   )
+
+  function abrirFormulario() {
+    setForm({
+      fecha_inicio: inicioMes,
+      fecha_fin: finMes,
+      sueldo_base: String(sueldoBase),
+      bonos: bonosMes.toFixed(2),
+      dscto_tardanza: descuentosMes.toFixed(2),
+      dscto_adelantos: adelantosMes.toFixed(2),
+    })
+    setShowForm(true)
+  }
 
   const generarBoleta = useMutation({
     mutationFn: async () => {
@@ -451,15 +497,35 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
   const boletas = data ?? []
 
   return (
-    <section className="kyro-card p-5">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <section className="kyro-card p-5 lg:col-span-2">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Boletas</h3>
-          <p className="text-xs text-kyro-muted">Liquidaciones generadas para el agente.</p>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Liquidación y Boletas</h3>
+          <p className="text-xs text-kyro-muted">Resumen del mes en curso ({mesActual}) y liquidaciones generadas.</p>
         </div>
-        <Button size="sm" variant="gold" onClick={() => setShowForm(v => !v)}>
-          <Plus size={13} /> Generar
+        <Button size="sm" variant="gold" onClick={() => (showForm ? setShowForm(false) : abrirFormulario())}>
+          <Plus size={13} /> {showForm ? 'Cerrar' : 'Nueva Boleta'}
         </Button>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="kyro-card border-l-4 border-l-kyro-info p-3 text-center">
+          <p className="text-[0.65rem] uppercase tracking-wide text-kyro-muted">Sueldo Base Mensual</p>
+          <p className="mt-1 font-mono text-lg font-bold text-kyro-text">{fmt(sueldoBase)}</p>
+        </div>
+        <div className="kyro-card border-l-4 border-l-kyro-success p-3 text-center">
+          <p className="text-[0.65rem] uppercase tracking-wide text-kyro-muted">Bonos (Comisiones)</p>
+          <p className="mt-1 font-mono text-lg font-bold text-kyro-success">{fmt(bonosMes)}</p>
+        </div>
+        <div className="kyro-card border-l-4 border-l-kyro-warning p-3 text-center">
+          <p className="text-[0.65rem] uppercase tracking-wide text-kyro-muted">Descuentos (Tard/Faltas)</p>
+          <p className="mt-1 font-mono text-lg font-bold text-kyro-warning">-{fmt(descuentosMes)}</p>
+          <p className="mt-0.5 text-[0.65rem] text-kyro-danger">{faltasMes} Faltas | {tardanzaMin}m Tard | {deudaMin}m Deuda</p>
+        </div>
+        <div className="kyro-card border-l-4 border-l-kyro-danger p-3 text-center">
+          <p className="text-[0.65rem] uppercase tracking-wide text-kyro-muted">Adelantos (Descuento)</p>
+          <p className="mt-1 font-mono text-lg font-bold text-kyro-danger">-{fmt(adelantosMes)}</p>
+        </div>
       </div>
 
       {showForm && (
@@ -785,7 +851,7 @@ export function VerAgentePage() {
           <TokenSeguridadPanel agenteId={id} />
           <AdelantosPanel agenteId={id} />
           <SeguridadDispositivoPanel agenteId={id} />
-          <BoletasPanel agenteId={id} nombre={agente.nombres.replace(/\s+/g, '_')} />
+          <BoletasPanel agenteId={id} nombre={agente.nombres.replace(/\s+/g, '_')} sueldoBase={Number(agente.sueldo_base)} />
           <PerfilRrhhPanel agenteId={id} />
           <DocumentosAgentePanel agenteId={Number(id)} />
         </div>

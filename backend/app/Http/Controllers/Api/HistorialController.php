@@ -39,13 +39,31 @@ class HistorialController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
+        $user    = $request->user();
 
-        $reportes = $this->baseQuery($request)
+        $query = $this->baseQuery($request)
             ->leftJoin('agentes as a', 'reportes.agente_id', '=', 'a.id')
             ->select([
                 'reportes.*',
                 DB::raw("COALESCE(a.nombres, 'Agente') AS agente_nombre"),
-            ])
+            ]);
+
+        // Ganancia por fila (paridad legacy gerencia/historial_completo.php), solo admin.
+        if ($user->rol === 'admin') {
+            $gananciaSub = DB::table('ventas as v')
+                ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
+                ->leftJoin('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
+                ->whereColumn('v.reporte_id', 'reportes.id')
+                ->where('v.comision_estado', '!=', 'ANULADA')
+                ->selectRaw('
+                    COALESCE(SUM(COALESCE(ve.ganancia_snap, 0)), 0)
+                    + COALESCE(SUM(COALESCE(vl.comision_unitaria * vl.cantidad, 0)), 0)
+                ');
+
+            $query->selectSub($gananciaSub, 'ganancia');
+        }
+
+        $reportes = $query
             ->orderByDesc('reportes.fecha')
             ->orderByDesc('reportes.id')
             ->paginate($perPage);

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, PencilSimple as Pencil, Trash as Trash2, ArrowsClockwise as RefreshCw, SealCheck as CheckCircle2, WarningCircle as AlertCircle, ChartLineUp as TrendingUp } from '@phosphor-icons/react'
+import { Plus, PencilSimple as Pencil, Trash as Trash2, ArrowsClockwise as RefreshCw, SealCheck as CheckCircle2, WarningCircle as AlertCircle, ChartLineUp as TrendingUp, Coins, ShieldCheck, Sliders, DeviceMobile as DeviceMobileIcon, Phone as PhoneIcon, CreditCard, Handshake } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -278,7 +278,15 @@ interface RangoProductividad { desde: number; hasta: number; monto: number }
 interface RangoServicio { monto_min: number; monto_max: number | null; ganancia: number }
 type ServicioOperativo = 'bipay' | 'krece' | 'payjoy'
 
-function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
+// ── Color-coding por sección (paridad legacy comisiones_empresa.php / configurar_comisiones.php) ──
+
+const SERVICIO_COLORS: Record<ServicioOperativo, { border: string; text: string; bg: string; icon: typeof CreditCard }> = {
+  bipay:  { border: 'border-t-blue-400',   text: 'text-blue-400',   bg: 'bg-blue-500/5 border-blue-500/20',     icon: CreditCard },
+  krece:  { border: 'border-t-orange-400', text: 'text-orange-400', bg: 'bg-orange-500/5 border-orange-500/20', icon: Handshake },
+  payjoy: { border: 'border-t-purple-400', text: 'text-purple-400', bg: 'bg-purple-500/5 border-purple-500/20', icon: DeviceMobileIcon },
+}
+
+function GananciasOperativasSection() {
   const { data, isLoading } = useQuery({
     queryKey: ['config-comisiones'],
     queryFn: () => api.get<ConfigComisiones>('/v1/config-comisiones').then(r => r.data),
@@ -312,9 +320,9 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
     onError: () => setMsg('Error al guardar las tarifas.'),
   })
 
-  const field = (key: keyof typeof form, label: string, suffix: string) => (
+  const field = (key: keyof typeof form, label: string, suffix: string, colorClass: string) => (
     <div>
-      <Label htmlFor={key}>{label}</Label>
+      <Label htmlFor={key} className={colorClass}>{label}</Label>
       <div className="relative mt-1">
         <Input id={key} type="number" step="0.01" min="0" value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="pr-10" />
@@ -323,36 +331,46 @@ function TarifasOperativasModal({ onClose }: { onClose: () => void }) {
     </div>
   )
 
-  if (isLoading) return <p className="py-6 text-center text-sm text-kyro-muted">Cargando configuración...</p>
-
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-kyro-body">
-        Ganancia de la empresa por servicios operativos. <strong>No</strong> modifica reportes históricos
-        (para eso usa el recálculo masivo).
-      </p>
-      <div className="grid grid-cols-2 gap-4">
-        {field('ganancia_recargas', 'Recargas', '%')}
-        {field('ganancia_bipay', 'Bipay', 'S/')}
-        {field('ganancia_krece', 'Krece', 'S/')}
-        {field('ganancia_payjoy', 'Payjoy', 'S/')}
+    <section id="ganancias-operativas" className="kyro-card relative overflow-hidden border-t-4 border-t-emerald-400 p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-400">
+            <Coins size={16} /> Ganancias Operativas por Servicio
+          </h3>
+          <p className="mt-1 text-xs text-kyro-muted">
+            Guarda las tarifas actuales (no modifica el historial) o usa Recálculo Masivo para corregir períodos pasados.
+          </p>
+        </div>
+        <Button variant="gold" size="sm" disabled={guardar.isPending || isLoading} onClick={() => { setMsg(null); guardar.mutate() }}>
+          {guardar.isPending ? 'Guardando...' : 'Guardar Tarifas'}
+        </Button>
       </div>
 
-      {msg && (
-        <p className={`rounded-kyro px-3 py-2 text-sm ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>
+      {isLoading ? (
+        <p className="py-6 text-center text-sm text-kyro-muted">Cargando configuración...</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {field('ganancia_recargas', 'Recargas (% del monto)', '%', 'text-emerald-400')}
+          {field('ganancia_bipay', 'Bipay (fijo)', 'S/', 'text-blue-400')}
+          {field('ganancia_krece', 'Krece (fijo)', 'S/', 'text-orange-400')}
+          {field('ganancia_payjoy', 'Payjoy (fijo)', 'S/', 'text-purple-400')}
+        </div>
       )}
 
-      <div className="flex gap-3">
-        <Button variant="gold" className="flex-1" disabled={guardar.isPending} onClick={() => { setMsg(null); guardar.mutate() }}>
-          {guardar.isPending ? 'Guardando...' : 'Guardar tarifas'}
-        </Button>
-        <Button variant="outline" onClick={onClose}>Cerrar</Button>
-      </div>
-    </div>
+      {msg && (
+        <p className={`mt-4 rounded-kyro px-3 py-2 text-sm ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>
+      )}
+
+      <p className="mt-4 flex items-start gap-2 rounded-kyro border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-kyro-muted">
+        <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-400" />
+        <span><strong className="text-emerald-400">Blindaje de datos:</strong> «Guardar Tarifas» actualiza solo la configuración — los reportes existentes no se modifican. Para corregir el historial, usa Recálculo Masivo con un rango de fechas exacto.</span>
+      </p>
+    </section>
   )
 }
 
-function RangosOperativosModal({ onClose }: { onClose: () => void }) {
+function EstrategiaComisionesSection() {
   const qc = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ['config-comisiones'],
@@ -394,41 +412,52 @@ function RangosOperativosModal({ onClose }: { onClose: () => void }) {
     tipo: 'PLAN' | 'EQUIPO',
     rangos: RangoProductividad[],
     setRangos: React.Dispatch<React.SetStateAction<RangoProductividad[]>>,
-  ) => (
-    <section className="rounded-kyro border border-kyro-border p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h4 className="text-sm font-semibold text-kyro-text">{titulo}</h4>
-          <p className="text-xs text-kyro-muted">Rango por número de venta mensual del agente.</p>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => setRangos(r => [...r, { desde: 1, hasta: 9999, monto: 0 }])}>
-          <Plus size={13} /> Agregar
-        </Button>
-      </div>
-      <div className="space-y-2">
-        {rangos.map((r, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
-            <Input type="number" min="1" value={r.desde} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, desde: Number(e.target.value) } : x))} placeholder="Desde" />
-            <Input type="number" min="1" value={r.hasta} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, hasta: Number(e.target.value) } : x))} placeholder="Hasta" />
-            <Input type="number" min="0" step="0.01" value={r.monto} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, monto: Number(e.target.value) } : x))} placeholder="S/" />
-              <Button size="iconSm" variant="glassDanger" aria-label="Eliminar rango" onClick={() => setRangos(v => v.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+    color: { border: string; text: string; bg: string; icon: typeof PhoneIcon },
+    banner: string,
+  ) => {
+    const Icon = color.icon
+    return (
+      <section className={`relative overflow-hidden rounded-kyro border-t-4 ${color.border} bg-kyro-elevated/40 p-4`}>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h4 className={`flex items-center gap-1.5 text-sm font-semibold ${color.text}`}>
+              <Icon size={15} /> {titulo}
+            </h4>
           </div>
-        ))}
-      </div>
-      <Button variant="gold" className="mt-3 w-full" disabled={guardarProductividad.isPending}
-        onClick={() => guardarProductividad.mutate({ tipo, rangos })}>
-        Guardar {tipo}
-      </Button>
-    </section>
-  )
+          <Button size="sm" variant="outline" onClick={() => setRangos(r => [...r, { desde: 1, hasta: 9999, monto: 0 }])}>
+            <Plus size={13} /> Agregar Rango
+          </Button>
+        </div>
+        <p className={`mb-3 rounded-kyro border p-2.5 text-xs text-kyro-muted ${color.bg}`}>{banner}</p>
+        <div className="space-y-2">
+          {rangos.map((r, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
+              <Input type="number" min="1" value={r.desde} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, desde: Number(e.target.value) } : x))} placeholder="Desde" />
+              <Input type="number" min="1" value={r.hasta} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, hasta: Number(e.target.value) } : x))} placeholder="Hasta" />
+              <Input type="number" min="0" step="0.01" value={r.monto} onChange={e => setRangos(v => v.map((x, j) => j === i ? { ...x, monto: Number(e.target.value) } : x))} placeholder="S/" />
+              <Button size="iconSm" variant="glassDanger" aria-label="Eliminar rango" onClick={() => setRangos(v => v.filter((_, j) => j !== i))}><Trash2 size={14} /></Button>
+            </div>
+          ))}
+        </div>
+        <Button variant="gold" className="mt-3 w-full" disabled={guardarProductividad.isPending}
+          onClick={() => guardarProductividad.mutate({ tipo, rangos })}>
+          Guardar {tipo}
+        </Button>
+      </section>
+    )
+  }
 
   const servicio = (tipo: ServicioOperativo) => {
     const rangos = servicios[tipo]
     const setRangos = (next: RangoServicio[]) => setServicios(s => ({ ...s, [tipo]: next }))
+    const color = SERVICIO_COLORS[tipo]
+    const Icon = color.icon
     return (
-      <section key={tipo} className="rounded-kyro border border-kyro-border p-4">
+      <section key={tipo} className={`relative overflow-hidden rounded-kyro border-t-4 ${color.border} bg-kyro-elevated/40 p-4`}>
         <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-semibold uppercase text-kyro-text">{tipo}</h4>
+          <h4 className={`flex items-center gap-1.5 text-sm font-semibold uppercase ${color.text}`}>
+            <Icon size={15} /> {tipo} — por monto
+          </h4>
           <Button size="sm" variant="outline" onClick={() => setRangos([...rangos, { monto_min: 0, monto_max: null, ganancia: 0 }])}>
             <Plus size={13} /> Agregar
           </Button>
@@ -443,6 +472,7 @@ function RangosOperativosModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
+        <p className="mt-2 text-[11px] text-kyro-muted">El sistema evaluará el monto exacto de la operación y aplicará la ganancia del rango que corresponda.</p>
         <Button variant="gold" className="mt-3 w-full" disabled={guardarServicio.isPending}
           onClick={() => guardarServicio.mutate({ tipo_servicio: tipo, rangos })}>
           Guardar {tipo.toUpperCase()}
@@ -451,20 +481,37 @@ function RangosOperativosModal({ onClose }: { onClose: () => void }) {
     )
   }
 
-  if (isLoading) return <p className="py-8 text-center text-sm text-kyro-muted">Cargando rangos...</p>
-
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        {productividad('Planes postpago', 'PLAN', plan, setPlan)}
-        {productividad('Equipos celulares', 'EQUIPO', equipo, setEquipo)}
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {(['bipay', 'krece', 'payjoy'] as ServicioOperativo[]).map(servicio)}
-      </div>
-      {msg && <p className="rounded-kyro bg-kyro-success/10 px-3 py-2 text-sm text-kyro-success">{msg}</p>}
-      <div className="flex justify-end"><Button variant="outline" onClick={onClose}>Cerrar</Button></div>
-    </div>
+    <section id="estrategia-comisiones" className="kyro-card relative overflow-hidden p-5">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
+        <Sliders size={16} className="text-kyro-info" /> Estrategia de Comisiones
+      </h3>
+      <p className="mb-4 text-xs text-kyro-muted">Rangos de productividad (por cantidad vendida) y por monto de operación.</p>
+
+      {isLoading ? (
+        <p className="py-8 text-center text-sm text-kyro-muted">Cargando rangos...</p>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {productividad(
+              'Comisiones de Planes Postpago', 'PLAN', plan, setPlan,
+              { border: 'border-t-cyan-400', text: 'text-cyan-400', bg: 'bg-cyan-500/5 border-cyan-500/20', icon: PhoneIcon },
+              'El rango es el n.º de plan vendido en el mes (acumulado por agente). Para el último rango usa 9999 como "Hasta". Los rangos no deben solaparse.',
+            )}
+            {productividad(
+              'Comisiones de Equipos Celulares', 'EQUIPO', equipo, setEquipo,
+              { border: 'border-t-amber-400', text: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/20', icon: DeviceMobileIcon },
+              'El rango es el n.º de equipo vendido en el mes por el agente. La comisión se aplica por equipo. Si el ítem tiene comisión especial, esta tabla se usa solo como fallback.',
+            )}
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {(['bipay', 'krece', 'payjoy'] as ServicioOperativo[]).map(servicio)}
+          </div>
+        </div>
+      )}
+
+      {msg && <p className="mt-4 rounded-kyro bg-kyro-success/10 px-3 py-2 text-sm text-kyro-success">{msg}</p>}
+    </section>
   )
 }
 
@@ -486,9 +533,12 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const scrollToId = (elementId: string) =>
+  document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
 export function ComisionesPage() {
   const [filtroTipo, setFiltroTipo] = useState('')
-  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | 'tarifas' | 'rangos' | null>(null)
+  const [modal, setModal] = useState<'create' | 'edit' | 'recalcular' | null>(null)
   const [planEditando, setPlanEditando] = useState<ComisionPlan | null>(null)
 
   const qc = useQueryClient()
@@ -521,10 +571,10 @@ export function ComisionesPage() {
       {/* Header */}
       <PageHeader title="Comisiones de Planes" subtitle="Configura las tarifas de comisión por plan de servicio" Icon={TrendingUp}>
         <div className="flex flex-wrap gap-3">
-          <Button variant="glassInfo" onClick={() => setModal('tarifas')}>
+          <Button variant="glassInfo" onClick={() => scrollToId('ganancias-operativas')}>
             <AlertCircle size={15} className="mr-2" /> Tarifas operativas
           </Button>
-          <Button variant="glassIndigo" onClick={() => setModal('rangos')}>
+          <Button variant="glassIndigo" onClick={() => scrollToId('estrategia-comisiones')}>
             <Pencil size={15} className="mr-2" /> Estrategia y rangos
           </Button>
           <Button variant="glassWarning" onClick={() => setModal('recalcular')}>
@@ -600,6 +650,10 @@ export function ComisionesPage() {
         </div>
       </div>
 
+      {/* Secciones siempre visibles (paridad legacy: 2 páginas propias, no modales on-demand) */}
+      <GananciasOperativasSection />
+      <EstrategiaComisionesSection />
+
       {/* Modals */}
       {modal === 'create' && (
         <Modal title="Nuevo plan de comisión" onClose={closeModal}>
@@ -614,16 +668,6 @@ export function ComisionesPage() {
       {modal === 'recalcular' && (
         <Modal title="Recálculo masivo de comisiones" onClose={closeModal}>
           <RecalcularModal onClose={closeModal} />
-        </Modal>
-      )}
-      {modal === 'tarifas' && (
-        <Modal title="Tarifas operativas (recargas / financieras)" onClose={closeModal}>
-          <TarifasOperativasModal onClose={closeModal} />
-        </Modal>
-      )}
-      {modal === 'rangos' && (
-        <Modal title="Estrategia de comisiones y rangos operativos" onClose={closeModal}>
-          <RangosOperativosModal onClose={closeModal} />
         </Modal>
       )}
     </div>
