@@ -16,7 +16,8 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { StatCard } from '../../components/ui/StatCard'
-import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star, MessageCircle } from 'lucide-react'
+import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star, MessageCircle, Trash2 } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { ComponentType } from 'react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie,
@@ -199,6 +200,7 @@ function LeadCard({
   onEliminar: (id: number) => void
 }) {
   const estados = ESTADOS.map(e => e.value).filter(e => e !== lead.estado)
+  const confirmDialog = useConfirmDialog()
 
   return (
     <div className="kyro-card group space-y-3 p-3.5 text-xs transition-colors hover:border-kyro-gold">
@@ -250,7 +252,7 @@ function LeadCard({
           variant="glassDanger"
           size="sm"
           className="h-7 px-2 text-xs"
-          onClick={() => { if (confirm('¿Eliminar lead?')) onEliminar(lead.id) }}
+          onClick={async () => { if (await confirmDialog({ title: '¿Eliminar lead?', intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) onEliminar(lead.id) }}
         >
           ×
         </Button>

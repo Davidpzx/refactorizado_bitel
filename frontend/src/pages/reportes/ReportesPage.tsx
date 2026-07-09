@@ -12,6 +12,7 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Eye, Trash2, ClipboardList } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { Reporte } from '../../types/reporte'
 
 const TIENDAS = [
@@ -115,9 +116,16 @@ export function ReportesPage() {
   })
 
   const eliminar = useEliminarReporte()
+  const confirmDialog = useConfirmDialog()
 
-  const handleEliminar = (r: Reporte) => {
-    if (!confirm(`¿Eliminar el reporte del ${r.fecha?.slice(0, 10)} - ${r.tienda_id}?`)) return
+  const handleEliminar = async (r: Reporte) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar el reporte del ${r.fecha?.slice(0, 10)} - ${r.tienda_id}?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(r.id)
   }
 

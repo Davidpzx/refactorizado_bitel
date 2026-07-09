@@ -13,6 +13,7 @@ import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -500,10 +501,17 @@ export function ComisionesPage() {
     mutationFn: comisionesApi.destroy,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['comisiones-planes'] }),
   })
+  const confirmDialog = useConfirmDialog()
 
   const handleEdit = (p: ComisionPlan) => { setPlanEditando(p); setModal('edit') }
-  const handleDelete = (p: ComisionPlan) => {
-    if (window.confirm(`¿Eliminar "${p.nombre_plan}"?`)) eliminar.mutate(p.id)
+  const handleDelete = async (p: ComisionPlan) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar "${p.nombre_plan}"?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (ok) eliminar.mutate(p.id)
   }
 
   const closeModal = () => { setModal(null); setPlanEditando(null) }

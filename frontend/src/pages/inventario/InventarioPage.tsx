@@ -18,6 +18,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Label } from '../../components/ui/label'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InventarioForm } from './InventarioForm'
 import { useAuth } from '../../hooks/useAuth'
 import type { InventarioItem } from '../../types/inventario'
@@ -393,13 +394,20 @@ export function InventarioPage() {
   })
 
   const eliminar = useEliminarInventario()
+  const confirmDialog = useConfirmDialog()
 
   const abrirCrear  = () => { setEditando(undefined); setDialogOpen(true) }
   const abrirEditar = (i: InventarioItem) => { setEditando(i); setDialogOpen(true) }
   const cerrar      = () => setDialogOpen(false)
 
-  const handleEliminar = (i: InventarioItem) => {
-    if (!confirm(`¿Eliminar "${i.producto_nombre}"?`)) return
+  const handleEliminar = async (i: InventarioItem) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar "${i.producto_nombre}"?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(i.id)
   }
 

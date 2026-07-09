@@ -11,6 +11,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
 import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale, Lock, Link2, FileSpreadsheet, BellRing } from 'lucide-react'
 import { CuadreBitelPanel } from './CuadreBitelPage'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 
@@ -210,6 +211,8 @@ export function PanelBipayPage() {
     onSuccess: (res: { message?: string }) => { setCuentaMsg(res.message ?? 'Cuenta eliminada.'); qc.invalidateQueries({ queryKey: ['bipay-saldo'] }) },
     onError: (error: unknown) => setCuentaErr(apiErrorData(error).message ?? 'Error al eliminar la cuenta.'),
   })
+
+  const confirmDialog = useConfirmDialog()
 
   const warning = saldoData?.warning
   const huerfanas = (saldoData?.cuentas ?? []).filter(c => c.tipo === 'HIJO' && !c.cuenta_madre_id)
@@ -613,7 +616,7 @@ export function PanelBipayPage() {
                             label="Eliminar cuenta"
                             icon={<Trash2 size={15} />}
                             disabled={eliminarCuenta.isPending}
-                            onClick={() => { if (confirm(`¿Eliminar la cuenta "${c.alias}"?`)) eliminarCuenta.mutate(c.id) }}
+                            onClick={async () => { if (await confirmDialog({ title: `¿Eliminar la cuenta "${c.alias}"?`, intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) eliminarCuenta.mutate(c.id) }}
                           />
                         </TableActions>
                       </td>

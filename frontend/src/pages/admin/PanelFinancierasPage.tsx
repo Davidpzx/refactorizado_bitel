@@ -9,7 +9,8 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { StatCard } from '../../components/ui/StatCard'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { AlertTriangle, Filter, Handshake, Search } from 'lucide-react'
+import { AlertTriangle, Filter, Handshake, RotateCcw, Search } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const DIAS_ALERTA_AMARILLA = 15
 const DIAS_ALERTA_ROJA     = 30
@@ -114,6 +115,8 @@ export function PanelFinancierasPage() {
       api.post(`/v1/financieras/${id}/revertir-desembolso`).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['financieras'] }),
   })
+
+  const confirmDialog = useConfirmDialog()
 
   const items    = data?.data ?? []
   const totales  = data?.totales
@@ -309,10 +312,15 @@ export function PanelFinancierasPage() {
                         <Button
                           size="sm"
                           variant="glassSuccess"
-                          onClick={() => {
-                            if (!window.confirm(
-                              `¿Confirmar desembolso de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)} (${item.vendedor_nombre})? Esta acción no se puede deshacer directamente.`,
-                            )) return
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `¿Confirmar desembolso de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)}?`,
+                              description: `Vendedor: ${item.vendedor_nombre}. Esta acción no se puede deshacer directamente.`,
+                              intent: 'success',
+                              icon: Handshake,
+                              confirmLabel: 'Confirmar desembolso',
+                            })
+                            if (!ok) return
                             confirmar.mutate(item.id)
                           }}
                           disabled={confirmar.isPending}
@@ -324,10 +332,15 @@ export function PanelFinancierasPage() {
                         <Button
                           size="sm"
                           variant="glassWarning"
-                          onClick={() => {
-                            if (!window.confirm(
-                              `¿Revertir el desembolso confirmado de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)} (${item.vendedor_nombre})?`,
-                            )) return
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `¿Revertir el desembolso confirmado de ${item.financiera} por S/ ${Number(item.por_cobrar).toFixed(2)}?`,
+                              description: `Vendedor: ${item.vendedor_nombre}.`,
+                              intent: 'gold',
+                              icon: RotateCcw,
+                              confirmLabel: 'Revertir',
+                            })
+                            if (!ok) return
                             revertir.mutate(item.id)
                           }}
                           disabled={revertir.isPending}

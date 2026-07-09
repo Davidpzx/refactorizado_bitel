@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from 'react'
 type Variant =
   | 'default'
   | 'destructive'
+  | 'success'
   | 'outline'
   | 'ghost'
   | 'link'
@@ -17,6 +18,7 @@ type Size = 'default' | 'sm' | 'lg' | 'icon' | 'iconSm'
 const variantClasses: Record<Variant, string> = {
   default:     'text-white border border-[#4338ca] bg-[linear-gradient(180deg,#6366f1,#4f46e5)] shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:brightness-110 hover:-translate-y-px focus:ring-indigo-500',
   destructive: 'text-white border border-red-800 bg-[linear-gradient(180deg,#ef4444,#dc2626)] shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:brightness-110 hover:-translate-y-px focus:ring-red-500',
+  success:     'text-white border border-emerald-800 bg-[linear-gradient(180deg,#22c55e,#16a34a)] shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:brightness-110 hover:-translate-y-px focus:ring-emerald-500',
   outline:     'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-indigo-500 dark:border-white/12 dark:bg-zinc-900/50 dark:backdrop-blur-sm dark:text-zinc-200 dark:hover:bg-white/[0.06] dark:hover:border-white/25',
   ghost:       'text-gray-700 hover:bg-gray-100 focus:ring-gray-400 dark:text-zinc-300 dark:hover:bg-zinc-800',
   link:        'text-indigo-600 underline-offset-4 hover:underline focus:ring-indigo-500 dark:text-indigo-400',

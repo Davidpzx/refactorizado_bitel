@@ -7,6 +7,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { PaginatedResponse } from '../../types/pagination'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -111,6 +112,8 @@ export function ComprobantesPage() {
     mutationFn: comprobantesApi.destroy,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['comprobantes'] }),
   })
+
+  const confirmDialog = useConfirmDialog()
 
   const comprobantes = data?.data ?? []
   const totalPags    = data?.last_page ?? 1
@@ -217,8 +220,14 @@ export function ComprobantesPage() {
                       )}
                       {c.estado_sunat !== 'ACEPTADO' && (
                         <ActionIconButton
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar ${c.nombre_completo}?`)) deleteMutation.mutate(c.id)
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `¿Eliminar ${c.nombre_completo}?`,
+                              intent: 'danger',
+                              icon: Trash2,
+                              confirmLabel: 'Eliminar',
+                            })
+                            if (ok) deleteMutation.mutate(c.id)
                           }}
                           disabled={deleteMutation.isPending}
                           tone="delete"

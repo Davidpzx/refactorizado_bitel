@@ -18,6 +18,7 @@ import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { formatearFechaCorta } from '../../lib/fechas'
 
 type BadgeVariant = 'success' | 'warning' | 'destructive'
@@ -170,13 +171,20 @@ export function AgentesPage() {
   })
 
   const eliminar = useEliminarAgente()
+  const confirmDialog = useConfirmDialog()
 
   const abrirCrear  = () => { setEditando(undefined); setDialogOpen(true) }
   const abrirEditar = (a: Agente) => { setEditando(a); setDialogOpen(true) }
   const cerrar      = () => setDialogOpen(false)
 
-  const handleEliminar = (a: Agente) => {
-    if (!confirm(`¿Eliminar al agente ${a.nombres}?`)) return
+  const handleEliminar = async (a: Agente) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar al agente ${a.nombres}?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(a.id)
   }
 

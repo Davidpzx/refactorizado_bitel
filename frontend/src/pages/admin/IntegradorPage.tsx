@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '../../components/PageHeader'
 import { integradorApi, type CredencialTienda } from '../../services/integradorBitel.api'
 import { apiErrorData } from '../../lib/httpError'
-import { Plug } from 'lucide-react'
+import { Plug, KeyRound } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 function EstadoAgente({ estado }: { estado: CredencialTienda['estado_agente'] }) {
   const map = {
@@ -49,6 +50,18 @@ function FilaTienda({ fila }: { fila: CredencialTienda }) {
     mutationFn: () => integradorApi.toggleActivo(fila.codigo),
     onSuccess: invalidar, onError: onErr,
   })
+
+  const confirmDialog = useConfirmDialog()
+  const confirmarRegenerar = async () => {
+    const ok = await confirmDialog({
+      title: '¿Regenerar token?',
+      description: 'El agente actual dejará de sincronizar hasta actualizar su config.php.',
+      intent: 'indigo',
+      icon: KeyRound,
+      confirmLabel: 'Regenerar',
+    })
+    if (ok) regenerar.mutate()
+  }
 
   return (
     <div className="kyro-card p-4">
@@ -104,7 +117,7 @@ function FilaTienda({ fila }: { fila: CredencialTienda }) {
         {fila.configurada === 1 && (
           <>
             <button
-              onClick={() => window.confirm('¿Regenerar token? El agente actual dejará de sincronizar hasta actualizar su config.php.') && regenerar.mutate()}
+              onClick={confirmarRegenerar}
               className="rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-300">
               Regenerar token
             </button>

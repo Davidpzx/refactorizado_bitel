@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, FileText, FileSpreadsheet } from 'lucide-react'
+import { ChevronLeft, FileText, FileSpreadsheet, CheckCircle } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { reportesApi, type HistorialReporteEntry } from '../../services/reportes.api'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { ReporteConVentas, VentaConDetalle } from '../../types/reporte'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -651,6 +652,7 @@ export function ReporteDetallePage() {
   const { usuario } = useAuth()
   const qc = useQueryClient()
   const { data: reporte, isLoading, isError } = useReporte(Number(id))
+  const confirmDialog = useConfirmDialog()
 
   async function descargar(path: string, filename: string) {
     const response = await api.get(path, { responseType: 'blob' })
@@ -784,10 +786,14 @@ export function ReporteDetallePage() {
                       size="sm"
                       variant="gold"
                       disabled={aprobarEdicion.isPending}
-                      onClick={() => {
-                        if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
-                          aprobarEdicion.mutate(reporte.id)
-                        }
+                      onClick={async () => {
+                        const ok = await confirmDialog({
+                          title: '¿Aprobar la solicitud de edición de este reporte?',
+                          intent: 'success',
+                          icon: CheckCircle,
+                          confirmLabel: 'Aprobar',
+                        })
+                        if (ok) aprobarEdicion.mutate(reporte.id)
                       }}
                       className="h-7 gap-1 px-2 text-xs"
                     >

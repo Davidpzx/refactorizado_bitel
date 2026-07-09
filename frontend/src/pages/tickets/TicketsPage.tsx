@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { FileSpreadsheet, Pencil, Printer, Ticket as TicketIcon, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, Pencil, Printer, Ticket as TicketIcon, Trash2, Ban } from 'lucide-react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
@@ -15,6 +15,7 @@ import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { api } from '../../services/api'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { Ticket, TicketPayload, TicketUpdatePayload } from '../../types/ticket'
 
 
@@ -367,6 +368,7 @@ export function TicketsPage() {
 
   const anular = useActualizarTicket()
   const [exportando, setExportando] = useState(false)
+  const confirmDialog = useConfirmDialog()
 
   const { data, isLoading } = useTickets({
     desde:       desde       || undefined,
@@ -388,8 +390,15 @@ export function TicketsPage() {
     window.open(`/tickets/imprimir/${t.id}?print=1`, '_blank')
   }
 
-  const handleAnular = (t: Ticket) => {
-    if (!window.confirm(`¿Anular el ticket #${padTicket(t.id)}? Esta acción no se puede deshacer.`)) return
+  const handleAnular = async (t: Ticket) => {
+    const ok = await confirmDialog({
+      title: `¿Anular el ticket #${padTicket(t.id)}?`,
+      description: 'Esta acción no se puede deshacer.',
+      intent: 'danger',
+      icon: Ban,
+      confirmLabel: 'Anular',
+    })
+    if (!ok) return
     anular.mutate({ id: t.id, data: { estado: 'ANULADO' } })
   }
 

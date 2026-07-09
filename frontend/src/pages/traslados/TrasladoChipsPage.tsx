@@ -13,8 +13,9 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, Check, XCircle, Undo2 } from 'lucide-react'
 import { Dialog } from '../../components/ui/dialog'
+import { useConfirmDialog, type ConfirmIntent } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -378,10 +379,22 @@ export function TrasladoChipsPage() {
   })
   const { data: stockData, isLoading: stockLoading } = useStockChips()
   const gestionar = useGestionarTrasladoChip()
+  const confirmDialog = useConfirmDialog()
 
-  const handleGestionar = (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
-    const labels = { aprobar: 'aprobar', rechazar: 'rechazar', cancelar: 'cancelar' }
-    if (!confirm(`¿Seguro que deseas ${labels[action]} este traslado?`)) return
+  const handleGestionar = async (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
+    const meta: Record<typeof action, { label: string; intent: ConfirmIntent; icon: typeof Check }> = {
+      aprobar:  { label: 'aprobar',  intent: 'success', icon: Check },
+      rechazar: { label: 'rechazar', intent: 'danger',  icon: XCircle },
+      cancelar: { label: 'cancelar', intent: 'gold',     icon: Undo2 },
+    }
+    const { label, intent, icon } = meta[action]
+    const ok = await confirmDialog({
+      title: `¿Seguro que deseas ${label} este traslado?`,
+      intent,
+      icon,
+      confirmLabel: label.charAt(0).toUpperCase() + label.slice(1),
+    })
+    if (!ok) return
     gestionar.mutate({ id, data: { action } })
   }
 

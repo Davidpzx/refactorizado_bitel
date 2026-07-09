@@ -17,6 +17,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { Postulacion, EstadoPostulacion } from '../../types/postulacion'
 
 type EstadoVariant = 'default' | 'success' | 'destructive' | 'warning' | 'outline'
@@ -296,12 +297,19 @@ export function PostulacionesPage() {
   })
 
   const eliminar = useEliminarPostulacion()
+  const confirmDialog = useConfirmDialog()
 
   const abrirDetalle = (p: Postulacion) => { setViendo(p); setDialogOpen(true) }
   const cerrar       = () => setDialogOpen(false)
 
-  const handleEliminar = (p: Postulacion) => {
-    if (!confirm(`¿Eliminar postulación de "${p.nombres} ${p.apellidos}" (${p.dni})?`)) return
+  const handleEliminar = async (p: Postulacion) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar postulación de "${p.nombres} ${p.apellidos}" (${p.dni})?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(p.id)
   }
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Eye, EyeOff, RefreshCw, Ban, Smartphone, Infinity as InfinityIcon, CalendarCheck } from 'lucide-react'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { useAgenteSeguridad, useTokenSeguridad, useResetDispositivo } from '../../hooks/useAgentes'
 import type { Agente } from '../../types/agente'
 import type { TipoTokenAccion } from '../../services/agentes.api'
@@ -19,6 +20,7 @@ export function AgenteSeguridadDialog({ agente, onClose }: Props) {
   const { data, isLoading } = useAgenteSeguridad(agente?.id)
   const tokenMutation = useTokenSeguridad(agente?.id)
   const resetMutation = useResetDispositivo(agente?.id)
+  const confirmDialog = useConfirmDialog()
 
   const ejecutarAccion = (tipo: TipoTokenAccion) => {
     tokenMutation.mutate(tipo, { onSuccess: () => setMostrarToken(true) })
@@ -31,8 +33,14 @@ export function AgenteSeguridadDialog({ agente, onClose }: Props) {
     setTimeout(() => setCopiado(false), 2000)
   }
 
-  const confirmarReset = () => {
-    if (!confirm('¿Desvincular el dispositivo y revocar el token de este agente?')) return
+  const confirmarReset = async () => {
+    const ok = await confirmDialog({
+      title: '¿Desvincular el dispositivo y revocar el token de este agente?',
+      intent: 'danger',
+      icon: Ban,
+      confirmLabel: 'Desvincular',
+    })
+    if (!ok) return
     resetMutation.mutate()
   }
 

@@ -20,9 +20,10 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, Check, XCircle, Undo2 } from 'lucide-react'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
+import { useConfirmDialog, type ConfirmIntent } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -40,6 +41,12 @@ const estadoBadge: Record<EstadoTraslado, BadgeVariant> = {
   CONFIRMADO:            'success',
   RECHAZADO:             'destructive',
   CANCELADO:             'outline',
+}
+
+const ACCION_GESTION_META: Record<'aprobar' | 'rechazar' | 'cancelar', { label: string; intent: ConfirmIntent; icon: typeof Check }> = {
+  aprobar:  { label: 'aprobar',  intent: 'success', icon: Check },
+  rechazar: { label: 'rechazar', intent: 'danger',  icon: XCircle },
+  cancelar: { label: 'cancelar', intent: 'gold',     icon: Undo2 },
 }
 
 const estadoLabel: Record<EstadoTraslado, string> = {
@@ -620,6 +627,7 @@ const stockColumns: ColumnDef<ChipStock>[] = [
 export function TrasladosPage() {
   const { usuario } = useAuth()
   const { tiendas: tiendasFiltro } = useTiendasSelect()
+  const confirmDialog = useConfirmDialog()
 
   // ── Sección activa ─────────────────────────────────────────────────────────
   const [seccion, setSeccion] = useState<'equipos' | 'chips'>('equipos')
@@ -650,8 +658,15 @@ export function TrasladosPage() {
 
   const gestionarEq = useGestionarTraslado()
 
-  const handleGestionarEq = (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
-    if (!confirm(`¿Seguro que deseas ${action} este traslado?`)) return
+  const handleGestionarEq = async (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
+    const { label, intent, icon } = ACCION_GESTION_META[action]
+    const ok = await confirmDialog({
+      title: `¿Seguro que deseas ${label} este traslado?`,
+      intent,
+      icon,
+      confirmLabel: label.charAt(0).toUpperCase() + label.slice(1),
+    })
+    if (!ok) return
     gestionarEq.mutate({ id, data: { action } })
   }
 
@@ -665,8 +680,15 @@ export function TrasladosPage() {
   const { data: stockData, isLoading: stockLoading } = useStockChips()
   const gestionarCh = useGestionarTrasladoChip()
 
-  const handleGestionarCh = (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
-    if (!confirm(`¿Seguro que deseas ${action} este traslado?`)) return
+  const handleGestionarCh = async (id: number, action: 'aprobar' | 'rechazar' | 'cancelar') => {
+    const { label, intent, icon } = ACCION_GESTION_META[action]
+    const ok = await confirmDialog({
+      title: `¿Seguro que deseas ${label} este traslado?`,
+      intent,
+      icon,
+      confirmLabel: label.charAt(0).toUpperCase() + label.slice(1),
+    })
+    if (!ok) return
     gestionarCh.mutate({ id, data: { action } })
   }
 

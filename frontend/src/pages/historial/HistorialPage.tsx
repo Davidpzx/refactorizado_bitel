@@ -10,6 +10,7 @@ import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, XCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
@@ -60,6 +61,7 @@ export function HistorialPage() {
   const [applied, setApplied] = useState({ ...filters, page: 1 })
 
   const qc = useQueryClient()
+  const confirmDialog = useConfirmDialog()
 
   const aprobarEdicion = useMutation({
     mutationFn: (id: number) =>
@@ -84,12 +86,14 @@ export function HistorialPage() {
     },
   })
 
-  function handleEliminar(r: { id: number; fecha: string; tienda_id: string }) {
-    const ok = confirm(
-      `¿Eliminar el cuadre #${String(r.id).padStart(4, '0')} (${r.fecha?.slice(0, 10)} - ${r.tienda_id})?\n\n` +
-      'Todo el stock usado (equipos, accesorios, chips) regresará a la tienda y se anularán las comisiones generadas.\n\n' +
-      'Esta acción no se puede deshacer.'
-    )
+  async function handleEliminar(r: { id: number; fecha: string; tienda_id: string }) {
+    const ok = await confirmDialog({
+      title: `¿Eliminar el cuadre #${String(r.id).padStart(4, '0')} (${r.fecha?.slice(0, 10)} - ${r.tienda_id})?`,
+      description: 'Todo el stock usado (equipos, accesorios, chips) regresará a la tienda y se anularán las comisiones generadas.\nEsta acción no se puede deshacer.',
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
     if (ok) eliminarReporte.mutate(r.id)
   }
 
@@ -397,10 +401,14 @@ export function HistorialPage() {
                               variant="gold"
                               size="sm"
                               disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
-                              onClick={() => {
-                                if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
-                                  aprobarEdicion.mutate(r.id)
-                                }
+                              onClick={async () => {
+                                const ok = await confirmDialog({
+                                  title: '¿Aprobar la solicitud de edición de este reporte?',
+                                  intent: 'success',
+                                  icon: CheckCircle,
+                                  confirmLabel: 'Aprobar',
+                                })
+                                if (ok) aprobarEdicion.mutate(r.id)
                               }}
                               className="h-8 gap-1 px-2 text-xs"
                             >

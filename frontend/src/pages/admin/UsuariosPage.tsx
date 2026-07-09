@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Building2, KeyRound, Landmark, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import {
   sanitizarNombreUsuario,
   validarUsuario,
@@ -291,6 +292,8 @@ export function UsuariosPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   const usuarios: Usuario[] = data?.data ?? []
 
   return (
@@ -355,7 +358,7 @@ export function UsuariosPage() {
                   <td className="px-4 py-3">
                     <TableActions>
                       <ActionIconButton tone="edit" label="Editar usuario" icon={<Pencil size={15} />} onClick={() => { setEditando(u); setDialogOpen(true) }} />
-                      <ActionIconButton tone="delete" label="Eliminar usuario" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar usuario ${u.nombre}?`)) eliminar.mutate(u.id) }} />
+                      <ActionIconButton tone="delete" label="Eliminar usuario" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={async () => { if (await confirmDialog({ title: `¿Eliminar usuario ${u.nombre}?`, intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) eliminar.mutate(u.id) }} />
                     </TableActions>
                   </td>
                 </tr>

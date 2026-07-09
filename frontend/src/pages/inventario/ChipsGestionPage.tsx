@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Cpu } from 'lucide-react'
+import { Cpu, Trash2 } from 'lucide-react'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
@@ -125,6 +126,8 @@ export function ChipsGestionPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['chips'] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   const ajustarStock = useMutation({
     mutationFn: (body: { id: number; cantidad_real: number; observacion: string }) =>
       api.post(`/v1/chips/${body.id}/ajustar-stock-real`, body).then((r) => r.data),
@@ -160,8 +163,14 @@ export function ChipsGestionPage() {
     })
   }
 
-  const handleEliminar = (chip: Chip) => {
-    if (!confirm(`¿Eliminar lote de chips "${chip.tienda_origen}"?`)) return
+  const handleEliminar = async (chip: Chip) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar lote de chips "${chip.tienda_origen}"?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(chip.id)
   }
 

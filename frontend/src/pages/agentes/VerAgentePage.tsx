@@ -9,13 +9,14 @@ import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
-import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye, Plus, History, X } from 'lucide-react'
+import { ArrowLeft, User, MapPin, DollarSign, Phone, Mail, Calendar, Key, ShieldCheck, FileText, TrendingUp, Download, Smartphone, Save, Receipt, Trash2, Eye, Plus, History, X, Ban } from 'lucide-react'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DocumentosAgentePanel } from '../../components/agente/DocumentosAgentePanel'
 import { formatearFechaCorta } from '../../lib/fechas'
 import { StatCard } from '../../components/ui/StatCard'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -184,6 +185,8 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-adelantos', agenteId] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   return (
     <section className="kyro-card relative overflow-hidden p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
@@ -226,7 +229,7 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
                 size="iconSm"
                 aria-label="Eliminar adelanto"
                 disabled={eliminar.isPending}
-                onClick={() => { if (confirm('¿Eliminar este adelanto?')) eliminar.mutate(a.id) }}
+                onClick={async () => { if (await confirmDialog({ title: '¿Eliminar este adelanto?', intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) eliminar.mutate(a.id) }}
               >
                 <Trash2 size={14} />
               </Button>
@@ -392,6 +395,8 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-boletas', agenteId] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ fecha_inicio: '', fecha_fin: '', sueldo_base: '', bonos: '0', dscto_tardanza: '0', dscto_adelantos: '0' })
   const totalNeto = Math.max(0,
@@ -504,7 +509,7 @@ function BoletasPanel({ agenteId, nombre }: { agenteId: string; nombre: string }
                 <Download size={13} /> PDF
               </Button>
               {boleta.estado === 'PENDIENTE' && <Button size="sm" variant="gold" onClick={() => accion.mutate({ id: boleta.id, accion: 'pagar' })}>Marcar pagado</Button>}
-              <Button size="sm" variant="glassDanger" onClick={() => confirm('Eliminar esta boleta?') && accion.mutate({ id: boleta.id, accion: 'eliminar' })}>
+              <Button size="sm" variant="glassDanger" onClick={async () => { if (await confirmDialog({ title: '¿Eliminar esta boleta?', intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) accion.mutate({ id: boleta.id, accion: 'eliminar' }) }}>
                 <Trash2 size={13} />
               </Button>
             </div>
@@ -526,6 +531,8 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agente-seguridad', agenteId] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   return (
     <section className="kyro-card p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Smartphone size={15} className="text-kyro-gold" /> Dispositivo</h3>
@@ -540,7 +547,7 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
         variant="destructive"
         className="mt-4"
         disabled={reset.isPending}
-        onClick={() => confirm('Desvincular el dispositivo y revocar el token?') && reset.mutate()}
+        onClick={async () => { if (await confirmDialog({ title: '¿Desvincular el dispositivo y revocar el token?', intent: 'danger', icon: Ban, confirmLabel: 'Desvincular' })) reset.mutate() }}
       >
         {reset.isPending ? 'Procesando...' : 'Resetear dispositivo'}
       </Button>

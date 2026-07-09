@@ -16,6 +16,7 @@ import { SectionPanel } from '../../components/ui/SectionPanel'
 import { AddRowButton } from '../../components/ui/AddRowButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
 import { PageHeader } from '../../components/PageHeader'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { borradorApi } from '../../services/borrador.api'
 import { BipayConsole } from '../../components/BipayConsole'
 import { ChipStockBadge } from '../../components/ChipStockBadge'
@@ -869,6 +870,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const { id }       = useParams<{ id: string }>()
   const { usuario }  = useAuth()
   const { data: planesData = [] } = usePlanesComisiones()
+  const confirmDialog = useConfirmDialog()
   const esEdicion = mode === 'edit'
   const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
   const reporteId = Number(id ?? 0)
@@ -1275,7 +1277,13 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
       setTimeout(() => setBorradorMsg(''), 3000)
       return
     }
-    const ok = window.confirm('¿Seguro que quieres guardar y cerrar la caja para empezar una nueva?')
+    const ok = await confirmDialog({
+      title: '¿Guardar y cerrar la caja?',
+      description: 'Se cerrará el cuadre actual para empezar una nueva caja.',
+      intent: 'gold',
+      icon: Save,
+      confirmLabel: 'Cerrar caja',
+    })
     if (!ok) return
     setCerrandoCaja(true)
     const fv = getValues()

@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { AlertCircle, AlertTriangle, Camera, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList, CalendarRange, Receipt } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -165,6 +166,8 @@ export function AsistenciasPage() {
     mutationFn: (id: number) => api.delete(`/v1/asistencias/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['asistencias'] }),
   })
+
+  const confirmDialog = useConfirmDialog()
 
   const editarRegistro = useMutation({
     mutationFn: () => api.patch(`/v1/asistencias/${editando!.id}`, {
@@ -540,7 +543,7 @@ export function AsistenciasPage() {
                             label="Eliminar asistencia"
                             icon={<UserX size={15} />}
                             disabled={eliminarRegistro.isPending}
-                            onClick={() => { if (confirm("¿Eliminar este registro de asistencia?")) eliminarRegistro.mutate(a.id) }}
+                            onClick={async () => { if (await confirmDialog({ title: '¿Eliminar este registro de asistencia?', intent: 'danger', icon: UserX, confirmLabel: 'Eliminar' })) eliminarRegistro.mutate(a.id) }}
                           />
                         </TableActions>
                       )}

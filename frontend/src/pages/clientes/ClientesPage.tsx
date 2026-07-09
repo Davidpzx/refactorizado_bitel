@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/badge'
 import { ClienteForm } from './ClienteForm'
 import type { Cliente } from '../../types/cliente'
 import { Pencil, Plus, Search, Trash2, UsersRound } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 type BadgeVariant = 'default' | 'warning' | 'outline'
 const tipoVariant: Record<Cliente['tipo_documento'], BadgeVariant> = {
@@ -85,13 +86,20 @@ export function ClientesPage() {
   })
 
   const eliminar = useEliminarCliente()
+  const confirmDialog = useConfirmDialog()
 
   const abrirCrear  = () => { setEditando(undefined); setDialogOpen(true) }
   const abrirEditar = (c: Cliente) => { setEditando(c); setDialogOpen(true) }
   const cerrar      = () => setDialogOpen(false)
 
-  const handleEliminar = (c: Cliente) => {
-    if (!confirm(`¿Eliminar al cliente ${c.nombre}?`)) return
+  const handleEliminar = async (c: Cliente) => {
+    const ok = await confirmDialog({
+      title: `¿Eliminar al cliente ${c.nombre}?`,
+      intent: 'danger',
+      icon: Trash2,
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     eliminar.mutate(c.id)
   }
 

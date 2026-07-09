@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { AlertTriangle, LocateFixed, MapPin, Pencil, Plus, Search, Store, Trash2 } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import {
   sanitizarCodigo,
   sanitizarNombre,
@@ -267,6 +268,8 @@ export function TiendasPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tiendas'] }),
   })
 
+  const confirmDialog = useConfirmDialog()
+
   const ubicacion = useMutation({
     mutationFn: ({ id, latitud, longitud }: { id: number; latitud: number; longitud: number }) =>
       api.put(`/v1/tiendas/${id}`, { latitud, longitud }),
@@ -371,7 +374,7 @@ export function TiendasPage() {
                   <td className="px-4 py-3">
                     <TableActions>
                       <ActionIconButton tone="edit" label="Editar tienda" icon={<Pencil size={15} />} onClick={() => { setEditando(t); setDialogOpen(true) }} />
-                      <ActionIconButton tone="delete" label="Eliminar tienda" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={() => { if (confirm(`¿Eliminar tienda ${t.nombre}?`)) eliminar.mutate(t.id) }} />
+                      <ActionIconButton tone="delete" label="Eliminar tienda" icon={<Trash2 size={15} />} disabled={eliminar.isPending} onClick={async () => { if (await confirmDialog({ title: `¿Eliminar tienda ${t.nombre}?`, intent: 'danger', icon: Trash2, confirmLabel: 'Eliminar' })) eliminar.mutate(t.id) }} />
                     </TableActions>
                   </td>
                 </tr>

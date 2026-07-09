@@ -16,6 +16,7 @@ import { ListToolbar } from '../components/ListToolbar'
 import { StatCard } from '../components/ui/StatCard'
 import { MoneyGroup } from '../components/ui/MoneyGroup'
 import { ProfitBanner } from '../components/ui/ProfitBanner'
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { apiErrorData } from '../lib/httpError'
 import { api } from '../services/api'
 import { Select } from '../components/ui/select'
@@ -190,6 +191,7 @@ export function DashboardPage() {
   const [showAnomalias, setShowAnomalias] = useState(false)
   const [editingDestino, setEditingDestino] = useState<{ id: number; current: string } | null>(null)
   const qc = useQueryClient()
+  const confirmDialog = useConfirmDialog()
 
   const aprobarEdicion = useMutation({
     mutationFn: (id: number) => api.post(`/v1/reportes/${id}/aprobar-edicion`).then(r => r.data),
@@ -516,10 +518,14 @@ export function DashboardPage() {
                               variant="gold"
                               size="sm"
                               disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
-                              onClick={() => {
-                                if (confirm('¿Aprobar la solicitud de edición de este reporte?')) {
-                                  aprobarEdicion.mutate(r.id)
-                                }
+                              onClick={async () => {
+                                const ok = await confirmDialog({
+                                  title: '¿Aprobar la solicitud de edición de este reporte?',
+                                  intent: 'success',
+                                  icon: CheckCircle,
+                                  confirmLabel: 'Aprobar',
+                                })
+                                if (ok) aprobarEdicion.mutate(r.id)
                               }}
                               className="h-8 gap-1 px-2 text-xs"
                             >

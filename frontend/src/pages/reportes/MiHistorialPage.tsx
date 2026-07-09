@@ -12,7 +12,8 @@ import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { StatCard } from '../../components/ui/StatCard'
-import { ChevronLeft, ChevronRight, Eye, Edit, PenLine, UserCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Edit, PenLine, UserCircle, LifeBuoy } from 'lucide-react'
+import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0))
@@ -152,6 +153,8 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
     }
   })
 
+  const confirmDialog = useConfirmDialog()
+
   // Monday of current week logic
   const checkEsEstaSemana = (fechaStr: string) => {
     const date = new Date(fechaStr + 'T00:00:00')
@@ -287,8 +290,15 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
                               variant="glassSuccess"
                               className="w-full mt-1 font-bold text-[10px] h-7 gap-1"
                               disabled={procesandoId === item.id || recuperarTardanza.isPending}
-                              onClick={() => {
-                                if (window.confirm(`¿Recuperar Tardanza?\n\nSe perdonarán tus ${tardeEntradaBruta} minutos de tardanza de este día.\n\n⚠️ Ese tiempo se descontará automáticamente de tu tiempo de refrigerio de HOY.\n\nNota: Solo puedes usar esto 1 vez por semana.`)) {
+                              onClick={async () => {
+                                const ok = await confirmDialog({
+                                  title: '¿Recuperar Tardanza?',
+                                  description: `Se perdonarán tus ${tardeEntradaBruta} minutos de tardanza de este día.\n⚠️ Ese tiempo se descontará automáticamente de tu tiempo de refrigerio de HOY.\nNota: Solo puedes usar esto 1 vez por semana.`,
+                                  intent: 'success',
+                                  icon: LifeBuoy,
+                                  confirmLabel: 'Recuperar',
+                                })
+                                if (ok) {
                                   setProcesandoId(item.id)
                                   recuperarTardanza.mutate({ asistenciaId: item.id, minutos: tardeEntradaBruta })
                                 }
