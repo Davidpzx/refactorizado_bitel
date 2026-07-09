@@ -15,8 +15,24 @@ export const postulacionesApi = {
   eliminar: (id: number) =>
     api.delete(`/v1/postulaciones/${id}`),
 
-  enviarPublica: (data: PostulacionPublicaPayload) =>
-    api.post<Postulacion>('/v1/postulaciones', data).then((r) => r.data),
+  enviarPublica: (data: PostulacionPublicaPayload) => {
+    const fd = new FormData()
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined || value === null) continue
+      if (key === 'foto_perfil' || key === 'foto_dni') {
+        fd.append(key, value as File)
+      } else if (Array.isArray(value)) {
+        fd.append(key, JSON.stringify(value))
+      } else if (typeof value === 'boolean') {
+        fd.append(key, value ? '1' : '0')
+      } else {
+        fd.append(key, String(value))
+      }
+    }
+    return api.post<Postulacion>('/v1/postulaciones', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
 
   tiendas: () =>
     api.get<{ id: number; nombre: string; codigo: string }[]>('/v1/postulaciones/tiendas').then((r) => r.data),

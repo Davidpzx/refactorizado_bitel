@@ -26,6 +26,13 @@ class PostulanteController extends Controller
             return response()->json(['success' => false, 'message' => 'Nombres y apellidos son obligatorios.'], 422);
         }
 
+        try {
+            $fotoPerfil = $this->procesarDocumento($request, 'foto_perfil', permitirPdf: false);
+            $fotoDni    = $this->procesarDocumento($request, 'foto_dni', permitirPdf: true);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
         $yaExiste = DB::table('postulantes_temp')
             ->where('dni', $dni)
             ->where('estado', 'PENDIENTE')
@@ -80,6 +87,8 @@ class PostulanteController extends Controller
             'antecedentes_policial'  => (bool) $request->input('antecedentes_policial', false),
             'antecedentes_judicial'  => (bool) $request->input('antecedentes_judicial', false),
             'contactos_emergencia'   => json_encode($contactos, JSON_UNESCAPED_UNICODE),
+            'foto_perfil'            => $fotoPerfil,
+            'foto_dni'               => $fotoDni,
             'estado'                 => 'PENDIENTE',
             'created_at'             => now(),
             'updated_at'             => now(),
@@ -285,6 +294,82 @@ class PostulanteController extends Controller
         if (is_array($val)) return json_encode($val, JSON_UNESCAPED_UNICODE);
         $decoded = json_decode((string)$val, true);
         return $decoded !== null ? $val : '[]';
+    }
+
+    /**
+     * Puerto de la validación/compresión de foto_perfil y foto_dni de
+     * public_onboarding.php. Sin archivo → null (no es obligatorio server-side,
+     * igual que el legacy). Formato inválido o tamaño excedido → excepción.
+     */
+    private function procesarDocumento(Request $request, string $campo, bool $permitirPdf): ?string
+    {
+        if (! $request->hasFile($campo)) {
+            return null;
+        }
+
+        $archivo = $request->file($campo);
+        if (! $archivo->isValid()) {
+            return null;
+        }
+
+        $mime     = $archivo->getMimeType();
+        $esImagen = in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true);
+        $esPdf    = $permitirPdf && $mime === 'application/pdf';
+
+        if (! $esImagen && ! $esPdf) {
+            throw new \InvalidArgumentException($campo === 'foto_dni'
+                ? 'El DNI debe ser una imagen (JPG/PNG) o un PDF.'
+                : 'La foto de perfil debe ser una imagen (JPG/PNG/WEBP).');
+        }
+
+        $maxBytes = $permitirPdf ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+        if ($archivo->getSize() > $maxBytes) {
+            throw new \InvalidArgumentException("El archivo de {$campo} supera el límite permitido.");
+        }
+
+        if ($esPdf) {
+            return 'data:application/pdf;base64,' . base64_encode(file_get_contents($archivo->getRealPath()));
+        }
+
+        return $this->comprimirImagen($archivo->getRealPath())
+            ?? 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($archivo->getRealPath()));
+    }
+
+    /** Redimensiona a máx 800px y recomprime a JPEG q80 (igual que el legacy). Requiere GD. */
+    private function comprimirImagen(string $tmp, int $maxPx = 800, int $q = 80): ?string
+    {
+        if (! function_exists('imagecreatefromjpeg')) {
+            return null;
+        }
+        $info = @getimagesize($tmp);
+        if (! $info) {
+            return null;
+        }
+        [$w, $h, $tipo] = [$info[0], $info[1], $info[2]];
+
+        $src = match ($tipo) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($tmp),
+            IMAGETYPE_PNG  => @imagecreatefrompng($tmp),
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($tmp) : false,
+            default        => false,
+        };
+        if (! $src) {
+            return null;
+        }
+
+        $ratio = min($maxPx / $w, $maxPx / $h, 1.0);
+        $nw = (int) round($w * $ratio);
+        $nh = (int) round($h * $ratio);
+        $dst = imagecreatetruecolor($nw, $nh);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+
+        ob_start();
+        imagejpeg($dst, null, $q);
+        $data = ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        return 'data:image/jpeg;base64,' . base64_encode($data);
     }
 
     private function datosAgenteDesdePostulante(

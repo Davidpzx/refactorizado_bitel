@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Camera, FileText, IdCard } from 'lucide-react'
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query'
 import { postulacionesApi } from '../services/postulaciones.api'
 import { apiErrorData, apiErrorStatus } from '../lib/httpError'
@@ -49,6 +50,12 @@ function PostulacionForm() {
   const [c3Parentesco, setC3Parentesco]   = useState('')
   const [c3Telefono, setC3Telefono]       = useState('')
 
+  const [fotoPerfil, setFotoPerfil]           = useState<File | null>(null)
+  const [fotoPerfilPreview, setFotoPerfilPreview] = useState('')
+  const [fotoDni, setFotoDni]                 = useState<File | null>(null)
+  const [fotoDniPreview, setFotoDniPreview]   = useState('')
+  const [fotoDniEsPdf, setFotoDniEsPdf]       = useState(false)
+
   const enviar = useMutation({
     mutationFn: (payload: PostulacionPublicaPayload) => postulacionesApi.enviarPublica(payload),
     onSuccess: () => { setEnviado(true) },
@@ -75,6 +82,30 @@ function PostulacionForm() {
   const removeExperiencia = (i: number) => setExperiencia((p) => p.filter((_, idx) => idx !== i))
   const updateExperiencia = (i: number, field: keyof ExperienciaItem, val: string) =>
     setExperiencia((p) => p.map((row, idx) => idx === i ? { ...row, [field]: val } : row))
+
+  const onFotoPerfil = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivo = e.target.files?.[0] ?? null
+    setFotoPerfil(archivo)
+    if (!archivo) { setFotoPerfilPreview(''); return }
+    const reader = new FileReader()
+    reader.onload = (ev) => setFotoPerfilPreview(String(ev.target?.result ?? ''))
+    reader.readAsDataURL(archivo)
+  }
+
+  const onFotoDni = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivo = e.target.files?.[0] ?? null
+    setFotoDni(archivo)
+    if (!archivo) { setFotoDniPreview(''); setFotoDniEsPdf(false); return }
+    if (archivo.type === 'application/pdf') {
+      setFotoDniEsPdf(true)
+      setFotoDniPreview('')
+      return
+    }
+    setFotoDniEsPdf(false)
+    const reader = new FileReader()
+    reader.onload = (ev) => setFotoDniPreview(String(ev.target?.result ?? ''))
+    reader.readAsDataURL(archivo)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,6 +141,8 @@ function PostulacionForm() {
       contacto_nombre_3:     c3Nombre     || undefined,
       contacto_parentesco_3: c3Parentesco || undefined,
       contacto_telefono_3:   c3Telefono   || undefined,
+      foto_perfil: fotoPerfil ?? undefined,
+      foto_dni:    fotoDni    ?? undefined,
     }
     enviar.mutate(payload)
   }
@@ -378,6 +411,48 @@ function PostulacionForm() {
               </Field>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section title="Documentos requeridos">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Foto de perfil * (JPG/PNG/WEBP · máx 5 MB)">
+            <label className={inputCls + ' flex cursor-pointer items-center gap-2'}>
+              <Camera size={16} className="shrink-0 text-gray-400" />
+              <span className="truncate text-gray-500">{fotoPerfil?.name ?? 'Seleccionar archivo...'}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                onChange={onFotoPerfil}
+                className="hidden"
+              />
+            </label>
+            {fotoPerfilPreview && (
+              <img src={fotoPerfilPreview} alt="Foto de perfil" className="mt-2 max-h-32 rounded-lg border border-gray-200/60 object-cover dark:border-white/10" />
+            )}
+          </Field>
+          <Field label="DNI, imagen o PDF * (máx 10 MB)">
+            <label className={inputCls + ' flex cursor-pointer items-center gap-2'}>
+              <IdCard size={16} className="shrink-0 text-gray-400" />
+              <span className="truncate text-gray-500">{fotoDni?.name ?? 'Seleccionar archivo...'}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                required
+                onChange={onFotoDni}
+                className="hidden"
+              />
+            </label>
+            {fotoDniPreview && (
+              <img src={fotoDniPreview} alt="DNI" className="mt-2 max-h-32 rounded-lg border border-gray-200/60 object-cover dark:border-white/10" />
+            )}
+            {fotoDniEsPdf && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-indigo-500">
+                <FileText size={16} /> PDF seleccionado
+              </div>
+            )}
+          </Field>
         </div>
       </Section>
 

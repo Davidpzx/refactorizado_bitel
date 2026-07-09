@@ -31,6 +31,8 @@ export interface Postulacion {
   contacto_nombre_3: string | null
   contacto_parentesco_3: string | null
   contacto_telefono_3: string | null
+  foto_perfil: string | null
+  foto_dni: string | null
   estado: EstadoPostulacion
   notas_admin: string | null
   created_at: string
@@ -94,4 +96,6 @@ export interface PostulacionPublicaPayload {
   contacto_nombre_3?: string
   contacto_parentesco_3?: string
   contacto_telefono_3?: string
+  foto_perfil?: File
+  foto_dni?: File
 }

@@ -215,6 +215,14 @@ function DetallePostulacion({
       )}
 
       <section>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Documentos</h3>
+        <div className="flex flex-wrap gap-4">
+          <DocumentoPreview titulo="Foto de perfil" valor={p.foto_perfil} />
+          <DocumentoPreview titulo="DNI" valor={p.foto_dni} />
+        </div>
+      </section>
+
+      <section>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-kyro-muted">Contactos de emergencia</h3>
         <div className="space-y-1 text-sm">
           {[1, 2, 3].map((n) => {
@@ -268,6 +276,30 @@ function DetallePostulacion({
           </div>
         </div>
       </section>
+    </div>
+  )
+}
+
+function DocumentoPreview({ titulo, valor }: { titulo: string; valor: string | null | undefined }) {
+  if (!valor) {
+    return (
+      <div>
+        <h4 className="mb-1 text-[0.65rem] font-bold uppercase tracking-wider text-kyro-muted">{titulo}</h4>
+        <p className="text-xs text-kyro-muted">Sin documento.</p>
+      </div>
+    )
+  }
+  const esPdf = valor.startsWith('data:application/pdf')
+  return (
+    <div>
+      <h4 className="mb-1 text-[0.65rem] font-bold uppercase tracking-wider text-kyro-muted">{titulo}</h4>
+      {esPdf ? (
+        <a href={valor} download={`${titulo}.pdf`} className="text-xs font-semibold text-kyro-gold">
+          Descargar PDF
+        </a>
+      ) : (
+        <img src={valor} alt={titulo} className="max-h-36 rounded-lg border border-kyro-border object-cover" />
+      )}
     </div>
   )
 }
