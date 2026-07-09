@@ -212,6 +212,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Greenter `comprobantes`. La NC/anulación SOLO encolan o confirman contra la
     // API; nunca cambian el estado local antes de que la API responda.
     Route::middleware('role:admin')->group(function () {
+        Route::get('comprobantes-cola',                       [ComprobanteColaController::class, 'index']);
         Route::post('comprobantes-cola/{id}/nota-credito',   [ComprobanteColaController::class, 'notaCredito']);
         Route::post('comprobantes-cola/{id}/anular',         [ComprobanteColaController::class, 'anular']);
         Route::get('comprobantes-cola/{id}/descargar/{tipo}', [ComprobanteColaController::class, 'descargar']);

@@ -9,6 +9,7 @@ use App\Services\Facturacion\CpeLinkService;
 use App\Services\Facturacion\FacturacionApiClient;
 use App\Services\Facturacion\ProcesadorColaComprobantes;
 use App\Services\Facturacion\ResultadoProceso;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -36,6 +37,47 @@ class ComprobanteColaController extends Controller
         $resultado = $this->procesador->procesar($this->filaDe($request));
 
         return response()->json($this->respuesta($resultado));
+    }
+
+    /**
+     * Listado de la cola con filtros. Port de `gerencia/comprobantes_emitidos.php`.
+     *
+     * A diferencia del legacy (LIMIT 200 sin paginar), esto pagina de verdad: la
+     * cola crece sin techo y el gerente necesita poder ir hacia atrás en el tiempo.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $datos = $request->validate([
+            'estado' => ['sometimes', 'string', Rule::in([
+                ComprobanteCola::ESTADO_PENDIENTE,
+                ComprobanteCola::ESTADO_ENVIADO,
+                ComprobanteCola::ESTADO_ACEPTADO,
+                ComprobanteCola::ESTADO_RECHAZADO,
+                ComprobanteCola::ESTADO_ANULADO,
+                ComprobanteCola::ESTADO_ERROR,
+            ])],
+            'tipo_comprobante' => ['sometimes', 'string', Rule::in([
+                ComprobanteCola::TIPO_BOLETA,
+                ComprobanteCola::TIPO_FACTURA,
+                ComprobanteCola::TIPO_NOTA_CREDITO,
+            ])],
+            'tienda_id' => ['sometimes', 'string', 'max:20'],
+            'desde'     => ['sometimes', 'date'],
+            'hasta'     => ['sometimes', 'date'],
+            'per_page'  => ['sometimes', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        $cola = ComprobanteCola::query()
+            ->when($datos['estado'] ?? null, fn (Builder $q, string $v) => $q->where('estado', $v))
+            ->when($datos['tipo_comprobante'] ?? null, fn (Builder $q, string $v) => $q->where('tipo_comprobante', $v))
+            ->when($datos['tienda_id'] ?? null, fn (Builder $q, string $v) => $q->where('tienda_id', $v))
+            ->when($datos['desde'] ?? null, fn (Builder $q, string $v) => $q->where('creado_en', '>=', $v.' 00:00:00'))
+            ->when($datos['hasta'] ?? null, fn (Builder $q, string $v) => $q->where('creado_en', '<=', $v.' 23:59:59'))
+            ->latest('creado_en')
+            ->paginate($datos['per_page'] ?? 20)
+            ->withQueryString();
+
+        return response()->json($cola);
     }
 
     /**

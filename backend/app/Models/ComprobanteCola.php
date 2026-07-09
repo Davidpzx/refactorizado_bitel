@@ -75,6 +75,9 @@ class ComprobanteCola extends Model
         'max_intentos' => 8,
     ];
 
+    /** El listado de la cola (gerencia) necesita el número armado sin un accessor manual en el controller. */
+    protected $appends = ['numero_completo'];
+
     protected $casts = [
         'venta_id'                => 'integer',
         'reporte_id'              => 'integer',
