@@ -4,7 +4,7 @@ import { bipayCajeroApi } from '../services/bipayCajero.api'
 import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { RefreshCw, Lock } from 'lucide-react'
+import { ArrowsClockwise as RefreshCw, Lock } from '@phosphor-icons/react'
 
 function fmt(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—'

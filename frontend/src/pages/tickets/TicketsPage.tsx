@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
-import { FileSpreadsheet, Pencil, Printer, Ticket as TicketIcon, Trash2, Ban } from 'lucide-react'
+import { FileXls as FileSpreadsheet, PencilSimple as Pencil, Printer, Ticket as TicketIcon, Trash as Trash2, Prohibit as Ban } from '@phosphor-icons/react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'

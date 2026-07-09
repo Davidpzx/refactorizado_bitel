@@ -5,14 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
-import {
-  LayoutDashboard, History, BarChart2, CircleDollarSign, QrCode, CalendarCheck,
-  Users, DollarSign, Package, BookOpen, Building2, IdCard, Handshake, Wallet, Settings2,
-  UserCog, Store, LogOut, Bell, ChevronLeft, ChevronRight,
-  ClipboardList, Menu, Receipt, Sun, Moon, ArrowLeftRight,
-  Cpu, Landmark, Stethoscope, UserCheck, Ticket, ScrollText, Megaphone, Signal, MapPin,
-  Plug,
-} from 'lucide-react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ClipboardText as ClipboardList, List as Menu, Receipt, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -218,7 +211,7 @@ export function AppLayout() {
                   title="Centro de Control"
                   className={`relative flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
                 >
-                  <Bell size={14} />
+                  <Bell size={14} weight={ccAlertCount > 0 ? 'fill' : 'regular'} />
                   {ccAlertCount > 0 && (
                     <span className="badge-pulse absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 flex items-center justify-center text-[8px] font-bold rounded-full text-white"
                       style={{ background: '#ef4444' }}>
@@ -376,7 +369,7 @@ export function AppLayout() {
                 }}
               >
                 <span className="flex items-center gap-2">
-                  <Bell size={13} />
+                  <Bell size={13} weight={notifCount > 0 ? 'fill' : 'regular'} />
                   Notificaciones
                 </span>
                 {notifCount > 0 && (
@@ -486,7 +479,7 @@ export function AppLayout() {
                   title="Centro de Control"
                   className={`relative p-1.5 rounded-md transition-colors ${mobileMenuCls}`}
                 >
-                  <Bell size={16} />
+                  <Bell size={16} weight={ccAlertCount > 0 ? 'fill' : 'regular'} />
                   {ccAlertCount > 0 && (
                     <span className="badge-pulse absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[8px] font-bold rounded-full text-white"
                       style={{ background: '#ef4444' }}>

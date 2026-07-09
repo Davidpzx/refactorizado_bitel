@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { MagnifyingGlass as Search } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import {
   useReactTable,

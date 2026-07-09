@@ -1,4 +1,4 @@
-import { Eye, Trash2, UserCheck } from 'lucide-react'
+import { Eye, Trash as Trash2, UserCheck } from '@phosphor-icons/react'
 import { useState } from 'react'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import {

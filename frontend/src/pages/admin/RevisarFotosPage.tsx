@@ -4,7 +4,7 @@ import { adminPaginasApi, type FotoPendienteItem } from '../../services/adminPag
 import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Camera } from 'lucide-react'
+import { Camera } from '@phosphor-icons/react'
 
 function srcFoto(foto: string): string {
   return foto.startsWith('data:') ? foto : `data:image/jpeg;base64,${foto}`

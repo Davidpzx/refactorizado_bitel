@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertTriangle, Info } from 'lucide-react'
+import { Warning as AlertTriangle, Info } from '@phosphor-icons/react'
 
 export type AlertBannerTone = 'danger' | 'warning' | 'info'
 

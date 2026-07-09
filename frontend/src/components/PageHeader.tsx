@@ -9,7 +9,7 @@ interface PageHeaderProps {
   /** Acento del ícono / barrita lateral; por defecto oro Kyro */
   accent?: string
   /**
-   * Ícono (lucide) a la izquierda del título, estilo legacy (`ph-fill`).
+   * Ícono (phosphor) a la izquierda del título, estilo legacy (`ph-fill`).
    * Cuando se pasa, reemplaza la barra vertical de acento.
    */
   Icon?: ComponentType<{ size?: number | string; className?: string }>

@@ -9,7 +9,7 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { StatCard } from '../../components/ui/StatCard'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { AlertTriangle, Filter, Handshake, RotateCcw, Search } from 'lucide-react'
+import { Warning as AlertTriangle, Funnel as Filter, Handshake, ArrowCounterClockwise as RotateCcw, MagnifyingGlass as Search } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const DIAS_ALERTA_AMARILLA = 15

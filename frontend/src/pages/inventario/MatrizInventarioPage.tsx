@@ -6,7 +6,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { ArrowLeft, LayoutGrid } from 'lucide-react'
+import { ArrowLeft, GridFour as LayoutGrid } from '@phosphor-icons/react'
 
 interface TiendaInfo {
   codigo: string

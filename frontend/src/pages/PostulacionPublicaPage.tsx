@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, FileText, IdCard } from 'lucide-react'
+import { Camera, FileText, IdentificationCard as IdCard } from '@phosphor-icons/react'
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query'
 import { postulacionesApi } from '../services/postulaciones.api'
 import { apiErrorData, apiErrorStatus } from '../lib/httpError'

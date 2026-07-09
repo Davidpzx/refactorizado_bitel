@@ -12,7 +12,7 @@ import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { StatCard } from '../../components/ui/StatCard'
-import { Download, TrendingUp, BarChart2, Search } from 'lucide-react'
+import { DownloadSimple as Download, ChartLineUp as TrendingUp, ChartBar as BarChart2, MagnifyingGlass as Search } from '@phosphor-icons/react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 

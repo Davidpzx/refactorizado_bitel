@@ -9,7 +9,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
-import { AlertTriangle, Wallet, ArrowRightLeft, RefreshCw, CreditCard, Layers, CheckCircle2, XCircle, Send, SlidersHorizontal, Pencil, Trash2, Scale, Lock, Link2, FileSpreadsheet, BellRing } from 'lucide-react'
+import { Warning as AlertTriangle, Wallet, ArrowsLeftRight as ArrowRightLeft, ArrowsClockwise as RefreshCw, CreditCard, Stack as Layers, SealCheck as CheckCircle2, XCircle, PaperPlaneTilt as Send, SlidersHorizontal, PencilSimple as Pencil, Trash as Trash2, Scales as Scale, Lock, Link as Link2, FileXls as FileSpreadsheet, BellRinging as BellRing } from '@phosphor-icons/react'
 import { CuadreBitelPanel } from './CuadreBitelPage'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 

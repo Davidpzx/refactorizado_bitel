@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Download, RotateCcw, ClipboardList } from 'lucide-react'
+import { DownloadSimple as Download, ArrowCounterClockwise as RotateCcw, ClipboardText as ClipboardList } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader } from '../../components/PageHeader'

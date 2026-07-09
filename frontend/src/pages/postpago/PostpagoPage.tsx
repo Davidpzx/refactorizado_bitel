@@ -12,7 +12,7 @@ import { PageTabs } from '../../components/ui/PageTabs'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { StatCard } from '../../components/ui/StatCard'
-import { FileSpreadsheet, AlertTriangle, TrendingUp, Phone, RefreshCw, Zap, Star, Signal } from 'lucide-react'
+import { FileXls as FileSpreadsheet, Warning as AlertTriangle, ChartLineUp as TrendingUp, Phone, ArrowsClockwise as RefreshCw, Lightning as Zap, Star, CellSignalFull as Signal } from '@phosphor-icons/react'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 

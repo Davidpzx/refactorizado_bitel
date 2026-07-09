@@ -9,7 +9,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { ChevronLeft, ChevronRight, Eye, FileSpreadsheet, CheckCircle, XCircle, Pencil, Trash2, Wallet, TrendingUp, Scale, Banknote } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Eye, FileXls as FileSpreadsheet, CheckCircle, XCircle, PencilSimple as Pencil, Trash as Trash2, Wallet, ChartLineUp as TrendingUp, Scales as Scale, Money as Banknote } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'
 import { Select } from '../../components/ui/select'

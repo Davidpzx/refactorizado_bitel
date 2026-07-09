@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Send, Trash2, FileCheck, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
+import { ArrowsClockwise as RefreshCw, PaperPlaneTilt as Send, Trash as Trash2, Receipt as FileCheck, WarningCircle as AlertCircle, Clock, SealCheck as CheckCircle2 } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'

@@ -12,7 +12,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
-import { AlertCircle, AlertTriangle, Camera, CheckCircle, Clock, Download, Pencil, UserCheck, UserX, ClipboardList, CalendarRange, Receipt } from 'lucide-react'
+import { WarningCircle as AlertCircle, Warning as AlertTriangle, Camera, CheckCircle, Clock, DownloadSimple as Download, PencilSimple as Pencil, UserCheck, UserMinus as UserX, ClipboardText as ClipboardList, CalendarDots as CalendarRange, Receipt } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']

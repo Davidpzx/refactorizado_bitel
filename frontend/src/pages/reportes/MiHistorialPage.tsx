@@ -12,7 +12,7 @@ import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { StatCard } from '../../components/ui/StatCard'
-import { ChevronLeft, ChevronRight, Eye, Edit, PenLine, UserCircle, LifeBuoy } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Eye, NotePencil as Edit, Signature as PenLine, UserCircle, Lifebuoy as LifeBuoy } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })

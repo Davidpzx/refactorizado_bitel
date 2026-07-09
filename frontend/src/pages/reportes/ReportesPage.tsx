@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { Eye, Trash2, ClipboardList } from 'lucide-react'
+import { Eye, Trash as Trash2, ClipboardText as ClipboardList } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { Reporte } from '../../types/reporte'
 

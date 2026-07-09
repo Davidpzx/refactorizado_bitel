@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Cpu, Trash2 } from 'lucide-react'
+import { Cpu, Trash as Trash2 } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'

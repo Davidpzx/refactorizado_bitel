@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
-import { AlertTriangle, CheckCircle2, Info, KeyRound } from 'lucide-react'
+import type { Icon as LucideIcon } from '@phosphor-icons/react'
+import { Warning as AlertTriangle, SealCheck as CheckCircle2, Info, Keyhole as KeyRound } from '@phosphor-icons/react'
 import { Dialog } from './dialog'
 import { Button } from './button'
 
@@ -71,7 +71,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
         <Dialog open onClose={() => close(false)} title={pending.title} maxWidth="sm">
           <div className="flex flex-col items-center gap-4 py-1 text-center">
             <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border ${INTENT_ICON_WRAP[intent]}`}>
-              <Icon size={22} strokeWidth={2.25} />
+              <Icon size={22} weight="bold" />
             </div>
             {pending.description && (
               <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600 dark:text-zinc-400">

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { ChartLineUp as TrendingUp } from '@phosphor-icons/react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 

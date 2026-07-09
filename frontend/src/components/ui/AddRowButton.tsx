@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@phosphor-icons/react'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string
@@ -33,7 +33,7 @@ export function AddRowButton({
       ].join(' ')}
       {...props}
     >
-      <Plus size={16} strokeWidth={2.5} />
+      <Plus size={16} weight="bold" />
       {label}
     </button>
   )

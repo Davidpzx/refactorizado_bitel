@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Printer, FileCheck, X } from 'lucide-react'
+import { Printer, Receipt as FileCheck, X } from '@phosphor-icons/react'
 import { api } from '../../../services/api'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'

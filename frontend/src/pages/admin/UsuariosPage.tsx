@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { Building2, KeyRound, Landmark, Pencil, Plus, Search, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react'
+import { Buildings as Building2, Keyhole as KeyRound, Bank as Landmark, PencilSimple as Pencil, Plus, MagnifyingGlass as Search, ShieldCheck, Trash as Trash2, UserCircle as UserRound, Users } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import {
   sanitizarNombreUsuario,

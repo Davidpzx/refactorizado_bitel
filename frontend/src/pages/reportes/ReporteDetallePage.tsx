@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, FileText, FileSpreadsheet, CheckCircle } from 'lucide-react'
+import { CaretLeft as ChevronLeft, FileText, FileXls as FileSpreadsheet, CheckCircle } from '@phosphor-icons/react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'

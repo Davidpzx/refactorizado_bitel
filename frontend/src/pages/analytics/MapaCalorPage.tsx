@@ -4,7 +4,7 @@ import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { GlassPanel } from '../../components/ui/GlassPanel'
-import { MapPin, CalendarDays, Clock, RefreshCw } from 'lucide-react'
+import { MapPin, CalendarBlank as CalendarDays, Clock, ArrowsClockwise as RefreshCw } from '@phosphor-icons/react'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 

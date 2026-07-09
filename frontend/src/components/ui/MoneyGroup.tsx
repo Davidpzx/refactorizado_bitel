@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CircleDollarSign } from 'lucide-react'
+import { CurrencyCircleDollar as CircleDollarSign } from '@phosphor-icons/react'
 import { StatCard } from './StatCard'
 
 export interface MoneyGroupItem {

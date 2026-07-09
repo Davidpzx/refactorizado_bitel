@@ -16,7 +16,7 @@ import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { StatCard } from '../../components/ui/StatCard'
-import { TrendingUp, Users, CheckCircle, XCircle, MessageSquare, Megaphone, Star, MessageCircle, Trash2 } from 'lucide-react'
+import { ChartLineUp as TrendingUp, Users, CheckCircle, XCircle, ChatText as MessageSquare, Megaphone, Star, ChatCircle as MessageCircle, Trash as Trash2 } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { ComponentType } from 'react'
 import {

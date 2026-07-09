@@ -5,7 +5,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { StatCard } from '../../components/ui/StatCard'
 import { Select } from '../../components/ui/select'
 import { Label } from '../../components/ui/label'
-import { Clock, TrendingDown, ShieldOff, DollarSign } from 'lucide-react'
+import { Clock, ChartLineDown as TrendingDown, ShieldSlash as ShieldOff, CurrencyDollar as DollarSign } from '@phosphor-icons/react'
 
 interface AgenteOption {
   id: number

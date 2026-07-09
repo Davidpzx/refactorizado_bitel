@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { CreditCard, AlertTriangle, CheckCircle } from 'lucide-react'
+import { CreditCard, Warning as AlertTriangle, CheckCircle } from '@phosphor-icons/react'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
 

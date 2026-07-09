@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { AlertTriangle, LocateFixed, MapPin, Pencil, Plus, Search, Store, Trash2 } from 'lucide-react'
+import { Warning as AlertTriangle, Crosshair as LocateFixed, MapPin, PencilSimple as Pencil, Plus, MagnifyingGlass as Search, Storefront as Store, Trash as Trash2 } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import {
   sanitizarCodigo,

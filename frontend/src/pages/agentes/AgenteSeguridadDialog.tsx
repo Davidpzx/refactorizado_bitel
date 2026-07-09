@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Eye, EyeOff, RefreshCw, Ban, Smartphone, Infinity as InfinityIcon, CalendarCheck } from 'lucide-react'
+import { Copy, Check, Eye, EyeSlash as EyeOff, ArrowsClockwise as RefreshCw, Prohibit as Ban, DeviceMobile as Smartphone, Infinity as InfinityIcon, CalendarCheck } from '@phosphor-icons/react'
 import { Dialog } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'

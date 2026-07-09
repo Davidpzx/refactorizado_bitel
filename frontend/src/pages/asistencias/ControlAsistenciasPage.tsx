@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { Input } from '../../components/ui/input'
-import { ArrowLeft, CalendarCheck } from 'lucide-react'
+import { ArrowLeft, CalendarCheck } from '@phosphor-icons/react'
 
 interface CeldaMatriz {
   fecha: string

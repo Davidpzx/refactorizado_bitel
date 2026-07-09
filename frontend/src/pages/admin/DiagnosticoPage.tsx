@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { Badge } from '../../components/ui/badge'
 import { PageHeader } from '../../components/PageHeader'
-import { Stethoscope } from 'lucide-react'
+import { Stethoscope } from '@phosphor-icons/react'
 
 interface DiagnosticoSesion {
   user_id: number

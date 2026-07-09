@@ -1,11 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  AlertTriangle, Bell, TrendingDown, TrendingUp, Pencil, X, Eye, CheckCircle,
-  FileSpreadsheet, LayoutDashboard, Store, Users, FilePlus2, Wallet, FileText,
-  Zap, CreditCard, Landmark, RotateCcw, Search,
-} from 'lucide-react'
+import { Warning as AlertTriangle, Bell, ChartLineDown as TrendingDown, ChartLineUp as TrendingUp, PencilSimple as Pencil, X, Eye, CheckCircle, FileXls as FileSpreadsheet, SquaresFour as LayoutDashboard, Storefront as Store, Users, FilePlus as FilePlus2, Wallet, FileText, Lightning as Zap, CreditCard, Bank as Landmark, ArrowCounterClockwise as RotateCcw, MagnifyingGlass as Search } from '@phosphor-icons/react'
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
@@ -271,7 +267,7 @@ export function DashboardPage() {
               className="relative flex h-9 items-center gap-2 rounded-lg border border-red-200/70 bg-white/80 px-3 text-xs font-semibold text-red-600/90 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-red-500/20 dark:bg-zinc-900/65 dark:text-red-400/90"
               title="Reportes con anomalías"
             >
-              <Bell size={18} />
+              <Bell size={18} weight={anomaliasCount > 0 ? 'fill' : 'regular'} />
               <span>Anomalías</span>
               {anomaliasCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-0.5">

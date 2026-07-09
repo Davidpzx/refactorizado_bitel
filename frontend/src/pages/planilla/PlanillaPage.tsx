@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { format, startOfMonth } from 'date-fns'
-import { ChevronDown, ChevronUp, DollarSign, FileText, RotateCcw } from 'lucide-react'
+import { CaretDown as ChevronDown, CaretUp as ChevronUp, CurrencyDollar as DollarSign, FileText, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react'
 import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } from '../../hooks/usePlanilla'
 import { PageHeader } from '../../components/PageHeader'
 import { StatCard } from '../../components/ui/StatCard'

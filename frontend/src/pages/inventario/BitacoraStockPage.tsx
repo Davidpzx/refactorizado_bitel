@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { StatCard } from '../../components/ui/StatCard'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Activity, Store, Users, Search, Download, BookOpen } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, ChartLineUp as TrendingUp, ChartLineDown as TrendingDown, Pulse as Activity, Storefront as Store, Users, MagnifyingGlass as Search, DownloadSimple as Download, BookOpen } from '@phosphor-icons/react'
 
 interface BitacoraKpis {
   total_mov: number

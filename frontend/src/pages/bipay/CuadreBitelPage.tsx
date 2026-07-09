@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, BellRing } from 'lucide-react'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, BellRinging as BellRing } from '@phosphor-icons/react'
 import { Button } from '../../components/ui/button'
 import {
   cuadreBitelApi, auditoriaBipayApi, integradorApi,

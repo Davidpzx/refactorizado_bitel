@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '../../components/PageHeader'
 import { integradorApi, type CredencialTienda } from '../../services/integradorBitel.api'
 import { apiErrorData } from '../../lib/httpError'
-import { Plug, KeyRound } from 'lucide-react'
+import { Plugs as Plug, Keyhole as KeyRound } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 function EstadoAgente({ estado }: { estado: CredencialTienda['estado_agente'] }) {

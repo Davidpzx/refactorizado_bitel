@@ -11,7 +11,7 @@ import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { ClienteForm } from './ClienteForm'
 import type { Cliente } from '../../types/cliente'
-import { Pencil, Plus, Search, Trash2, UsersRound } from 'lucide-react'
+import { PencilSimple as Pencil, Plus, MagnifyingGlass as Search, Trash as Trash2, UsersFour as UsersRound } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 type BadgeVariant = 'default' | 'warning' | 'outline'

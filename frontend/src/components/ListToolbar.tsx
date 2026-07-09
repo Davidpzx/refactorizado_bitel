@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal } from '@phosphor-icons/react'
 
 interface ListToolbarProps {
   children: ReactNode

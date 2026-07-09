@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
-import { ArrowRightLeft, Check, XCircle, Undo2 } from 'lucide-react'
+import { ArrowsLeftRight as ArrowRightLeft, Check, XCircle, ArrowUUpLeft as Undo2 } from '@phosphor-icons/react'
 import { Dialog } from '../../components/ui/dialog'
 import { useConfirmDialog, type ConfirmIntent } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'

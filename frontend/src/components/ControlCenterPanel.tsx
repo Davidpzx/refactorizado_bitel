@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  AlertTriangle, ArrowLeftRight, BellRing, Check, X, Trash2,
-  TrendingDown, ShieldAlert, Inbox,
-} from 'lucide-react'
+import { Warning as AlertTriangle, ArrowsLeftRight as ArrowLeftRight, BellRinging as BellRing, Check, X, Trash as Trash2, ChartLineDown as TrendingDown, ShieldWarning as ShieldAlert, Tray as Inbox } from '@phosphor-icons/react'
 import { controlCenterApi, type ControlCenterResponse, type TrasladoAccion } from '../services/controlCenter.api'
 
 interface Props {
@@ -159,7 +156,7 @@ export function ControlCenterPanel({ cc, isDark, onClose }: Props) {
         </Section>
 
         {/* Notificaciones del sistema */}
-        <Section icon={<BellRing size={13} />} title="Notificaciones" count={notifs.length} accent={isDark ? '#a78bfa' : '#7c3aed'} sectionLabel={sectionLabel}>
+        <Section icon={<BellRing size={13} weight={notifs.length > 0 ? 'fill' : 'regular'} />} title="Notificaciones" count={notifs.length} accent={isDark ? '#a78bfa' : '#7c3aed'} sectionLabel={sectionLabel}>
           {notifs.map((n) => {
             const key = `notif-${n.id}`
             const busy = busyId === key && notif.isPending
