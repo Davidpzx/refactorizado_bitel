@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\ControlCenterController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DniController;
 use App\Http\Controllers\Api\EstadisticasController;
+use App\Http\Controllers\Api\FacturacionConfigController;
 use App\Http\Controllers\Api\HistorialController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\LeadController;
@@ -184,6 +185,18 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('configuracion',             [ConfiguracionController::class, 'update'])->middleware('role:admin');
     Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo'])->middleware('role:admin');
     Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo'])->middleware('role:admin');
+
+    // ── Facturación electrónica — configuración multi-emisor ──────────────────
+    // `configure-sunat` va antes del wildcard `{facturacionConfig}` para que no
+    // lo capture como id.
+    Route::middleware('role:admin')->group(function () {
+        Route::post('facturacion-config/configure-sunat',        [FacturacionConfigController::class, 'configureSunat']);
+        Route::get('facturacion-config',                         [FacturacionConfigController::class, 'index']);
+        Route::post('facturacion-config',                        [FacturacionConfigController::class, 'store']);
+        Route::get('facturacion-config/{facturacionConfig}',     [FacturacionConfigController::class, 'show']);
+        Route::match(['put', 'patch'], 'facturacion-config/{facturacionConfig}', [FacturacionConfigController::class, 'update']);
+        Route::delete('facturacion-config/{facturacionConfig}',  [FacturacionConfigController::class, 'destroy']);
+    });
 
     // ── RENIEC DNI ────────────────────────────────────────────────────────────
     Route::get('dni/{dni}',                 [DniController::class, 'consultar']);
