@@ -147,6 +147,20 @@ html.dark .kyro-glass {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+/* Sidebar — identidad corporativa Bitel en modo claro (azul rgba(0,53,128,0.95)
+   + acentos dorados, calcado del legacy). En dark mantiene exactamente el
+   mismo glass oscuro que .kyro-glass para no tocar el tema oscuro. */
+.kyro-sidebar {
+  background: rgba(0, 53, 128, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 194, 0, 0.18);
+}
+html.dark .kyro-sidebar {
+  background: rgba(9, 9, 11, 0.75);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
 .kyro-card {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(203, 213, 225, 0.72);

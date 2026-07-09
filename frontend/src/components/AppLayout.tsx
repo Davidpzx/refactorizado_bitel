@@ -140,26 +140,31 @@ export function AppLayout() {
     ? { background: '#18181b', borderBottom: '1px solid rgba(255,255,255,0.06)' }
     : { background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }
 
-  const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
-  const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-gray-100'
+  /* Sidebar claro = azul corporativo Bitel rgba(0,53,128,0.95) con acentos
+     dorados (calco del legacy); estos tonos solo aplican dentro del sidebar
+     (.kyro-sidebar) — el resto del tema claro no cambia. Contraste AA
+     verificado sobre el navy efectivo (~rgb(12,63,134)): blanco 10.1:1,
+     dorado #ffc200 6.3:1, red-300 5.3:1, white/75 5.7:1, white/70 5.0:1. */
+  const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-[rgba(255,255,255,0.14)]'
+  const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-[rgba(255,255,255,0.14)]'
 
   const navActive = isDark
     ? 'bg-kyro-elevated text-white border-l-[3px] border-kyro-gold'
-    : 'bg-[rgba(255,194,0,0.12)] text-gray-900 border-l-[3px] border-kyro-gold'
+    : 'bg-[rgba(255,194,0,0.18)] text-kyro-gold border-l-[3px] border-kyro-gold'
   const navInactive = isDark
     ? 'text-kyro-body hover:bg-kyro-elevated/50'
-    : 'text-gray-600 hover:bg-gray-100/70'
+    : 'text-white/85 hover:bg-white/10 hover:text-white'
   const collapseBtnCls  = isDark
     ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800'
-    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-  const userNameCls     = isDark ? 'text-zinc-200' : 'text-gray-800'
-  const userRoleCls     = isDark ? 'text-zinc-600' : 'text-gray-400'
+    : 'text-white/70 hover:text-white hover:bg-white/10'
+  const userNameCls     = isDark ? 'text-zinc-200' : 'text-white'
+  const userRoleCls     = isDark ? 'text-zinc-600' : 'text-white/70'
   const logoutCls       = isDark
     ? 'text-red-400 hover:bg-red-500/10'
-    : 'text-red-500 hover:bg-red-50'
-  const mutedToggleIconCls = isDark ? 'text-zinc-600' : 'text-gray-300'
-  const soonCls         = isDark ? 'text-zinc-700' : 'text-gray-300'
-  const soonBadgeCls    = isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-gray-100 text-gray-400'
+    : 'text-red-300 hover:bg-white/10'
+  const mutedToggleIconCls = isDark ? 'text-zinc-600' : 'text-white/55'
+  const soonCls         = isDark ? 'text-zinc-700' : 'text-white/35'
+  const soonBadgeCls    = isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-white/10 text-white/50'
   const mobileMenuCls   = isDark
     ? 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
@@ -196,7 +201,7 @@ export function AppLayout() {
                 <span className="font-orbitron text-sm font-bold tracking-wide uppercase text-kyro-gold truncate">
                   SIS-KYRO
                 </span>
-                <span className={`text-[9px] uppercase tracking-wide truncate ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>
+                <span className={`text-[9px] uppercase tracking-wide truncate ${isDark ? 'text-zinc-500' : 'text-white/70'}`}>
                   Panel de Gestión
                 </span>
               </span>
@@ -245,7 +250,7 @@ export function AppLayout() {
               <div key={to} ref={(el) => { if (el) navItemRefs.current.set(to, el); else navItemRefs.current.delete(to) }}>
                 {showSeparator && !collapsed && (
                   <div className="pt-3 pb-1 px-3">
-                    <span className="block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide text-kyro-muted">
+                    <span className={`block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide ${isDark ? 'text-kyro-muted' : 'text-white/75'}`}>
                       {sectionLabel(section, userRole)}
                     </span>
                   </div>
@@ -318,7 +323,7 @@ export function AppLayout() {
               {/* Tarjeta de usuario */}
               <div
                 className="rounded-kyro p-2 space-y-2"
-                style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+                style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.08)' }}
               >
                 <div className="flex items-center gap-2">
                   <div
@@ -333,8 +338,8 @@ export function AppLayout() {
                     <span
                       className="inline-block text-[9px] px-1.5 py-0.5 rounded font-semibold mt-0.5"
                       style={{
-                        background: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)',
-                        color: isDark ? '#a5b4fc' : '#4f46e5',
+                        background: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(199,210,254,0.25)',
+                        color: isDark ? '#a5b4fc' : '#eef2ff',
                       }}
                     >
                       {usuario?.tienda_id ?? 'CENTRAL'}
@@ -364,8 +369,8 @@ export function AppLayout() {
                 onClick={() => setCcOpen((o) => !o)}
                 className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
                 style={{
-                  background: isDark ? 'rgba(255,194,0,0.12)' : 'rgba(255,194,0,0.15)',
-                  color: isDark ? '#ffc200' : '#b45309',
+                  background: isDark ? 'rgba(255,194,0,0.12)' : 'rgba(255,194,0,0.16)',
+                  color: '#ffc200',
                 }}
               >
                 <span className="flex items-center gap-2">
@@ -424,7 +429,7 @@ export function AppLayout() {
       {/* Sidebar desktop ────────────────────────────────────────────────── */}
       <aside
         className={[
-          'kyro-glass hidden lg:flex flex-col shrink-0 border border-kyro-border transition-all duration-200',
+          'kyro-sidebar hidden lg:flex flex-col shrink-0 transition-all duration-200',
           collapsed ? 'w-16' : 'w-[260px]',
         ].join(' ')}
       >
@@ -439,7 +444,7 @@ export function AppLayout() {
             onClick={() => setMobileOpen(false)}
           />
           <aside
-            className="kyro-glass relative z-10 flex w-[260px] flex-col border border-kyro-border"
+            className="kyro-sidebar relative z-10 flex w-[260px] flex-col"
           >
             {renderSidebarContent()}
           </aside>
