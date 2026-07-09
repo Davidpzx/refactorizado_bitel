@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   Receipt, Buildings, Certificate, Key, Info, ShieldCheck, Rocket, UploadSimple,
-  CheckCircle, WarningCircle, CaretDown, ListNumbers, FloppyDisk, LockKey,
+  CheckCircle, WarningCircle, CaretDown, ListNumbers, FloppyDisk, LockKey, ImageSquare,
 } from '@phosphor-icons/react'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/ui/button'
@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
-import { useFacturacionConfigs, useGuardarFacturacionConfig, useConfigurarSunat } from '../../hooks/useFacturacionConfig'
+import { useFacturacionConfigs, useGuardarFacturacionConfig, useConfigurarSunat, useSyncLogoFacturacion } from '../../hooks/useFacturacionConfig'
 import { apiErrorData } from '../../lib/httpError'
 import type { FacturacionConfig } from '../../services/facturacionConfig.api'
 
@@ -45,6 +45,7 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
   const confirmDialog = useConfirmDialog()
   const guardar = useGuardarFacturacionConfig()
   const configurarSunat = useConfigurarSunat()
+  const syncLogo = useSyncLogoFacturacion()
 
   /* ── Datos del emisor y series ─────────────────────────────────────────── */
   const [emisor, setEmisor] = useState({
@@ -129,6 +130,33 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
       },
       onError: (e) => setActivacionMsg({ tipo: 'error', texto: sunatErrorMessage(e) }),
     })
+  }
+
+  /* ── Sincronizar logo con la API de facturación ─────────────────────────── */
+  const [syncLogoMsg, setSyncLogoMsg] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null)
+
+  const sincronizarLogo = async () => {
+    setSyncLogoMsg(null)
+    if (!claveSol.trim()) {
+      setSyncLogoMsg({ tipo: 'error', texto: 'Ingresa la Clave SOL arriba para poder sincronizar el logo.' })
+      return
+    }
+    const ok = await confirmDialog({
+      title: '¿Sincronizar el logo con el servicio de facturación?',
+      description: 'Se enviará el logo del Perfil de Empresa a la API de facturación. Nota: el PDF oficial del comprobante trae su propio logo fijo — esto solo actualiza los datos de la empresa, no cambia el PDF.',
+      intent: 'indigo',
+      icon: ImageSquare,
+      confirmLabel: 'Sincronizar',
+    })
+    if (!ok) return
+
+    syncLogo.mutate(
+      { claveSol: claveSol.trim(), tiendaId: tiendaSeleccionada || null },
+      {
+        onSuccess: (r) => setSyncLogoMsg({ tipo: 'success', texto: r.msg }),
+        onError: (e) => setSyncLogoMsg({ tipo: 'error', texto: sunatErrorMessage(e) }),
+      },
+    )
   }
 
   /* ── Configuración técnica avanzada ─────────────────────────────────────── */
@@ -255,15 +283,37 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
           </p>
         )}
 
-        <Button
-          variant="gold"
-          className="mt-4 gap-2"
-          disabled={!puedeActivar || configurarSunat.isPending}
-          onClick={activarProduccion}
-        >
-          <UploadSimple size={15} weight="bold" />
-          {configurarSunat.isPending ? 'Activando…' : 'Activar producción'}
-        </Button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button
+            variant="gold"
+            className="gap-2"
+            disabled={!puedeActivar || configurarSunat.isPending}
+            onClick={activarProduccion}
+          >
+            <UploadSimple size={15} weight="bold" />
+            {configurarSunat.isPending ? 'Activando…' : 'Activar producción'}
+          </Button>
+          <Button
+            variant="glassIndigo"
+            className="gap-2"
+            disabled={syncLogo.isPending}
+            onClick={sincronizarLogo}
+          >
+            <ImageSquare size={15} weight="bold" />
+            {syncLogo.isPending ? 'Sincronizando…' : 'Sincronizar logo con facturación'}
+          </Button>
+        </div>
+
+        {syncLogoMsg && (
+          <p className={`mt-3 flex items-start gap-2 text-xs ${syncLogoMsg.tipo === 'success' ? 'text-kyro-success' : 'text-kyro-danger'}`}>
+            {syncLogoMsg.tipo === 'success' ? <CheckCircle size={14} weight="bold" className="mt-0.5 shrink-0" /> : <WarningCircle size={14} weight="bold" className="mt-0.5 shrink-0" />}
+            {syncLogoMsg.texto}
+          </p>
+        )}
+
+        <p className="mt-2 text-[11px] text-kyro-muted">
+          El PDF oficial del comprobante trae su propio logo fijo — sincronizar solo actualiza los datos de la empresa en el servicio de facturación.
+        </p>
       </div>
 
       {/* Datos del emisor y series */}

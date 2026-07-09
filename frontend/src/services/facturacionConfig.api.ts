@@ -52,6 +52,11 @@ export interface ConfigurarSunatResponse {
   config?: FacturacionConfig
 }
 
+export interface SyncLogoFacturacionResponse {
+  ok: boolean
+  msg: string
+}
+
 export const facturacionConfigApi = {
   index: () =>
     api.get<{ data: FacturacionConfig[] }>('/v1/facturacion-config').then((r) => r.data.data),
@@ -65,6 +70,13 @@ export const facturacionConfigApi = {
     api
       .post<ConfigurarSunatResponse>('/v1/facturacion-config/configure-sunat', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data),
+  syncLogoFacturacion: (claveSol: string, tiendaId?: string | null) =>
+    api
+      .post<SyncLogoFacturacionResponse>('/v1/configuracion/sync-logo-facturacion', {
+        clave_sol: claveSol,
+        tienda_id: tiendaId ?? undefined,
       })
       .then((r) => r.data),
 }

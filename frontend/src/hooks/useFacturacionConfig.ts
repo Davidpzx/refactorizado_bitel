@@ -24,3 +24,10 @@ export function useConfigurarSunat() {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }
+
+export function useSyncLogoFacturacion() {
+  return useMutation({
+    mutationFn: ({ claveSol, tiendaId }: { claveSol: string; tiendaId?: string | null }) =>
+      facturacionConfigApi.syncLogoFacturacion(claveSol, tiendaId),
+  })
+}

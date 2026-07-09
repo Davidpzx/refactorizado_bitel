@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\SunatSetupException;
 use App\Http\Controllers\Controller;
+use App\Models\FacturacionConfig;
+use App\Services\Facturacion\SincronizarLogoFacturacionService;
+use App\Services\LogoProcessorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class ConfiguracionController extends Controller
 {
@@ -68,7 +74,7 @@ class ConfiguracionController extends Controller
         return response()->json(['message' => 'Configuración guardada.']);
     }
 
-    public function updateLogo(Request $request): JsonResponse
+    public function updateLogo(Request $request, LogoProcessorService $logoProcessor): JsonResponse
     {
         if (!Schema::hasTable('configuracion_empresa')) {
             return response()->json(['error' => 'Tabla configuracion_empresa no existe.'], 422);
@@ -78,9 +84,13 @@ class ConfiguracionController extends Controller
             'logo' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
-        $mime     = $request->file('logo')->getMimeType();
-        $base64   = base64_encode(file_get_contents($request->file('logo')->getRealPath()));
-        $dataUrl  = "data:{$mime};base64,{$base64}";
+        // Quita el fondo sólido por flood-fill desde las 4 esquinas y redimensiona
+        // a máx. 400px, para que el logo se acople a modo claro/oscuro.
+        $dataUrl = $logoProcessor->procesar($request->file('logo')->getRealPath());
+
+        if ($dataUrl === null) {
+            return response()->json(['error' => 'No se pudo procesar la imagen. Sube un PNG, JPG o WebP válido.'], 422);
+        }
 
         DB::table('configuracion_empresa')
             ->upsert(['id' => 1, 'logo_base64' => $dataUrl], ['id'], ['logo_base64']);
@@ -95,6 +105,54 @@ class ConfiguracionController extends Controller
             ->update(['logo_base64' => null]);
 
         return response()->json(['message' => 'Logo eliminado.']);
+    }
+
+    /**
+     * Envía el logo actual del Perfil de Empresa a la company de la API de
+     * facturación externa (PUT companies, multipart). Port de
+     * `gerencia/ajax_sync_logo_facturacion.php` (legacy).
+     *
+     * Nota conocida (documentada también en la UI): la API tiene el logo del
+     * PDF oficial hardcodeado — este sync cubre los datos de la company, no
+     * cambia el PDF.
+     */
+    public function syncLogoFacturacion(Request $request, SincronizarLogoFacturacionService $sincronizar): JsonResponse
+    {
+        $datos = $request->validate([
+            'tienda_id' => ['nullable', 'string', 'max:20'],
+            'clave_sol' => ['required', 'string', 'max:100'],
+        ]);
+
+        $tiendaId = trim((string) ($datos['tienda_id'] ?? '')) ?: null;
+        $config = FacturacionConfig::paraTienda($tiendaId);
+
+        if ($config === null) {
+            return response()->json([
+                'ok'  => false,
+                'msg' => 'No hay una configuración de facturación registrada para este emisor.',
+            ], 400);
+        }
+
+        try {
+            $sincronizar->ejecutar($config, trim($datos['clave_sol']));
+        } catch (SunatSetupException $e) {
+            return response()->json(['ok' => false, 'msg' => $e->getMessage()], $e->status);
+        } catch (Throwable $e) {
+            Log::error('[FACT-SYNC-LOGO] fallo inesperado', [
+                'excepcion' => $e::class,
+                'mensaje'   => $e->getMessage(),
+                'tienda_id' => $config->tienda_id,
+            ]);
+
+            return response()->json(['ok' => false, 'msg' => 'Error interno al sincronizar el logo.'], 500);
+        }
+
+        return response()->json([
+            'ok'  => true,
+            'msg' => 'Logo sincronizado con el servicio de facturación. Nota: la API tiene el logo del PDF '
+                .'oficial fijo — este sync actualiza los datos de la empresa, no cambia el logo que aparece '
+                .'en el PDF de los comprobantes.',
+        ]);
     }
 
     private function defaults(): array

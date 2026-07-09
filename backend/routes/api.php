@@ -186,6 +186,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('configuracion',             [ConfiguracionController::class, 'update'])->middleware('role:admin');
     Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo'])->middleware('role:admin');
     Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo'])->middleware('role:admin');
+    Route::post('configuracion/sync-logo-facturacion', [ConfiguracionController::class, 'syncLogoFacturacion'])->middleware('role:admin');
 
     // ── Facturación electrónica — emisión ─────────────────────────────────────
     // Único camino de emisión síncrona: encola y drena esa misma fila. Cualquier

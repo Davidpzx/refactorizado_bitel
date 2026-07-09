@@ -4,12 +4,11 @@ namespace App\Services\Facturacion;
 
 use App\Exceptions\SunatSetupException;
 use App\Models\FacturacionConfig;
+use App\Services\Facturacion\Concerns\InteractuaConApiEmpresa;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Activa la facturación real (producción) de un emisor contra la API externa.
@@ -27,6 +26,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class ConfigurarSunatService
 {
+    use InteractuaConApiEmpresa;
+
     public function __construct(private readonly CertificadoDigitalService $certificados)
     {
     }
@@ -183,7 +184,7 @@ class ConfigurarSunatService
         }
 
         try {
-            $respuesta = $cliente->actualizarEmpresa($campos, $this->logoEmpresa());
+            $respuesta = $cliente->actualizarEmpresa($campos, $this->logoEmpresaActual());
         } catch (ConnectionException $e) {
             throw new SunatSetupException('No se pudieron guardar las credenciales SOL.', 502, $e);
         }
@@ -218,59 +219,4 @@ class ConfigurarSunatService
         }
     }
 
-    /**
-     * Logo de la empresa para sincronizarlo de paso, igual que el legacy.
-     * Se lee en memoria: no hace falta un temporal como en PHP puro.
-     *
-     * @return array{contents: string, filename: string, mime: string}|null
-     */
-    private function logoEmpresa(): ?array
-    {
-        if (! Schema::hasTable('configuracion_empresa')) {
-            return null;
-        }
-
-        $dataUrl = DB::table('configuracion_empresa')->where('id', 1)->value('logo_base64');
-
-        if (! is_string($dataUrl) || ! preg_match('#^data:image/(png|jpe?g);base64,(.+)$#s', $dataUrl, $m)) {
-            return null;
-        }
-
-        $binario = base64_decode($m[2], true);
-
-        if ($binario === false) {
-            return null;
-        }
-
-        $extension = $m[1] === 'png' ? 'png' : 'jpg';
-
-        return [
-            'contents' => $binario,
-            'filename' => 'logo.'.$extension,
-            'mime'     => 'image/'.$m[1],
-        ];
-    }
-
-    /** Concatena los mensajes de validación 422 de Laravel en una frase legible. */
-    private function erroresApi(Response $respuesta): string
-    {
-        $json = $respuesta->json();
-
-        if (! is_array($json)) {
-            return '';
-        }
-
-        $errores = $json['errors'] ?? null;
-
-        if (is_array($errores) && $errores !== []) {
-            $lineas = array_map(
-                static fn ($mensajes) => is_array($mensajes) ? implode(' ', $mensajes) : (string) $mensajes,
-                $errores,
-            );
-
-            return trim(implode(' ', $lineas));
-        }
-
-        return empty($json['message']) ? '' : (string) $json['message'];
-    }
 }
