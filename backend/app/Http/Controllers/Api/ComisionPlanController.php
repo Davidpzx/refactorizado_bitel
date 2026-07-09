@@ -17,7 +17,7 @@ class ComisionPlanController extends Controller
     {
         $planes = ComisionPlan::query()
             ->when($request->tipo_servicio, fn($q, $t) => $q->where('tipo_servicio', $t))
-            ->orderByRaw("FIELD(tipo_servicio, 'POSTPAGO', 'PREPAGO', 'EQUIPO', 'ACCESORIO') ASC")
+            ->orderByRaw("CASE tipo_servicio WHEN 'POSTPAGO' THEN 1 WHEN 'PREPAGO' THEN 2 WHEN 'EQUIPO' THEN 3 WHEN 'ACCESORIO' THEN 4 ELSE 5 END ASC")
             ->orderBy('nombre_plan')
             ->get();
 
