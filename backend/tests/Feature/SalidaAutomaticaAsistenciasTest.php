@@ -144,4 +144,43 @@ class SalidaAutomaticaAsistenciasTest extends TestCase
         $this->assertNull(DB::table('asistencias')->where('id', $id)->value('hora_salida'));
         $this->assertDatabaseHas('sys_notificaciones', ['tipo' => 'horario_invalido']);
     }
+
+    /**
+     * (f) No pisa filas PERMISO/FALTA_INJUSTIFICADA registradas vía
+     * AsistenciaController::registrarExcepcion (hora_ingreso='00:00:00',
+     * latitud_ingreso='EXCEPCION'). Regresión del bug que en el legacy
+     * requería cron/reparar_excepciones_pisadas.php como reparación manual.
+     */
+    public function test_no_pisa_excepcion_permiso_de_dia_anterior(): void
+    {
+        $id = $this->abrirAsistencia('2026-06-10', '00:00:00', [
+            'estado_asistencia' => 'PERMISO',
+            'minutos_deuda' => 540,
+        ]);
+
+        $this->artisan('bitel:salida-automatica')->assertExitCode(0);
+
+        $this->assertDatabaseHas('asistencias', [
+            'id' => $id,
+            'hora_salida' => null,
+            'estado_asistencia' => 'PERMISO',
+        ]);
+    }
+
+    /** (g) Idem para FALTA_INJUSTIFICADA. */
+    public function test_no_pisa_excepcion_falta_injustificada(): void
+    {
+        $id = $this->abrirAsistencia('2026-06-10', '00:00:00', [
+            'estado_asistencia' => 'FALTA_INJUSTIFICADA',
+            'minutos_deuda' => 0,
+        ]);
+
+        $this->artisan('bitel:salida-automatica')->assertExitCode(0);
+
+        $this->assertDatabaseHas('asistencias', [
+            'id' => $id,
+            'hora_salida' => null,
+            'estado_asistencia' => 'FALTA_INJUSTIFICADA',
+        ]);
+    }
 }

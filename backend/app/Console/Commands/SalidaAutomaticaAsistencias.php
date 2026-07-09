@@ -42,11 +42,23 @@ class SalidaAutomaticaAsistencias extends Command
 
         // fecha <= hoy: también cierra turnos que quedaron abiertos días anteriores
         // (incluye turnos nocturnos que cruzan medianoche). Igual que el legacy.
+        //
+        // Excluir filas de excepción (PERMISO/FALTA_INJUSTIFICADA, registradas por
+        // AsistenciaController::registrarExcepcion con hora_ingreso='00:00:00' y
+        // latitud_ingreso='EXCEPCION' como sentinela): el legacy tuvo el bug de que
+        // el auto-cierre las pisaba, sobrescribiéndolas con CIERRE_AUTO y una
+        // hora_salida falsa (por eso existía cron/reparar_excepciones_pisadas.php
+        // como reparación manual). Aquí se previene en origen, sin necesitar el
+        // script de reparación.
         $abiertos = DB::table('asistencias as a')
             ->join('agentes as ag', 'ag.id', '=', 'a.agente_id')
             ->where('a.fecha', '<=', $fechaHoy)
             ->whereNull('a.hora_salida')
             ->whereNotNull('a.hora_ingreso')
+            ->where(function ($q) {
+                $q->whereNull('a.estado_asistencia')
+                    ->orWhereNotIn('a.estado_asistencia', ['PERMISO', 'FALTA_INJUSTIFICADA']);
+            })
             ->where('ag.estado', 'ACTIVO')
             ->select(
                 'a.id as asistencia_id',

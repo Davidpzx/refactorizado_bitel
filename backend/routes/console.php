@@ -5,6 +5,9 @@ use App\Console\Commands\AutoRetornoAgentes;
 use App\Console\Commands\LimpiarFotosAsistencia;
 use App\Console\Commands\ProcesarColaComprobantes;
 use App\Console\Commands\SalidaAutomaticaAsistencias;
+// bitel:reparar-excepciones-pisadas (RepararExcepcionesPisadas) NO se programa aquí:
+// es una herramienta de reparación puntual (paridad con cron/reparar_excepciones_pisadas.php
+// del legacy, que también era manual), no un cron recurrente. Ver docs/runbook-operacion.md.
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -23,9 +26,14 @@ Schedule::command(AutoRetornoAgentes::class)
     ->withoutOverlapping()
     ->runInBackground();
 
-// Cerrar automáticamente turnos sin salida registrada
+// Cerrar automáticamente turnos sin salida registrada.
+// Cada 30 min, igual que cron/cron_salida_automatica.php del legacy: el comando
+// espera 90 min tras la hora de salida programada antes de cerrar, así que
+// correrlo solo 1x/día (como estaba antes) puede dejar turnos abiertos hasta
+// 24h de más y retrasar la alerta a gerencia (gap documentado en
+// docs/comparacion/gap_api_cron_auth_2026-07-02.md, "5 gaps más importantes" #1).
 Schedule::command(SalidaAutomaticaAsistencias::class)
-    ->dailyAt('23:00')
+    ->everyThirtyMinutes()
     ->timezone('America/Lima')
     ->withoutOverlapping()
     ->runInBackground();
@@ -46,10 +54,12 @@ Schedule::command(ProcesarColaComprobantes::class)
     ->withoutOverlapping()
     ->runInBackground();
 
-// Limpiar fotos de asistencia antiguas (> 7 días)
+// Limpiar fotos de asistencia antiguas (> 7 días) + auto-aprobar fotos pendientes
+// de revisión de días anteriores (Sección A). La Sección A debe correr a diario
+// (paridad con cron/limpiar_fotos_asistencia.php, legacy cada 30 min): dejarla en
+// semanal represaba fotos sin revisar hasta 6 días de más.
 Schedule::command(LimpiarFotosAsistencia::class)
-    ->weekly()
-    ->sundays()
-    ->at('02:15')
+    ->dailyAt('02:15')
     ->timezone('America/Lima')
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->runInBackground();
