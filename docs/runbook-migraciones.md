@@ -3,7 +3,13 @@
 - **Ticket:** `plan/tickets/ticket-003.md`
 - **Fecha de redacción:** 2026-07-08
 - **Entorno objetivo:** VPS de producción (Dokploy), stack `docker-compose.prod.yml`, host `https://refactor.kyrocodelabs.cloud`
-- **Estado de esta ejecución:** 🔴 **BLOQUEADA POR ACCESO** — no hay credenciales SSH/Dokploy disponibles para este agente. Ver §5 (checklist para el operador).
+- **Estado de esta ejecución:** 🟢 **EJECUTADA por el orquestador el 2026-07-08** (el usuario confirmó acceso SSH — clave `~/.ssh/id_ed25519`, registrada en Hostinger como `david-sys-trading-local`, host `2.24.105.11`, contenedor `erpcrmbitel-backend-5othkr...`). Resultado: **sin pendientes**. Ver §6 (evidencia real).
+
+## Update 2026-07-08 — resultado real
+
+1. `php artisan migrate:status` en el contenedor: **todas** las migraciones desplegadas figuran `Ran`, cero `Pending`. No hizo falta `migrate --force`.
+2. `php artisan inventario:migrar-chips-mal-guardados` (sin `--force`, o sea dry-run): `Sin filas CHIP mal guardadas en inventario_tiendas. Nada que migrar.` No hizo falta `--force` porque no hay filas que mover.
+3. **Importante — brecha real distinta a la asumida:** el código nuevo generado hoy en esta sesión (incluida la migración `2026_07_08_000001_create_facturacion_config_table` del ticket-001, y lo que produzcan los tickets siguientes) **todavía no está desplegado** en el VPS — vive solo en el working tree local. Cuando se despliegue (build + `docker service update` / redeploy en Dokploy), ahí sí habrá que correr `migrate --force` para esas migraciones nuevas. Esta sección del runbook (pasos 1-5 abajo) sigue vigente para ESE momento futuro, no para el estado actual (que ya se verificó limpio).
 
 ## 0. Qué problema resuelve esto
 
