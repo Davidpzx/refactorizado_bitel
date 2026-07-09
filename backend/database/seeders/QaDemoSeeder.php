@@ -245,7 +245,90 @@ class QaDemoSeeder extends Seeder
             ]);
         }
 
-        $this->command?->info('QaDemoSeeder: datos de prueba TICKET-026 (Bloque A) insertados.');
+        // ── Asistencias (para Bloque B: Asistencias / Control / Liquidación / Fotos) ─
+        $pixelPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        for ($d = 12; $d >= 0; $d--) {
+            $fecha = now()->subDays($d)->format('Y-m-d');
+            foreach ([1, 2, 3, 4, 5] as $agenteId) {
+                $tienda = $agenteId <= 2 || $agenteId === 5 ? 'T01' : 'T02';
+
+                // Ana Torres (1) el día d=5: falta injustificada, sin marcación
+                if ($agenteId === 1 && $d === 5) {
+                    DB::table('asistencias')->insert([
+                        'agente_id' => $agenteId,
+                        'tienda_id' => $tienda,
+                        'fecha' => $fecha,
+                        'estado_asistencia' => 'FALTA_INJUSTIFICADA',
+                        'requiere_revision' => false,
+                        'metodo_marcacion' => 'MANUAL',
+                        'created_at' => $fecha . ' 09:00:00',
+                        'updated_at' => $fecha . ' 09:00:00',
+                    ]);
+                    continue;
+                }
+
+                $tardanza = ($agenteId === 2 && in_array($d, [2, 7], true)) ? rand(5, 25) : 0;
+                $conFoto = ($agenteId === 3 && in_array($d, [0, 1], true));
+                $conGps = $agenteId === 4 && $d < 6;
+
+                DB::table('asistencias')->insert([
+                    'agente_id' => $agenteId,
+                    'tienda_id' => $tienda,
+                    'tienda_ingreso' => $tienda,
+                    'fecha' => $fecha,
+                    'hora_ingreso' => $tardanza > 0 ? sprintf('09:%02d:00', $tardanza) : '09:00:00',
+                    'inicio_refrigerio' => '13:00:00',
+                    'fin_refrigerio' => '14:00:00',
+                    'hora_salida' => '20:00:00',
+                    'minutos_tardanza' => $tardanza,
+                    'estado_asistencia' => $tardanza > 0 ? 'TARDANZA' : 'REGULAR',
+                    'requiere_revision' => $conFoto,
+                    'metodo_marcacion' => $conFoto ? 'FOTO' : ($conGps ? 'GPS' : 'MANUAL'),
+                    'foto_marcacion' => $conFoto ? $pixelPng : null,
+                    'lat_entrada' => $conGps ? -16.3988 : null,
+                    'lng_entrada' => $conGps ? -71.5369 : null,
+                    'accuracy_entrada' => $conGps ? 12.5 : null,
+                    'created_at' => $fecha . ' 09:00:00',
+                    'updated_at' => $fecha . ' 09:00:00',
+                ]);
+            }
+        }
+
+        // ── Tickets emitidos (para Bloque B: Tickets) ────────────────────────
+        $formasPago = ['Efectivo', 'Yape', 'Bipay', 'Transferencia'];
+        $descripciones = [
+            'Pago de servicio Bitel postpago', 'Recarga prepago', 'Venta accesorio - case',
+            'Pago de cuota equipo', 'Portabilidad - trámite', 'Recarga BCP',
+        ];
+        for ($t = 0; $t < 10; $t++) {
+            $agenteId = ($t % 4) + 1;
+            $tienda = $agenteId <= 2 ? 'T01' : 'T02';
+            $monto = rand(20, 250);
+            $formaPago = $formasPago[$t % count($formasPago)];
+
+            DB::table('tickets_emitidos')->insert([
+                'tienda_id' => $tienda,
+                'agente_id' => $agenteId,
+                'vendedor' => $agentes[$agenteId - 1][1] . ' ' . $agentes[$agenteId - 1][2],
+                'nombre_cliente' => $nombresCliente[$t % count($nombresCliente)],
+                'dni_cliente' => (string) (72000000 + ($t % count($nombresCliente))),
+                'forma_pago' => $formaPago,
+                'telefono' => '9'.rand(10000000, 99999999),
+                'descripcion' => $descripciones[$t % count($descripciones)] . ' S/' . number_format($monto, 2),
+                'monto' => $monto,
+                'cantidad' => 1,
+                'efectivo' => $formaPago === 'Efectivo' ? $monto : 0,
+                'yape' => $formaPago === 'Yape' ? $monto : 0,
+                'bipay' => $formaPago === 'Bipay' ? $monto : 0,
+                'transferencia' => $formaPago === 'Transferencia' ? $monto : 0,
+                'vuelto' => 0,
+                'creado_en' => now()->subDays(rand(0, 10))->subHours(rand(0, 8)),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $this->command?->info('QaDemoSeeder: datos de prueba TICKET-026 (Bloque A + B) insertados.');
         $this->command?->info('Login admin: admin@qa.test / password');
     }
 }
