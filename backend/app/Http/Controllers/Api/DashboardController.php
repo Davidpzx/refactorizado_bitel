@@ -58,14 +58,32 @@ class DashboardController extends Controller
                 ->value('total_ganancia') ?? 0;
         }
 
-        $reportes = (clone $base)
+        $reportesQuery = (clone $base)
             ->leftJoin('agentes as a', 'r.agente_id', '=', 'a.id')
             ->select([
                 'r.id', 'r.fecha', 'r.tienda_id', 'r.agente_id',
                 'r.total_calculado', 'r.efectivo_esperado', 'r.efectivo_entregado',
                 'r.diferencia', 'r.estado', 'r.estado_edicion', 'r.destino_efectivo',
                 DB::raw("COALESCE(a.nombres, 'Agente') AS agente_nombre"),
-            ])
+            ]);
+
+        // Ganancia por fila (paridad legacy panel_gerencia.php), solo admin — mismo patrón que HistorialController.
+        if ($user->rol === 'admin') {
+            $reportesQuery->selectSub(
+                DB::table('ventas as v')
+                    ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
+                    ->leftJoin('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
+                    ->whereColumn('v.reporte_id', 'r.id')
+                    ->where('v.comision_estado', '!=', 'ANULADA')
+                    ->selectRaw('
+                        COALESCE(SUM(COALESCE(ve.ganancia_snap, 0)), 0)
+                        + COALESCE(SUM(COALESCE(vl.comision_unitaria * vl.cantidad, 0)), 0)
+                    '),
+                'ganancia'
+            );
+        }
+
+        $reportes = $reportesQuery
             ->orderByDesc('r.fecha')
             ->orderByDesc('r.id')
             ->limit(5)

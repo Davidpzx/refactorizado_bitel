@@ -24,6 +24,7 @@ export interface DashboardReporte {
   estado: string
   estado_edicion: 'CERRADO' | 'SOLICITADO' | 'APROBADO'
   destino_efectivo: string
+  ganancia?: string | number | null
 }
 
 export interface DashboardKpisResponse {

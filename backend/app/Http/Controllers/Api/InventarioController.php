@@ -617,6 +617,46 @@ class InventarioController extends Controller
         return response()->json(['ok' => true, 'rows' => $rows]);
     }
 
+    // ── GET /inventario/capital-invertido — Franja de KPIs (paridad legacy ver_inventario.php) ──
+    // Capital = costo * cantidad de lo DISPONIBLE (chips cuestan S/1.00 fijo); admin-only.
+    public function capitalInvertido(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        if ($user->rol !== 'admin') {
+            return response()->json([
+                'capital_equipos' => 0, 'capital_accesorios' => 0, 'capital_chips' => 0,
+                'total_uds_equipos' => 0, 'total_uds_accesorios' => 0, 'total_uds_chips' => 0,
+            ]);
+        }
+
+        $tienda = $request->get('tienda');
+
+        $agg = DB::table('inventario_tiendas')
+            ->when($tienda, fn ($q, $t) => $q->where('tienda_id', $t))
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN tipo = 'EQUIPO'    AND estado = 'DISPONIBLE' THEN precio_costo * cantidad ELSE 0 END), 0) AS capital_equipos,
+                COALESCE(SUM(CASE WHEN tipo = 'ACCESORIO' AND estado = 'DISPONIBLE' THEN precio_costo * cantidad ELSE 0 END), 0) AS capital_accesorios,
+                COALESCE(SUM(CASE WHEN tipo = 'EQUIPO'    AND estado = 'DISPONIBLE' THEN cantidad ELSE 0 END), 0)                AS total_uds_equipos,
+                COALESCE(SUM(CASE WHEN tipo = 'ACCESORIO' AND estado = 'DISPONIBLE' AND cantidad > 0 THEN cantidad ELSE 0 END), 0) AS total_uds_accesorios
+            ")
+            ->first();
+
+        $chipsQuery = DB::table('inventario_chips as ic');
+        if ($tienda) {
+            $chipsQuery->join('tiendas as t', 'ic.tienda_id', '=', 't.id')->where('t.codigo', $tienda);
+        }
+        $chips = $chipsQuery->selectRaw('COALESCE(SUM(ic.stock_actual), 0) AS total_stock')->first();
+
+        return response()->json([
+            'capital_equipos'      => (float) $agg->capital_equipos,
+            'capital_accesorios'   => (float) $agg->capital_accesorios,
+            'capital_chips'        => (float) $chips->total_stock, // S/1.00 fijo por unidad
+            'total_uds_equipos'    => (int) $agg->total_uds_equipos,
+            'total_uds_accesorios' => (int) $agg->total_uds_accesorios,
+            'total_uds_chips'      => (int) $chips->total_stock,
+        ]);
+    }
+
     // ── GET /inventario/stock-estancado — Items DISPONIBLE sin movimiento 30+ días ──
     public function stockEstancado(Request $request): JsonResponse
     {

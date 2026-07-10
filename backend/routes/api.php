@@ -160,6 +160,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Custom inventario routes MUST come before apiResource to avoid {inventario} wildcard conflict
     Route::get('inventario/kardex',          [InventarioController::class, 'kardex']);
     Route::get('inventario/stock-estancado', [InventarioController::class, 'stockEstancado']);
+    Route::get('inventario/capital-invertido', [InventarioController::class, 'capitalInvertido']);
     Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos']);
     Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes']);
     Route::get('inventario/precios-matriz',     [InventarioController::class, 'preciosMatriz'])->middleware('role:admin');

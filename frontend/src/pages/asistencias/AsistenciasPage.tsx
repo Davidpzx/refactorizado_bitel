@@ -264,11 +264,11 @@ export function AsistenciasPage() {
             <AlertCircle size={14} /> Registrar excepción
           </Button>
         )}
-        <Button variant="glassSuccess" size="sm" onClick={exportar} disabled={exportando}>
+        <Button variant="success" size="sm" onClick={exportar} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
         {usuario?.rol === 'admin' && (
-          <Button variant="glassWarning" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
+          <Button variant="gold" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
             <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
           </Button>
         )}

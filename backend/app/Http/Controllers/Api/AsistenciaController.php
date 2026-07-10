@@ -1399,10 +1399,10 @@ class AsistenciaController extends Controller
             ->whereBetween('a.fecha', [$desde, $hasta])
             ->when($agente, fn ($q) => $q->where('a.agente_id', $agente))
             ->selectRaw('
-                SUM(CASE WHEN a.hora_ingreso IS NOT NULL THEN 1 ELSE 0 END)  AS presentes,
-                SUM(CASE WHEN a.hora_ingreso IS NULL THEN 1 ELSE 0 END)      AS ausentes,
-                SUM(CASE WHEN a.minutos_tardanza > 0 THEN 1 ELSE 0 END)      AS tardanzas,
-                SUM(CASE WHEN a.requiere_revision = 1 THEN 1 ELSE 0 END)     AS pendientes_revision
+                COALESCE(SUM(CASE WHEN a.hora_ingreso IS NOT NULL THEN 1 ELSE 0 END), 0)  AS presentes,
+                COALESCE(SUM(CASE WHEN a.hora_ingreso IS NULL THEN 1 ELSE 0 END), 0)      AS ausentes,
+                COALESCE(SUM(CASE WHEN a.minutos_tardanza > 0 THEN 1 ELSE 0 END), 0)      AS tardanzas,
+                COALESCE(SUM(CASE WHEN a.requiere_revision = 1 THEN 1 ELSE 0 END), 0)     AS pendientes_revision
             ')
             ->first();
 

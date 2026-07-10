@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { AxiosError } from 'axios'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileXls as FileSpreadsheet, PencilSimple as Pencil, Trash as Trash2, SlidersHorizontal, Tag, ClockCounterClockwise as History, GridFour as LayoutGrid, Package } from '@phosphor-icons/react'
+import { FileXls as FileSpreadsheet, PencilSimple as Pencil, Trash as Trash2, SlidersHorizontal, Tag, ClockCounterClockwise as History, GridFour as LayoutGrid, Package, DeviceMobileCamera, Headphones, SimCard } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import { useInventario, useEliminarInventario } from '../../hooks/useInventario'
 import { api } from '../../services/api'
@@ -18,6 +18,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Label } from '../../components/ui/label'
+import { StatCard } from '../../components/ui/StatCard'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InventarioForm } from './InventarioForm'
 import { useAuth } from '../../hooks/useAuth'
@@ -321,6 +322,42 @@ function StockEstancadoWidget() {
   )
 }
 
+// ── Capital Invertido (paridad legacy ver_inventario.php, franja de 6 KPIs) ────
+
+interface CapitalInvertidoResponse {
+  capital_equipos: number
+  capital_accesorios: number
+  capital_chips: number
+  total_uds_equipos: number
+  total_uds_accesorios: number
+  total_uds_chips: number
+}
+
+function CapitalInvertidoWidget({ tienda }: { tienda: string }) {
+  const { data } = useQuery<CapitalInvertidoResponse>({
+    queryKey: ['inventario-capital-invertido', tienda],
+    queryFn: () => api.get('/v1/inventario/capital-invertido', { params: tienda ? { tienda } : {} }).then(r => r.data),
+    staleTime: 60_000,
+  })
+
+  const fmt = (v: number | undefined) => `S/ ${(v ?? 0).toFixed(2)}`
+
+  return (
+    <div className="space-y-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Capital Invertido — Equipos" value={data ? fmt(data.capital_equipos) : null} accent="#ffc200" icon={<DeviceMobileCamera size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
+        <StatCard title="Capital Invertido — Accesorios" value={data ? fmt(data.capital_accesorios) : null} accent="#ffc200" icon={<Headphones size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
+        <StatCard title="Capital Invertido — Chips" value={data ? fmt(data.capital_chips) : null} accent="#ffc200" icon={<SimCard size={18} />} subtitle="Costo fijo: S/ 1.00 por unidad" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Total Equipos" value={data?.total_uds_equipos != null ? `${data.total_uds_equipos} uds` : null} accent="#ffc200" icon={<DeviceMobileCamera size={18} />} />
+        <StatCard title="Total Accesorios" value={data?.total_uds_accesorios != null ? `${data.total_uds_accesorios} uds` : null} accent="#a78bfa" icon={<Headphones size={18} />} />
+        <StatCard title="Total Chips" value={data?.total_uds_chips != null ? `${data.total_uds_chips} uds` : null} accent="#22d3ee" icon={<SimCard size={18} />} />
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function InventarioPage() {
@@ -493,6 +530,7 @@ export function InventarioPage() {
         }
       />
 
+      {!esTienda && <CapitalInvertidoWidget tienda={tienda} />}
       <CampanaCostosWidget />
       <StockEstancadoWidget />
 

@@ -250,8 +250,11 @@ export function DashboardPage() {
       })
   }
 
-  const tableHeaders = ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
-  const rightAligned = new Set(['Venta Total', 'Físico Entregado', 'Diferencia'])
+  const isAdmin = usuario?.rol === 'admin'
+  const tableHeaders = isAdmin
+    ? ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Ganancia', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
+    : ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
+  const rightAligned = new Set(['Venta Total', 'Ganancia', 'Físico Entregado', 'Diferencia'])
 
   return (
     <div className="space-y-6">
@@ -421,11 +424,11 @@ export function DashboardPage() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-sm">Cargando datos...</td></tr>
+                <tr><td colSpan={tableHeaders.length} className="px-4 py-8 text-center text-gray-400 text-sm">Cargando datos...</td></tr>
               )}
               {!isLoading && reportes.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={tableHeaders.length} className="px-4 py-10 text-center text-gray-400 text-sm">
                     <span className="inline-flex flex-col items-center gap-2">
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/[0.04] dark:text-zinc-500">
                         <Search size={16} />
@@ -461,6 +464,9 @@ export function DashboardPage() {
                       <div className="text-xs text-gray-400 dark:text-zinc-500">{r.agente_nombre}</div>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.total_calculado)}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">{fmt(r.ganancia)}</td>
+                    )}
                     <td className="px-4 py-3 text-right font-mono text-gray-800 dark:text-zinc-200">{fmt(r.efectivo_entregado)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${diferenciaClass(dif)}`}>
