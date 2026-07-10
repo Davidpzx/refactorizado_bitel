@@ -7,6 +7,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MatrizInventarioController extends Controller
 {
@@ -112,15 +117,32 @@ class MatrizInventarioController extends Controller
         return $rows;
     }
 
-    // ── GET /inventario/exportar — Exportar inventario a CSV ──────────────────
-    public function exportar(Request $request)
+    // ── GET /inventario/exportar — Exportar inventario a XLSX ──────────────────
+    // Antes emitía CSV pero el frontend (InventarioPage.tsx) siempre lo descarga
+    // con extensión .xlsx: Excel rechaza el archivo por "formato o extensión no
+    // válidos". También ignoraba los filtros estado/tienda/q que el usuario ya
+    // aplicó en pantalla — un filtro a "Vendido" exportaba un archivo vacío
+    // porque el estado quedaba fijo a DISPONIBLE/TRASLADO sin importar lo pedido.
+    public function exportar(Request $request): StreamedResponse
     {
-        $tipo = strtoupper($request->input('tipo', 'EQUIPO'));
+        $user    = $request->user();
+        $esAdmin = $user->rol === 'admin';
+        $tipo    = strtoupper($request->input('tipo', 'EQUIPO'));
 
         $items = DB::table('inventario_tiendas as it')
             ->leftJoin('tiendas as t', 'it.tienda_id', '=', 't.codigo')
             ->where('it.tipo', $tipo)
-            ->whereIn('it.estado', ['DISPONIBLE', 'TRASLADO'])
+            ->when(! $esAdmin, fn ($q) => $q->where('it.tienda_id', $user->tienda_id))
+            ->when($esAdmin && $request->filled('tienda'), fn ($q) => $q->where('it.tienda_id', $request->input('tienda')))
+            ->when(
+                $request->filled('estado'),
+                fn ($q) => $q->where('it.estado', strtoupper((string) $request->input('estado'))),
+                fn ($q) => $q->whereIn('it.estado', ['DISPONIBLE', 'TRASLADO'])
+            )
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $texto = '%' . trim((string) $request->input('q')) . '%';
+                $q->where(fn ($qq) => $qq->where('it.producto_nombre', 'like', $texto)->orWhere('it.imei_serial', 'like', $texto));
+            })
             ->select(
                 'it.id',
                 'it.producto_nombre',
@@ -138,38 +160,46 @@ class MatrizInventarioController extends Controller
             ->orderBy('it.producto_nombre')
             ->get();
 
-        $filename = 'inventario_' . strtolower($tipo) . '_' . date('Y-m-d') . '.csv';
+        $headers = ['ID', 'Producto', 'IMEI/Serial', 'Cantidad', 'P.Costo', 'P.Mínimo', 'P.Normal', 'Estado', 'Tienda', 'Fecha Registro'];
 
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Inventario');
+        $sheet->fromArray($headers, null, 'A1');
+        $ultimaColumna = Coordinate::stringFromColumnIndex(count($headers));
+        $sheet->getStyle("A1:{$ultimaColumna}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A1A2E']],
+        ]);
 
-        $callback = function () use ($items, $tipo) {
-            $output = fopen('php://output', 'w');
-            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+        foreach ($items as $index => $item) {
+            $sheet->fromArray([
+                $item->id,
+                $item->producto_nombre,
+                $item->imei_serial ?? '',
+                (int) $item->cantidad,
+                (float) $item->precio_costo,
+                (float) $item->precio_minimo,
+                (float) $item->precio_normal,
+                $item->estado,
+                $item->tienda_nombre,
+                $item->fecha_registro,
+            ], null, 'A' . ($index + 2));
+        }
 
-            $columns = ['ID', 'Producto', 'IMEI/Serial', 'Cantidad', 'P.Costo', 'P.Mínimo', 'P.Normal', 'Estado', 'Tienda', 'Fecha Registro'];
-            fputcsv($output, $columns);
+        for ($column = 1; $column <= count($headers); $column++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($column))->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
 
-            foreach ($items as $item) {
-                fputcsv($output, [
-                    $item->id,
-                    $item->producto_nombre,
-                    $item->imei_serial ?? '',
-                    $item->cantidad,
-                    $item->precio_costo,
-                    $item->precio_minimo,
-                    $item->precio_normal,
-                    $item->estado,
-                    $item->tienda_nombre,
-                    $item->fecha_registro,
-                ]);
-            }
-            fclose($output);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return response()->streamDownload(
+            static function () use ($spreadsheet) {
+                (new Xlsx($spreadsheet))->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            'inventario_' . strtolower($tipo) . '_' . date('Y-m-d') . '.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        );
     }
 
     // ── GET /agentes/exportar — Exportar agentes con comisiones a CSV ─────────
@@ -177,27 +207,33 @@ class MatrizInventarioController extends Controller
     {
         $mes = $request->input('mes', date('Y-m'));
 
+        // `agentes` no tiene columna `tienda_id` (solo `tienda_base`); el join
+        // anterior a `a.tienda_id` habría fallado con "Unknown column" en MySQL.
         $agentes = DB::table('agentes as a')
-            ->leftJoin('tiendas as t', 'a.tienda_id', '=', 't.codigo')
+            ->leftJoin('tiendas as t', 'a.tienda_base', '=', 't.codigo')
             ->select(
                 'a.id',
                 'a.nombres',
                 'a.dni',
-                'a.tienda_id',
-                DB::raw("COALESCE(t.nombre, a.tienda_id) as tienda_nombre"),
+                'a.tienda_base',
+                DB::raw("COALESCE(t.nombre, a.tienda_base) as tienda_nombre"),
                 'a.estado',
                 'a.es_gerencia',
                 'a.fecha_ingreso',
             )
             ->where('a.estado', 'ACTIVO')
-            ->orderBy('a.tienda_id')
+            ->orderBy('a.tienda_base')
             ->orderBy('a.nombres')
             ->get();
 
-        // Comisiones del mes
+        // Comisiones del mes. `reportes.estado` solo toma 'borrador'|'enviado'
+        // (nunca 'cerrado' — ese filtro dejaba esta columna siempre en 0).
+        // whereBetween en vez de DATE_FORMAT: funciona igual en MySQL y SQLite.
+        $inicioMes = $mes . '-01';
+        $finMes    = date('Y-m-t', strtotime($inicioMes));
         $comisionesRaw = DB::table('reportes as r')
-            ->whereRaw("DATE_FORMAT(r.fecha, '%Y-%m') = ?", [$mes])
-            ->where('r.estado', 'cerrado')
+            ->whereBetween('r.fecha', [$inicioMes, $finMes])
+            ->where('r.estado', 'enviado')
             ->groupBy('r.agente_id')
             ->select('r.agente_id', DB::raw('SUM(r.total_calculado) as total_comisiones'))
             ->get()

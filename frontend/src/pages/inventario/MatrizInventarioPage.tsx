@@ -45,11 +45,14 @@ export function MatrizInventarioPage() {
   const tiendas  = data?.tiendas ?? []
   const filas    = data?.[tab] ?? []
 
-  const handleExportar = (tipo: 'EQUIPO' | 'ACCESORIO') => {
-    const token = localStorage.getItem('auth_token')
-    const base  = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api'
-    const url   = `${base}/v1/inventario/exportar?tipo=${tipo}${token ? `&token=${token}` : ''}`
-    window.open(url, '_blank')
+  const handleExportar = async (tipo: 'EQUIPO' | 'ACCESORIO') => {
+    const res = await api.get(`/v1/inventario/exportar?tipo=${tipo}`, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data as Blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `inventario_${tipo.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -67,10 +70,10 @@ export function MatrizInventarioPage() {
               <ArrowLeft size={14} /> Volver
             </Link>
             <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('EQUIPO')}>
-              Exportar Equipos CSV
+              Exportar Equipos Excel
             </Button>
             <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('ACCESORIO')}>
-              Exportar Accesorios CSV
+              Exportar Accesorios Excel
             </Button>
           </div>
         }
