@@ -225,8 +225,13 @@ class PhaseBBusinessParityTest extends TestCase
         ]);
     }
 
-    public function test_planilla_aplica_rangos_mensuales_de_plan_y_equipo(): void
+    public function test_planilla_aplica_rangos_mensuales_de_plan_pero_equipo_siempre_es_plano(): void
     {
+        // Paridad legacy: PASO A (PLANES) usa el escalonado mensual (config_comisiones tipo=PLAN),
+        // pero PASO B (EQUIPOS) de gerencia/planilla_agentes.php y ver_agente.php:217-219 NUNCA
+        // lee la tabla de rangos EQUIPO — siempre paga plano (comision_especial>0, o si no,
+        // EQUIPO_ESTANDAR / fallback 5.00). La fila 'EQUIPO' de config_comisiones se deja sembrada
+        // a propósito para probar que el refactor la IGNORA, tal como el legacy.
         $admin = Usuario::factory()->admin()->create();
         DB::table('agentes')->insert([
             'id' => 77,
@@ -277,7 +282,60 @@ class PhaseBBusinessParityTest extends TestCase
         $fila = collect($response->json('agentes'))->firstWhere('agente_id', 77);
 
         $this->assertSame(30.0, (float) $fila['comision_planes']);
-        $this->assertSame(7.0, (float) $fila['comision_equipo']);
+        // Fallback plano 5.00 (no hay fila EQUIPO_ESTANDAR en config_comisiones), NO el
+        // rango EQUIPO=7 sembrado arriba: la planilla ignora ese rango, igual que el legacy.
+        $this->assertSame(5.0, (float) $fila['comision_equipo']);
+    }
+
+    public function test_planilla_paga_equipo_cuotas_pendiente_igual_que_uno_activo_pero_sin_escalonado(): void
+    {
+        // BUG-027B-01 (QA 027B) confirmado contra el legacy: reportes/procesar_reporte.php:113-126
+        // congela comision_agente=0.00 tanto para el equipo ESTÁNDAR normal como para el CUOTAS
+        // PENDIENTE (ambos casos "se calcula despues"). gerencia/planilla_agentes.php PASO B EQUIPOS
+        // (:348-350) y ver_agente.php:217-219 no filtran por comision_estado ni por tipo_pago: pagan
+        // el MISMO fallback plano (EQUIPO_ESTANDAR, default 5.00) para ambos. Pagar el CUOTAS
+        // pendiente en planilla es, por tanto, PARIDAD del legacy — no una regresión. Lo que sí era
+        // un bug real (ya corregido en PlanillaController::calcularComisionesEquipo) es que el
+        // refactor aplicaba el escalonado por rango (montoPorRango) a los equipos con comision=0,
+        // lo que podía pagar MÁS que el EQUIPO_ESTANDAR plano que se libera al confirmar el
+        // desembolso — asimetría que el legacy nunca tiene, porque nunca usa rango para EQUIPO.
+        $admin = Usuario::factory()->admin()->create();
+        DB::table('agentes')->insert([
+            'id' => 78,
+            'dni' => '00000078',
+            'nombres' => 'Agente cuotas',
+            'tienda_base' => 'PUNDA50',
+            'estado' => 'ACTIVO',
+            'sueldo_base' => 1200,
+        ]);
+        DB::table('config_comisiones')->insert([
+            'tipo' => 'EQUIPO_ESTANDAR', 'monto' => 6.0,
+        ]);
+        DB::table('config_comisiones')->insert([
+            'tipo' => 'EQUIPO', 'rango_desde' => 1, 'rango_hasta' => 9999, 'monto' => 50,
+        ]);
+        $reporteId = DB::table('reportes')->insertGetId([
+            'agente_id' => 78,
+            'tienda_id' => 'PUNDA50',
+            'fecha' => '2026-06-11',
+        ]);
+
+        // Equipo a CUOTAS aún sin desembolso confirmado: comision_generada=0, comision_estado=PENDIENTE.
+        DB::table('ventas')->insert([
+            'reporte_id' => $reporteId,
+            'vendedor_id' => 78,
+            'tipo_venta' => 'EQUIPO',
+            'comision_generada' => 0,
+            'comision_estado' => 'PENDIENTE',
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/planilla/2026-06')
+            ->assertOk();
+        $fila = collect($response->json('agentes'))->firstWhere('agente_id', 78);
+
+        // Paga el plano EQUIPO_ESTANDAR (6.00), no el rango sembrado (50) ni cero.
+        $this->assertSame(6.0, (float) $fila['comision_equipo']);
     }
 
     private function payload(Usuario $usuario): array

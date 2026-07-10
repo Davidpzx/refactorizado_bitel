@@ -310,11 +310,17 @@ class PlanillaController extends Controller
 
     /**
      * Comisión de equipos: SUM(comision_generada) por vendedor, tipo EQUIPO,
-     * con fallback a S/5 si la comisión está en 0.
+     * con fallback plano a EQUIPO_ESTANDAR (config, default S/5) si la comisión está en 0.
+     *
+     * Paridad legacy (gerencia/planilla_agentes.php PASO B EQUIPOS y ver_agente.php:217-219):
+     * el equipo NUNCA usa el escalonado por rango (eso es solo para PLAN, PASO A). Un equipo con
+     * comision_agente<=0 (estándar, o CUOTAS aún PENDIENTE — ambos se congelan en 0.00 al registrar,
+     * ver reportes/procesar_reporte.php:113-126) siempre cae al monto plano EQUIPO_ESTANDAR; solo un
+     * comision_especial>0 congelado en el ítem lo reemplaza. La tabla config_comisiones tipo='EQUIPO'
+     * (rangos) existe mas nunca se lee en ese PASO B del legacy.
      */
     private function calcularComisionesEquipo(array $ids, string $inicio, string $fin): array
     {
-        $rangos = $this->rangosProductividad('EQUIPO');
         $fallback = $this->montoConfig('EQUIPO_ESTANDAR', 5.0);
 
         $rows = DB::table('ventas')
@@ -323,20 +329,14 @@ class PlanillaController extends Controller
             ->where('ventas.tipo_venta', 'EQUIPO')
             ->where('ventas.comision_estado', '!=', 'ANULADA')
             ->whereBetween('reportes.fecha', [$inicio, $fin])
-            ->select('ventas.id', 'ventas.vendedor_id', 'ventas.comision_generada', 'reportes.fecha')
-            ->orderBy('reportes.fecha')
-            ->orderBy('ventas.id')
+            ->select('ventas.vendedor_id', 'ventas.comision_generada')
             ->get();
 
         $totales = array_fill_keys($ids, 0.0);
-        $contadores = array_fill_keys($ids, 0);
         foreach ($rows as $row) {
             $agenteId = (int) $row->vendedor_id;
-            $contadores[$agenteId]++;
             $especial = (float) $row->comision_generada;
-            $totales[$agenteId] += $especial > 0
-                ? $especial
-                : $this->montoPorRango($rangos, $contadores[$agenteId], $fallback);
+            $totales[$agenteId] += $especial > 0 ? $especial : $fallback;
         }
 
         return $totales;
