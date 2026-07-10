@@ -34,7 +34,26 @@ Después solo queda: QA de cuadre post-020, y 027 (QA funcional, Opus — gate d
 
 **Polish 028-030 INTEGRADO** (2026-07-09 ~3:15pm): 028 → `ce9a2f0` (Terminal dorada, CRM púrpura #c084fc, Comprobantes=Files vs Facturación=Receipt según header.php legacy). 029 → `f18dfb6` (Ganancia por fila admin-only en Historial + test; Comisiones Empresa en secciones siempre visibles con color-coding; VerAgente: las secciones "faltantes" del QA YA existían vía ticket-021 — el gap real era la franja de KPIs de boletas, añadida reutilizando endpoints existentes). 030 → `93cbb1c` (Monitor de Fraude completo: endpoint + panel + 16 tests; ingreso stock sin precio → Precios pendientes). **dev2 volvió a agotar sesión (resetea 6:30pm) a mitad del InventarioForm.tsx** — el orquestador completó los tipos (z.preprocess→setValueAs, InventarioPayload con precios opcionales). Suite 590/590, build limpio.
 
-**TICKET-027 (QA funcional, GATE FINAL) — PENDIENTE, bloqueado por cuotas.** El primer intento (2026-07-09 ~3:20pm) murió al instante: titan y dev3 con Opus agotaron sesión de inmediato (venían trabajando todo el día). SIN trabajo perdido (regla 0.3 caso 1 — no empezaron, working tree limpio).
+## Cierre 2026-07-09 (noche)
+**TICKET-027 COMPLETADO** (05-qa-funcional-A.md + B.md, commit `264aac4`): Flujo 4 SUNAT PASA sin bugs; Flujo 6 Asistencia PASA (mejora al legacy); Flujo 5 PASA con 1 bug medio (planilla paga CUOTAS pendientes); Flujo 1 PASA con defectos (falta guard precio mínimo y guard DISPONIBLE); Flujo 2 FALLA (tienda 403 en reprocesar con edición aprobada); Flujo 3 PARCIAL (constancia PDF 500: tabla `configuraciones` inexistente + tests falso-verde). QA visual consolidado: 42 filas — 25 fiel, 9 mejorada, 5 parcial, 0 degradada/genérica/faltante.
+
+**DECISIONES del usuario (2026-07-09):** DECISIÓN-003 = NO restaurar guard anti-duplicado de cuadres (queda como está). DECISIÓN-004 = MANTENER el bloqueo por chips insuficientes (no replicar el "loguear y continuar" del legacy). → ticket-037 cerrado sin código.
+
+**DEPLOY A PRODUCCIÓN COMPLETADO:** backup BD (`/root/backups/migracion_pre_deploy_20260709_2340.sql`, 72 tablas) → push 37+2 commits → backend redeployado + 5 migraciones DONE + health 200 → 6 filas asistencia reparadas con --apply (0 restantes) → frontend: 2 builds fallidos (npm ci EUSAGE por peers opcionales vite8 con npm10; npm12 exige node22) → fix final npm@11 en Dockerfile → build done, app.kyrocodelabs.cloud HTTP 200 bundle nuevo. Webhooks Dokploy: POST /api/deploy/<token> con header X-GitHub-Event: push y body {ref, repository.full_name} (tokens en la BD postgres de dokploy, tabla application).
+
+**Ola de fixes QA funcional INTEGRADA:** guards de cuadre (`6c183a2`), constancias (`8c8460c`), planilla plana como legacy + test 540min (`7b75f58`).
+
+## Ola frontend por feedback del usuario (2026-07-09/10, tickets 040-043)
+El usuario vio producción y NO percibió paridad: toggle de tema mal, notificaciones duplicadas, sidebar explotado en rutas (el legacy es más intuitivo con tabs internas), exports vacíos. Tickets y cierres:
+- **040** shell (`915298d`): toggle en cabecera, campana única, secciones colapsables.
+- **042** exports (`1cebbd6`): CAUSA RAÍZ del reporte del usuario — inventario exportaba CSV como .xlsx (Excel lo rechaza), ignoraba filtro estado, matriz con token en query → 401. 21 endpoints auditados, 6 archivos de tests de contenido. Pendiente menor anotado: IntegradorPage ZIP con el mismo patrón token-en-query.
+- **041** paridad producción-vs-producción (`493b52b`): mayoría de pantallas SÍ fieles; cerrados 3 gaps visibles (Ganancia en Dashboard, KPIs asistencia con COALESCE — bug "···" eterno, Capital Invertido en Inventario). Credenciales de prueba en ambos sistemas: adminprueba@gmail.com/adminadmin. Decisión menor pendiente: botón Registrar Cuadre índigo vs azul legacy.
+- **043** navegación (`f7518c4`): sidebar 1:1 con menú legacy; Inventario+Traslados+Kardex+Chips, Personal+Postulantes, CRM+Clientes consolidados en tabs; mapeo en 07-mapa-navegacion.md. Diferido con razón: fusión Dashboard/Historial/MiHistorial (dinero real, requiere pasada dedicada). Gaps anotados: tiene_bcp en /me, Ingreso Stock sin página.
+
+**DEPLOY FINAL 2026-07-10: frontend=done backend=done, app 200 / api 200.** Suite 632/632. Esperando veredicto del usuario en app.kyrocodelabs.cloud; si no convence, iterar 041 con su feedback puntual.
+
+---
+**(histórico)** TICKET-027 primer intento bloqueado por cuotas. El primer intento (2026-07-09 ~3:20pm) murió al instante: titan y dev3 con Opus agotaron sesión de inmediato (venían trabajando todo el día). SIN trabajo perdido (regla 0.3 caso 1 — no empezaron, working tree limpio).
 **Resets:** dev2 y dev3 → 6:30pm; titan → 6:50pm (2026-07-09, Lima).
 **Plan de reanudación** (cron en sesión programado 6:36pm + este texto como respaldo si la terminal muere): ping a dev2/dev3 → despachar mitad A (flujos 1-3: cuadre, edición aprobada, traslados → 05-qa-funcional-A.md) y mitad B (flujos 4-6: SUNAT e2e, comisiones, asistencia → 05-qa-funcional-B.md), ambas Opus, prompts autocontenidos (setup en 04-qa-visual-setup.md, legacy como oráculo, bugs como borrador de ticket sin corregir).
 Tras el 027: consolidar informes QA, tickets de bugs si salen, y coordinar DEPLOY al VPS con el usuario (+ reparar las 6 filas de asistencia dañadas post-deploy).
