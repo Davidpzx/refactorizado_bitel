@@ -177,8 +177,8 @@ class ReporteController extends Controller
         $estadoCuadre = abs($diferencia) < 0.01 ? 'CUADRE EXACTO' : ($diferencia < 0 ? 'FALTANTE' : 'SOBRANTE');
 
         $numReporte = str_pad((string) $reporte->id, 5, '0', STR_PAD_LEFT);
-        $empresa = Schema::hasTable('configuraciones')
-            ? (DB::table('configuraciones')->value('razon_social') ?? 'BITEL')
+        $empresa = Schema::hasTable('configuracion_empresa')
+            ? (DB::table('configuracion_empresa')->value('razon_social') ?: 'BITEL')
             : 'BITEL';
 
         // ── Construcción del XLSX ────────────────────────────────────────────────
@@ -554,6 +554,14 @@ class ReporteController extends Controller
             $this->guardarSalidas($reporte, $salidasData);
             (new ComisionOperativaService())->recalcularReporte($reporte);
 
+            // Auditoría del evento de creación del cuadre, paridad legacy procesar_reporte.php:434.
+            HistorialReporte::create([
+                'reporte_id' => $reporte->id,
+                'usuario_id' => $user->id,
+                'accion'     => 'crear',
+                'detalle'    => 'Cuadre creado.',
+            ]);
+
             DB::commit();
 
             if ($user && $user->tienda_id) {
@@ -899,6 +907,20 @@ class ReporteController extends Controller
                 // B1 — Descuento de stock con guardia (rowCount !== 1 ⇒ throw ⇒ rollBack).
                 $invId = (int) ($vd['inventario_tienda_id'] ?? 0);
                 if ($invId > 0) {
+                    // Validar precio mínimo (server-side anti-bypass), paridad legacy
+                    // procesar_reporte.php:96-101 — se ejecuta ANTES del descuento de stock.
+                    $precioMinimoDb = (float) (DB::table('inventario_tiendas')
+                        ->where('id', $invId)
+                        ->value('precio_minimo') ?? 0);
+                    $precioVenta = (float) ($vd['precio_venta'] ?? $vd['monto_total'] ?? 0);
+                    if ($precioMinimoDb > 0 && $precioVenta < $precioMinimoDb) {
+                        throw new \RuntimeException(
+                            'Precio de venta (S/ ' . number_format($precioVenta, 2) . ') es menor al mínimo permitido '
+                            . '(S/ ' . number_format($precioMinimoDb, 2) . ') para "' . $vd['producto_nombre']
+                            . '". Comuníquese con su encargado/a.'
+                        );
+                    }
+
                     // El WHERE cantidad>0 garantiza cantidad-1>=0 (sin GREATEST, portable a sqlite/mysql).
                     $update = ['cantidad' => DB::raw('cantidad - 1')];
                     if (Schema::hasColumn('inventario_tiendas', 'estado')) {
@@ -914,11 +936,14 @@ class ReporteController extends Controller
                         $update['reporte_venta_id'] = $reporte->id;
                     }
 
-                    $afectadas = DB::table('inventario_tiendas')
+                    $query = DB::table('inventario_tiendas')
                         ->where('id', $invId)
                         ->where('tienda_id', $tiendaId)
-                        ->where('cantidad', '>', 0)
-                        ->update($update);
+                        ->where('cantidad', '>', 0);
+                    if (Schema::hasColumn('inventario_tiendas', 'estado')) {
+                        $query->where('estado', 'DISPONIBLE');
+                    }
+                    $afectadas = $query->update($update);
 
                     if ($afectadas !== 1) {
                         throw new \RuntimeException(
@@ -1122,7 +1147,18 @@ class ReporteController extends Controller
     // Revierte stock → borra ventas → re-procesa todo. Requiere edición autorizada (estado_edicion=APROBADO).
     public function reprocesar(Request $request, Reporte $reporte): JsonResponse
     {
-        abort_unless($request->user()->rol === 'admin', 403);
+        $user = $request->user();
+
+        // Paridad legacy (procesar_edicion.php:49-54): admin siempre pasa; no-admin solo
+        // puede reprocesar SU PROPIO reporte y únicamente cuando la edición ya fue aprobada.
+        if ($user->rol !== 'admin') {
+            abort_unless(
+                (string) $reporte->tienda_id === (string) $user->tienda_id
+                    && $reporte->estado_edicion === 'APROBADO',
+                403,
+                'No tienes permisos para reprocesar este reporte.'
+            );
+        }
 
         // Borradores: el admin puede editar directamente sin aprobación previa
         if ($reporte->estado !== 'borrador' && $reporte->estado_edicion !== 'APROBADO') {

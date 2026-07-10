@@ -238,6 +238,62 @@ class ReporteStoreParityTest extends TestCase
         $this->assertNotNull($historial->snapshot_despues);
     }
 
+    public function test_reprocesar_lo_ejecuta_la_tienda_que_solicito_la_edicion_aprobada(): void
+    {
+        // Paridad legacy (procesar_edicion.php:49-54): admin aprueba, pero es la TIENDA
+        // quien reprocesa su propio reporte una vez que estado_edicion=APROBADO.
+        $vendedor = $this->vendedorVinculado('PUNDA50');
+        $admin = Usuario::factory()->admin()->create();
+
+        $resp = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 60,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 60, 'efectivo_inicial' => 60]],
+            ]))->assertCreated();
+        $reporteId = $resp->json('id');
+
+        // Aún SOLICITADO (o borrador): la tienda no puede reprocesar todavía.
+        DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'SOLICITADO']);
+        $this->actingAs($vendedor, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'agente_id' => $vendedor->agente_id,
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 60,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 60, 'efectivo_inicial' => 60]],
+            ]))->assertStatus(403);
+
+        // Admin aprueba la edición.
+        DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'APROBADO']);
+
+        // Otra tienda (no dueña del reporte) sigue sin poder tocarlo, aunque esté APROBADO.
+        $otraTienda = $this->vendedorVinculado('PUNDA99');
+        $this->actingAs($otraTienda, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'agente_id' => $vendedor->agente_id,
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 60,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 60, 'efectivo_inicial' => 60]],
+            ]))->assertStatus(403);
+
+        // La tienda propietaria, con la edición APROBADA, sí puede reprocesar su reporte.
+        $this->actingAs($vendedor, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'agente_id' => $vendedor->agente_id,
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 45,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 45, 'efectivo_inicial' => 45]],
+            ]))->assertOk()
+            ->assertJsonPath('estado_edicion', 'CERRADO');
+
+        $this->assertSame(45.0, (float) DB::table('reportes')->where('id', $reporteId)->value('total_calculado'));
+
+        // El admin conserva el bypass total (puede reprocesar aunque no esté APROBADO).
+        DB::table('reportes')->where('id', $reporteId)->update(['estado_edicion' => 'SOLICITADO']);
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/reportes/{$reporteId}/reprocesar", $this->payload($vendedor, [
+                'agente_id' => $vendedor->agente_id,
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 10,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 10, 'efectivo_inicial' => 10]],
+            ]))->assertOk();
+    }
+
     public function test_edicion_ligera_recalcula_diferencia_y_cierra_edicion(): void
     {
         $vendedor = $this->vendedorVinculado('PUNDA50');
@@ -256,6 +312,78 @@ class ReporteStoreParityTest extends TestCase
             ->assertOk()
             ->assertJsonPath('diferencia', '-20.00')      // 80 − 100
             ->assertJsonPath('estado_edicion', 'CERRADO');
+    }
+
+    public function test_store_rechaza_venta_de_equipo_bajo_el_precio_minimo(): void
+    {
+        $vendedor = $this->vendedorVinculado('PUNDA50');
+
+        $invId = DB::table('inventario_tiendas')->insertGetId([
+            'tienda_id' => 'PUNDA50', 'tipo' => 'EQUIPO', 'producto_nombre' => 'Xiaomi Redmi 13',
+            'cantidad' => 1, 'estado' => 'DISPONIBLE',
+            'precio_costo' => 400, 'precio_minimo' => 520, 'precio_normal' => 600,
+            'fecha_registro' => now(),
+        ]);
+
+        $response = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 100,
+                'ventas' => [[
+                    'tipo_venta' => 'EQUIPO', 'monto_total' => 100, 'efectivo_inicial' => 100,
+                    'producto_nombre' => 'Xiaomi Redmi 13', 'tipo_pago' => 'CONTADO',
+                    'inventario_tienda_id' => $invId, 'precio_venta' => 100, 'costo_snap' => 400,
+                ]],
+            ]));
+
+        $response->assertStatus(422)->assertJsonPath('code', 'STOCK_GUARD');
+        $this->assertDatabaseCount('reportes', 0);
+        $this->assertSame(1, (int) DB::table('inventario_tiendas')->where('id', $invId)->value('cantidad'));
+        $this->assertSame('DISPONIBLE', DB::table('inventario_tiendas')->where('id', $invId)->value('estado'));
+    }
+
+    public function test_store_rechaza_venta_de_item_en_traslado(): void
+    {
+        $vendedor = $this->vendedorVinculado('PUNDA50');
+
+        $invId = DB::table('inventario_tiendas')->insertGetId([
+            'tienda_id' => 'PUNDA50', 'tipo' => 'EQUIPO', 'producto_nombre' => 'Cargador',
+            'cantidad' => 1, 'estado' => 'TRASLADO',
+            'precio_costo' => 10, 'precio_minimo' => 0, 'precio_normal' => 20,
+            'fecha_registro' => now(),
+        ]);
+
+        $response = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 20,
+                'ventas' => [[
+                    'tipo_venta' => 'EQUIPO', 'monto_total' => 20, 'efectivo_inicial' => 20,
+                    'producto_nombre' => 'Cargador', 'tipo_pago' => 'CONTADO',
+                    'inventario_tienda_id' => $invId, 'precio_venta' => 20, 'costo_snap' => 10,
+                ]],
+            ]));
+
+        $response->assertStatus(422)->assertJsonPath('code', 'STOCK_GUARD');
+        $this->assertDatabaseCount('reportes', 0);
+        $this->assertSame(1, (int) DB::table('inventario_tiendas')->where('id', $invId)->value('cantidad'));
+        $this->assertSame('TRASLADO', DB::table('inventario_tiendas')->where('id', $invId)->value('estado'));
+    }
+
+    public function test_store_registra_accion_crear_en_historial(): void
+    {
+        $vendedor = $this->vendedorVinculado('PUNDA50');
+
+        $resp = $this->actingAs($vendedor, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($vendedor, [
+                'fecha' => now()->toDateString(), 'efectivo_entregado' => 60,
+                'ventas' => [['tipo_venta' => 'OTROS_FLUJO', 'monto_total' => 60, 'efectivo_inicial' => 60]],
+            ]))->assertCreated();
+
+        $reporteId = $resp->json('id');
+        $historial = DB::table('historial_reportes')->where('reporte_id', $reporteId)->orderBy('id')->first();
+
+        $this->assertNotNull($historial);
+        $this->assertSame('crear', $historial->accion);
+        $this->assertSame((int) $vendedor->id, (int) $historial->usuario_id);
     }
 
     private function payload(Usuario $usuario, array $overrides = []): array
