@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
-import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -30,6 +30,11 @@ interface NavItem {
 // pestañas dentro de la página `/asistencias` en el legacy, no entradas de
 // menú: sus rutas siguen vivas, solo se accede a ellas desde la cabecera de
 // Asistencias.
+//
+// Cada sección es colapsable (clic en el header) y el estado se persiste en
+// localStorage por `section` (clave estable, independiente del label que
+// cambia por rol, ver `sectionLabel`). Al navegar, la sección de la ruta
+// activa se auto-expande si estaba colapsada, para no perder el highlight.
 const NAV_ITEMS: NavItem[] = [
   // ── Gerencia ─────────────────────────────────────────────────────────────
   { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
@@ -79,6 +84,17 @@ function sectionLabel(section: string, role: string) {
   return section === 'Gerencia' && role === 'tienda' ? 'Mi Panel' : section
 }
 
+const SIDEBAR_SECTIONS_KEY = 'kyro:sidebar-collapsed-sections'
+
+function loadCollapsedSections(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_SECTIONS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
   const { isDark, toggleTheme } = useTheme()
@@ -86,7 +102,16 @@ export function AppLayout() {
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [ccOpen, setCcOpen]         = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(loadCollapsedSections)
   const navItemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_SECTIONS_KEY, JSON.stringify(collapsedSections))
+  }, [collapsedSections])
+
+  function toggleSection(section: string) {
+    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  }
 
   const { data: cc } = useQuery({
     queryKey: ['control-center'],
@@ -123,6 +148,20 @@ export function AppLayout() {
 
   const userRole     = usuario?.rol ?? 'tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
+
+  /* Sección de la ruta activa: se calcula en cada render (no en un efecto) para
+     poder forzarla siempre expandida sin necesitar setState — así el usuario
+     nunca pierde el highlight de dónde está parado, aunque haya colapsado esa
+     sección antes. */
+  const activeSection = (() => {
+    const path = location.pathname
+    let found: NavItem | null = null
+    for (const item of visibleItems) {
+      const matches = item.to === '/' ? path === '/' : (path === item.to || path.startsWith(item.to + '/'))
+      if (matches && (!found || item.to.length > found.to.length)) found = item
+    }
+    return found?.section ?? null
+  })()
 
   /* Auto-scroll al item activo del sidebar (como el legacy) al cambiar de ruta. */
   useEffect(() => {
@@ -165,7 +204,6 @@ export function AppLayout() {
   const logoutCls       = isDark
     ? 'text-red-400 hover:bg-red-500/10'
     : 'text-red-300 hover:bg-white/10'
-  const mutedToggleIconCls = isDark ? 'text-zinc-600' : 'text-white/55'
   const soonCls         = isDark ? 'text-zinc-700' : 'text-white/35'
   const soonBadgeCls    = isDark ? 'bg-zinc-800 text-zinc-600' : 'bg-white/10 text-white/50'
   const mobileMenuCls   = isDark
@@ -211,6 +249,14 @@ export function AppLayout() {
             </Link>
           )}
           <div className={`flex items-center gap-1 shrink-0 ${collapsed ? '' : 'ml-auto'}`}>
+            {/* Toggle de tema claro/oscuro — único lugar, junto a las acciones globales */}
+            <button
+              onClick={toggleTheme}
+              title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${collapseBtnCls}`}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
             {/* Centro de Control (campana) — solo admin */}
             {isAdmin && (
               <div className="relative">
@@ -248,18 +294,28 @@ export function AppLayout() {
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visibleItems.map(({ to, label, Icon, soon, section, accent }, idx) => {
             const showSeparator = idx === 0 || section !== visibleItems[idx - 1].section
+            const sectionIsCollapsed = !!collapsedSections[section] && section !== activeSection
 
             return (
               <div key={to} ref={(el) => { if (el) navItemRefs.current.set(to, el); else navItemRefs.current.delete(to) }}>
                 {showSeparator && !collapsed && (
-                  <div className="pt-3 pb-1 px-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section)}
+                    className="w-full flex items-center justify-between gap-2 pt-3 pb-1 px-3"
+                  >
                     <span className={`block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide ${isDark ? 'text-kyro-muted' : 'text-white/75'}`}>
                       {sectionLabel(section, userRole)}
                     </span>
-                  </div>
+                    <CaretDown
+                      size={11}
+                      weight="bold"
+                      className={`shrink-0 mr-1 transition-transform duration-150 ${sectionIsCollapsed ? '-rotate-90' : ''} ${isDark ? 'text-kyro-muted' : 'text-white/60'}`}
+                    />
+                  </button>
                 )}
 
-                {soon ? (
+                {(collapsed || !sectionIsCollapsed) && (soon ? (
                   <div
                     title={collapsed ? label : undefined}
                     className={`flex items-center gap-3 px-3 py-2 rounded-kyro text-[0.9rem] cursor-not-allowed select-none ${soonCls}
@@ -320,7 +376,7 @@ export function AppLayout() {
                       )
                     }}
                   </NavLink>
-                )}
+                ))}
               </div>
             )
           })}
@@ -356,43 +412,7 @@ export function AppLayout() {
                     </span>
                   </div>
                 </div>
-                {/* Toggle de tema (luna / dorado / sol) */}
-                <div className="flex items-center justify-center gap-2 pt-1">
-                  <Moon size={12} className={isDark ? 'text-kyro-gold' : mutedToggleIconCls} />
-                  <button
-                    onClick={toggleTheme}
-                    title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                    className="relative w-9 h-5 rounded-full transition-colors shrink-0"
-                    style={{ background: '#ffc200' }}
-                  >
-                    <span
-                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
-                      style={{ transform: isDark ? 'translateX(18px)' : 'translateX(2px)' }}
-                    />
-                  </button>
-                  <Sun size={12} className={!isDark ? 'text-kyro-gold' : mutedToggleIconCls} />
-                </div>
               </div>
-
-              {/* Notificaciones */}
-              <button
-                onClick={() => setCcOpen((o) => !o)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
-                style={{
-                  background: isDark ? 'rgba(255,194,0,0.12)' : 'rgba(255,194,0,0.16)',
-                  color: '#ffc200',
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <Bell size={13} weight={notifCount > 0 ? 'fill' : 'regular'} />
-                  Notificaciones
-                </span>
-                {notifCount > 0 && (
-                  <span className="min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[9px] font-bold rounded-full text-white" style={{ background: '#ef4444' }}>
-                    {notifCount > 99 ? '99+' : notifCount}
-                  </span>
-                )}
-              </button>
 
               {/* Aprobar Traslados — solo admin */}
               {isAdmin && (
