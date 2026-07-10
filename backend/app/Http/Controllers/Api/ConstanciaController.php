@@ -6,12 +6,38 @@ use App\Http\Controllers\Controller;
 use App\Models\Venta;
 use App\Support\TiendaGuard;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ConstanciaController extends Controller
 {
+    /**
+     * Perfil de la empresa que cabecera todas las constancias. La tabla real es
+     * `configuracion_empresa` (migración 2026_07_09_000002, nombre heredado del
+     * legacy `gerencia/configuracion_empresa.php`). Devuelve null si la fila
+     * única aún no existe; las vistas ya tienen texto por defecto.
+     */
+    private function empresa(): ?object
+    {
+        return DB::table('configuracion_empresa')->first();
+    }
+
+    /**
+     * `tiendas.codigo` y las columnas `tienda_origen`/`tienda_destino` de los
+     * traslados pueden traer colaciones distintas cuando la BD viene adoptada
+     * del legacy, y MySQL aborta el JOIN con "Illegal mix of collations". El
+     * COLLATE explícito lo resuelve, pero SQLite —el motor de la suite— no
+     * conoce esa colación y tumba la consulta entera. Se emite solo en MySQL.
+     */
+    private function codigoTienda(string $columna): Expression|string
+    {
+        return in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+            ? DB::raw("{$columna} COLLATE utf8mb4_unicode_ci")
+            : $columna;
+    }
+
     // ── GET /constancias/traslado?tipo=equipos&id=&lote= ──────────────────────
     public function traslado(Request $request)
     {
@@ -30,8 +56,8 @@ class ConstanciaController extends Controller
             $traslado = DB::table('traslados_chips as tc')
                 ->leftJoin('agentes as ae', 'ae.id', '=', 'tc.enviado_por_id')
                 ->leftJoin('agentes as ac', 'ac.id', '=', 'tc.confirmado_por_id')
-                ->leftJoin('tiendas as te', DB::raw('te.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('tc.tienda_origen COLLATE utf8mb4_unicode_ci'))
-                ->leftJoin('tiendas as td', DB::raw('td.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('tc.tienda_destino COLLATE utf8mb4_unicode_ci'))
+                ->leftJoin('tiendas as te', $this->codigoTienda('te.codigo'), '=', $this->codigoTienda('tc.tienda_origen'))
+                ->leftJoin('tiendas as td', $this->codigoTienda('td.codigo'), '=', $this->codigoTienda('tc.tienda_destino'))
                 ->where('tc.id', $id)
                 ->select(
                     'tc.*',
@@ -47,8 +73,8 @@ class ConstanciaController extends Controller
                 ->leftJoin('inventario_tiendas as it', 'it.id', '=', 'ts.producto_id')
                 ->leftJoin('agentes as ae', 'ae.id', '=', 'ts.enviado_por_id')
                 ->leftJoin('agentes as ac', 'ac.id', '=', 'ts.confirmado_por_id')
-                ->leftJoin('tiendas as te', DB::raw('te.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('ts.tienda_origen COLLATE utf8mb4_unicode_ci'))
-                ->leftJoin('tiendas as td', DB::raw('td.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('ts.tienda_destino COLLATE utf8mb4_unicode_ci'))
+                ->leftJoin('tiendas as te', $this->codigoTienda('te.codigo'), '=', $this->codigoTienda('ts.tienda_origen'))
+                ->leftJoin('tiendas as td', $this->codigoTienda('td.codigo'), '=', $this->codigoTienda('ts.tienda_destino'))
                 ->where('ts.codigo_lote', $lote)
                 ->select(
                     'ts.*',
@@ -67,8 +93,8 @@ class ConstanciaController extends Controller
                 ->leftJoin('inventario_tiendas as it', 'it.id', '=', 'ts.producto_id')
                 ->leftJoin('agentes as ae', 'ae.id', '=', 'ts.enviado_por_id')
                 ->leftJoin('agentes as ac', 'ac.id', '=', 'ts.confirmado_por_id')
-                ->leftJoin('tiendas as te', DB::raw('te.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('ts.tienda_origen COLLATE utf8mb4_unicode_ci'))
-                ->leftJoin('tiendas as td', DB::raw('td.codigo COLLATE utf8mb4_unicode_ci'), '=', DB::raw('ts.tienda_destino COLLATE utf8mb4_unicode_ci'))
+                ->leftJoin('tiendas as te', $this->codigoTienda('te.codigo'), '=', $this->codigoTienda('ts.tienda_origen'))
+                ->leftJoin('tiendas as td', $this->codigoTienda('td.codigo'), '=', $this->codigoTienda('ts.tienda_destino'))
                 ->where('ts.id', $id)
                 ->select(
                     'ts.*',
@@ -95,7 +121,7 @@ class ConstanciaController extends Controller
             'No tienes permisos sobre este traslado.'
         );
 
-        $empresa = DB::table('configuraciones')->first();
+        $empresa = $this->empresa();
 
         $pdf = Pdf::loadView('constancias.traslado', compact('traslado', 'items', 'tipo', 'empresa'))
             ->setPaper('a4', 'portrait');
@@ -124,7 +150,7 @@ class ConstanciaController extends Controller
             'No tienes permisos sobre este agente.'
         );
 
-        $empresa = DB::table('configuraciones')->first();
+        $empresa = $this->empresa();
 
         $pdf = Pdf::loadView('constancias.agente', compact('agente', 'empresa'))
             ->setPaper('a4', 'portrait');
@@ -153,7 +179,7 @@ class ConstanciaController extends Controller
             'No tienes permisos sobre esta boleta.'
         );
 
-        $empresa = DB::table('configuraciones')->first();
+        $empresa = $this->empresa();
 
         $pdf = Pdf::loadView('constancias.boleta', compact('pago', 'agente', 'empresa'))
             ->setPaper([0, 0, 595, 842], 'portrait');
@@ -249,7 +275,7 @@ class ConstanciaController extends Controller
 
         $salidas = DB::table('reporte_salidas')->where('reporte_id', $id)->orderBy('id')->get();
 
-        $empresa = DB::table('configuraciones')->first();
+        $empresa = $this->empresa();
 
         $pdf = Pdf::loadView('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))
             ->setPaper('a4', 'portrait');

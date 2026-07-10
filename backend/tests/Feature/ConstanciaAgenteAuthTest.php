@@ -6,7 +6,6 @@ use App\Models\Agente;
 use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -28,13 +27,10 @@ class ConstanciaAgenteAuthTest extends TestCase
 
     private function asegurarConfiguraciones(): void
     {
-        if (! Schema::hasTable('configuraciones')) {
-            Schema::create('configuraciones', function ($table) {
-                $table->id();
-                $table->string('razon_social')->nullable();
-            });
-            DB::table('configuraciones')->insert(['razon_social' => 'BITEL TELECOM S.A.C.']);
-        }
+        DB::table('configuracion_empresa')->insert([
+            'razon_social' => 'BITEL TELECOM S.A.C.',
+            'ruc'          => '20512345678',
+        ]);
     }
 
     // ── /constancias/agente/{id} ──────────────────────────────────────────

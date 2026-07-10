@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Venta;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -155,15 +154,17 @@ class ConstanciaReporteDetalleTest extends TestCase
         $this->assertStringContainsString('GANANCIA TOTAL', $html);
     }
 
+    private function asegurarConfiguraciones(): void
+    {
+        DB::table('configuracion_empresa')->insert([
+            'razon_social' => 'BITEL TELECOM S.A.C.',
+            'ruc'          => '20512345678',
+        ]);
+    }
+
     public function test_pdf_excluye_ventas_anuladas_igual_que_los_exports_excel(): void
     {
-        if (! Schema::hasTable('configuraciones')) {
-            Schema::create('configuraciones', function ($table) {
-                $table->id();
-                $table->string('razon_social')->nullable();
-            });
-            DB::table('configuraciones')->insert(['razon_social' => 'BITEL TELECOM S.A.C.']);
-        }
+        $this->asegurarConfiguraciones();
 
         [$reporteId] = $this->crearReporteConDetalle();
 
@@ -293,13 +294,7 @@ class ConstanciaReporteDetalleTest extends TestCase
 
     public function test_endpoint_descarga_pdf_real_sin_error(): void
     {
-        if (! Schema::hasTable('configuraciones')) {
-            Schema::create('configuraciones', function ($table) {
-                $table->id();
-                $table->string('razon_social')->nullable();
-            });
-            DB::table('configuraciones')->insert(['razon_social' => 'BITEL TELECOM S.A.C.']);
-        }
+        $this->asegurarConfiguraciones();
 
         [$reporteId, , $cajero] = $this->crearReporteConDetalle();
 
@@ -308,6 +303,6 @@ class ConstanciaReporteDetalleTest extends TestCase
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('content-type'));
-        $this->assertGreaterThan(0, strlen($response->getContent()));
+        $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 }
