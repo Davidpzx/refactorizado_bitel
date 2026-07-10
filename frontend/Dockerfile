@@ -4,10 +4,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies with lockfile enforcement (reproducible builds).
-# npm >=11 requerido: el npm 10 de node:20-alpine exige en el lock los peers
-# opcionales de vite@8 (esbuild) y rompe npm ci con EUSAGE.
+# npm 11 requerido (npm 12 exige node>=22): el npm 10 de node:20-alpine exige
+# en el lock los peers opcionales de vite@8 (esbuild) y rompe npm ci (EUSAGE).
 COPY package*.json ./
-RUN npm install -g npm@12 && npm ci
+RUN npm install -g npm@11 && npm ci
 
 # Copy source and compile
 COPY . .
