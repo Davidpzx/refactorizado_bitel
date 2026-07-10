@@ -9,6 +9,7 @@ import {
 } from '../../hooks/usePostulaciones'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { PersonalTabs } from '../agentes/PersonalTabs'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -368,6 +369,8 @@ export function PostulacionesPage() {
         description="Gestión de postulaciones recibidas."
         Icon={UserCheck}
       />
+
+      <PersonalTabs />
 
       <ListToolbar description="Busca postulantes y filtra por etapa del proceso.">
         <Input

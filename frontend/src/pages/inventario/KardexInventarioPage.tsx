@@ -4,6 +4,7 @@ import { DownloadSimple as Download, ArrowCounterClockwise as RotateCcw, Clipboa
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader } from '../../components/PageHeader'
+import { InventarioTabs } from './InventarioTabs'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
@@ -141,6 +142,8 @@ export function KardexInventarioPage() {
           </Button>
         }
       />
+
+      <InventarioTabs />
 
       <ListToolbar description="Consulta el historial por tienda y estado de inventario.">
         <Select

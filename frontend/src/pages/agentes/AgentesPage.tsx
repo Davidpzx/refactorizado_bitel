@@ -4,6 +4,7 @@ import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useAgentes, useEliminarAgente } from '../../hooks/useAgentes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { PersonalTabs } from './PersonalTabs'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -245,6 +246,8 @@ export function AgentesPage() {
           </div>
         }
       />
+
+      <PersonalTabs />
 
       <ListToolbar description="Busca por documento, nombre o filtra por tienda.">
         <div className="relative w-full sm:max-w-xs">

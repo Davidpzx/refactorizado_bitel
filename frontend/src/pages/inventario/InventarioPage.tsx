@@ -21,6 +21,7 @@ import { Label } from '../../components/ui/label'
 import { StatCard } from '../../components/ui/StatCard'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InventarioForm } from './InventarioForm'
+import { InventarioTabs } from './InventarioTabs'
 import { useAuth } from '../../hooks/useAuth'
 import type { InventarioItem } from '../../types/inventario'
 
@@ -529,6 +530,8 @@ export function InventarioPage() {
           </div>
         }
       />
+
+      <InventarioTabs />
 
       {!esTienda && <CapitalInvertidoWidget tienda={tienda} />}
       <CampanaCostosWidget />

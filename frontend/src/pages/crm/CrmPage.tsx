@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -800,6 +801,7 @@ const CRM_TABS = [
 ] as const
 
 export function CrmPage() {
+  const navigate = useNavigate()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
   const [filtroTienda, setFiltroTienda] = useState('')
@@ -867,11 +869,11 @@ export function CrmPage() {
         <Button variant="gold" size="sm" onClick={abrirNuevo}>+ Nuevo lead</Button>
       </PageHeader>
 
-      {/* Tabs */}
+      {/* Tabs — "Clientes" navega a /clientes (legacy: la base de clientes vive dentro de CRM y Marketing) */}
       <PageTabs
-        tabs={CRM_TABS.map(t => ({ id: t.id, label: t.label }))}
+        tabs={[...CRM_TABS.map(t => ({ id: t.id, label: t.label })), { id: 'clientes', label: 'Clientes' }]}
         active={tab}
-        onChange={(id) => setTab(id as typeof tab)}
+        onChange={(id) => (id === 'clientes' ? navigate('/clientes') : setTab(id as typeof tab))}
         activeColor="#c084fc"
         activeTextColor="#1a1033"
       />

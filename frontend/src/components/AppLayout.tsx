@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
-import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, UserGear as UserCog, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Cpu, Bank as Landmark, Stethoscope, UserCheck, Ticket, Scroll as ScrollText, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -43,7 +43,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: ['admin'],          section: 'Gerencia' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
-  { to: '/clientes',       label: 'Clientes',        Icon: UserCog,         roles: ['admin', 'tienda'], section: 'Gerencia' },
 
   // ── Administración ───────────────────────────────────────────────────────
   { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
@@ -51,31 +50,28 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/agentes',        label: 'Personal',        Icon: IdCard,          roles: ['admin'],           section: 'Administración' },
   { to: '/asistencias',    label: 'Asistencias',     Icon: CalendarCheck,   roles: ['admin'],           section: 'Administración' },
   { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Administración' },
-  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin', 'tienda'], section: 'Administración' },
+  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin'],           section: 'Administración' },
   { to: '/comisiones',     label: 'Comisiones',      Icon: Settings2,       roles: ['admin'],           section: 'Administración' },
   { to: '/financieras',    label: 'Financieras',     Icon: Handshake,       roles: ['admin'],           section: 'Administración' },
   { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: Landmark,        roles: ['admin', 'tienda'], section: 'Administración' },
   { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: Wallet,          roles: ['admin'],           section: 'Administración' },
   { to: '/postpago',       label: 'Churn / Postpago', Icon: Signal,         roles: ['admin'],           section: 'Administración' },
   { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: MapPin,          roles: ['admin'],           section: 'Administración' },
-  { to: '/admin/postulaciones', label: 'Postulantes', Icon: UserCheck,      roles: ['admin'],           section: 'Administración' },
-  { to: '/diagnostico',    label: 'Diagnóstico',     Icon: Stethoscope,     roles: ['admin'],           section: 'Administración' },
-  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Files,           roles: ['admin'],           section: 'Administración' },
+  { to: '/postular',       label: 'Registro de Datos', Icon: ClipboardList, roles: ['admin'],          section: 'Administración', accent: '#c084fc' },
 
   // ── Inventario ───────────────────────────────────────────────────────────
   { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
   { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
-  { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: ['admin', 'tienda'], section: 'Inventario' },
-  { to: '/inventario/kardex', label: 'Kardex',            Icon: ScrollText, roles: ['admin'],           section: 'Inventario' },
-  { to: '/chips-gestion',     label: 'Gestión Chips',     Icon: Cpu,        roles: ['admin', 'tienda'], section: 'Inventario' },
 
   // ── Operaciones ──────────────────────────────────────────────────────────
   { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
+  { to: '/tickets',        label: 'Tickets Emitidos', Icon: Ticket,         roles: ['tienda'],          section: 'Operaciones' },
   { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: QrCode,          roles: ['admin', 'tienda'], section: 'Operaciones' },
 
   // ── Configuración ────────────────────────────────────────────────────────
   { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Building2,     roles: ['admin'],           section: 'Configuración' },
   { to: '/configuracion/facturacion', label: 'Facturación Electrónica', Icon: Receipt, roles: ['admin'], section: 'Configuración' },
+  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Files,           roles: ['admin'],           section: 'Configuración' },
   { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
 ]
 
@@ -136,9 +132,8 @@ export function AppLayout() {
   const badgeByRoute: Record<string, number> = {
     '/historial':            cc?.anomalias_caja.count ?? 0,
     '/revisar-stock':        cc?.precios_pendientes.count ?? 0,
-    '/traslados':            cc?.traslados_pendientes.count ?? 0,
     '/financieras':          cc?.financieras_pendientes.count ?? 0,
-    '/admin/postulaciones':  cc?.postulantes_pendientes.count ?? 0,
+    '/agentes':              cc?.postulantes_pendientes.count ?? 0,
     '/reporte-bcp':          cc?.alertas_bcp.count ?? 0,
     '/panel-bipay':          cc?.alertas_bipay.count ?? 0,
   }

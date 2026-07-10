@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Cpu, Trash as Trash2 } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
+import { InventarioTabs } from './InventarioTabs'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
@@ -186,6 +187,8 @@ export function ChipsGestionPage() {
           ) : undefined
         }
       />
+
+      <InventarioTabs />
 
       {isError && (
         <div className="kyro-card p-4 text-sm text-kyro-danger">

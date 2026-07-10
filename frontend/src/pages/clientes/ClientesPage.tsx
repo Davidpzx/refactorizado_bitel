@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { useClientes, useEliminarCliente } from '../../hooks/useClientes'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { PageTabs } from '../../components/ui/PageTabs'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
@@ -72,7 +74,15 @@ function getColumns(
   ]
 }
 
+const CRM_TABS_REMOTOS = [
+  { id: 'tabla',       label: 'Tabla' },
+  { id: 'pipeline',    label: 'Pipeline Kanban' },
+  { id: 'temperatura', label: 'Temperatura' },
+  { id: 'analytics',   label: 'Analytics' },
+] as const
+
 export function ClientesPage() {
+  const navigate = useNavigate()
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })
@@ -122,6 +132,15 @@ export function ClientesPage() {
         title="Clientes"
         description="Base de clientes del sistema CRM."
         actions={<Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo cliente</Button>}
+      />
+
+      {/* Tabs — comparte cabecera con CRM y Marketing (legacy: misma sección) */}
+      <PageTabs
+        tabs={[...CRM_TABS_REMOTOS.map(t => ({ id: t.id, label: t.label })), { id: 'clientes', label: 'Clientes' }]}
+        active="clientes"
+        onChange={(id) => navigate(id === 'clientes' ? '/clientes' : '/crm')}
+        activeColor="#c084fc"
+        activeTextColor="#1a1033"
       />
 
       <ListToolbar description="Busca por documento o nombre del cliente.">

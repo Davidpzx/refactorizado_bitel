@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
+import { InventarioTabs } from '../inventario/InventarioTabs'
 import { ArrowsLeftRight as ArrowRightLeft, Check, XCircle, ArrowUUpLeft as Undo2 } from '@phosphor-icons/react'
 import { ListToolbar } from '../../components/ListToolbar'
 import { Dialog } from '../../components/ui/dialog'
@@ -770,6 +771,8 @@ export function TrasladosPage() {
           </Button>
         }
       />
+
+      <InventarioTabs />
 
       {/* ── Tab principal ──────────────────────────────────────────────────── */}
       <div className="flex gap-2 border-b border-kyro-border pb-3">
