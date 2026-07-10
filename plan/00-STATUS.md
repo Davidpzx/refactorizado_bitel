@@ -52,6 +52,13 @@ El usuario vio producción y NO percibió paridad: toggle de tema mal, notificac
 
 **DEPLOY FINAL 2026-07-10: frontend=done backend=done, app 200 / api 200.** Suite 632/632. Esperando veredicto del usuario en app.kyrocodelabs.cloud; si no convence, iterar 041 con su feedback puntual.
 
+## Fase de planes de mejora (autorizada por el usuario 2026-07-09 ~8pm)
+Nueva fase: SOLO ESCRITURA DE PLANES (cero código, cuotas muy usadas), Fable razonamiento medio→bajo, mejora de diseño POR ENCIMA del legacy (identidad Ultra Dark Premium, nunca genérico) + ciberseguridad.
+- titan → plan/08-mejoras-diseno-bloque1.md (Dashboard, cuadre, Historial, Mi Historial, Asistencias×4, Planilla, Terminal; por pantalla: qué elevar, propuesta con valores exactos, esfuerzo, modelo ejecutor Sonnet/Opus, tickets de una pasada; + transversales del design system)
+- dev3 → plan/08-mejoras-diseno-bloque2.md (Inventario+tabs, CRM+Clientes, Precios, Comisiones, Financieras, Facturación, Comprobantes, Personal/VerAgente, Postulación, Tiendas/Usuarios, Tickets; mismo formato)
+- dev2 → plan/09-plan-ciberseguridad.md (7 áreas por LECTURA de código, sin escaneos activos: auth/roles matriz endpoint-middleware, inyección SQL/XSS/mass-assignment, secretos en env/logs/git, uploads, links públicos HMAC/enumeración, headers/CORS/rate-limits/infra, PII; hallazgo = severidad + archivo:línea + fix + ticket)
+**Intento 1 (2026-07-09 ~8:15pm) FALLÓ por cuotas**: las 3 sesiones agotadas al instante con Fable medio, sin archivos producidos (0.3 caso 1, sin trabajo perdido). Resets: dev2/dev3 11:30pm, titan 11:50pm. Cron en sesión programado 11:37pm para relanzar con razonamiento BAJO. Si esta terminal muere, relanzar a mano tras esas horas con los mismos alcances de arriba.
+
 ---
 **(histórico)** TICKET-027 primer intento bloqueado por cuotas. El primer intento (2026-07-09 ~3:20pm) murió al instante: titan y dev3 con Opus agotaron sesión de inmediato (venían trabajando todo el día). SIN trabajo perdido (regla 0.3 caso 1 — no empezaron, working tree limpio).
 **Resets:** dev2 y dev3 → 6:30pm; titan → 6:50pm (2026-07-09, Lima).
