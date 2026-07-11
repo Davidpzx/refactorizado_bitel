@@ -113,6 +113,10 @@ class AsistenciaController extends Controller
             'turno_extendido' => ['nullable', 'boolean'],
             'minutos_refrigerio_asignado' => ['nullable', 'integer', 'between:0,240'],
             'hora_intento_gps' => ['nullable', 'integer'],
+            // APP-03: la app nativa reporta si detectó GPS falso (mock location). El
+            // plugin web/oficial no puede detectarlo hoy — siempre llega false desde ahí;
+            // solo la app Android (plugin propio, APP-02) puede mandar true de verdad.
+            'mock_gps' => ['nullable', 'boolean'],
         ]);
 
         $agente = $this->buscarAgente($data['dni']);
@@ -138,6 +142,20 @@ class AsistenciaController extends Controller
             return $error;
         }
         $usaTokenEmergencia = trim((string) ($data['token'] ?? '')) !== '';
+
+        // APP-03: GPS falso detectado por la app — no se acepta como marcación válida
+        // aunque "caiga" dentro del rango (una posición falseada puede simular cualquier
+        // coordenada). Se registra como intento fallido para el antifraude y se ofrecen
+        // las alternativas (QR/foto/token), igual que ante GPS débil o fuera de rango.
+        if (! $usaTokenEmergencia && ($data['mock_gps'] ?? false)) {
+            $this->registrarIntentoFallido($agente, $data, 'MOCK_GPS');
+
+            return response()->json([
+                'error' => 'Se detectó una ubicación GPS simulada. Escanea el QR de la tienda.',
+                'code' => 'MOCK_GPS',
+                'qr_disponible' => true,
+            ], 422);
+        }
 
         $distancia = null;
         $latTienda = $this->valor($tienda, 'lat_centro', $this->valor($tienda, 'latitud'));

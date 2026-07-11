@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import jsQR from 'jsqr'
 import { api } from '../../services/api'
+import { obtenerPosicionActual, type ErrorPermisoGps } from '../../utils/geolocalizacionNativa'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -393,7 +394,7 @@ export function TerminalAsistenciaPage() {
     } catch (err: unknown) {
       const resp = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
       // GPS fuera de rango o señal débil → ofrecer alternativas (no es error duro)
-      if (metodo === 'gps' && (resp?.code === 'OUT_OF_RANGE' || resp?.code === 'WEAK_GPS')) {
+      if (metodo === 'gps' && (resp?.code === 'OUT_OF_RANGE' || resp?.code === 'WEAK_GPS' || resp?.code === 'MOCK_GPS')) {
         setMensaje(resp?.error ?? 'No estás dentro del rango de la tienda.')
         setPaso('fallback'); return
       }
@@ -401,15 +402,23 @@ export function TerminalAsistenciaPage() {
     } finally { setLoading(false) }
   }, [dni, tipo, tiendaSel, omitirRefrigerio, turnoCompleto, status])
 
-  function marcarGPS() {
-    if (!navigator.geolocation) { setMensaje('GPS no disponible. Usa una alternativa.'); setPaso('fallback'); return }
+  async function marcarGPS() {
     horaIntentoRef.current = Date.now() // A3
     setPaso('gps')
-    navigator.geolocation.getCurrentPosition(
-      (pos) => marcar('gps', { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-      () => { setMensaje('No se pudo obtener tu ubicación GPS.'); setPaso('fallback') },
-      { enableHighAccuracy: true, timeout: 10000 },
-    )
+    try {
+      const pos = await obtenerPosicionActual()
+      marcar('gps', { lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy, mock_gps: pos.mockGps })
+    } catch (err: unknown) {
+      const code = (err as { code?: ErrorPermisoGps })?.code
+      const mensajes: Record<ErrorPermisoGps, string> = {
+        no_disponible: 'GPS no disponible. Usa una alternativa.',
+        permiso_denegado: 'Activa el permiso de ubicación para la app y vuelve a intentar. Mientras tanto, usa una alternativa.',
+        timeout: 'No se pudo obtener tu ubicación GPS.',
+        desconocido: 'No se pudo obtener tu ubicación GPS.',
+      }
+      setMensaje(mensajes[code ?? 'desconocido'])
+      setPaso('fallback')
+    }
   }
 
   async function activarTurnoCorrido() {

@@ -127,6 +127,22 @@ class AsistenciaTest extends TestCase
         ]);
     }
 
+    public function test_rechaza_mock_gps_y_registra_el_intento(): void
+    {
+        $payload = $this->gpsPayload('entrada');
+        $payload['mock_gps'] = true;
+
+        $this->postJson('/api/v1/attendance/mark', $payload)
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'MOCK_GPS')
+            ->assertJsonPath('qr_disponible', true);
+
+        $this->assertDatabaseHas('asistencia_intentos_fallidos', [
+            'agente_id' => 1,
+            'motivo' => 'MOCK_GPS',
+        ]);
+    }
+
     public function test_token_emergencia_valido_permite_marcar_fuera_del_rango_gps(): void
     {
         DB::table('agentes')->where('id', 1)->update([
