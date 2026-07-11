@@ -77,6 +77,8 @@ Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
     Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto'])->middleware('throttle:10,1');
     // APP-04 — ping de presencia (app nativa; autenticado por device_hash + agente).
     Route::post('ping-ubicacion', [AsistenciaPresenciaController::class, 'pingUbicacion']);
+    // APP-08 — consentimiento de rastreo, requerido por ping-ubicacion antes de aceptar pings.
+    Route::post('consentimiento-ubicacion', [AsistenciaPresenciaController::class, 'registrarConsentimiento']);
 });
 Route::post('/v1/asistencias/turno-corrido', [AsistenciaController::class, 'turnoCorrido'])->middleware('throttle:60,1');
 

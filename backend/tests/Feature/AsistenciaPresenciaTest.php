@@ -41,6 +41,15 @@ class AsistenciaPresenciaTest extends TestCase
             'dia_descanso' => 'DOMINGO',
             'hash_dispositivo' => 'device-abc',
         ]);
+
+        // APP-08: consentimiento ya aceptado por defecto — los tests de ping (APP-04)
+        // no son sobre el gate de consentimiento; ese tiene su propio test dedicado.
+        DB::table('asistencia_consentimientos_ubicacion')->insert([
+            'agente_id' => 1,
+            'device_hash' => 'device-abc',
+            'version_texto' => 'v1',
+            'aceptado_en' => now(),
+        ]);
     }
 
     protected function tearDown(): void
@@ -239,5 +248,49 @@ class AsistenciaPresenciaTest extends TestCase
 
         // Presencia borrada; las incidencias (si hubiera) permanecerían.
         $this->assertDatabaseCount('asistencia_presencia', 0);
+    }
+
+    public function test_ping_sin_consentimiento_previo_es_428(): void
+    {
+        DB::table('asistencia_consentimientos_ubicacion')->where('agente_id', 1)->delete();
+        $this->abrirTurno();
+
+        $this->postJson('/api/v1/attendance/ping-ubicacion', $this->pingPayload())
+            ->assertStatus(428)
+            ->assertJsonPath('code', 'CONSENT_REQUIRED');
+
+        $this->assertDatabaseCount('asistencia_presencia', 0);
+    }
+
+    public function test_registrar_consentimiento_permite_el_ping_despues(): void
+    {
+        DB::table('asistencia_consentimientos_ubicacion')->where('agente_id', 1)->delete();
+        $this->abrirTurno();
+
+        $this->postJson('/api/v1/attendance/consentimiento-ubicacion', [
+            'dni' => '12345678',
+            'device_hash' => 'device-abc',
+        ])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('version_texto', 'v1');
+
+        $this->assertDatabaseHas('asistencia_consentimientos_ubicacion', [
+            'agente_id' => 1,
+            'device_hash' => 'device-abc',
+            'version_texto' => 'v1',
+        ]);
+
+        $this->postJson('/api/v1/attendance/ping-ubicacion', $this->pingPayload())->assertOk();
+    }
+
+    public function test_registrar_consentimiento_con_device_hash_incorrecto_es_403(): void
+    {
+        $this->postJson('/api/v1/attendance/consentimiento-ubicacion', [
+            'dni' => '12345678',
+            'device_hash' => 'otro-dispositivo',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('code', 'DEVICE_MISMATCH');
     }
 }

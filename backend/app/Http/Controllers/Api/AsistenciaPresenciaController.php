@@ -18,9 +18,48 @@ use Illuminate\Support\Facades\Schema;
  *   upsert del ÚLTIMO ping por agente (DECISIÓN-APP-03: estado, no historial) y,
  *   si el estado no es `ok`, se registra una incidencia que sí persiste.
  * - presencia (admin): semáforo en vivo de los agentes en turno.
+ * - consentimiento-ubicacion (APP-08): el agente debe aceptar el texto de rastreo
+ *   ANTES de que la app empiece a mandar pings — sin consentimiento registrado,
+ *   ping-ubicacion rechaza con CONSENT_REQUIRED (428).
  */
 class AsistenciaPresenciaController extends Controller
 {
+    // Sube esta versión si el texto de consentimiento cambia de forma sustancial
+    // (obliga a los agentes ya autorizados a re-aceptar).
+    private const VERSION_TEXTO_CONSENTIMIENTO = 'v1';
+
+    public function registrarConsentimiento(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'dni' => ['required', 'string'],
+            'device_hash' => ['required', 'string', 'max:128'],
+        ]);
+
+        $agente = DB::table('agentes')->where('dni', trim($data['dni']))->first();
+        if (! $agente) {
+            return response()->json(['error' => 'DNI no encontrado.'], 404);
+        }
+
+        $hashDb = trim((string) ($agente->hash_dispositivo ?? ''));
+        $deviceHash = trim($data['device_hash']);
+        if ($hashDb === '' || ! hash_equals($hashDb, $deviceHash)) {
+            return response()->json(['error' => 'Dispositivo no autorizado.', 'code' => 'DEVICE_MISMATCH'], 403);
+        }
+
+        $ahora = $this->ahora();
+        DB::table('asistencia_consentimientos_ubicacion')->updateOrInsert(
+            ['agente_id' => $agente->id, 'device_hash' => $deviceHash],
+            [
+                'version_texto' => self::VERSION_TEXTO_CONSENTIMIENTO,
+                'aceptado_en' => $ahora,
+                'updated_at' => $ahora,
+                'created_at' => $ahora,
+            ]
+        );
+
+        return response()->json(['ok' => true, 'version_texto' => self::VERSION_TEXTO_CONSENTIMIENTO]);
+    }
+
     public function pingUbicacion(Request $request): JsonResponse
     {
         if (! Schema::hasTable('asistencias') || ! Schema::hasTable('asistencia_presencia')) {
@@ -52,6 +91,21 @@ class AsistenciaPresenciaController extends Controller
                 'error' => 'Dispositivo no autorizado.',
                 'code' => 'DEVICE_MISMATCH',
             ], 403);
+        }
+
+        // APP-08: sin consentimiento registrado para este agente+dispositivo, no se rastrea.
+        // La app debe llamar a consentimiento-ubicacion antes de empezar a mandar pings.
+        if (Schema::hasTable('asistencia_consentimientos_ubicacion')) {
+            $consentido = DB::table('asistencia_consentimientos_ubicacion')
+                ->where('agente_id', $agente->id)
+                ->where('device_hash', $deviceHash)
+                ->exists();
+            if (! $consentido) {
+                return response()->json([
+                    'error' => 'Falta aceptar el consentimiento de ubicación.',
+                    'code' => 'CONSENT_REQUIRED',
+                ], 428);
+            }
         }
 
         // Turno abierto hoy: entrada marcada y salida aún no registrada.
