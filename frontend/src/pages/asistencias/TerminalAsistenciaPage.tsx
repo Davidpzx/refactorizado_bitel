@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import jsQR from 'jsqr'
 import { api } from '../../services/api'
 import { obtenerPosicionActual, type ErrorPermisoGps } from '../../utils/geolocalizacionNativa'
+import DeviceIdentity, { esPlataformaNativa, type DeviceInfo } from '../../plugins/deviceIdentity'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,26 @@ function obtenerOCrearHuella(dni: string): string {
   try { localStorage.setItem(KYRO_LS, nueva) } catch { /* noop */ }
   setKyroCookie(nueva)
   return nueva
+}
+
+/**
+ * Resuelve la huella del dispositivo según la plataforma (APP-02):
+ * - Nativo (APK): huella REAL del plugin = SHA-256(ANDROID_ID + build + uuid),
+ *   formateada `kyro-hw-<sha256>-<dni>` (81 chars) para respetar el contrato del
+ *   backend, que exige prefijo `kyro-hw-` y ≤128 chars (DispositivoController).
+ * - Web: huella localStorage existente (`obtenerOCrearHuella`), sin cambios.
+ * Nunca lanza: si el plugin nativo falla, cae al comportamiento web.
+ */
+async function resolverHuella(dni: string): Promise<{ huella: string; deviceInfo: DeviceInfo | null }> {
+  if (esPlataformaNativa()) {
+    try {
+      const res = await DeviceIdentity.getDeviceFingerprint()
+      return { huella: `kyro-hw-${res.fingerprint}-${dni}`, deviceInfo: res.deviceInfo }
+    } catch {
+      return { huella: obtenerOCrearHuella(dni), deviceInfo: null }
+    }
+  }
+  return { huella: obtenerOCrearHuella(dni), deviceInfo: null }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -318,6 +339,7 @@ export function TerminalAsistenciaPage() {
   const [turnoCompleto, setTurnoCompleto] = useState(false)
 
   const huellaRef = useRef<string>('')
+  const deviceInfoRef = useRef<DeviceInfo | null>(null)  // APP-02: info del equipo (nativo) para Monitor de Fraude
   const horaIntentoRef = useRef<number>(0)      // A3: instante del intento GPS (ms)
   const aperturaCamaraRef = useRef<number>(0)   // A3: instante de apertura de cámara/QR (ms)
 
@@ -339,8 +361,9 @@ export function TerminalAsistenciaPage() {
   async function buscarDNI(dniVal: string) {
     if (dniVal.length !== 8) return
     setLoading(true)
-    const huella = obtenerOCrearHuella(dniVal)
+    const { huella, deviceInfo } = await resolverHuella(dniVal)
     huellaRef.current = huella
+    deviceInfoRef.current = deviceInfo
     try {
       const res = await api.get(`/v1/attendance/status/${dniVal}`, { params: { device_id: huella } })
       const data: AgenteStatus = res.data
@@ -384,6 +407,7 @@ export function TerminalAsistenciaPage() {
         omitir_refrigerio: omitirRefrigerio,
         turno_extendido: turnoCompleto,
         hora_intento_gps: horaIntentoRef.current || undefined, // A3: 60s tolerancia revocable del QR
+        ...(deviceInfoRef.current ? { device_info: deviceInfoRef.current } : {}), // APP-02: solo nativo; el backend lo ignora hasta APP-04
         ...payload,
       })
       const data = res.data
