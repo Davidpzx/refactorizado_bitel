@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { WarningOctagon, Warning, ShieldCheck, CaretDown, CaretUp } from '@phosphor-icons/react'
-import { adminPaginasApi } from '../../services/adminPaginas.api'
+import { WarningOctagon, Warning, ShieldCheck, CaretDown, CaretUp, MapPinLine, WifiSlash } from '@phosphor-icons/react'
+import { adminPaginasApi, type AlertaFraudeItem } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+
+/** APP-06: etiqueta + ícono de las alertas de ubicación (fuente !== 'dispositivo'). */
+const UBICACION_INFO: Record<NonNullable<AlertaFraudeItem['tipo_ubicacion']>, { label: string; Icon: typeof MapPinLine }> = {
+  fuera_de_rango: { label: 'Fuera de rango', Icon: MapPinLine },
+  mock_gps:       { label: 'GPS simulado',   Icon: WarningOctagon },
+  sin_senal:      { label: 'Sin señal',      Icon: WifiSlash },
+}
 
 /** Filas visibles antes de pulsar "Mostrar todos" (paridad legacy panel_asistencias.php). */
 const FILAS_INICIALES = 5
@@ -93,7 +100,9 @@ export function MonitorFraudePanel() {
                 </thead>
                 <tbody>
                   {visibles.map(a => {
-                    const distinto = Boolean(a.dni_duenio_hash) && a.dni_duenio_hash !== a.dni_ingresado
+                    const esUbicacion = a.fuente === 'ubicacion'
+                    const distinto = !esUbicacion && Boolean(a.dni_duenio_hash) && a.dni_duenio_hash !== a.dni_ingresado
+                    const infoUbicacion = esUbicacion && a.tipo_ubicacion ? UBICACION_INFO[a.tipo_ubicacion] : null
 
                     return (
                       <tr key={a.id} className="border-b border-kyro-border hover:bg-kyro-elevated/50">
@@ -106,7 +115,14 @@ export function MonitorFraudePanel() {
                         </td>
                         <td className="px-4 py-3 font-mono text-kyro-warning">{a.dni_ingresado || '—'}</td>
                         <td className="px-4 py-3">
-                          {a.dni_duenio_hash ? (
+                          {esUbicacion ? (
+                            infoUbicacion && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-kyro-warning/15 px-2 py-0.5 text-xs font-semibold text-kyro-warning">
+                                <infoUbicacion.Icon size={13} weight="fill" />
+                                {infoUbicacion.label}
+                              </span>
+                            )
+                          ) : a.dni_duenio_hash ? (
                             <span className="flex items-center gap-2">
                               <code className="font-mono text-kyro-info">{a.dni_duenio_hash}</code>
                               {distinto && (

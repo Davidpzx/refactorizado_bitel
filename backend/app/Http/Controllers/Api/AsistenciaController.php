@@ -1341,16 +1341,66 @@ class AsistenciaController extends Controller
     // Si la tabla aún no existe, responde estado vacío en vez de reventar.
     public function fraudeDispositivos(Request $request): JsonResponse
     {
-        if (! Schema::hasTable('log_fraude_dispositivo')) {
+        // APP-06 conserva este endpoint como feed unico del monitor admin. Las
+        // incidencias de ubicacion se normalizan al contrato legacy en lectura;
+        // fuente/tipo_ubicacion permiten distinguirlas sin duplicar rutas o permisos.
+        $hayDispositivos = Schema::hasTable('log_fraude_dispositivo');
+        $hayUbicacion = Schema::hasTable('asistencia_incidencias_ubicacion');
+
+        if (! $hayDispositivos && ! $hayUbicacion) {
             return response()->json(['data' => [], 'total' => 0]);
         }
 
-        $rows = DB::table('log_fraude_dispositivo')
-            ->select(['id', 'fecha_hora', 'nombre_agente', 'dni_ingresado', 'dni_duenio_hash', 'tienda_intento'])
-            ->orderByDesc('fecha_hora')
-            ->orderByDesc('id')
-            ->limit(50)
-            ->get();
+        $dispositivos = $hayDispositivos
+            ? DB::table('log_fraude_dispositivo')
+                ->select(['id', 'fecha_hora', 'nombre_agente', 'dni_ingresado', 'dni_duenio_hash', 'tienda_intento'])
+                ->orderByDesc('fecha_hora')
+                ->orderByDesc('id')
+                ->limit(50)
+                ->get()
+                ->map(function (object $row) {
+                    $row->fuente = 'dispositivo';
+                    $row->tipo_ubicacion = null;
+
+                    return $row;
+                })
+            : collect();
+
+        $ubicacion = $hayUbicacion
+            ? DB::table('asistencia_incidencias_ubicacion as iu')
+                ->leftJoin('agentes as ag', 'ag.id', '=', 'iu.agente_id')
+                ->leftJoin('tiendas as t', 't.id', '=', 'iu.tienda_id')
+                ->select([
+                    'iu.id', 'iu.created_at', 'iu.tipo', 'iu.agente_id', 'iu.tienda_id',
+                    'ag.nombres', 'ag.dni', 't.codigo as tienda_codigo',
+                ])
+                ->orderByDesc('iu.created_at')
+                ->orderByDesc('iu.id')
+                ->limit(50)
+                ->get()
+                ->map(function (object $row) {
+                    // El frontend (MonitorFraudePanel) renderiza la etiqueta/ícono a partir de
+                    // tipo_ubicacion; nombre_agente y dni_duenio_hash quedan limpios (sin texto
+                    // duplicado horneado aquí, columna "DNI dueño" no aplica a este tipo de alerta).
+                    return (object) [
+                        // Negativo evita colisiones con ids del log en la key del panel.
+                        'id' => -((int) $row->id),
+                        'fecha_hora' => $row->created_at,
+                        'nombre_agente' => $row->nombres ?? "Agente #{$row->agente_id}",
+                        'dni_ingresado' => $row->dni,
+                        'dni_duenio_hash' => null,
+                        'tienda_intento' => $row->tienda_codigo ?? ($row->tienda_id !== null ? (string) $row->tienda_id : null),
+                        'fuente' => 'ubicacion',
+                        'tipo_ubicacion' => $row->tipo,
+                    ];
+                })
+            : collect();
+
+        $rows = $dispositivos
+            ->concat($ubicacion)
+            ->sortByDesc(fn (object $row) => sprintf('%s|%012d', $row->fecha_hora, abs((int) $row->id)))
+            ->take(50)
+            ->values();
 
         return response()->json(['data' => $rows, 'total' => $rows->count()]);
     }

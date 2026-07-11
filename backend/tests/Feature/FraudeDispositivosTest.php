@@ -20,12 +20,12 @@ class FraudeDispositivosTest extends TestCase
     private function alerta(array $overrides = []): void
     {
         DB::table('log_fraude_dispositivo')->insert(array_merge([
-            'fecha_hora'      => '2026-07-01 08:00:00',
-            'agente_id'       => 1,
-            'nombre_agente'   => 'Agente Prueba',
-            'dni_ingresado'   => '12345678',
+            'fecha_hora' => '2026-07-01 08:00:00',
+            'agente_id' => 1,
+            'nombre_agente' => 'Agente Prueba',
+            'dni_ingresado' => '12345678',
             'dni_duenio_hash' => '87654321',
-            'tienda_intento'  => 'T01',
+            'tienda_intento' => 'T01',
         ], $overrides));
     }
 
@@ -61,7 +61,7 @@ class FraudeDispositivosTest extends TestCase
     public function test_limita_a_50_alertas_como_el_legacy(): void
     {
         for ($i = 1; $i <= 55; $i++) {
-            $this->alerta(['fecha_hora' => '2026-07-01 ' . sprintf('%02d:00:00', $i % 24)]);
+            $this->alerta(['fecha_hora' => '2026-07-01 '.sprintf('%02d:00:00', $i % 24)]);
         }
 
         $this->actingAs(Usuario::factory()->admin()->create(), 'sanctum')
@@ -88,6 +88,27 @@ class FraudeDispositivosTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 0)
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_incidencias_de_ubicacion_aparecen_en_el_mismo_monitor(): void
+    {
+        DB::table('agentes')->insert([
+            'id' => 7, 'dni' => '70123456', 'nombres' => 'Agente GPS', 'estado' => 'ACTIVO',
+        ]);
+        DB::table('asistencia_incidencias_ubicacion')->insert([
+            'agente_id' => 7, 'device_hash' => 'device-gps', 'tipo' => 'mock_gps',
+            'capturado_en' => '2026-07-04 11:00:00', 'created_at' => '2026-07-04 11:00:00',
+        ]);
+
+        $this->actingAs(Usuario::factory()->admin()->create(), 'sanctum')
+            ->getJson(self::URL)
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.fuente', 'ubicacion')
+            ->assertJsonPath('data.0.tipo_ubicacion', 'mock_gps')
+            ->assertJsonPath('data.0.dni_ingresado', '70123456')
+            ->assertJsonPath('data.0.nombre_agente', 'Agente GPS')
+            ->assertJsonPath('data.0.dni_duenio_hash', null);
     }
 
     public function test_no_admin_recibe_403(): void

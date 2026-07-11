@@ -76,6 +76,10 @@ export interface AlertaFraudeItem {
   /** DNI del dueño real del celular; null cuando no se pudo identificar. */
   dni_duenio_hash: string | null
   tienda_intento: string | null
+  /** APP-06: 'dispositivo' (log_fraude_dispositivo, comportamiento original) o 'ubicacion'. */
+  fuente?: 'dispositivo' | 'ubicacion'
+  /** Solo cuando fuente==='ubicacion': fuera_de_rango | mock_gps | sin_senal. */
+  tipo_ubicacion?: 'fuera_de_rango' | 'mock_gps' | 'sin_senal' | null
 }
 
 export interface FraudeDispositivosResponse {

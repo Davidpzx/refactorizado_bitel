@@ -2,6 +2,7 @@
 
 use App\Console\Commands\AuditoriaNocturnaBipay;
 use App\Console\Commands\AutoRetornoAgentes;
+use App\Console\Commands\DetectarAsistenciasSinSenal;
 use App\Console\Commands\LimpiarFotosAsistencia;
 use App\Console\Commands\ProcesarColaComprobantes;
 use App\Console\Commands\SalidaAutomaticaAsistencias;
@@ -34,6 +35,15 @@ Schedule::command(AutoRetornoAgentes::class)
 // docs/comparacion/gap_api_cron_auth_2026-07-02.md, "5 gaps más importantes" #1).
 Schedule::command(SalidaAutomaticaAsistencias::class)
     ->everyThirtyMinutes()
+    ->timezone('America/Lima')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// APP-06: la app envia presencia cada 30 min. Cada 15 min se detectan turnos
+// abiertos cuyo ultimo ping supera la tolerancia de 45 min (o que nunca
+// enviaron uno tras esa misma espera). El comando evita alertas duplicadas.
+Schedule::command(DetectarAsistenciasSinSenal::class)
+    ->everyFifteenMinutes()
     ->timezone('America/Lima')
     ->withoutOverlapping()
     ->runInBackground();

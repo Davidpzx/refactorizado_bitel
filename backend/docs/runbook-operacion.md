@@ -23,9 +23,16 @@ El legacy corre sus 5 tareas periódicas vía cPanel/Tareas Programadas de Windo
 | `cron/cron_auditoria_nocturna.php` (sugerido 20:00–23:59) | `bitel:auditoria-nocturna` (`AuditoriaNocturnaBipay`) | `dailyAt('23:30')` | ✅ | `America/Lima` | `$this->info/line` (delegado a `AuditoriaBipayService`) | Sí — recalcula el cruce del día, no inserta filas duplicadas. |
 | `cron/procesar_cola_comprobantes.php` (cada minuto) | `facturacion:procesar-cola` (`ProcesarColaComprobantes`) | `everyMinute()` | ✅ | `America/Lima` | `$this->info/warn/error` por fila | Sí — backoff exponencial + `proximo_intento_at`; filas ya `emitida`/`rechazada` no vuelven a matchear `pendientes()`. Registrado en TICKET-005. |
 | `cron/limpiar_fotos_asistencia.php` (cada 30 min) | `bitel:limpiar-fotos` (`LimpiarFotosAsistencia`) | `dailyAt('02:15')` **(corregido, ver §3.2)** | ✅ | `America/Lima` | `$this->info/error` + `logger()->error` por fila | Sí — Sección A solo toca `requiere_revision=1`; Sección B solo fotos con `fecha < corte`; ambas dejan de matchear tras procesarse. |
+| Sin equivalente legacy (APP-06) | `bitel:detectar-sin-senal` (`DetectarAsistenciasSinSenal`) | `everyFifteenMinutes()` | ✅ | `America/Lima` | `$this->info/line` | Sí — solo turnos abiertos de hoy sin ping en 45 min y omite si ya existe una incidencia `sin_senal` en esa ventana. |
 | `cron/reparar_excepciones_pisadas.php` (manual, una sola vez) | `bitel:reparar-excepciones-pisadas` (`RepararExcepcionesPisadas`) | **No programado** — herramienta de reparación puntual, igual que en el legacy (ver §3.1) | N/A (dry-run por defecto) | N/A | `$this->line/info/comment` | Sí — filtra por `estado_asistencia=CIERRE_AUTO` + `hora_ingreso='00:00:00'`, condición que deja de cumplirse tras reparar la fila. |
 
 No hay crons legacy huérfanos: los 6 archivos de `cron/` tienen equivalente en el refactor (5 programados + 1 herramienta manual, exactamente como en el legacy).
+
+APP-06 agrega una tarea nativa del refactor, sin equivalente legacy. Sus incidencias se
+leen junto con `log_fraude_dispositivo` desde el endpoint admin existente
+`/v1/asistencias/fraude-dispositivos`. Se eligió un único feed normalizado porque el
+monitor ya concentra las alertas operativas y ya tiene autorización `admin`; una ruta
+paralela duplicaría permisos y dejaría las incidencias fuera del panel actual.
 
 ## 2. Cómo corre `schedule:run` en producción
 
@@ -63,7 +70,7 @@ El comando tiene dos secciones: (A) auto-aprobación de fotos `FOTO` pendientes 
    docker exec <contenedor_backend> crontab -l
    docker exec <contenedor_backend> php artisan schedule:list
    ```
-   Si `schedule:list` no muestra las 5 líneas de la matriz (§1), `routes/console.php` no se cargó — revisar que el contenedor tenga el código desplegado (`docker exec <contenedor_backend> git log -1` o el hash de build).
+   Si `schedule:list` no muestra las 7 tareas (6 de la matriz más la purga de Sanctum), `routes/console.php` no se cargó — revisar que el contenedor tenga el código desplegado (`docker exec <contenedor_backend> git log -1` o el hash de build).
 2. **¿Corrió pero falló?** Laravel no loguea por defecto la salida de `schedule:run` a menos que cada comando la loguee él mismo (todos los de esta matriz lo hacen vía `$this->info/error` + `logger()->error`) — revisar:
    ```bash
    docker exec <contenedor_backend> tail -n 200 storage/logs/laravel.log
@@ -82,7 +89,7 @@ El comando tiene dos secciones: (A) auto-aprobación de fotos `FOTO` pendientes 
 ## 5. Checklist para el operador (pendiente de ejecutar en el VPS)
 
 - [ ] Confirmar que el contenedor `backend` tiene un cron de sistema (o `schedule:work` supervisado) disparando `php artisan schedule:run` cada minuto (§2).
-- [ ] `php artisan schedule:list` dentro del contenedor — debe mostrar las 5 líneas de la matriz (§1) con los horarios corregidos (`bitel:salida-automatica` cada 30 min, `bitel:limpiar-fotos` a diario).
+- [ ] `php artisan schedule:list` dentro del contenedor — debe mostrar las 7 tareas programadas, incluido `bitel:detectar-sin-senal` cada 15 min.
 - [ ] Correr `php artisan bitel:reparar-excepciones-pisadas` (dry-run) en el VPS para saber si ya hay filas PERMISO/FALTA_INJUSTIFICADA corrompidas por el bug de §3.1 (probablemente activo desde que se implementó `registrarExcepcion`, ~2026-06-14). Si `N > 0`, correr con `--apply` tras confirmar con el operador (modifica datos de asistencia).
 - [ ] Verificar en la UI (`/asistencias` o el módulo de gerencia) que un agente con `PERMISO`/`FALTA_INJUSTIFICADA` registrado no aparece como `CIERRE_AUTO` al día siguiente.
 
@@ -106,7 +113,7 @@ $ CACHE_STORE=array php artisan schedule:list
 ```
 (Las horas mostradas están en la timezone del sistema/servidor, no en America/Lima — la ejecución real sí respeta `->timezone('America/Lima')` en cada entrada de `routes/console.php`.)
 
-**Dry-run de los 7 comandos (5 programados + 2 manuales) contra una BD sqlite descartable** (`APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=/tmp/verify_ticket025.sqlite`, migrada con `migrate --force`, sin tocar la BD MySQL local ni la de producción):
+**Dry-run de los 8 comandos de dominio (6 programados + 2 manuales) contra una BD sqlite descartable** (`APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=/tmp/verify_ticket025.sqlite`, migrada con `migrate --force`, sin tocar la BD MySQL local ni la de producción):
 ```
 bitel:auto-retorno              → "0 agentes a reactivar. OK."
 bitel:salida-automatica         → "0 turnos abiertos. OK."
