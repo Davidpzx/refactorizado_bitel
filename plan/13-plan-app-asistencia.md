@@ -46,7 +46,7 @@ Hash `SHA-256(ANDROID_ID + fingerprint_build + install_uuid)` donde:
 - **Persistencia offline**: si no hay red, el ping se encola en SQLite local y se reenvía en lote al recuperar conexión (con su timestamp original — el backend distingue "llegó tarde" de "se tomó tarde").
 
 ### 4. Backend nuevo (Laravel)
-- Migración `asistencia_ubicaciones`: `id, agente_id, tienda_id, device_hash, lat, lng, accuracy, estado(ok|fuera_de_rango|mock), battery_pct, capturado_en, recibido_en` + índice `(agente_id, capturado_en)`.
+- Migración (ajustada por DECISIÓN-APP-03): `asistencia_presencia` (una fila por agente en turno, upsert del último ping: `agente_id UNIQUE, tienda_id, device_hash, lat, lng, accuracy, estado, battery_pct, capturado_en, recibido_en`) + `asistencia_incidencias_ubicacion` (solo eventos `fuera_de_rango|mock_gps|sin_señal`: mismos campos + `id` autoincremental, sin upsert).
 - `POST /v1/attendance/ping-ubicacion` (throttle + token de terminal) y `GET /v1/asistencias-admin/presencia` (admin: mapa/lista de agentes en turno con último ping, semáforo verde/ámbar/rojo).
 - Job programado cada 15 min: detecta turnos activos sin ping reciente → incidencia `sin_señal`.
 - Alertas: incidencias `fuera_de_rango` repetidas (2+ consecutivas) y `mock_gps` van al Monitor de Fraude existente.
@@ -74,7 +74,8 @@ Hash `SHA-256(ANDROID_ID + fingerprint_build + install_uuid)` donde:
 
 **Dependencias**: 01 → (02, 03) → 05; 04 → (05, 06, 07); 08/09 tras 04. Piloto (10) al final con UNA tienda antes de repartir el APK a todas.
 
-## Decisiones que necesito de ti antes de ejecutar
-1. **DECISIÓN-APP-01**: ¿el ping cada 30 min exactos (foreground service con notificación visible) o es aceptable "aprox. cada 30 min" (WorkManager, sin notificación persistente pero Android puede estirarlo a 45-60 min en Doze)? Recomendación: foreground service — la notificación visible además resuelve la transparencia legal.
-2. **DECISIÓN-APP-02**: ¿la app reemplaza al terminal web en tiendas, o conviven (app en el equipo fijo de tienda, web como respaldo)? Recomendación: conviven — el backend ya distingue por calidad de huella.
-3. **DECISIÓN-APP-03**: retención de pings 90 días ¿ok, o el gerente quiere otro plazo?
+## Decisiones CONFIRMADAS por el usuario (2026-07-11)
+
+1. **DECISIÓN-APP-01 — Ubicación exacta, notificación mínima silenciosa.** Aclaración técnica: Android exige UNA notificación fija mientras un foreground service corre — no es un aviso que "salta a cada rato", es una línea estática y silenciosa en la bandeja (como WhatsApp Web o un reproductor de música: sin sonido, sin banner, sin vibración). Se implementa con canal `IMPORTANCE_MIN`: colapsada, muda, solo visible si el agente despliega la bandeja. Eliminar la notificación por completo obligaría a WorkManager, y ahí Android puede estirar los 30 min a 45-60 en Doze — se perdería la exactitud pedida. **Resolución: foreground service con notificación mínima silenciosa** ("Turno activo") — exactitud garantizada y cero molestia práctica. De paso mantiene la transparencia legal del rastreo.
+2. **DECISIÓN-APP-02 — La app REEMPLAZA al terminal web.** Cuando la app esté desplegada en todas las tiendas, la ruta web `/terminal-asistencia` se retira (o queda detrás de un flag solo-admin para emergencias). El ticket APP-01 incluye este flag; el retiro definitivo se hace al cerrar el piloto (APP-10).
+3. **DECISIÓN-APP-03 — Retención mínima, no historial.** El razonamiento del usuario es correcto: no interesa un historial de movimientos. Los pings sirven para DOS cosas puntuales: (a) el semáforo de presencia en vivo del admin, y (b) la evidencia cuando hay una incidencia (agente fuera de tienda / GPS falso / sin señal), p.ej. ante un reclamo de descuento. **Resolución: se guarda solo el ÚLTIMO ping por agente (upsert, se sobreescribe) + las incidencias** (`fuera_de_rango`, `mock_gps`, `sin_señal`, que sí persisten porque son el motivo del monitoreo). Los pings `ok` intermedios no se acumulan. La tabla pasa de historial a estado: `asistencia_presencia` (una fila por agente en turno) + `asistencia_incidencias_ubicacion` (solo eventos). APP-08 se simplifica: ya no hay job de purga de 90 días, solo limpieza de la fila de presencia al cerrar turno.
