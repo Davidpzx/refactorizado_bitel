@@ -46,10 +46,11 @@
   --radius-kyro:             8px;
   --radius-kyro-lg:          12px;
   --radius-kyro-xl:          16px;
+  --radius-kyro-2xl:         20px;
 
-  /* — Sombras legacy — */
-  --shadow-kyro-card:        0 4px 20px -2px rgb(0 0 0 / 0.5);
-  --shadow-kyro-popover:     0 8px 24px rgb(0 0 0 / 0.8);
+  /* — Sombras (claro por defecto; html.dark las restaura a las profundas) — */
+  --shadow-kyro-card:        0 4px 20px -6px rgb(15 23 42 / 0.10);
+  --shadow-kyro-popover:     0 8px 24px -4px rgb(15 23 42 / 0.16);
 }
 
 /* ── Neutros kyro-* en oscuro — restauran los valores dark sobre los claros de @theme ── */
@@ -64,6 +65,8 @@ html.dark {
   --color-kyro-muted:        #a1a1aa;
   --color-kyro-body:         #e4e4e7;
   --color-kyro-subtle:       #52525b;
+  --shadow-kyro-card:        0 4px 20px -2px rgb(0 0 0 / 0.5);
+  --shadow-kyro-popover:     0 8px 24px rgb(0 0 0 / 0.8);
 }
 
 /* ── Reset & base ──────────────────────────────────────────────────────────── */
@@ -142,6 +145,22 @@ html.dark textarea:focus-visible {
   40%, 60% { transform: translateX(4px); }
 }
 .animate-kyro-shake { animation: kyro-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-pulse,
+  .animate-kyro-shake { animation: none; }
+  .premium-kpi,
+  .premium-kpi:hover { transform: none; transition: none; }
+}
+
+/* ── Dinero: tipografía tabular de panel de control ───────────────────────────
+   Único tratamiento reservado a montos (S/): cifras tabulares alineadas y
+   tracking apretado. El dorado kyro-gold acompaña SOLO a dinero/CTA. */
+.kyro-money {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum';
+}
 
 /* ── Componentes premium ───────────────────────────────────────────────────── */
 .kyro-glass {
@@ -231,7 +250,7 @@ html.dark .kyro-table-head th {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.72);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-kyro-xl);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(18px);
@@ -250,7 +269,7 @@ html.dark .kyro-table-head th {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.72);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-kyro-xl);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(18px);
