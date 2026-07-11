@@ -63,3 +63,12 @@ Schedule::command(LimpiarFotosAsistencia::class)
     ->timezone('America/Lima')
     ->withoutOverlapping()
     ->runInBackground();
+
+// Purgar tokens Sanctum expirados (expiration=14 días en config/sanctum.php).
+// El comando purga los que llevan expirados >24h para no borrar tokens recién vencidos
+// que el cliente aún podría estar renovando.
+Schedule::command('sanctum:prune-expired --hours=24')
+    ->dailyAt('03:00')
+    ->timezone('America/Lima')
+    ->withoutOverlapping()
+    ->runInBackground();

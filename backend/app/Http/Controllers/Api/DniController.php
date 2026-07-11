@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class DniController extends Controller
 {
@@ -20,6 +21,14 @@ class DniController extends Controller
         if (!preg_match('/^\d{8}$/', $dni)) {
             return response()->json(['success' => false, 'message' => 'DNI debe tener exactamente 8 dígitos.'], 422);
         }
+
+        // Auditoría de consulta de dato personal (RENIEC): quién consulta qué DNI.
+        // No se registra la respuesta del proveedor, solo el hecho de la consulta.
+        Log::info('consulta_dni', [
+            'usuario_id' => $request->user()?->id,
+            'dni'        => $dni,
+            'ip'         => $request->ip(),
+        ]);
 
         // Caché de primer nivel: si el CRM ya capturó este DNI, se evita la API externa por completo.
         // Honestidad de fuente: nombres/apellidos de crm_clientes pueden venir de un nombre

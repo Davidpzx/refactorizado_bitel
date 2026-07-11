@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Consulta RUC (SUNAT). Equivalente moderno del módulo ApisConsumirRUCYDNI
@@ -16,11 +18,19 @@ class RucController extends Controller
     private const API_URL = 'https://api.apis.net.pe/v1/ruc?numero=';
     private const TTL     = 3600 * 24 * 7; // 7 días
 
-    public function consultar(string $ruc): JsonResponse
+    public function consultar(Request $request, string $ruc): JsonResponse
     {
         if (! preg_match('/^\d{11}$/', $ruc)) {
             return response()->json(['success' => false, 'message' => 'RUC debe tener exactamente 11 dígitos.'], 422);
         }
+
+        // Auditoría de consulta (SUNAT): quién consulta qué RUC. No se registra la
+        // respuesta del proveedor, solo el hecho de la consulta.
+        Log::info('consulta_ruc', [
+            'usuario_id' => $request->user()?->id,
+            'ruc'        => $ruc,
+            'ip'         => $request->ip(),
+        ]);
 
         $cacheKey = "sunat_ruc_{$ruc}";
         if ($cached = Cache::get($cacheKey)) {

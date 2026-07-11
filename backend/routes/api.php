@@ -232,7 +232,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     });
 
     // ── RENIEC DNI ────────────────────────────────────────────────────────────
-    Route::get('dni/{dni}',                 [DniController::class, 'consultar']);
+    Route::get('dni/{dni}',                 [DniController::class, 'consultar'])->middleware(['role:admin,tienda', 'throttle:30,1']);
 
     Route::post('comprobantes/{comprobante}/reenviar', [ComprobanteController::class, 'reenviar'])->middleware('role:admin');
 
@@ -407,7 +407,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('clientes-crm',      [ClienteCrmController::class, 'guardar']);
 
     // ── SUNAT RUC ─────────────────────────────────────────────────────────────
-    Route::get('ruc/{ruc}', [RucController::class, 'consultar']);
+    Route::get('ruc/{ruc}', [RucController::class, 'consultar'])->middleware(['role:admin,tienda', 'throttle:30,1']);
 
     // ── Documentos del agente (foto perfil / DNI) ─────────────────────────────
     Route::get('agentes/{id}/documentos',             [AgenteDocumentoController::class, 'ver'])->middleware('role:admin');
