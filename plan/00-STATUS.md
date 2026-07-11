@@ -195,3 +195,9 @@ QA final (026 visual, 027 funcional) al cierre de todo lo demás.
 - [x] APP-04 backend presencia (titan/Opus, agotó sesión al escribir el reporte pero el trabajo quedó completo — 10 tests nuevos, suite 696/696). GeoService extraído compartido.
 - Cuotas: titan agotada hasta 5:20pm Lima; Codex agotado hasta 5:12pm. Solo david operativo hasta entonces.
 - Siguiente ola (al volver cuotas): APP-02 (huella real, Opus) + APP-03 (GPS nativo) + APP-05 (foreground service) / APP-06/07 backend+frontend; SEC-08..16 medias/bajas; tickets DIS-FX pendientes de aprobación del usuario.
+
+## Ciberseguridad CERRADA COMPLETA (2026-07-11, tarde) — implementado directamente por el orquestador
+Las 6 medias y 5 bajas (SEC-08..16) del plan/09-plan-ciberseguridad.md, implementadas por david directamente (sin delegar a titan/Codex, que estaban en cooldown) — commit ef8f73b. 9 tests nuevos, suite 705/705, frontend build limpio.
+- SEC-08 (logs con PII), SEC-09 (cache descarga CPE), SEC-10 (limiter exports), SEC-11 (agentes/select sin DNI completo — se descubrió un consumidor real en TrasladosPage que matcheaba DNI completo para autorizar; se migró a comparar por dni_ultimos4 en vez de solo eliminar el campo, para no romper la función), SEC-12 (health limpio), SEC-13 (throttle+tamaño mark-photo), SEC-14 (HMAC QR 64->128 bits), SEC-15 (limiter compuesto verify-pin), SEC-16 (revocación de tokens).
+**LAS 16 VULNERABILIDADES DEL PLAN DE CIBERSEGURIDAD ESTÁN CERRADAS.** (1 crítica + 4 altas en ola anterior + estas 11 medias/bajas).
+Pendiente real fuera de código: rotación de INTEGRADOR_API_KEY (SEC-01) coordinada con el usuario — sigue con la clave vieja/quemada en el VPS por ahora, solo para no romper el arranque.
