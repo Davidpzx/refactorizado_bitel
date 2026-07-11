@@ -186,3 +186,12 @@ QA final (026 visual, 027 funcional) al cierre de todo lo demás.
 - [ ] EN VUELO: titan/Opus → paquete SEC-02+04+06+07 (log: plan/.worker-titan-SEC-ola2.log); Codex/gpt-5.6-sol → plan/12-plan-verificacion-optimizacion.md (log: plan/.worker-codex-verificacion.log).
 - [ ] Siguiente ola tras titan: SEC-05 (headers, Opus) y SEC-03 (matriz role:, Opus — el gordo). Ambos chocan con bootstrap/app.php y routes/api.php de la ola actual, por eso van después.
 - [ ] Luego: SEC-08..SEC-16 (medias/bajas), tickets DIS-FX (usuario debe aprobar el doc 11 primero), y plan 12 (verificación funcional + optimizaciones).
+
+## App asistencia + cierre seguridad altas (2026-07-11, tarde)
+- [x] SEC-03 (commit dbf8bbf, 40 tests nuevos) y SEC-05 (b22da1b). Las 5 ALTAS de seguridad cerradas. Suite 686.
+- [x] Env vars seteadas en Dokploy Postgres via SSH (INTEGRADOR_API_KEY=valor viejo por ahora, CORS_ALLOWED_ORIGINS=https://app.kyrocodelabs.cloud, SANCTUM_EXPIRATION). Rotación de key = pendiente coordinado con usuario.
+- [x] plan/13-plan-app-asistencia.md completo con DECISIÓN-APP-01/02/03 confirmadas + distribución por botón en Asistencias admin + enlace WhatsApp.
+- [x] APP-01 scaffold Capacitor (commit dd3c515, titan/Sonnet). Pendientes anotados: Android SDK para compilar APK, keystore release, branding ícono/splash.
+- [x] APP-04 backend presencia (titan/Opus, agotó sesión al escribir el reporte pero el trabajo quedó completo — 10 tests nuevos, suite 696/696). GeoService extraído compartido.
+- Cuotas: titan agotada hasta 5:20pm Lima; Codex agotado hasta 5:12pm. Solo david operativo hasta entonces.
+- Siguiente ola (al volver cuotas): APP-02 (huella real, Opus) + APP-03 (GPS nativo) + APP-05 (foreground service) / APP-06/07 backend+frontend; SEC-08..16 medias/bajas; tickets DIS-FX pendientes de aprobación del usuario.
