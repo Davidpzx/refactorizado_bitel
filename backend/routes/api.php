@@ -156,27 +156,29 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // show() valida tienda_base internamente (admin ve todo, no-admin solo su propia tienda)
     Route::apiResource('agentes', AgenteController::class)->except(['show'])->middleware('role:admin');
     Route::get('agentes/{agente}', [AgenteController::class, 'show']);
-    Route::apiResource('clientes',    ClienteController::class);
+    Route::apiResource('clientes',    ClienteController::class)->middleware('role:admin,tienda'); // SEC-03
     // Custom inventario routes MUST come before apiResource to avoid {inventario} wildcard conflict
-    Route::get('inventario/kardex',          [InventarioController::class, 'kardex']);
-    Route::get('inventario/stock-estancado', [InventarioController::class, 'stockEstancado']);
-    Route::get('inventario/capital-invertido', [InventarioController::class, 'capitalInvertido']);
-    Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos']);
-    Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes']);
+    // SEC-03: todo el dominio inventario (costos, stock, altas) queda restringido a admin/tienda;
+    // las rutas que ya eran role:admin siguen siéndolo (el middleware compone: intersección).
+    Route::get('inventario/kardex',          [InventarioController::class, 'kardex'])->middleware('role:admin,tienda');
+    Route::get('inventario/stock-estancado', [InventarioController::class, 'stockEstancado'])->middleware('role:admin,tienda');
+    Route::get('inventario/capital-invertido', [InventarioController::class, 'capitalInvertido'])->middleware('role:admin,tienda');
+    Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos'])->middleware('role:admin,tienda');
+    Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes'])->middleware('role:admin,tienda');
     Route::get('inventario/precios-matriz',     [InventarioController::class, 'preciosMatriz'])->middleware('role:admin');
-    Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex']);
-    Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index']);
-    Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar']);
-    Route::get('inventario', [InventarioController::class, 'index']);
-    Route::post('inventario', [InventarioController::class, 'store']);
-    Route::get('inventario/{inventario}', [InventarioController::class, 'show']);
+    Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex'])->middleware('role:admin,tienda');
+    Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index'])->middleware('role:admin,tienda');
+    Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar'])->middleware('role:admin,tienda');
+    Route::get('inventario', [InventarioController::class, 'index'])->middleware('role:admin,tienda');
+    Route::post('inventario', [InventarioController::class, 'store'])->middleware('role:admin,tienda');
+    Route::get('inventario/{inventario}', [InventarioController::class, 'show'])->middleware('role:admin,tienda');
     Route::match(['put', 'patch'], 'inventario/{inventario}', [InventarioController::class, 'update'])->middleware('role:admin');
     Route::delete('inventario/{inventario}', [InventarioController::class, 'destroy'])->middleware('role:admin');
     Route::post('inventario/{id}/ajustar-stock-real', [InventarioController::class, 'ajustarStockReal'])->middleware('role:admin');
     Route::post('inventario/{id}/restaurar',            [InventarioController::class, 'restaurar'])->middleware('role:admin');
     Route::post('inventario/{id}/recalcular-ganancias', [InventarioController::class, 'recalcularGanancias'])->middleware('role:admin');
-    Route::post('inventario/{id}/precio-agente',        [InventarioController::class, 'fijarPrecioAgente']);
-    Route::apiResource('ventas',      VentaController::class);
+    Route::post('inventario/{id}/precio-agente',        [InventarioController::class, 'fijarPrecioAgente'])->middleware('role:admin,tienda');
+    Route::apiResource('ventas',      VentaController::class)->middleware('role:admin,tienda'); // SEC-03
     Route::apiResource('comprobantes', ComprobanteController::class)->middleware('role:admin');
 
     // ── Comisiones de Planes ──────────────────────────────────────────────────
@@ -263,17 +265,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('postpago/ventas',    [PostpagoController::class, 'ventas'])->middleware('role:admin');
     Route::get('postpago/exportar',  [PostpagoController::class, 'exportar'])->middleware('role:admin');
 
-    // ── CRM ──────────────────────────────────────────────────────────────────
-    Route::get('crm/dashboard',              [LeadController::class, 'dashboard']);
-    Route::get('crm/pipeline',               [LeadController::class, 'pipeline']);
-    Route::apiResource('leads',              LeadController::class);
-    Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
-    Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
+    // ── CRM (SEC-03: el CRM completo — leads, pipeline, temperatura — es admin/tienda) ──
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('crm/dashboard',              [LeadController::class, 'dashboard']);
+        Route::get('crm/pipeline',               [LeadController::class, 'pipeline']);
+        Route::apiResource('leads',              LeadController::class);
+        Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
+        Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
 
-    // ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
-    Route::get('crm/temperatura',           [CrmTemperaturaController::class, 'index']);
-    Route::get('crm/temperatura/exportar',  [CrmTemperaturaController::class, 'exportar']);
-    Route::get('crm/temperatura/{dni}',     [CrmTemperaturaController::class, 'porDni']);
+        // ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
+        Route::get('crm/temperatura',           [CrmTemperaturaController::class, 'index']);
+        Route::get('crm/temperatura/exportar',  [CrmTemperaturaController::class, 'exportar']);
+        Route::get('crm/temperatura/{dni}',     [CrmTemperaturaController::class, 'porDni']);
+    });
 
     // ── Estadísticas (admin ve todo; tienda ve solo su propia tienda) ─────────
     Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin,tienda');
@@ -298,8 +302,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('tiendas', TiendaController::class)->middleware('role:admin');
 
     // ── Bipay ─────────────────────────────────────────────────────────────────
-    Route::get('bipay/saldo',          [BipayController::class, 'saldo']);
-    Route::get('bipay/transacciones',  [BipayController::class, 'transacciones']);
+    Route::get('bipay/saldo',          [BipayController::class, 'saldo'])->middleware('role:admin,tienda'); // SEC-03
+    Route::get('bipay/transacciones',  [BipayController::class, 'transacciones'])->middleware('role:admin,tienda'); // SEC-03
     Route::get('bipay/transacciones/exportar', [BipayController::class, 'exportarTransacciones'])->middleware('role:admin');
     Route::get('bipay/locks-activos',  [BipayController::class, 'locksActivos'])->middleware('role:admin');
     Route::post('bipay/recarga',       [BipayController::class, 'recarga'])->middleware('role:admin');
@@ -309,17 +313,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('bipay/cuentas/{id}',   [BipayController::class, 'editarCuenta'])->middleware('role:admin');
     Route::delete('bipay/cuentas/{id}', [BipayController::class, 'eliminarCuenta'])->middleware('role:admin');
     Route::post('bipay/cuentas/{id}/vincular-huerfana', [BipayController::class, 'vincularHuerfana'])->middleware('role:admin');
-    Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero']);
-    Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero']);
-    Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero']);
+    Route::get('bipay/cajero/estado',       [BipayController::class, 'estadoCajero'])->middleware('role:admin,tienda'); // SEC-03
+    Route::post('bipay/cajero/actualizar',  [BipayController::class, 'actualizarCajero'])->middleware('role:admin,tienda'); // SEC-03
+    Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero'])->middleware('role:admin,tienda'); // SEC-03
 
-    // ── Tickets Emitidos ─────────────────────────────────────────────────────
-    Route::get('tickets',              [TicketController::class, 'index']);
-    Route::get('tickets/exportar',     [TicketController::class, 'exportar']);
-    Route::get('tickets/{id}',         [TicketController::class, 'show']);
-    Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
-    Route::patch('tickets/{id}',       [TicketController::class, 'update']);
-    Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
+    // ── Tickets Emitidos (SEC-03: solo admin/tienda; scoping por tienda en el controller) ──
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('tickets',              [TicketController::class, 'index']);
+        Route::get('tickets/exportar',     [TicketController::class, 'exportar']);
+        Route::get('tickets/{id}',         [TicketController::class, 'show']);
+        Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
+        Route::patch('tickets/{id}',       [TicketController::class, 'update']);
+        Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
+    });
 
     // ── Postulaciones (admin) ─────────────────────────────────────────────────
     Route::get('postulaciones',          [PostulanteController::class, 'index'])->middleware('role:admin');
@@ -336,38 +342,44 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('financieras/{id}/confirmar-desembolso',    [PanelFinancierasController::class, 'confirmarDesembolso'])->middleware('role:admin');
     Route::post('financieras/{id}/revertir-desembolso',     [PanelFinancierasController::class, 'revertirDesembolso'])->middleware('role:admin');
 
-    // ── Chips (gestión interna) ───────────────────────────────────────────────
-    Route::get('chips',                         [ChipsController::class, 'index']);
-    Route::post('chips',                        [ChipsController::class, 'store']);
-    Route::post('chips/{id}/cambiar-codigo',    [ChipsController::class, 'cambiarCodigo']);
-    Route::delete('chips/{id}',                 [ChipsController::class, 'destroy']);
-    Route::get('chips/{id}/historial',          [ChipsController::class, 'historial']);
-    Route::post('chips/{id}/ajustar-stock-real',[ChipsController::class, 'ajustarStockReal'])->middleware('role:admin');
+    // ── Chips (gestión interna) — SEC-03: admin/tienda; ajustar-stock-real sigue admin ──
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('chips',                         [ChipsController::class, 'index']);
+        Route::post('chips',                        [ChipsController::class, 'store']);
+        Route::post('chips/{id}/cambiar-codigo',    [ChipsController::class, 'cambiarCodigo']);
+        Route::delete('chips/{id}',                 [ChipsController::class, 'destroy']);
+        Route::get('chips/{id}/historial',          [ChipsController::class, 'historial']);
+        Route::post('chips/{id}/ajustar-stock-real',[ChipsController::class, 'ajustarStockReal'])->middleware('role:admin');
+    });
 
 
-    // ── Traslados de Equipos ──────────────────────────────────────────────────
-    Route::get('traslados/pendientes-aprobacion', [TrasladoController::class, 'pendientesAprobacion']);
-    Route::get('traslados',                       [TrasladoController::class, 'index']);
-    Route::post('traslados/lote/{codigoLote}/confirmar', [TrasladoController::class, 'confirmarLote']);
-    Route::get('traslados/{id}',                  [TrasladoController::class, 'show']);
-    Route::post('traslados',                      [TrasladoController::class, 'store']);
-    Route::post('traslados/{id}/confirmar',       [TrasladoController::class, 'confirmar']);
-    Route::post('traslados/{id}/gestionar',       [TrasladoController::class, 'gestionar']);
+    // ── Traslados de Equipos (SEC-03: admin/tienda; scoping origen/destino en el controller) ──
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('traslados/pendientes-aprobacion', [TrasladoController::class, 'pendientesAprobacion']);
+        Route::get('traslados',                       [TrasladoController::class, 'index']);
+        Route::post('traslados/lote/{codigoLote}/confirmar', [TrasladoController::class, 'confirmarLote']);
+        Route::get('traslados/{id}',                  [TrasladoController::class, 'show']);
+        Route::post('traslados',                      [TrasladoController::class, 'store']);
+        Route::post('traslados/{id}/confirmar',       [TrasladoController::class, 'confirmar']);
+        Route::post('traslados/{id}/gestionar',       [TrasladoController::class, 'gestionar']);
 
-    // ── Traslados de Chips ────────────────────────────────────────────────────
-    Route::get('traslados-chips',                       [TrasladoChipsController::class, 'index']);
-    Route::post('traslados-chips',                      [TrasladoChipsController::class, 'store']);
-    Route::post('traslados-chips/{id}/confirmar',       [TrasladoChipsController::class, 'confirmar']);
-    Route::post('traslados-chips/{id}/gestionar',       [TrasladoChipsController::class, 'gestionar']);
-    Route::get('inventario-chips',                      [TrasladoChipsController::class, 'inventario']);
+        // ── Traslados de Chips ────────────────────────────────────────────────
+        Route::get('traslados-chips',                       [TrasladoChipsController::class, 'index']);
+        Route::post('traslados-chips',                      [TrasladoChipsController::class, 'store']);
+        Route::post('traslados-chips/{id}/confirmar',       [TrasladoChipsController::class, 'confirmar']);
+        Route::post('traslados-chips/{id}/gestionar',       [TrasladoChipsController::class, 'gestionar']);
+        Route::get('inventario-chips',                      [TrasladoChipsController::class, 'inventario']);
+    });
 
-    // ── Constancias PDF ──────────────────────────────────────────────────────
-    Route::get('constancias/traslado',    [ConstanciaController::class, 'traslado']);
-    Route::get('constancias/agente/{id}', [ConstanciaController::class, 'agente']);
-    Route::get('constancias/reporte/{id}',[ConstanciaController::class, 'reporte']);
-    Route::get('constancias/boleta/{id}',   [ConstanciaController::class, 'boleta']);
-    Route::post('constancias/boleta',       [ConstanciaController::class, 'crearBoleta']);
-    Route::patch('constancias/boleta/{id}', [ConstanciaController::class, 'accionBoleta']);
+    // ── Constancias PDF (SEC-03: admin/tienda; generan documentos con datos sensibles) ──
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('constancias/traslado',    [ConstanciaController::class, 'traslado']);
+        Route::get('constancias/agente/{id}', [ConstanciaController::class, 'agente']);
+        Route::get('constancias/reporte/{id}',[ConstanciaController::class, 'reporte']);
+        Route::get('constancias/boleta/{id}',   [ConstanciaController::class, 'boleta']);
+        Route::post('constancias/boleta',       [ConstanciaController::class, 'crearBoleta']);
+        Route::patch('constancias/boleta/{id}', [ConstanciaController::class, 'accionBoleta']);
+    });
 
     // ── Mapa de Calor (admin) ─────────────────────────────────────────────────
     Route::get('heatmap/calendario', [MapaCalorController::class, 'calendario'])->middleware('role:admin');
@@ -402,9 +414,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('auditoria-bipay/{id}/detalles',       [AuditoriaBipayController::class, 'detalles'])->middleware('role:admin');
     Route::post('auditoria-bipay/{id}/ajustar',       [AuditoriaBipayController::class, 'ajustar'])->middleware('role:admin');
 
-    // ── Cliente Activo CRM (cuadre) ───────────────────────────────────────────
-    Route::get('clientes-crm/{dni}', [ClienteCrmController::class, 'buscar']);
-    Route::post('clientes-crm',      [ClienteCrmController::class, 'guardar']);
+    // ── Cliente Activo CRM (cuadre) — SEC-03: admin/tienda ────────────────────
+    Route::middleware('role:admin,tienda')->group(function () {
+        Route::get('clientes-crm/{dni}', [ClienteCrmController::class, 'buscar']);
+        Route::post('clientes-crm',      [ClienteCrmController::class, 'guardar']);
+    });
 
     // ── SUNAT RUC ─────────────────────────────────────────────────────────────
     Route::get('ruc/{ruc}', [RucController::class, 'consultar'])->middleware(['role:admin,tienda', 'throttle:30,1']);
