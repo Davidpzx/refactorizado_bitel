@@ -1,11 +1,31 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Capacitor } from '@capacitor/core'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
 import { AppLayout } from './components/AppLayout'
 
 import { LoginPage } from './pages/auth/LoginPage'
+
+// La app nativa (Capacitor) abre directo en el terminal de asistencia, no en el dashboard.
+// Se reescribe la URL antes de que BrowserRouter monte para evitar un parpadeo del dashboard/login.
+const isNativePlatform = Capacitor.isNativePlatform()
+if (isNativePlatform && window.location.pathname === '/') {
+  window.history.replaceState(null, '', '/terminal')
+}
+
+// DECISIÓN-APP-02: flag de emergencia para retirar el terminal web cuando la app
+// nativa lo reemplace en todas las tiendas. Default true — mecanismo listo, sin activar.
+const terminalWebHabilitado = import.meta.env.VITE_TERMINAL_WEB_HABILITADO !== 'false'
+
+function TerminalWebDeshabilitado() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-950 px-4 text-center">
+      <p className="text-lg text-gray-300">Usa la app de asistencia</p>
+    </div>
+  )
+}
 
 const DashboardPage      = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const AgentesPage        = lazy(() => import('./pages/agentes/AgentesPage').then(m => ({ default: m.AgentesPage })))
@@ -73,7 +93,11 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* ── Rutas públicas ── */}
-          <Route path="/terminal"           element={<Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>} />
+          <Route path="/terminal"           element={
+            isNativePlatform || terminalWebHabilitado
+              ? <Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>
+              : <TerminalWebDeshabilitado />
+          } />
           <Route path="/postular"           element={<Suspense fallback={<PageLoader />}><PostulacionPublicaPage /></Suspense>} />
           <Route path="/tickets/imprimir/:id" element={<Suspense fallback={<PageLoader />}><TicketImpresionPage /></Suspense>} />
           <Route path="/cpe/:id"           element={<Suspense fallback={<PageLoader />}><CpePublicoPage /></Suspense>} />

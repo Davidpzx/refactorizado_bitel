@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Asistencia Mundo Android</string>
+    <string name="title_activity_main">Asistencia Mundo Android</string>
+    <string name="package_name">cloud.kyrocodelabs.asistencia</string>
+    <string name="custom_url_scheme">cloud.kyrocodelabs.asistencia</string>
+</resources>
