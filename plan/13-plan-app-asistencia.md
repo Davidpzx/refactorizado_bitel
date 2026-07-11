@@ -21,6 +21,7 @@
 **Capacitor** envuelve el frontend React existente en una app Android nativa: se reutiliza el 95% del `TerminalAsistenciaPage` tal cual (misma UI, mismos endpoints) y lo nativo se añade como plugins. Alternativas descartadas: React Native/Flutter (reescribir toda la UI que ya funciona), PWA (no da background location ni identificadores de hardware — es exactamente lo que falta).
 
 - Distribución: **APK directo instalado en los equipos de tienda** (sideload). No pasa por Play Store → sin fricción con la política de Google sobre background location, y son dispositivos del negocio. Actualizaciones: la app consulta `GET /v1/app-terminal/version` al abrir y ofrece descargar el APK nuevo desde el propio backend.
+- **Distribución inicial (decisión del usuario 2026-07-11):** botón "Descargar app" en la pestaña Asistencias del panel admin (el equivalente refactor de `gerencia/panel_asistencias.php` del legacy), con URL de descarga estable y copiable que se comparte **por WhatsApp como enlace, no como archivo** — el enlace sirve siempre la última versión desde el backend; un APK adjunto en el chat envejece y genera versiones viejas circulando.
 - iOS queda fuera del alcance (las tiendas usan Android — el cliente es "Mundo Android").
 
 ## Diseño técnico
@@ -69,7 +70,7 @@ Hash `SHA-256(ANDROID_ID + fingerprint_build + install_uuid)` donde:
 | APP-06 | Job `sin_señal` + integración con Monitor de Fraude (fuera_de_rango, mock) | Backend: scheduler + incidencias | Medio | Sonnet 5 |
 | APP-07 | Pestaña "Presencia" en Asistencias (admin) | Frontend web: tabla semáforo + detalle por agente | Medio | Sonnet 5 |
 | APP-08 | Consentimiento + retención/purga de pings (90 días) | Backend + pantalla en app | Bajo | Sonnet 5 |
-| APP-09 | Canal de actualización del APK (`/v1/app-terminal/version` + hosting del APK) | Backend + check al abrir la app | Bajo | Sonnet 5 |
+| APP-09 | Canal de distribución del APK: `/v1/app-terminal/version` + descarga pública estable + **botón "Descargar app" en la pestaña Asistencias del admin** (equivalente refactor de `gerencia/panel_asistencias.php` del legacy) con enlace copiable para compartir por WhatsApp | Backend + frontend admin + check al abrir la app | Bajo-Medio | Sonnet 5 |
 | APP-10 | QA en dispositivo real: matriz de pruebas (Doze, sin red, GPS falso, reinicio, batería) | Manual con el equipo de una tienda piloto | Medio | Manual + Opus verifica |
 
 **Dependencias**: 01 → (02, 03) → 05; 04 → (05, 06, 07); 08/09 tras 04. Piloto (10) al final con UNA tienda antes de repartir el APK a todas.
