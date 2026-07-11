@@ -36,12 +36,7 @@ class AsistenciaController extends Controller
 
     private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
-        $earthRadius = 6371000;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-
-        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return \App\Services\GeoService::haversine($lat1, $lng1, $lat2, $lng2);
     }
 
     public function status(Request $request, string $dni): JsonResponse
@@ -588,6 +583,12 @@ class AsistenciaController extends Controller
                         ], 409);
                     }
                     $id = $asistencia->id;
+
+                    // APP-04 — al cerrar el turno se termina el rastreo de presencia:
+                    // se borra la fila de estado (las incidencias NO se borran, son la evidencia).
+                    if ($tipo === 'salida' && Schema::hasTable('asistencia_presencia')) {
+                        DB::table('asistencia_presencia')->where('agente_id', $agente->id)->delete();
+                    }
                 }
 
                 $asistenciaActualizada = DB::table('asistencias')->find($id);

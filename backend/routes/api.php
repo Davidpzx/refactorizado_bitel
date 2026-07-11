@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\AsistenciaController;
+use App\Http\Controllers\Api\AsistenciaPresenciaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BipayController;
 use App\Http\Controllers\Api\BitacoraStockController;
@@ -75,6 +76,8 @@ Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
     Route::post('mark',         [AsistenciaController::class, 'mark']);
     Route::post('mark-qr',      [AsistenciaController::class, 'markQr']);
     Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto']);
+    // APP-04 — ping de presencia (app nativa; autenticado por device_hash + agente).
+    Route::post('ping-ubicacion', [AsistenciaPresenciaController::class, 'pingUbicacion']);
 });
 Route::post('/v1/asistencias/turno-corrido', [AsistenciaController::class, 'turnoCorrido'])->middleware('throttle:60,1');
 
@@ -432,6 +435,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('asistencias/exportar-neiry', [AsistenciaNeiryController::class, 'exportar'])->middleware('role:admin');
 
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
+    // APP-04 — semáforo de presencia en vivo (agentes en turno + último ping).
+    Route::get('asistencias-admin/presencia',        [AsistenciaPresenciaController::class, 'presencia'])->middleware('role:admin');
     Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');
     Route::post('asistencias',                       [AsistenciaController::class, 'registrar'])->middleware('role:admin');
     Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar'])->middleware('role:admin');
