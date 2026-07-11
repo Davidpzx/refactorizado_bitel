@@ -441,6 +441,16 @@ class IntegradorController extends Controller
         $servidorCentral = rtrim(config('app.url'), '/').'/api/v1/integrador/recibir-saldo';
         $apiKeyCentral = config('services.integrador.api_key');
 
+        // Sin key central no tiene sentido entregar el agente: quedaría con API_KEY_CENTRAL
+        // vacía y sus POST serían rechazados. Fallar controladamente en vez de repartir basura.
+        if (! is_string($apiKeyCentral) || $apiKeyCentral === '') {
+            return response()->json([
+                'ok' => false,
+                'error' => 'La API key central del integrador no está configurada en el servidor. '
+                    .'Contacta al administrador del sistema.',
+            ], 503);
+        }
+
         $configPhp = "<?php\n"
             ."// Config del agente Bipay — tienda {$codigo}. Generado el ".now()->format('Y-m-d H:i').".\n"
             ."// Las credenciales Bitel NO viven aquí: el agente las descarga del servidor\n"
@@ -552,12 +562,20 @@ class IntegradorController extends Controller
 
     private function validarM2M(Request $request): ?JsonResponse
     {
+        // Sin key central configurada NO se autentica a nadie: rechazar antes de comparar
+        // para que un config vacío no cuele como válido ('' === '' / null === null).
+        $apiKeyCentral = config('services.integrador.api_key');
+        if (! is_string($apiKeyCentral) || $apiKeyCentral === '') {
+            return response()->json(['ok' => false, 'error' => 'Integrador no configurado en el servidor.'], 403);
+        }
+
         $data = $request->json()->all();
         if (! is_array($data) || empty($data)) {
             // agente_config manda form-data; el resto JSON
             $data = $request->all();
         }
-        if (($data['api_key'] ?? '') !== config('services.integrador.api_key')) {
+        $apiKeyRecibida = (string) ($data['api_key'] ?? '');
+        if ($apiKeyRecibida === '' || ! hash_equals($apiKeyCentral, $apiKeyRecibida)) {
             return response()->json(['ok' => false, 'error' => 'API key inválida'], 403);
         }
         if (abs(time() - (int) ($data['timestamp'] ?? 0)) > 300) {

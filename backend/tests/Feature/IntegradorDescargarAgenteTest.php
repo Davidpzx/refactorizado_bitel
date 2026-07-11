@@ -30,6 +30,10 @@ class IntegradorDescargarAgenteTest extends TestCase
         // Partir siempre de un servidor SIN binarios provisionados.
         File::deleteDirectory($this->agenteDir);
 
+        // El default hardcodeado del config se eliminó (SEC-01) y sin él descargarAgente
+        // rechaza la entrega con 503. Fijamos una key central conocida para el happy path.
+        config(['services.integrador.api_key' => 'test-integrador-key']);
+
         DB::table('integrador_credenciales')->insert([
             'tienda_codigo' => 'PUNDA50',
             'bitel_username' => 'USUARIO_TEST',
@@ -99,5 +103,19 @@ class IntegradorDescargarAgenteTest extends TestCase
         $this->actingAs($admin, 'sanctum')
             ->get($this->url(token: str_repeat('b', 64)))
             ->assertStatus(403);
+    }
+
+    public function test_no_entrega_agente_si_falta_la_key_central(): void
+    {
+        // SEC-01: con la key central del integrador vacía, el ZIP se generaría con
+        // API_KEY_CENTRAL en blanco (agente inútil). Debe fallar controladamente (503).
+        $this->provisionarBinarios();
+        config(['services.integrador.api_key' => null]);
+        $admin = Usuario::factory()->admin()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->get($this->url())
+            ->assertStatus(503)
+            ->assertJsonPath('ok', false);
     }
 }

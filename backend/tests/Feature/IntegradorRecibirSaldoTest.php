@@ -24,11 +24,17 @@ class IntegradorRecibirSaldoTest extends TestCase
 
     private const TIENDA = 'PUNDA50';
 
+    private const API_KEY = 'test-integrador-key';
+
     private int $cuentaId;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // El default hardcodeado del config se eliminó (SEC-01); en testing no hay env var,
+        // así que fijamos una key conocida en runtime para poder ejercitar el happy path.
+        config(['services.integrador.api_key' => self::API_KEY]);
 
         // cuentas_bipay / transacciones_bipay no están migradas en este repo (viven en el
         // legacy); se crean ad-hoc igual que BipayAdminTest.
@@ -188,6 +194,80 @@ class IntegradorRecibirSaldoTest extends TestCase
         unset($payload['api_key']);
 
         $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertStatus(403);
+    }
+
+    public function test_api_key_correcta_sigue_funcionando(): void
+    {
+        // Regresión SEC-01: tras quitar el default hardcodeado, la key configurada válida
+        // debe seguir autenticando exactamente igual que antes.
+        $this->postJson('/api/v1/integrador/recibir-saldo', $this->payload())
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+    }
+
+    public function test_api_key_vacia_es_rechazada(): void
+    {
+        $payload = $this->payload();
+        $payload['api_key'] = '';
+
+        $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertStatus(403);
+    }
+
+    public function test_api_key_incorrecta_es_rechazada(): void
+    {
+        $payload = $this->payload();
+        $payload['api_key'] = 'clave-que-no-corresponde';
+
+        $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertStatus(403);
+    }
+
+    public function test_key_central_vacia_rechaza_aunque_request_tampoco_mande_key(): void
+    {
+        // Con el config vacío/null, ni siquiera un request sin api_key debe colar
+        // (evita que '' === '' o null === null pase como válido).
+        config(['services.integrador.api_key' => null]);
+        $payload = $this->payload();
+        unset($payload['api_key']);
+
+        $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertStatus(403);
+
+        config(['services.integrador.api_key' => '']);
+        $this->postJson('/api/v1/integrador/recibir-saldo', $this->payload())->assertStatus(403);
+    }
+
+    public function test_config_no_tiene_api_key_hardcodeada_por_defecto(): void
+    {
+        // Sin la env var INTEGRADOR_API_KEY, el config NO debe caer en un secreto
+        // hardcodeado: el default se eliminó, debe resolver a null.
+        $prev = [
+            'env' => $_ENV['INTEGRADOR_API_KEY'] ?? null,
+            'server' => $_SERVER['INTEGRADOR_API_KEY'] ?? null,
+            'getenv' => getenv('INTEGRADOR_API_KEY'),
+        ];
+        unset($_ENV['INTEGRADOR_API_KEY'], $_SERVER['INTEGRADOR_API_KEY']);
+        putenv('INTEGRADOR_API_KEY');
+
+        try {
+            // Se re-evalúa el archivo de config con la env var ausente (bypassa el cache
+            // de config del contenedor, que setUp sobrescribió con una key de prueba).
+            $config = require base_path('config/services.php');
+
+            $this->assertNull($config['integrador']['api_key']);
+            $this->assertNotSame(
+                'KyrO+-tomowrroland-skrillex-2026?-wazak-vegetta777',
+                $config['integrador']['api_key']
+            );
+        } finally {
+            if ($prev['env'] !== null) {
+                $_ENV['INTEGRADOR_API_KEY'] = $prev['env'];
+            }
+            if ($prev['server'] !== null) {
+                $_SERVER['INTEGRADOR_API_KEY'] = $prev['server'];
+            }
+            if ($prev['getenv'] !== false) {
+                putenv('INTEGRADOR_API_KEY='.$prev['getenv']);
+            }
+        }
     }
 
     protected function tearDown(): void
