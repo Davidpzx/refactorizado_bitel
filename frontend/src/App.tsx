@@ -48,6 +48,7 @@ const TiendasPage        = lazy(() => import('./pages/admin/TiendasPage').then(m
 const PanelBipayPage     = lazy(() => import('./pages/bipay/PanelBipayPage').then(m => ({ default: m.PanelBipayPage })))
 const AsistenciasPage    = lazy(() => import('./pages/asistencias/AsistenciasPage').then(m => ({ default: m.AsistenciasPage })))
 const ControlAsistenciasPage = lazy(() => import('./pages/asistencias/ControlAsistenciasPage').then(m => ({ default: m.ControlAsistenciasPage })))
+const PresenciaPage      = lazy(() => import('./pages/asistencias/PresenciaPage').then(m => ({ default: m.PresenciaPage })))
 const HistorialLiquidacionPage = lazy(() => import('./pages/asistencias/HistorialLiquidacionPage').then(m => ({ default: m.HistorialLiquidacionPage })))
 const ComisionesPage     = lazy(() => import('./pages/comisiones/ComisionesPage').then(m => ({ default: m.ComisionesPage })))
 const ConfiguracionPage  = lazy(() => import('./pages/admin/ConfiguracionPage').then(m => ({ default: m.ConfiguracionPage })))
@@ -135,6 +136,7 @@ export default function App() {
                 <Route path="/asistencias"         element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
                 <Route path="/asistencias/control" element={<Suspense fallback={<PageLoader />}><ControlAsistenciasPage /></Suspense>} />
                 <Route path="/asistencias/liquidacion" element={<Suspense fallback={<PageLoader />}><HistorialLiquidacionPage /></Suspense>} />
+                <Route path="/asistencias/presencia"   element={<Suspense fallback={<PageLoader />}><PresenciaPage /></Suspense>} />
                 <Route path="/asistencias/qr"      element={<Suspense fallback={<PageLoader />}><QrDisplayPage /></Suspense>} />
                 <Route path="/revisar-fotos"       element={<Suspense fallback={<PageLoader />}><RevisarFotosPage /></Suspense>} />
                 <Route path="/revisar-stock"       element={<Suspense fallback={<PageLoader />}><RevisarStockPage /></Suspense>} />

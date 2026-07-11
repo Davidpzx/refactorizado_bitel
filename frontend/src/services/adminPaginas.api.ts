@@ -43,6 +43,29 @@ export interface FotosPendientesResponse {
   total: number
 }
 
+// ── Presencia en vivo (APP-04/07) ────────────────────────────────────────────────
+
+export type EstadoPresencia = 'ok' | 'fuera_de_rango' | 'mock_gps' | 'sin_ping'
+
+export interface PresenciaAgenteItem {
+  agente_id: number
+  dni: string
+  nombre: string
+  tienda: string | null
+  hora_ingreso: string | null
+  estado: EstadoPresencia
+  ultimo_ping: string | null
+  minutos_desde_ping: number | null
+  distancia: number | null
+  battery_pct: number | null
+  incidencias_dia: number
+}
+
+export interface PresenciaResponse {
+  data: PresenciaAgenteItem[]
+  total: number
+}
+
 // ── Monitor de fraude de dispositivos ───────────────────────────────────────────
 
 export interface AlertaFraudeItem {
@@ -83,4 +106,7 @@ export const adminPaginasApi = {
 
   fraudeDispositivos: () =>
     api.get<FraudeDispositivosResponse>('/v1/asistencias/fraude-dispositivos').then((r) => r.data),
+
+  presencia: () =>
+    api.get<PresenciaResponse>('/v1/asistencias-admin/presencia').then((r) => r.data),
 }

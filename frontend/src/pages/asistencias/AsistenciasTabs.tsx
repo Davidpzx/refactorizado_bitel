@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarCheck, GridFour, Calculator, Camera } from '@phosphor-icons/react'
+import { CalendarCheck, GridFour, Calculator, Camera, MapPinLine } from '@phosphor-icons/react'
 import { adminPaginasApi } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageTabs } from '../../components/ui/PageTabs'
@@ -9,6 +9,7 @@ const RUTAS = [
   { id: '/asistencias', label: 'Gestión', icon: CalendarCheck },
   { id: '/asistencias/control', label: 'Control mensual', icon: GridFour },
   { id: '/asistencias/liquidacion', label: 'Liquidación', icon: Calculator },
+  { id: '/asistencias/presencia', label: 'Presencia', icon: MapPinLine },
   { id: '/revisar-fotos', label: 'Revisar fotos', icon: Camera },
 ] as const
 
