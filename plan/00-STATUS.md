@@ -205,3 +205,11 @@ Pendiente real fuera de código: rotación de INTEGRADOR_API_KEY (SEC-01) coordi
 ## APP-03 integrado (2026-07-11, tarde) — implementado directamente por el orquestador
 Geolocalizacion nativa via @capacitor/geolocation (commit b74a036): permisos reales en Android, mensajes por tipo de error, y el backend ya rechaza mock_gps=true como MOCK_GPS (mismo patron que WEAK_GPS/OUT_OF_RANGE, alimenta antifraude). Nota importante: mock_gps siempre llega false hasta que exista el plugin nativo propio (isFromMockProvider de Android) -- eso es parte de APP-02, @capacitor/geolocation no lo expone. No inventar que ya detecta mock antes de que APP-02 lo implemente de verdad.
 Van 3 de 10 tickets APP integrados: APP-01 (scaffold), APP-04 (backend presencia), APP-03 (GPS nativo). Suite 706/706.
+
+## Ola paralela david+titan (2026-07-11 17:20-17:40) — 5 tickets APP integrados esta sesion
+- [x] APP-02 (titan/Opus, commit 52c1592): plugin nativo DeviceIdentity.java -- huella real SHA-256(ANDROID_ID|FINGERPRINT|MODEL|uuid) + getCurrentLocation() con Location.isMock()/isFromMockProvider() REAL. Correccion honesta: SharedPreferences no Keystore (ninguno sobrevive borrar-datos; ANDROID_ID es el ancla real). LocationManager no FusedLocation (equipos sideload sin Play Services).
+- [x] APP-03 (david, commit b74a036): geolocalizacion nativa base + plumbing mock_gps -- luego reemplazado/mejorado por APP-02 con deteccion real.
+- [x] APP-07 (david, commit 79c8eca): pestaña Presencia en Asistencias admin, consume el endpoint de APP-04.
+- [x] APP-08 backend (david, commit 32d4c0e): tabla + endpoint consentimiento-ubicacion, gate 428 CONSENT_REQUIRED en ping-ubicacion. FALTA: pantalla de consentimiento en la app (se wirea con APP-05).
+Suite backend: 709/709. Frontend tsc+build limpios en cada paso.
+Van 5 de 10 tickets APP: 001(scaffold), 02(plugin nativo), 03(GPS), 04(backend presencia), 07(UI presencia), 08(backend consentimiento). Faltan: 05 (foreground service 30min -- el corazon del monitoreo), 06 (job sin_señal + Monitor de Fraude), 09 (distribucion APK + boton descarga), 10 (QA dispositivo real).
