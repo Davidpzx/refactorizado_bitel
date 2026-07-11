@@ -3,10 +3,13 @@ import jsQR from 'jsqr'
 import { api } from '../../services/api'
 import { obtenerPosicionActual, type ErrorPermisoGps } from '../../utils/geolocalizacionNativa'
 import DeviceIdentity, { esPlataformaNativa, type DeviceInfo } from '../../plugins/deviceIdentity'
+import { iniciarRastreoPresencia, detenerRastreoPresencia } from '../../plugins/presenceTracker'
+import { ConsentimientoUbicacion } from './ConsentimientoUbicacion'
+import { consentimientoAceptado } from '../../utils/consentimientoUbicacion'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
-type Paso = 'dni' | 'pin' | 'opciones' | 'gps' | 'fallback' | 'qr' | 'foto' | 'token' | 'ok' | 'error'
+type Paso = 'dni' | 'pin' | 'opciones' | 'gps' | 'fallback' | 'qr' | 'foto' | 'token' | 'consentimiento' | 'ok' | 'error'
 type TipoMarcacion = 'entrada' | 'inicio_refrigerio' | 'fin_refrigerio' | 'salida'
 
 interface AgenteStatus {
@@ -90,6 +93,14 @@ async function resolverHuella(dni: string): Promise<{ huella: string; deviceInfo
     }
   }
   return { huella: obtenerOCrearHuella(dni), deviceInfo: null }
+}
+
+/**
+ * Base de la API que usará el foreground service nativo (APP-05) para sus POST directos,
+ * fuera del WebView. Se toma de la misma instancia axios y se le quita la barra final.
+ */
+function apiBaseUrl(): string {
+  return (api.defaults.baseURL ?? '').replace(/\/+$/, '')
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -414,7 +425,20 @@ export function TerminalAsistenciaPage() {
       const tard = data.tardanza_minutos > 0 ? ` (${data.tardanza_minutos} min tardanza)` : ''
       setMensaje(`¡${status?.agente.nombre}! ${TIPO_LABEL[tipo]} registrada${tard}.`)
       setSubMensaje(data.siguiente_marcacion ? `Próxima: ${TIPO_LABEL[data.siguiente_marcacion as TipoMarcacion] ?? data.siguiente_marcacion}` : '')
-      setPaso('ok')
+      // APP-05: el turno abre en ENTRADA (arranca el rastreo) y cierra en SALIDA (lo detiene).
+      // El rastreo solo existe en el APK nativo; en web las funciones son inertes.
+      if (esPlataformaNativa() && tipo === 'entrada') {
+        if (consentimientoAceptado(huellaRef.current)) {
+          void iniciarRastreoPresencia(apiBaseUrl(), dni, huellaRef.current)
+          setPaso('ok')
+        } else {
+          // Sin consentimiento aún: pedirlo antes de arrancar el rastreo (el mensaje de éxito ya está listo).
+          setPaso('consentimiento')
+        }
+      } else {
+        if (esPlataformaNativa() && tipo === 'salida') void detenerRastreoPresencia()
+        setPaso('ok')
+      }
     } catch (err: unknown) {
       const resp = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
       // GPS fuera de rango o señal débil → ofrecer alternativas (no es error duro)
@@ -457,6 +481,11 @@ export function TerminalAsistenciaPage() {
       setTipo(data.siguiente_marcacion as TipoMarcacion)
       setMensaje('Turno corrido activado.')
       setSubMensaje('Proxima marcacion: Salida.')
+      // APP-05: el turno sigue abierto — reasegura el rastreo si ya hay consentimiento
+      // (idempotente: si el service ya corre, solo reprograma el próximo ping).
+      if (esPlataformaNativa() && consentimientoAceptado(huella)) {
+        void iniciarRastreoPresencia(apiBaseUrl(), dni, huella)
+      }
       setPaso('ok')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'No se pudo activar turno corrido.'
@@ -615,6 +644,16 @@ export function TerminalAsistenciaPage() {
             {loading && <p className="text-xs text-zinc-400 animate-pulse">Validando token...</p>}
             <button onClick={() => setPaso('fallback')} className="text-xs text-zinc-500 hover:text-zinc-300">← Volver</button>
           </div>
+        )}
+
+        {/* ── Consentimiento de rastreo (APP-05, solo nativo, tras ENTRADA) ── */}
+        {paso === 'consentimiento' && (
+          <ConsentimientoUbicacion
+            dni={dni}
+            deviceHash={huellaRef.current}
+            onAceptar={() => { void iniciarRastreoPresencia(apiBaseUrl(), dni, huellaRef.current); setPaso('ok') }}
+            onRechazar={() => setPaso('ok')}
+          />
         )}
 
         {/* ── Éxito ── */}
