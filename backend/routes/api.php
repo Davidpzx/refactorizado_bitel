@@ -51,16 +51,13 @@ use App\Http\Controllers\Api\RucController;
 use Illuminate\Support\Facades\Route;
 
 // ── Health (público) ─────────────────────────────────────────────────────────
-Route::get('/v1/health', fn() => response()->json([
-    'status' => 'ok',
-    'app'    => config('app.name'),
-    'env'    => config('app.env'),
-]));
+// SEC-12: no exponer entorno/nombre de app — Dokploy solo necesita el 200.
+Route::get('/v1/health', fn() => response()->json(['status' => 'ok']));
 
 // ── Auth (público) ───────────────────────────────────────────────────────────
 Route::prefix('v1/auth')->group(function () {
     Route::post('login',      [AuthController::class, 'login'])->middleware('throttle:10,1');
-    Route::post('verify-pin', [AuthController::class, 'verifyPin'])->middleware('throttle:20,1');
+    Route::post('verify-pin', [AuthController::class, 'verifyPin'])->middleware(['throttle:20,1', 'throttle:verify-pin']);
 });
 
 // ── Dispositivo — autorización fingerprint (público) ─────────────────────────
@@ -75,7 +72,9 @@ Route::prefix('v1/attendance')->middleware('throttle:60,1')->group(function () {
     Route::get('status/{dni}',  [AsistenciaController::class, 'status']);
     Route::post('mark',         [AsistenciaController::class, 'mark']);
     Route::post('mark-qr',      [AsistenciaController::class, 'markQr']);
-    Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto']);
+    // SEC-13: throttle propio más estricto — el grupo comparte 60/min con status/mark/mark-qr,
+    // suficiente para llenar disco lentamente con fotos si se abusa del endpoint público.
+    Route::post('mark-photo',   [AsistenciaController::class, 'markPhoto'])->middleware('throttle:10,1');
     // APP-04 — ping de presencia (app nativa; autenticado por device_hash + agente).
     Route::post('ping-ubicacion', [AsistenciaPresenciaController::class, 'pingUbicacion']);
 });
@@ -107,19 +106,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Dashboard ────────────────────────────────────────────────────────────
     Route::get('dashboard/kpis',      [DashboardController::class, 'kpis']);
     Route::get('dashboard/anomalias', [DashboardController::class, 'anomalias'])->middleware('role:admin');
-    Route::get('dashboard/exportar',  [DashboardController::class, 'exportar'])->middleware('role:admin');
+    Route::get('dashboard/exportar',  [DashboardController::class, 'exportar'])->middleware(['role:admin', 'throttle:exports']);
     Route::get('control-center',      [ControlCenterController::class, 'index']);
     Route::post('marcar-notificacion', [ControlCenterController::class, 'marcarNotificacion']);
 
     // ── Historial Completo (admin ve todo; tienda ve solo su propia tienda) ───
     Route::get('historial',           [HistorialController::class, 'index'])->middleware('role:admin,tienda');
     Route::get('historial/kpis',      [HistorialController::class, 'kpis'])->middleware('role:admin,tienda');
-    Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware('role:admin,tienda');
+    Route::get('historial/exportar',  [HistorialController::class, 'exportar'])->middleware(['role:admin,tienda', 'throttle:exports']);
 
     // ── Bitácora de Stock ─────────────────────────────────────────────────────
     Route::get('bitacora-stock',           [BitacoraStockController::class, 'index']);
     Route::get('bitacora-stock/kpis',      [BitacoraStockController::class, 'kpis']);
-    Route::get('bitacora-stock/exportar',  [BitacoraStockController::class, 'exportar']);
+    Route::get('bitacora-stock/exportar',  [BitacoraStockController::class, 'exportar'])->middleware('throttle:exports');
     Route::post('bitacora-stock/corregir', [BitacoraStockController::class, 'corregir'])->middleware('role:admin');
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
@@ -139,7 +138,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('reportes/{reporte}/denegar-edicion',         [ReporteController::class, 'denegarEdicion']);
     Route::put('reportes/{reporte}/reprocesar',             [ReporteController::class, 'reprocesar']);
     Route::get('reportes/{reporte}/historial',              [ReporteController::class, 'historial']);
-    Route::get('reportes/{reporte}/exportar-excel',          [ReporteController::class, 'exportarExcel']);
+    Route::get('reportes/{reporte}/exportar-excel',          [ReporteController::class, 'exportarExcel'])->middleware('throttle:exports');
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
 
     Route::get('reportes', [ReporteController::class, 'index'])->middleware('role:admin');
@@ -150,12 +149,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Otros recursos ────────────────────────────────────────────────────────
     // Custom agentes routes BEFORE apiResource to avoid {agente} wildcard conflict
-    // Endpoint ligero accesible a todos los autenticados (para selects/dropdowns)
+    // Endpoint ligero accesible a todos los autenticados (para selects/dropdowns).
+    // SEC-11: el DNI completo del padrón NO viaja — TrasladosPage matchea por los
+    // últimos 4 dígitos (dni_ultimos4) contra lo que el agente autorizador teclea.
     Route::get('agentes/select', fn() => response()->json(
         \App\Models\Agente::where('estado', 'ACTIVO')->orderBy('nombres')->get(['id', 'nombres', 'dni'])
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'nombres' => $a->nombres,
+                'dni_ultimos4' => substr((string) $a->dni, -4),
+            ])
     ));
-    Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes'])->middleware('role:admin');
-    Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica'])->middleware('role:admin');
+    Route::get('agentes/exportar',              [MatrizInventarioController::class, 'exportarAgentes'])->middleware(['role:admin', 'throttle:exports']);
+    Route::get('agentes/exportar-ficha',        [AgenteController::class, 'exportarFichaTecnica'])->middleware(['role:admin', 'throttle:exports']);
     // show() valida tienda_base internamente (admin ve todo, no-admin solo su propia tienda)
     Route::apiResource('agentes', AgenteController::class)->except(['show'])->middleware('role:admin');
     Route::get('agentes/{agente}', [AgenteController::class, 'show']);
@@ -169,9 +175,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('inventario/campana-costos',  [InventarioController::class, 'campanaCostos'])->middleware('role:admin,tienda');
     Route::get('inventario/precios-pendientes', [InventarioController::class, 'preciosPendientes'])->middleware('role:admin,tienda');
     Route::get('inventario/precios-matriz',     [InventarioController::class, 'preciosMatriz'])->middleware('role:admin');
-    Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex'])->middleware('role:admin,tienda');
+    Route::get('inventario/exportar-kardex', [InventarioController::class, 'exportarKardex'])->middleware(['role:admin,tienda', 'throttle:exports']);
     Route::get('inventario/matriz',          [MatrizInventarioController::class, 'index'])->middleware('role:admin,tienda');
-    Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar'])->middleware('role:admin,tienda');
+    Route::get('inventario/exportar',        [MatrizInventarioController::class, 'exportar'])->middleware(['role:admin,tienda', 'throttle:exports']);
     Route::get('inventario', [InventarioController::class, 'index'])->middleware('role:admin,tienda');
     Route::post('inventario', [InventarioController::class, 'store'])->middleware('role:admin,tienda');
     Route::get('inventario/{inventario}', [InventarioController::class, 'show'])->middleware('role:admin,tienda');
@@ -258,7 +264,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('agentes/{id}/reset-dispositivo',       [AgenteController::class, 'resetDispositivo'])->middleware('role:admin');
 
     // ── Planilla ─────────────────────────────────────────────────────────────
-    Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel'])->middleware('role:admin');
+    Route::get('planilla/{mes}/exportar',           [PlanillaController::class, 'exportarExcel'])->middleware(['role:admin', 'throttle:exports']);
     Route::get('planilla/{mes}',                    [PlanillaController::class, 'calcular'])->middleware('role:admin');
     Route::post('planilla/ajuste',                  [PlanillaController::class, 'guardarAjuste'])->middleware('role:admin');
     Route::post('planilla/ajuste/reset-comisiones', [PlanillaController::class, 'resetarComisiones'])->middleware('role:admin');
@@ -266,7 +272,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Monitor Postpago ─────────────────────────────────────────────────────
     Route::get('postpago/resumen',   [PostpagoController::class, 'resumen'])->middleware('role:admin');
     Route::get('postpago/ventas',    [PostpagoController::class, 'ventas'])->middleware('role:admin');
-    Route::get('postpago/exportar',  [PostpagoController::class, 'exportar'])->middleware('role:admin');
+    Route::get('postpago/exportar',  [PostpagoController::class, 'exportar'])->middleware(['role:admin', 'throttle:exports']);
 
     // ── CRM (SEC-03: el CRM completo — leads, pipeline, temperatura — es admin/tienda) ──
     Route::middleware('role:admin,tienda')->group(function () {
@@ -278,13 +284,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // ── CRM: temperatura calculada (paridad legacy crm_clientes/crm_interacciones) ──
         Route::get('crm/temperatura',           [CrmTemperaturaController::class, 'index']);
-        Route::get('crm/temperatura/exportar',  [CrmTemperaturaController::class, 'exportar']);
+        Route::get('crm/temperatura/exportar',  [CrmTemperaturaController::class, 'exportar'])->middleware('throttle:exports');
         Route::get('crm/temperatura/{dni}',     [CrmTemperaturaController::class, 'porDni']);
     });
 
     // ── Estadísticas (admin ve todo; tienda ve solo su propia tienda) ─────────
     Route::get('estadisticas/ventas',       [EstadisticasController::class, 'ventas'])->middleware('role:admin,tienda');
-    Route::get('estadisticas/exportar',     [EstadisticasController::class, 'exportar'])->middleware('role:admin,tienda');
+    Route::get('estadisticas/exportar',     [EstadisticasController::class, 'exportar'])->middleware(['role:admin,tienda', 'throttle:exports']);
     Route::get('estadisticas/productividad',[EstadisticasController::class, 'productividad'])->middleware('role:admin,tienda');
     Route::get('estadisticas/ranking/subfiltros', [EstadisticasController::class, 'subfiltrosRanking'])->middleware('role:admin,tienda');
     Route::get('estadisticas/ranking',      [EstadisticasController::class, 'rankingAgentes'])->middleware('role:admin,tienda');
@@ -296,6 +302,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Usuarios ──────────────────────────────────────────────────────────────
     Route::apiResource('usuarios', UsuarioController::class)->middleware('role:admin');
+    // SEC-16: revocación manual de todas las sesiones (compromiso sospechado).
+    Route::post('usuarios/{usuario}/revocar-tokens', [UsuarioController::class, 'revocarTokens'])->middleware('role:admin');
 
     // ── Tiendas ───────────────────────────────────────────────────────────────
     // Endpoint ligero accesible a todos los autenticados (para selects/dropdowns)
@@ -307,7 +315,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Bipay ─────────────────────────────────────────────────────────────────
     Route::get('bipay/saldo',          [BipayController::class, 'saldo'])->middleware('role:admin,tienda'); // SEC-03
     Route::get('bipay/transacciones',  [BipayController::class, 'transacciones'])->middleware('role:admin,tienda'); // SEC-03
-    Route::get('bipay/transacciones/exportar', [BipayController::class, 'exportarTransacciones'])->middleware('role:admin');
+    Route::get('bipay/transacciones/exportar', [BipayController::class, 'exportarTransacciones'])->middleware(['role:admin', 'throttle:exports']);
     Route::get('bipay/locks-activos',  [BipayController::class, 'locksActivos'])->middleware('role:admin');
     Route::post('bipay/recarga',       [BipayController::class, 'recarga'])->middleware('role:admin');
     Route::post('bipay/transferir',    [BipayController::class, 'transferir'])->middleware('role:admin');
@@ -323,7 +331,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Tickets Emitidos (SEC-03: solo admin/tienda; scoping por tienda en el controller) ──
     Route::middleware('role:admin,tienda')->group(function () {
         Route::get('tickets',              [TicketController::class, 'index']);
-        Route::get('tickets/exportar',     [TicketController::class, 'exportar']);
+        Route::get('tickets/exportar',     [TicketController::class, 'exportar'])->middleware('throttle:exports');
         Route::get('tickets/{id}',         [TicketController::class, 'show']);
         Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
         Route::patch('tickets/{id}',       [TicketController::class, 'update']);
@@ -432,7 +440,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::delete('agentes/{id}/documentos/{campo}',  [AgenteDocumentoController::class, 'eliminar'])->middleware('role:admin');
 
     // ── Export plantilla Neiry ────────────────────────────────────────────────
-    Route::get('asistencias/exportar-neiry', [AsistenciaNeiryController::class, 'exportar'])->middleware('role:admin');
+    Route::get('asistencias/exportar-neiry', [AsistenciaNeiryController::class, 'exportar'])->middleware(['role:admin', 'throttle:exports']);
 
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
     // APP-04 — semáforo de presencia en vivo (agentes en turno + último ping).
@@ -440,7 +448,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');
     Route::post('asistencias',                       [AsistenciaController::class, 'registrar'])->middleware('role:admin');
     Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar'])->middleware('role:admin');
-    Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar'])->middleware('role:admin');
+    Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar'])->middleware(['role:admin', 'throttle:exports']);
     Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes'])->middleware('role:admin');
     Route::get('asistencias/fraude-dispositivos',    [AsistenciaController::class, 'fraudeDispositivos'])->middleware('role:admin');
     Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction'])->middleware('role:admin');

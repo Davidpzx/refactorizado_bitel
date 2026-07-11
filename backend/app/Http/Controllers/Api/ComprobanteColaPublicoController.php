@@ -9,6 +9,7 @@ use App\Services\Facturacion\FacturacionApiClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Vista pública (sin sesión) de un comprobante: el link que el cliente recibe
@@ -23,6 +24,11 @@ class ComprobanteColaPublicoController extends Controller
 {
     /** Los 4 formatos del legacy; cualquier otro valor cae a A4. */
     private const FORMATOS_IMPRESION = ['A4', 'a5', '80mm', 'ticket'];
+
+    // SEC-09: un link legítimo compartido por WhatsApp puede recibir hits repetidos
+    // durante toda su ventana de validez; cada uno re-descargaba desde la API externa
+    // de facturación. Se cachea el archivo ya obtenido por (id,tipo,formato).
+    private const CACHE_TTL_SEGUNDOS = 300;
 
     public function __construct(private readonly CpeLinkService $links)
     {
@@ -76,6 +82,28 @@ class ComprobanteColaPublicoController extends Controller
             return response()->json(['error' => 'Comprobante no disponible para descarga.'], 404);
         }
 
+        $formato = 'A4';
+        if ($tipo === 'pdf') {
+            $formato = (string) $request->query('formato', 'A4');
+            $formato = in_array($formato, self::FORMATOS_IMPRESION, true) ? $formato : 'A4';
+        }
+
+        $extension   = $tipo === 'cdr' ? 'zip' : $tipo;
+        $nombre      = ($cola->numero_completo ?? ('comprobante_'.$cola->getKey())).'.'.$extension;
+        // El pdf va inline: la página de impresión pública lo embebe en un <iframe>.
+        $disposicion = $tipo === 'pdf' ? 'inline' : 'attachment';
+
+        $cacheKey = "cpe-descarga:{$id}:{$tipo}:{$formato}";
+        $cacheado = Cache::get($cacheKey);
+
+        if ($cacheado !== null) {
+            return response(base64_decode($cacheado['body']), 200, [
+                'Content-Type'        => $cacheado['content_type'],
+                'Content-Disposition' => $disposicion.'; filename="'.$nombre.'"',
+                'Cache-Control'       => 'private, max-age='.self::CACHE_TTL_SEGUNDOS,
+            ]);
+        }
+
         $config = $cola->resolverConfig();
 
         if ($config === null || !$config->estaOperativa()) {
@@ -85,8 +113,6 @@ class ComprobanteColaPublicoController extends Controller
         $cliente = new FacturacionApiClient($config);
 
         if ($tipo === 'pdf') {
-            $formato = (string) $request->query('formato', 'A4');
-            $formato = in_array($formato, self::FORMATOS_IMPRESION, true) ? $formato : 'A4';
             $cliente->generarPdf($cola->tipo_comprobante, $cola->api_doc_id, $formato);
         }
 
@@ -96,15 +122,17 @@ class ComprobanteColaPublicoController extends Controller
             return response()->json(['error' => 'No se pudo obtener el archivo desde la API de facturación.'], 502);
         }
 
-        $extension    = $tipo === 'cdr' ? 'zip' : $tipo;
-        $nombre       = ($cola->numero_completo ?? ('comprobante_'.$cola->getKey())).'.'.$extension;
-        // El pdf va inline: la página de impresión pública lo embebe en un <iframe>.
-        $disposicion  = $tipo === 'pdf' ? 'inline' : 'attachment';
+        $contentType = $respuesta->header('Content-Type') ?: $formatosMime[$tipo];
+
+        Cache::put($cacheKey, [
+            'body'         => base64_encode($respuesta->body()),
+            'content_type' => $contentType,
+        ], self::CACHE_TTL_SEGUNDOS);
 
         return response($respuesta->body(), 200, [
-            'Content-Type'        => $respuesta->header('Content-Type') ?: $formatosMime[$tipo],
+            'Content-Type'        => $contentType,
             'Content-Disposition' => $disposicion.'; filename="'.$nombre.'"',
-            'Cache-Control'       => 'private, max-age=300',
+            'Cache-Control'       => 'private, max-age='.self::CACHE_TTL_SEGUNDOS,
         ]);
     }
 

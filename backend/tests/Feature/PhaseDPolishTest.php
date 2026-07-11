@@ -38,7 +38,7 @@ class PhaseDPolishTest extends TestCase
 
         $token = $response->json('token');
         [, $tienda, $bloque, $hmac] = explode('|', $token);
-        $esperado = substr(hash_hmac('sha256', "AST|{$tienda}|{$bloque}", 'phase-d-qr-secret'), 0, 16);
+        $esperado = substr(hash_hmac('sha256', "AST|{$tienda}|{$bloque}", 'phase-d-qr-secret'), 0, 32);
 
         $this->assertSame($esperado, $hmac);
         $this->assertStringStartsWith('data:image/svg+xml', $response->json('image_data_uri'));
@@ -69,7 +69,7 @@ class PhaseDPolishTest extends TestCase
         ]);
 
         $bloque = (int) floor(now()->timestamp / 5);
-        $hmac = substr(hash_hmac('sha256', "AST|T01|{$bloque}", 'phase-d-qr-secret'), 0, 16);
+        $hmac = substr(hash_hmac('sha256', "AST|T01|{$bloque}", 'phase-d-qr-secret'), 0, 32);
 
         $this->postJson('/api/v1/attendance/mark-qr', [
             'dni' => '12345678',

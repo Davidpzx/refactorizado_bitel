@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agente;
+use App\Support\LogSafe;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +70,7 @@ class DispositivoController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error('dispositivo.autorizacion_fallida', [
-                'dni' => $dni,
+                'dni' => LogSafe::dni($dni),
                 'exception' => $e,
             ]);
 

@@ -136,7 +136,7 @@ function CrearTrasladoDialog({
 
   const authDniWatch = watch('auth_dni') ?? ''
   const nombreAgente = agentes.find(
-    a => a.dni?.trim().toUpperCase() === authDniWatch.trim().toUpperCase()
+    a => a.dni_ultimos4 === authDniWatch.trim().slice(-4)
   )?.nombres ?? ''
 
   // ── Form chip (estado simple) ─────────────────────────────────────────────
@@ -299,7 +299,7 @@ function CrearTrasladoDialog({
               <div>
                 <Label>Nombre</Label>
                 <Input
-                  value={agentes.find(a => a.dni?.trim().toUpperCase() === chipForm.auth_dni.trim().toUpperCase())?.nombres ?? ''}
+                  value={agentes.find(a => a.dni_ultimos4 === chipForm.auth_dni.trim().slice(-4))?.nombres ?? ''}
                   readOnly
                   placeholder="No encontrado en el sistema"
                   className="mt-1 bg-kyro-surface/50 text-kyro-muted cursor-default"
@@ -340,7 +340,7 @@ function ConfirmarDialog({
 
   const dniWatch = watch('auth_dni') ?? ''
   const nombreConfirma = agentes.find(
-    a => a.dni?.trim().toUpperCase() === dniWatch.trim().toUpperCase()
+    a => a.dni_ultimos4 === dniWatch.trim().slice(-4)
   )?.nombres ?? ''
 
   const onSubmit = (data: ConfirmarForm) => {
@@ -417,7 +417,7 @@ function ConfirmarChipDialog({
 
   const dniWatch = watch('auth_dni') ?? ''
   const nombreConfirma = agentes.find(
-    a => a.dni?.trim().toUpperCase() === dniWatch.trim().toUpperCase()
+    a => a.dni_ultimos4 === dniWatch.trim().slice(-4)
   )?.nombres ?? ''
 
   const onSubmit = (data: ConfirmarForm) => {

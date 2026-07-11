@@ -4,7 +4,8 @@ import { api } from '../services/api'
 export interface AgenteOption {
   id: number
   nombres: string
-  dni: string
+  /** Solo los últimos 4 dígitos del DNI (SEC-11) — nunca el DNI completo. */
+  dni_ultimos4: string
   tienda_base?: string
 }
 

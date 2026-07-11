@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Agente;
+use App\Support\LogSafe;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
@@ -12,7 +13,7 @@ class AgenteService
     {
         $datos['pin_seguridad'] = Hash::make($datos['pin_seguridad']);
         $agente = Agente::create($datos);
-        Log::info('agente.creado', ['id' => $agente->id, 'dni' => $agente->dni]);
+        Log::info('agente.creado', ['id' => $agente->id, 'dni' => LogSafe::dni($agente->dni)]);
         return $agente;
     }
 

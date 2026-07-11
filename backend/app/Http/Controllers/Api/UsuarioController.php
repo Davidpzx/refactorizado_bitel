@@ -78,9 +78,26 @@ class UsuarioController extends Controller
             unset($data['password']);
         }
 
+        $seDesactiva = array_key_exists('activo', $data) && !$data['activo'] && $usuario->activo;
+
         $usuario->update($data);
 
+        // SEC-16: al desactivar un usuario, sus tokens Sanctum viejos seguían vivos
+        // hasta que expiraran solos (SEC-07). Si se sospecha compromiso o se da de
+        // baja a un empleado, la sesión debe morir en el acto, no en 14 días.
+        if ($seDesactiva) {
+            $usuario->tokens()->delete();
+        }
+
         return response()->json($usuario);
+    }
+
+    /** SEC-16: revocación manual de todas las sesiones de un usuario (compromiso sospechado). */
+    public function revocarTokens(Usuario $usuario): JsonResponse
+    {
+        $usuario->tokens()->delete();
+
+        return response()->json(['ok' => true, 'mensaje' => 'Todas las sesiones del usuario fueron cerradas.']);
     }
 
     public function destroy(Usuario $usuario): JsonResponse

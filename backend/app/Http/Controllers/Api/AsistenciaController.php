@@ -222,7 +222,10 @@ class AsistenciaController extends Controller
 
         $bloqueActual = (int) floor($this->ahora()->timestamp / 5);
         $bloqueQr = filter_var($bloqueToken, FILTER_VALIDATE_INT);
-        $hmacEsperado = substr(hash_hmac('sha256', "AST|{$tiendaToken}|{$bloqueToken}", $this->qrSecret()), 0, 16);
+        // SEC-14: 32 hex (128 bits) en vez de 16 (64 bits) — desplegar generación y
+        // validación juntas (fuera de horario de marcado): un QR en vuelo con el largo
+        // viejo deja de validar en el instante del deploy.
+        $hmacEsperado = substr(hash_hmac('sha256', "AST|{$tiendaToken}|{$bloqueToken}", $this->qrSecret()), 0, 32);
         if ($bloqueQr === false || abs($bloqueActual - $bloqueQr) > 2 || ! hash_equals($hmacEsperado, strtolower($hmacToken))) {
             return response()->json(['error' => 'QR expirado o inválido. Escanea de nuevo.'], 422);
         }
@@ -295,7 +298,8 @@ class AsistenciaController extends Controller
         $data = $request->validate([
             'dni' => ['required', 'string'],
             'tipo' => ['nullable', Rule::in($this->tiposAceptados())],
-            'foto' => ['required', 'string'],
+            // SEC-13: base64 de una imagen; ~2048 KB en binario ≈ 2.73M chars en base64 (×4/3 + margen).
+            'foto' => ['required', 'string', 'max:2796000'],
             'tienda_id' => ['nullable'],
             'device_id' => ['nullable', 'string', 'max:128'],
             'device_hash' => ['nullable', 'string', 'max:128'],
@@ -667,7 +671,8 @@ class AsistenciaController extends Controller
 
         $ahora = $this->ahora();
         $bloque = (int) floor($ahora->timestamp / 5);
-        $hmac = substr(hash_hmac('sha256', "AST|{$tiendaId}|{$bloque}", $this->qrSecret()), 0, 16);
+        // SEC-14: 32 hex (128 bits), en línea con la validación de arriba.
+        $hmac = substr(hash_hmac('sha256', "AST|{$tiendaId}|{$bloque}", $this->qrSecret()), 0, 32);
         $token = "AST|{$tiendaId}|{$bloque}|{$hmac}";
         $ttl = 5 - ($ahora->timestamp % 5);
         $qr = new QrCode(
