@@ -177,3 +177,12 @@ QA final (026 visual, 027 funcional) al cierre de todo lo demás.
 - Workers: recordarles skills (headroom, superpowers, frontend-design si UI, agentbrowser si comparación visual) y modelo en CADA prompt — los prompts son autocontenidos (arrancan en frío).
 - Diseño: replicar o mejorar identidad legacy "Ultra Dark Premium", nunca genérico; iconos con criterio = parte del criterio de aceptación.
 - Al recoger cada entrega: revisar diff/resultado antes de darla por buena.
+
+## Fase de mejoras — sesión 2026-07-11 (orquesta reducida: david + titan + Codex gpt-5.6-sol)
+- Cuentas: dev1/dev2/dev3 FUERA permanente (org disabled). Codex CLI actualizado a 0.144.1, modelo gpt-5.6-sol operativo vía MCP y exec.
+- [x] SEC-01 (API key integrador) — titan/Opus — commit 0ca9ecb. Tests 638/638. PENDIENTE OPERATIVO: rotar la clave quemada, setear INTEGRADOR_API_KEY en .env del VPS ANTES del próximo deploy (sin ella prod no arranca), actualizar config.php de agentes en tienda.
+- [x] Base design system fintech — david (autorizado por el usuario a implementar diseño) — commit 65955e0: Sparkline.tsx, StatCard con trend/delta, .kyro-money, radios 16px, sombras light recalibradas, prefers-reduced-motion. tsc + vite build limpios.
+- [x] Auditoría de diseño — Codex/gpt-5.6-sol — plan/11-tickets-diseno-fintech.md: 23 tickets DIS-FX (6 transversales + 17 pantallas). SIN commitear aún.
+- [ ] EN VUELO: titan/Opus → paquete SEC-02+04+06+07 (log: plan/.worker-titan-SEC-ola2.log); Codex/gpt-5.6-sol → plan/12-plan-verificacion-optimizacion.md (log: plan/.worker-codex-verificacion.log).
+- [ ] Siguiente ola tras titan: SEC-05 (headers, Opus) y SEC-03 (matriz role:, Opus — el gordo). Ambos chocan con bootstrap/app.php y routes/api.php de la ola actual, por eso van después.
+- [ ] Luego: SEC-08..SEC-16 (medias/bajas), tickets DIS-FX (usuario debe aprobar el doc 11 primero), y plan 12 (verificación funcional + optimizaciones).
