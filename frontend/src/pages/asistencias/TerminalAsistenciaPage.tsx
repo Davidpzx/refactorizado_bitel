@@ -6,6 +6,7 @@ import DeviceIdentity, { esPlataformaNativa, type DeviceInfo } from '../../plugi
 import { iniciarRastreoPresencia, detenerRastreoPresencia } from '../../plugins/presenceTracker'
 import { ConsentimientoUbicacion } from './ConsentimientoUbicacion'
 import { consentimientoAceptado } from '../../utils/consentimientoUbicacion'
+import { APP_VERSION } from '../../config/appVersion'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -332,6 +333,20 @@ function Toggle({ on, onChange, titulo, desc, color }: { on: boolean; onChange: 
   )
 }
 
+// ── Banner de actualización disponible (APP-09a, solo nativo) ──────────────────
+
+function BannerActualizacion({ urlDescarga }: { urlDescarga: string }) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-kyro-gold/30 bg-kyro-gold/10 px-4 py-3">
+      <p className="text-xs text-kyro-gold">Hay una actualización disponible</p>
+      <a href={urlDescarga} target="_blank" rel="noreferrer"
+        className="shrink-0 rounded-xl bg-kyro-gold/90 px-3 py-1.5 text-xs font-bold text-[#1a1a1a] hover:brightness-105">
+        Descargar
+      </a>
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export function TerminalAsistenciaPage() {
@@ -354,10 +369,24 @@ export function TerminalAsistenciaPage() {
   const horaIntentoRef = useRef<number>(0)      // A3: instante del intento GPS (ms)
   const aperturaCamaraRef = useRef<number>(0)   // A3: instante de apertura de cámara/QR (ms)
 
+  const [urlActualizacion, setUrlActualizacion] = useState<string | null>(null) // APP-09a
+
   useEffect(() => {
     api.get('/v1/postulaciones/tiendas')
       .then((r) => setTiendas(Array.isArray(r.data) ? r.data : (r.data?.data ?? [])))
       .catch(() => setTiendas([]))
+  }, [])
+
+  // APP-09a — solo en el APK: avisa (sin bloquear) si el servidor tiene una versión más nueva.
+  useEffect(() => {
+    if (!esPlataformaNativa()) return
+    api.get('/v1/app-terminal/version')
+      .then((r) => {
+        if (r.data?.disponible && r.data.version && r.data.version !== APP_VERSION && r.data.url_descarga) {
+          setUrlActualizacion(r.data.url_descarga)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   function reset() {
@@ -500,6 +529,8 @@ export function TerminalAsistenciaPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
+        {urlActualizacion && <BannerActualizacion urlDescarga={urlActualizacion} />}
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-kyro-gold/10 border border-kyro-gold/30 rounded-2xl px-5 py-2 mb-3">
             <span className="text-kyro-gold font-black text-lg tracking-tight">KYRO</span>

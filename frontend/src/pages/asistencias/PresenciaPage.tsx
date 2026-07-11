@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { adminPaginasApi, type EstadoPresencia, type PresenciaAgenteItem } from '../../services/adminPaginas.api'
 import { PageHeader } from '../../components/PageHeader'
 import { AsistenciasTabs } from './AsistenciasTabs'
+import { AppTerminalDescarga } from './AppTerminalDescarga'
 import { Card } from '../../components/ui/card'
 import { MapPinLine, BatteryFull, BatteryLow, WarningCircle, CheckCircle, XCircle } from '@phosphor-icons/react'
 
@@ -47,6 +48,8 @@ export function PresenciaPage() {
       />
 
       <AsistenciasTabs />
+
+      <AppTerminalDescarga />
 
       {isLoading ? (
         <Card className="kyro-card p-6"><p className="text-sm text-kyro-muted">Cargando…</p></Card>

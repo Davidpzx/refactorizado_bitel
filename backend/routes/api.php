@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AgenteController;
+use App\Http\Controllers\Api\AppTerminalController;
 use App\Http\Controllers\Api\AsistenciaController;
 use App\Http\Controllers\Api\AsistenciaPresenciaController;
 use App\Http\Controllers\Api\AuthController;
@@ -89,6 +90,13 @@ Route::prefix('v1/integrador')->middleware('throttle:120,1')->group(function () 
     Route::post('recibir-saldo',           [IntegradorController::class, 'recibirSaldo']);
     Route::post('recibir-morosidad',       [IntegradorController::class, 'recibirMorosidad']);
     Route::post('recibir-bitel-historico', [IntegradorController::class, 'recibirBitelHistorico']);
+});
+
+// ── App Terminal — distribución del APK de la app de asistencia (público) ────
+// APP-09a. `subir` (protegida, admin) vive en el grupo autenticado más abajo.
+Route::prefix('v1/app-terminal')->group(function () {
+    Route::get('version',    [AppTerminalController::class, 'version'])->middleware('throttle:60,1');
+    Route::get('descargar',  [AppTerminalController::class, 'descargar'])->middleware('throttle:30,1');
 });
 
 // ── CPE público — link firmado HMAC para WhatsApp (sin sesión) ───────────────
@@ -210,6 +218,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('configuracion/logo',       [ConfiguracionController::class, 'updateLogo'])->middleware('role:admin');
     Route::delete('configuracion/logo',     [ConfiguracionController::class, 'deleteLogo'])->middleware('role:admin');
     Route::post('configuracion/sync-logo-facturacion', [ConfiguracionController::class, 'syncLogoFacturacion'])->middleware('role:admin');
+
+    // ── App Terminal — subir nueva versión del APK (admin) ───────────────────
+    Route::post('app-terminal/subir', [AppTerminalController::class, 'subir'])->middleware('role:admin');
 
     // ── Facturación electrónica — emisión ─────────────────────────────────────
     // Único camino de emisión síncrona: encola y drena esa misma fila. Cualquier

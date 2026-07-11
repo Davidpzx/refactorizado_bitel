@@ -87,6 +87,16 @@ export interface FraudeDispositivosResponse {
   total: number
 }
 
+// ── App Terminal — canal de distribución del APK (APP-09a) ──────────────────────
+
+export interface AppTerminalVersion {
+  version: string | null
+  disponible: boolean
+  url_descarga?: string
+  tamano_bytes?: number | null
+  actualizado_en?: string | null
+}
+
 export const adminPaginasApi = {
   preciosPendientes: (tienda?: string) =>
     api.get<PreciosPendientesResponse>('/v1/inventario/precios-pendientes', { params: tienda ? { tienda } : {} }).then((r) => r.data),
@@ -113,4 +123,16 @@ export const adminPaginasApi = {
 
   presencia: () =>
     api.get<PresenciaResponse>('/v1/asistencias-admin/presencia').then((r) => r.data),
+
+  appTerminalVersion: () =>
+    api.get<AppTerminalVersion>('/v1/app-terminal/version').then((r) => r.data),
+
+  appTerminalSubir: (file: File, version: string) => {
+    const fd = new FormData()
+    fd.append('apk', file)
+    fd.append('version', version)
+    return api.post<{ message: string; version: string }>('/v1/app-terminal/subir', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
 }
