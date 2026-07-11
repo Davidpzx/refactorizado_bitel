@@ -213,3 +213,10 @@ Van 3 de 10 tickets APP integrados: APP-01 (scaffold), APP-04 (backend presencia
 - [x] APP-08 backend (david, commit 32d4c0e): tabla + endpoint consentimiento-ubicacion, gate 428 CONSENT_REQUIRED en ping-ubicacion. FALTA: pantalla de consentimiento en la app (se wirea con APP-05).
 Suite backend: 709/709. Frontend tsc+build limpios en cada paso.
 Van 5 de 10 tickets APP: 001(scaffold), 02(plugin nativo), 03(GPS), 04(backend presencia), 07(UI presencia), 08(backend consentimiento). Faltan: 05 (foreground service 30min -- el corazon del monitoreo), 06 (job sin_señal + Monitor de Fraude), 09 (distribucion APK + boton descarga), 10 (QA dispositivo real).
+
+## APP-05 y APP-06 integrados (2026-07-11, tarde) — ola paralela titan+Codex
+- [x] APP-05 (titan/Opus, commit 6a40b45): foreground service PresenceTrackerService.java, ping cada 30min exactos (AlarmManager setExactAndAllowWhileIdle), notificacion IMPORTANCE_MIN muda, cola offline SharedPreferences, pantalla ConsentimientoUbicacion.tsx integrada.
+- [x] APP-06 (Codex/gpt-5.6-sol, commit 36f420b): comando bitel:detectar-sin-senal cada 15min, Monitor de Fraude ampliado con incidencias de ubicacion. El orquestador encontro y arreglo un bug de integracion real: el backend horneaba texto en columnas de "dueño del dispositivo" y el frontend no sabia de las nuevas alertas -- el badge "≠ DIFERENTE" se hubiera disparado siempre para alertas de ubicacion. Se limpio backend + se actualizo MonitorFraudePanel.tsx con su propio badge por tipo_ubicacion.
+Suite backend: 714/714. Frontend tsc+build limpios.
+**7 de 10 tickets APP integrados**: 01,02,03,04,05,06,07,08 (backend). Faltan: APP-09a (canal descarga + boton refactor), APP-09b (mismo boton en legacy panel_asistencias.php -- pedido explicito del usuario, dos sistemas), APP-10 (QA dispositivo real).
+Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el boton de descarga en AMBOS sistemas (legacy Y refactor), no solo el refactor.
