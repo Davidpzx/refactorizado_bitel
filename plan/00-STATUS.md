@@ -260,3 +260,20 @@ Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el b
 - [x] DIS-FX-02/03/04/05/06 integrados (commit b1f1c67): 23 componentes compartidos alineados a la vision fintech (indigo estructural, oro solo dinero, radios 18/20/10px, KpiCard definitivo con skeleton). tsc+vite+vitest verificados por el orquestador (el sandbox de Codex no pudo correr vite).
 - [ ] DIS-FX-01 (AppLayout/sidebar + busqueda global) PENDIENTE — titan agoto sesion sin tocarlo; vuelve 10:20pm Lima. Siguiente en su cola.
 - [ ] Olas de pantallas DIS-FX-07..23 pendientes (Dashboard, Cuadre, Inventario, CRM, Planilla priorizados).
+
+## COLA MAESTRA SIN HUECOS (2026-07-12) — todo lo restante asignado
+Regla de despacho: al terminar cada ola, verificar diffs + tsc + vite build (+ suite backend si toca backend), integrar con commit por ola, push (auto-despliega), y despachar la siguiente. Dominios siempre disjuntos por archivos.
+
+**EN VUELO (ola D2):** titan/Opus → DIS-FX-01 (AppLayout+búsqueda) + 07 (Dashboard) | Codex/gpt-5.6-sol → DIS-FX-08, 11, 13, 14, 15 (Reportes lista, MiHistorial, Bitácora, Chips, Kardex/Matriz).
+- Ola D3: titan/Opus → DIS-FX-09 (Cuadre diario, el más grande) + 10 (Detalle/edición) | Codex → 18, 19, 20, 21 (Financieras, Bipay, CuadreBitel, BCP).
+- Ola D4: titan/Opus → DIS-FX-12 (Inventario) + 16 (CRM) | Codex → 22, 23, 24, 25 (Estadísticas, Postpago, MapaCalor, Historial).
+- Ola D5: titan/Opus → DIS-FX-17 (Planilla) | Codex → 26, 27, 28 (Asistencias, Control/Liquidación, QR/Terminal-light).
+- Ola D6: titan → 29, 30, 31 (Personal, VerAgente, Clientes) | Codex → 32, 33, 34, 35 (Comisiones, Tiendas, Usuarios, Perfil empresa).
+- Ola D7: titan → 36, 37, 38 (Facturación, Integrador, Diagnóstico) | Codex → 39, 40, 41 (Postulaciones, Fotos, Precios).
+- Ola D8: titan → 42, 43 (Comprobantes/CPE, Tickets) | Codex → 44, 45 (Traslados, Login).
+- Ola O1 (backend, intercalable si un worker queda libre): titan/Opus → OPT-01 + OPT-02 (N+1 reversión ventas y confirmación lotes, los 2 Alto de plan/12) | Codex → OPT-03, 04, 05, 06 (índices + cancelar lote).
+- Ola O2: titan → OPT-08 (temperatura CRM, Alto) | Codex → OPT-07, 09, 10 (paginación chips/leads, caching).
+- Ola O3 (frontend perf): Codex → OPT-11, 12, 13, 14 (bundle/lazy/staleTime) | titan → OPT-15, 16 (logo storage, assets huérfanos).
+- CIERRE: QA visual (plan/12 sección A flujos clave post-rediseño) + deploy final + resumen ejecutivo.
+Fuera de la cola (requieren al usuario): APP-10 (probar APK en equipo real), rotación INTEGRADOR_API_KEY, backup del keystore.
+Nota: plan/08-mejoras-diseno-bloque1/2 (fase anterior) quedan SUPERSEDIDOS por plan/11 donde se solapan — no ejecutar en paralelo; rescatar solo lo que plan/11 no cubra (revisar al cierre).
