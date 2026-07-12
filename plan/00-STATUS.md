@@ -287,3 +287,9 @@ titan agoto sesion sin arrancar OPT-01/02 (0.3 caso 1, nada perdido); Codex fuer
 
 ## CIERRE TOTAL (2026-07-12 tarde) — TODOS LOS PLANES EJECUTADOS
 Seguridad 16/16, App 9/10 (falta solo prueba fisica del usuario), Rediseño 45/45, Optimizaciones 16/16. Indices migrados en VPS. QA de humo produccion 8/8 verde (frontend, health, APK descarga/version, legacy, login+kpis, presencia, crm temperatura). Resumen completo en plan/14-resumen-ejecutivo-final.md. Suite final: 726 passed.
+
+## Ronda rendimiento+fluidez (2026-07-12 tarde) — commit f6bb79b, DESPLEGADO Y VERIFICADO
+- CAUSA RAIZ de la lentitud hallada y corregida: el backend corria con `php artisan serve` (dev server, 1 request a la vez, sin OPcache). Ahora nginx+php-fpm+OPcache (backend/docker/). VERIFICADO en prod: 5 requests pesadas EN PARALELO responden todas en ~0.38s (antes se encolaban).
+- Descarga APK corregida: trustProxies — url_descarga ahora sale https:// y la descarga arranca. Verificado.
+- Fluidez: prefetch al hover + top-5 en idle, keepPreviousData global, PageLoader skeleton.
+- Tiempo real: polling en dashboard/comprobantes/bipay/fraude (30-60s, pausado en pestaña oculta). Siguiente nivel si se pide: Laravel Reverb (websockets push).
