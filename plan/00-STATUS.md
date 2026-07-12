@@ -242,3 +242,9 @@ Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el b
 - LINK DE DESCARGA OPERATIVO: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
 - Nota cosmetica: url_descarga en el JSON sale con http:// (detras de Traefik el scheme no se fuerza) — el link https funciona igual; fix menor pendiente (URL::forceScheme o trustProxies).
 - OJO: el APK del storage vive DENTRO del contenedor — un redeploy del backend lo borra (no hay volumen para storage/app/app-terminal). Re-subirlo tras cada deploy o montar volumen. Anotado como pendiente.
+
+## APK publicado por el flujo OFICIAL (2026-07-12 01:06)
+- Bug real encontrado al probar la subida por el panel: PHP del contenedor limitaba uploads a 2M (el APK pesa 5.6M) — el uploader del panel habria fallado para el usuario. Fix permanente en backend/Dockerfile (uploads.ini 200M, commit 844d6f0) + redeploy.
+- APK v1.0.0 subido via POST /v1/app-terminal/subir con cuenta admin (flujo oficial completo validado). Version endpoint OK, descarga OK, sha256 identico.
+- LINK: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
+- El fix de 200M tambien resolvio de paso el riesgo del APK-borrado-por-redeploy para ESTA vez (se re-subio post-deploy); el riesgo de fondo (storage sin volumen) sigue anotado.
