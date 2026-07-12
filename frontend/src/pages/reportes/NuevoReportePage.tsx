@@ -5,6 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente, esJefeTienda, esAgente } from '../../utils/roles'
 import { Receipt, X, DeviceMobile, SimCard, Package, Coins, Storefront, ArrowsIn, Sigma, Money, DeviceTablet, Export, CheckCircle, Bank, Vault, NotePencil, FloppyDisk as Save, CloudArrowUp as UploadCloud, DownloadSimple as FolderDown, Printer, Plus, PencilSimple as Pencil, ClipboardText as ClipboardList } from '@phosphor-icons/react'
 import { usePlanesComisiones } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
@@ -918,7 +919,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const { data: planesData = [] } = usePlanesComisiones()
   const confirmDialog = useConfirmDialog()
   const esEdicion = mode === 'edit'
-  const esAdminReporte = usuario?.rol === 'admin' && !esEdicion
+  const esAdminReporte = esAdminOGerente(usuario) && !esEdicion
   const cuadreTone = esEdicion ? CUADRE_EDITAR : CUADRE_CREAR
   const reporteId = Number(id ?? 0)
   const inicializadoRef        = useRef(false)
@@ -980,7 +981,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   useEffect(() => {
     if (usuario && !esEdicion) {
-      if (usuario.rol !== 'admin') {
+      if (!esAdminOGerente(usuario)) {
         setValue('agente_id', usuario.agente_id ?? 0)
         setValue('tienda_id', usuario.tienda_id)
       } else {
@@ -1525,7 +1526,10 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   }, [salidaItems, savedReporteId, esEdicion])
 
   // ── Borrador en la nube (auto-save 60s + manual) ──────────────────────────────
-  const esTienda = usuario?.rol === 'tienda' && !esEdicion
+  // "esTienda" agrupa a jefe_tienda Y agente: ambos crean/cuadran "lo suyo" con el
+  // mismo flujo operativo (chequeo de stock de chips, consola Bipay, impresión de
+  // tickets) — solo administrador/gerente tienen el flujo "elegir tienda" (esAdminReporte).
+  const esTienda = (esJefeTienda(usuario) || esAgente(usuario)) && !esEdicion
   const [borradorMsg, setBorradorMsg] = useState('')
   const [borradorDisponible, setBorradorDisponible] = useState<Record<string, unknown> | null>(null)
   const [ticketDesc, setTicketDesc] = useState<string | null>(null)
@@ -1737,7 +1741,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
     return <div className="flex h-64 items-center justify-center text-sm text-kyro-muted">Cargando reporte...</div>
   }
 
-  if (esEdicion && usuario?.rol !== 'admin') {
+  if (esEdicion && !esAdminOGerente(usuario)) {
     return (
       <div className="kyro-card mx-auto max-w-xl p-6 text-center text-sm text-kyro-warning">
         El reprocesado completo requiere una cuenta administradora.
@@ -1775,7 +1779,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             )}
             {borradorMsg && <span className="text-xs text-kyro-muted">{borradorMsg}</span>}
             {crmMsg && <span className="text-xs text-kyro-info">{crmMsg}</span>}
-            <Button variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : usuario?.rol === 'admin' ? '/reportes' : '/mi-historial')}><X size={15} /> Cancelar</Button>
+            <Button variant="outline" className="gap-2" onClick={() => navigate(esEdicion ? `/reportes/${reporteId}` : esAdminOGerente(usuario) ? '/reportes' : '/mi-historial')}><X size={15} /> Cancelar</Button>
           </div>
         }
       />

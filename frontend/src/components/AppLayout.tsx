@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { esAdministrador, normalizarRol, type RolCanonico } from '../utils/roles'
 import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
@@ -13,7 +14,7 @@ interface NavItem {
   to: string
   label: string
   Icon: React.ComponentType<{ size?: number; className?: string }>
-  roles: string[]
+  roles: RolCanonico[]
   section: string
   soon?: boolean
   /** Color de acento propio (calca legacy `style="color:#c084fc"` en `sidebar-link`), p.ej. CRM. */
@@ -36,49 +37,58 @@ interface NavItem {
 // localStorage por `section` (clave estable, independiente del label que
 // cambia por rol, ver `sectionLabel`). Al navegar, la sección de la ruta
 // activa se auto-expande si estaba colapsada, para no perder el highlight.
+// Roles canónicos del plan/16-plan-roles.md (matriz congelada). Cada item declara
+// los roles que lo ven — `visibleItems` compara contra `userRole`, que ya está
+// normalizado a uno de los 4 roles canónicos (los alias legacy 'admin'/'tienda'
+// se resuelven en `normalizarRol` antes de comparar, ver más abajo).
+const ADM: RolCanonico = 'administrador'
+const GER: RolCanonico = 'gerente'
+const JT:  RolCanonico = 'jefe_tienda'
+const AG:  RolCanonico = 'agente'
+
 const NAV_ITEMS: NavItem[] = [
   // ── Gerencia ─────────────────────────────────────────────────────────────
-  { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: ['admin'],           section: 'Gerencia', accent: '#c084fc' },
-  { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: ['admin'],          section: 'Gerencia' },
-  { to: '/historial',      label: 'Historial',       Icon: History,         roles: ['admin', 'tienda'], section: 'Gerencia' },
-  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: ['tienda'],          section: 'Gerencia' },
+  { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: [ADM, GER, JT],      section: 'Gerencia' },
+  { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: [ADM, GER, JT],      section: 'Gerencia' },
+  { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: [ADM, GER, JT],      section: 'Gerencia', accent: '#c084fc' },
+  { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: [ADM, GER],         section: 'Gerencia' },
+  { to: '/historial',      label: 'Historial',       Icon: History,         roles: [ADM, GER, JT],      section: 'Gerencia' },
+  { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: [AG],                section: 'Gerencia' },
 
   // ── Administración ───────────────────────────────────────────────────────
-  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: ['admin'],           section: 'Administración' },
-  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: ['admin'],           section: 'Administración' },
-  { to: '/agentes',        label: 'Personal',        Icon: IdCard,          roles: ['admin'],           section: 'Administración' },
-  { to: '/asistencias',    label: 'Asistencias',     Icon: CalendarCheck,   roles: ['admin'],           section: 'Administración' },
-  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: ['admin'],           section: 'Administración' },
-  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: ['admin'],           section: 'Administración' },
-  { to: '/comisiones',     label: 'Comisiones',      Icon: Settings2,       roles: ['admin'],           section: 'Administración' },
-  { to: '/financieras',    label: 'Financieras',     Icon: Handshake,       roles: ['admin'],           section: 'Administración' },
-  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: Landmark,        roles: ['admin', 'tienda'], section: 'Administración' },
-  { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: Wallet,          roles: ['admin'],           section: 'Administración' },
-  { to: '/postpago',       label: 'Churn / Postpago', Icon: Signal,         roles: ['admin'],           section: 'Administración' },
-  { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: MapPin,          roles: ['admin'],           section: 'Administración' },
-  { to: '/postular',       label: 'Registro de Datos', Icon: ClipboardList, roles: ['admin'],          section: 'Administración', accent: '#c084fc' },
+  { to: '/tiendas',        label: 'Tiendas',         Icon: Store,           roles: [ADM, GER],          section: 'Administración' },
+  { to: '/usuarios',       label: 'Usuarios',        Icon: Users,           roles: [ADM, GER],          section: 'Administración' },
+  { to: '/agentes',        label: 'Personal',        Icon: IdCard,          roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/asistencias',    label: 'Asistencias',     Icon: CalendarCheck,   roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/planilla',       label: 'Planilla',        Icon: DollarSign,      roles: [ADM, GER],          section: 'Administración' },
+  { to: '/tickets',        label: 'Tickets',         Icon: Ticket,          roles: [ADM, GER],          section: 'Administración' },
+  { to: '/comisiones',     label: 'Comisiones',      Icon: Settings2,       roles: [ADM, GER],          section: 'Administración' },
+  { to: '/financieras',    label: 'Financieras',     Icon: Handshake,       roles: [ADM, GER],          section: 'Administración' },
+  { to: '/reporte-bcp',    label: 'Reporte BCP',     Icon: Landmark,        roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/panel-bipay',    label: 'Bipay / Anypay',  Icon: Wallet,          roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/postpago',       label: 'Churn / Postpago', Icon: Signal,         roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/mapa-calor',     label: 'Mapa de Calor',   Icon: MapPin,          roles: [ADM, GER, JT],      section: 'Administración' },
+  { to: '/postular',       label: 'Registro de Datos', Icon: ClipboardList, roles: [ADM, GER],          section: 'Administración', accent: '#c084fc' },
 
   // ── Inventario ───────────────────────────────────────────────────────────
-  { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: ['admin', 'tienda'], section: 'Inventario' },
-  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: ['admin', 'tienda'], section: 'Inventario' },
+  { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: [ADM, GER, JT],      section: 'Inventario' },
+  { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: [ADM, GER, JT],      section: 'Inventario' },
 
   // ── Operaciones ──────────────────────────────────────────────────────────
-  { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: ['tienda', 'admin'], section: 'Operaciones' },
-  { to: '/tickets',        label: 'Tickets Emitidos', Icon: Ticket,         roles: ['tienda'],          section: 'Operaciones' },
-  { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: QrCode,          roles: ['admin', 'tienda'], section: 'Operaciones' },
+  { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: [ADM, GER, JT, AG],  section: 'Operaciones' },
+  { to: '/tickets',        label: 'Tickets Emitidos', Icon: Ticket,         roles: [JT, AG],            section: 'Operaciones' },
+  { to: '/asistencias/qr', label: 'QR Asistencia',   Icon: QrCode,          roles: [ADM, GER, JT],      section: 'Operaciones' },
 
   // ── Configuración ────────────────────────────────────────────────────────
-  { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Building2,     roles: ['admin'],           section: 'Configuración' },
-  { to: '/configuracion/facturacion', label: 'Facturación Electrónica', Icon: Receipt, roles: ['admin'], section: 'Configuración' },
-  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Files,           roles: ['admin'],           section: 'Configuración' },
-  { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: ['admin', 'tienda'], section: 'Configuración' },
+  { to: '/configuracion',  label: 'Perfil de Empresa', Icon: Building2,     roles: [ADM, GER],          section: 'Configuración' },
+  { to: '/configuracion/facturacion', label: 'Facturación Electrónica', Icon: Receipt, roles: [ADM],   section: 'Configuración' },
+  { to: '/comprobantes',   label: 'Comprobantes',    Icon: Files,           roles: [ADM, GER, JT],      section: 'Configuración' },
+  { to: '/integrador',     label: 'Integrador Bipay', Icon: Plug,           roles: [ADM],               section: 'Configuración' },
 ]
 
-/** La 1ª sección del legacy se llama "Gerencia" para admin y "Mi Panel" para tienda. */
-function sectionLabel(section: string, role: string) {
-  return section === 'Gerencia' && role === 'tienda' ? 'Mi Panel' : section
+/** La 1ª sección del legacy se llama "Gerencia" para admin/gerente y "Mi Panel" para jefe_tienda/agente. */
+function sectionLabel(section: string, role: RolCanonico | null) {
+  return section === 'Gerencia' && (role === 'jefe_tienda' || role === 'agente') ? 'Mi Panel' : section
 }
 
 const SIDEBAR_SECTIONS_KEY = 'kyro:sidebar-collapsed-sections'
@@ -240,7 +250,7 @@ export function AppLayout() {
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdministrador(usuario),
   })
   const anomaliasCount = cc?.anomalias_caja.count ?? 0
 
@@ -260,7 +270,7 @@ export function AppLayout() {
     queryKey: ['configuracion-con-logo'],
     queryFn: () => api.get<{ logo_base64?: string | null }>('/v1/configuracion/con-logo').then((r) => r.data.logo_base64 ?? null),
     staleTime: 5 * 60_000,
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdministrador(usuario),
     initialData: () => leerCacheLogo()?.logo,
     initialDataUpdatedAt: () => leerCacheLogo()?.ts,
   })
@@ -280,9 +290,9 @@ export function AppLayout() {
   }
   const notifCount = cc?.notificaciones_sistema.count ?? 0
   const ccAlertCount = anomaliasCount + (cc?.traslados_pendientes.count ?? 0) + notifCount
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdministrador(usuario)
 
-  const userRole     = usuario?.rol ?? 'tienda'
+  const userRole: RolCanonico = normalizarRol(usuario?.rol) ?? 'jefe_tienda'
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(userRole))
 
   /* Sección de la ruta activa: se calcula en cada render (no en un efecto) para

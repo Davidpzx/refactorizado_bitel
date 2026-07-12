@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { api } from '../../services/api'
 import type { InventarioItem } from '../../types/inventario'
 
@@ -50,7 +51,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
   const crear      = useCrearInventario()
   const actualizar = useActualizarInventario()
   const { usuario } = useAuth()
-  const esAdmin     = usuario?.rol === 'admin'
+  const esAdmin     = esAdminOGerente(usuario)
 
   const { data: tiendasData } = useQuery<{ codigo: string; nombre: string }[]>({
     queryKey: ['tiendas-select'],

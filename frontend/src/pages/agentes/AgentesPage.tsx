@@ -18,6 +18,7 @@ import { Check, Copy, DownloadSimple as Download, Eye, FileText, Keyhole as KeyR
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { api } from '../../services/api'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { formatearFechaCorta } from '../../lib/fechas'
@@ -168,7 +169,7 @@ const urlsPublicas: Record<UrlPublica, string> = {
 export function AgentesPage() {
   const { usuario }                 = useAuth()
   const navigate                    = useNavigate()
-  const isAdmin                     = usuario?.rol === 'admin'
+  const isAdmin                     = esAdminOGerente(usuario)
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 })

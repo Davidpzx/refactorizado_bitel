@@ -14,6 +14,7 @@ import { ArrowLeft, User, MapPin, CurrencyDollar as DollarSign, Phone, EnvelopeS
 import { useState } from 'react'
 import { CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { DocumentosAgentePanel } from '../../components/agente/DocumentosAgentePanel'
 import { formatearFechaCorta } from '../../lib/fechas'
 import { KpiCard } from '../../components/ui/KpiCard'
@@ -708,7 +709,7 @@ export function VerAgentePage() {
   const { id }       = useParams<{ id: string }>()
   const navigate     = useNavigate()
   const { usuario }  = useAuth()
-  const isAdmin      = usuario?.rol === 'admin'
+  const isAdmin      = esAdminOGerente(usuario)
   const [page, setPage] = useState(1)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
 

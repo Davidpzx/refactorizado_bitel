@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { IdentificationCard as IdCard, UserCheck } from '@phosphor-icons/react'
 import { controlCenterApi } from '../../services/controlCenter.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { PageTabs } from '../../components/ui/PageTabs'
 
 const RUTAS = [
@@ -21,7 +22,7 @@ export function PersonalTabs() {
     queryKey: ['control-center'],
     queryFn: () => controlCenterApi.get(),
     staleTime: 25_000,
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdminOGerente(usuario),
   })
   const postulantesCount = cc?.postulantes_pendientes.count ?? 0
 

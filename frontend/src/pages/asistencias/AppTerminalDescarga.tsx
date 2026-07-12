@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DeviceMobile, DownloadSimple, Link as LinkIcon, Check, UploadSimple } from '@phosphor-icons/react'
 import { adminPaginasApi } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -19,7 +20,7 @@ function formatearTamano(bytes: number | null | undefined): string {
  */
 export function AppTerminalDescarga() {
   const { usuario } = useAuth()
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin = esAdminOGerente(usuario)
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [copiado, setCopiado] = useState(false)

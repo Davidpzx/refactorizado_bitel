@@ -5,6 +5,7 @@ import { Warning as AlertTriangle, Bell, ChartLineDown as TrendingDown, ChartLin
 import { dashboardApi } from '../services/dashboard.api'
 import { reportesApi } from '../services/reportes.api'
 import { useAuth } from '../hooks/useAuth'
+import { esAdminOGerente } from '../utils/roles'
 import { Button } from '../components/ui/button'
 import { ActionIconButton, TableActions } from '../components/ui/ActionIconButton'
 import { PageHeader } from '../components/PageHeader'
@@ -190,7 +191,7 @@ export function DashboardPage() {
     queryKey: ['dashboard-anomalias'],
     queryFn: () => dashboardApi.anomalias(),
     staleTime: 60_000,
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdminOGerente(usuario),
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   })
@@ -245,7 +246,7 @@ export function DashboardPage() {
       })
   }
 
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
   const tableHeaders = isAdmin
     ? ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Ganancia', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
     : ['ID', 'Fecha', 'Tienda / Agente', 'Venta Total', 'Físico Entregado', 'Diferencia', 'Destino Efectivo', 'Estado', 'Acción']
@@ -257,7 +258,7 @@ export function DashboardPage() {
         title="Dashboard Gerencial"
         description="Visión consolidada de caja, canales digitales y reportes operativos."
         Icon={LayoutDashboard}
-        actions={usuario?.rol === 'admin' ? (
+        actions={esAdminOGerente(usuario) ? (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -310,7 +311,7 @@ export function DashboardPage() {
             className="h-9 w-40 rounded-lg border border-gray-300/90 bg-white/90 px-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20 dark:text-zinc-100"
           />
         </div>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <div>
             <label className="block text-[0.68rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
             <Select
@@ -335,7 +336,7 @@ export function DashboardPage() {
         >
           <RotateCcw size={15} />
         </Button>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <Button variant="glassSuccess" onClick={exportarExcel} className="gap-1.5">
             <FileSpreadsheet size={14} /> Exportar
           </Button>
@@ -414,7 +415,7 @@ export function DashboardPage() {
       />
 
       {/* Ganancia total del período */}
-      {usuario?.rol === 'admin' && (
+      {esAdminOGerente(usuario) && (
         <ProfitBanner
           title="Ganancia Total del Período"
           subtitle={`Suma de ganancias y comisiones registradas entre el ${new Date(appliedFilters.fecha_desde + 'T00:00:00').toLocaleDateString('es-PE')} y el ${new Date(appliedFilters.fecha_hasta + 'T00:00:00').toLocaleDateString('es-PE')}.`}
@@ -473,8 +474,8 @@ export function DashboardPage() {
                   ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/50 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
                   : 'border-b border-gray-100 transition-colors hover:bg-kyro-indigo/[0.04] dark:border-white/[0.05] dark:hover:bg-kyro-indigo/[0.06]'
 
-                const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO'
-                const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'
+                const canEdit    = esAdminOGerente(usuario) || r.estado_edicion === 'APROBADO'
+                const editPending = r.estado_edicion === 'SOLICITADO' && !esAdminOGerente(usuario)
 
                 return (
                   <tr key={r.id} className={`group ${rowCls}`}>
@@ -503,7 +504,7 @@ export function DashboardPage() {
                         <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-semibold ${destinoBadgeClass(r.destino_efectivo ?? 'TIENDA')}`}>
                           {r.destino_efectivo ?? 'TIENDA'}
                         </span>
-                        {usuario?.rol === 'admin' && (
+                        {esAdminOGerente(usuario) && (
                           <ActionIconButton
                             tone="edit"
                             label="Modificar destino"
@@ -539,7 +540,7 @@ export function DashboardPage() {
                             <Pencil size={14} />
                           </span>
                         ) : null}
-                        {isSolicitado && usuario?.rol === 'admin' && (
+                        {isSolicitado && esAdminOGerente(usuario) && (
                           <>
                             <Button
                               variant="gold"
@@ -582,8 +583,10 @@ export function DashboardPage() {
         </div>
 
         <div className="flex items-center justify-center border-t border-gray-200/80 p-3 dark:border-white/[0.07]">
+          {/* Dashboard es solo administrador/gerente/jefe_tienda (el agente nunca llega
+              aquí, ver matriz plan/16) — los tres tienen "Historial completo". */}
           <Link
-            to={usuario?.rol === 'admin' ? '/historial' : '/mi-historial'}
+            to="/historial"
             className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-cyan-600 transition-all hover:bg-cyan-500/10 dark:text-cyan-400 dark:hover:bg-cyan-500/[0.08]"
           >
             Ver Historial de Movimientos →

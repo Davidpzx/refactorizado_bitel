@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { historialApi } from '../../services/historial.api'
 import { reportesApi } from '../../services/reportes.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
@@ -165,7 +166,7 @@ export function HistorialPage() {
       })
   }
 
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin = esAdminOGerente(usuario)
   const tableHeaders = esAdmin
     ? ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'Ganancia', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
     : ['ID', 'Fecha', 'Agente / Tienda', 'Total', 'F. Esperado', 'F. Entregado', 'Diferencia', 'Destino', 'Estado', '']
@@ -219,7 +220,7 @@ export function HistorialPage() {
         </div>
       )}
 
-      {usuario?.rol === 'admin' && kpisData?.ganancia_total != null && (
+      {esAdminOGerente(usuario) && kpisData?.ganancia_total != null && (
         <div className="kyro-card flex items-center justify-between rounded-[18px] border-l-4 border-l-kyro-success p-5">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><TrendingUp size={18} /></span>
@@ -268,7 +269,7 @@ export function HistorialPage() {
             className="kyro-input h-10 w-40 rounded-[10px]"
           />
         </div>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <>
             <div>
               <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
@@ -348,8 +349,8 @@ export function HistorialPage() {
                   ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/40 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
                   : 'border-b border-kyro-border transition-colors hover:bg-kyro-indigo/[0.04]'
 
-                const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO' || r.estado === 'borrador'
-                const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'
+                const canEdit    = esAdminOGerente(usuario) || r.estado_edicion === 'APROBADO' || r.estado === 'borrador'
+                const editPending = r.estado_edicion === 'SOLICITADO' && !esAdminOGerente(usuario)
 
                 return (
                   <tr key={r.id} className={rowCls}>
@@ -403,7 +404,7 @@ export function HistorialPage() {
                             <Pencil size={15} />
                           </span>
                         ) : null}
-                        {isSolicitado && usuario?.rol === 'admin' && (
+                        {isSolicitado && esAdminOGerente(usuario) && (
                           <>
                             <Button
                               variant="success"
@@ -436,7 +437,7 @@ export function HistorialPage() {
                             </Button>
                           </>
                         )}
-                        {usuario?.rol === 'admin' && (
+                        {esAdminOGerente(usuario) && (
                           <ActionIconButton
                             tone="delete"
                             label="Eliminar reporte (revierte stock y comisiones)"

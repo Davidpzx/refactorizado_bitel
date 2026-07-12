@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
@@ -210,7 +211,7 @@ export function EstadisticasPage() {
               className="kyro-input h-10 w-40 rounded-[10px]"
             />
           </div>
-          {usuario?.rol === 'admin' && (
+          {esAdminOGerente(usuario) && (
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
               <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="h-10 w-44 rounded-[10px]">

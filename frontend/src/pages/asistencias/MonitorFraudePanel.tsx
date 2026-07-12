@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { WarningOctagon, Warning, ShieldCheck, CaretDown, CaretUp, MapPinLine, WifiSlash } from '@phosphor-icons/react'
 import { adminPaginasApi, type AlertaFraudeItem } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 
 /** APP-06: etiqueta + ícono de las alertas de ubicación (fuente !== 'dispositivo'). */
@@ -40,7 +41,7 @@ function formatearFecha(valor: string): string {
  */
 export function MonitorFraudePanel() {
   const { usuario } = useAuth()
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin = esAdminOGerente(usuario)
   const [expandido, setExpandido] = useState(false)
 
   const { data, isLoading, isError } = useQuery({

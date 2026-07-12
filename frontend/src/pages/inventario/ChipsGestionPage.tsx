@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { KpiCard } from '../../components/ui/KpiCard'
 
@@ -55,7 +56,7 @@ function tipoEventoBadge(tipo: string): BadgeVariant {
 export function ChipsGestionPage() {
   const qc = useQueryClient()
   const { usuario } = useAuth()
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
   const { tiendas } = useTiendasSelect()
 
   const [cambiarDialog, setCambiarDialog]   = useState<Chip | null>(null)

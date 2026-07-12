@@ -11,6 +11,7 @@ import {
   useStockChips,
 } from '../../hooks/useTraslados'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { ArrowsLeftRight as ArrowRightLeft, Check, XCircle, ArrowUUpLeft as Undo2 } from '@phosphor-icons/react'
@@ -278,7 +279,7 @@ function getTrasladoColumns(
   gestionando: boolean,
   onConstancia: (t: TrasladoChip) => void,
 ): ColumnDef<TrasladoChip>[] {
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
 
   return [
     { accessorKey: 'id',             header: 'ID' },

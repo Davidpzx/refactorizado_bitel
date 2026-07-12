@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { AdminRoute } from './components/AdminRoute'
+import { RolRoute } from './components/RolRoute'
 
 // AppLayout carga 39 iconos Phosphor + ControlCenterPanel: se difiere para no
 // pagar ese peso en rutas públicas (login/terminal/postular/cpe) ni en el
@@ -77,6 +77,14 @@ const MapaCalorPage      = lazy(() => import('./pages/analytics/MapaCalorPage'))
 const IntegradorPage     = lazy(() => import('./pages/admin/IntegradorPage').then(m => ({ default: m.IntegradorPage })))
 const ConfiguracionFacturacionPage = lazy(() => import('./pages/admin/ConfiguracionFacturacionPage').then(m => ({ default: m.ConfiguracionFacturacionPage })))
 
+// Grupos de rol de la matriz congelada (plan/16-plan-roles.md). El agente NUNCA
+// aparece en estos grupos: solo tiene acceso a las rutas "comunes" de más abajo
+// (/reportes/nuevo, /reportes/:id[/editar], /mi-historial) — cualquier otra
+// ruta lo redirige a /mi-historial (ver RolRoute).
+const ADM_GER_JT = ['administrador', 'gerente', 'jefe_tienda']
+const ADM_GER    = ['administrador', 'gerente']
+const SOLO_ADMIN = ['administrador']
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -134,53 +142,69 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<Suspense fallback={<PageLoader />}><AppLayout /></Suspense>}>
-              {/* ── Rutas accesibles a todos los roles autenticados ── */}
-              <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+              {/* ── Rutas comunes a los 4 roles (el agente "opera lo suyo": su cuadre,
+                  su historial, sus comisiones — estas últimas viven dentro de
+                  MiHistorialPage) ── */}
               <Route path="/mi-historial"        element={<Suspense fallback={<PageLoader />}><MiHistorialPage /></Suspense>} />
               <Route path="/reportes/nuevo"      element={<Suspense fallback={<PageLoader />}><NuevoReportePage /></Suspense>} />
               <Route path="/reportes/:id"        element={<Suspense fallback={<PageLoader />}><ReporteDetallePage /></Suspense>} />
               <Route path="/reportes/:id/editar" element={<Suspense fallback={<PageLoader />}><EditarReportePage /></Suspense>} />
-              <Route path="/clientes"            element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
-              <Route path="/inventario"          element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
-              <Route path="/traslados"           element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
-              <Route path="/traslados-chips"     element={<Navigate to="/traslados" replace />} />
-              <Route path="/inventario/matriz"   element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
-              <Route path="/chips-gestion"       element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
-              <Route path="/bitacora-stock"      element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
-              <Route path="/reporte-bcp"         element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
+              {/* Ventas/Tickets: admin y gerente ven todas, jefe_tienda su tienda, agente crea los suyos */}
               <Route path="/tickets"             element={<Suspense fallback={<PageLoader />}><TicketsPage /></Suspense>} />
-              <Route path="/integrador"          element={<Suspense fallback={<PageLoader />}><IntegradorPage /></Suspense>} />
-              {/* Historial y Estadísticas: accesibles a tienda (scoped a su propia tienda en backend) */}
-              <Route path="/historial"           element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
-              <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
 
-              {/* ── Rutas solo admin ── */}
-              <Route element={<AdminRoute />}>
+              {/* ── Administrador + Gerente + Jefe de Tienda (su tienda) — el agente NO ── */}
+              <Route element={<RolRoute roles={ADM_GER_JT} />}>
+                <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+                <Route path="/historial"           element={<Suspense fallback={<PageLoader />}><HistorialPage /></Suspense>} />
+                <Route path="/estadisticas"        element={<Suspense fallback={<PageLoader />}><EstadisticasPage /></Suspense>} />
+                <Route path="/clientes"            element={<Suspense fallback={<PageLoader />}><ClientesPage /></Suspense>} />
+                <Route path="/crm"                 element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
+                <Route path="/inventario"          element={<Suspense fallback={<PageLoader />}><InventarioPage /></Suspense>} />
+                <Route path="/inventario/matriz"   element={<Suspense fallback={<PageLoader />}><MatrizInventarioPage /></Suspense>} />
+                <Route path="/inventario/kardex"   element={<Suspense fallback={<PageLoader />}><KardexInventarioPage /></Suspense>} />
+                <Route path="/chips-gestion"       element={<Suspense fallback={<PageLoader />}><ChipsGestionPage /></Suspense>} />
+                <Route path="/bitacora-stock"      element={<Suspense fallback={<PageLoader />}><BitacoraStockPage /></Suspense>} />
+                <Route path="/traslados"           element={<Suspense fallback={<PageLoader />}><TrasladosPage /></Suspense>} />
+                <Route path="/traslados-chips"     element={<Navigate to="/traslados" replace />} />
                 <Route path="/reportes"            element={<Suspense fallback={<PageLoader />}><ReportesPage /></Suspense>} />
                 <Route path="/panel-bipay"         element={<Suspense fallback={<PageLoader />}><PanelBipayPage /></Suspense>} />
                 <Route path="/cuadre-bitel"        element={<Navigate to="/panel-bipay" replace />} />
-                <Route path="/agentes"             element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
-                <Route path="/agentes/:id"         element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
+                <Route path="/reporte-bcp"         element={<Suspense fallback={<PageLoader />}><ReporteBcpPage /></Suspense>} />
+                <Route path="/comprobantes"        element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
+                <Route path="/postpago"            element={<Suspense fallback={<PageLoader />}><PostpagoPage /></Suspense>} />
+                <Route path="/mapa-calor"          element={<Suspense fallback={<PageLoader />}><MapaCalorPage /></Suspense>} />
+                {/* Asistencias VER: jefe_tienda es solo lectura (los botones de modificar
+                    se ocultan dentro de cada página con esAdminOGerente) */}
                 <Route path="/asistencias"         element={<Suspense fallback={<PageLoader />}><AsistenciasPage /></Suspense>} />
                 <Route path="/asistencias/control" element={<Suspense fallback={<PageLoader />}><ControlAsistenciasPage /></Suspense>} />
-                <Route path="/asistencias/liquidacion" element={<Suspense fallback={<PageLoader />}><HistorialLiquidacionPage /></Suspense>} />
                 <Route path="/asistencias/presencia"   element={<Suspense fallback={<PageLoader />}><PresenciaPage /></Suspense>} />
                 <Route path="/asistencias/qr"      element={<Suspense fallback={<PageLoader />}><QrDisplayPage /></Suspense>} />
+                <Route path="/agentes"             element={<Suspense fallback={<PageLoader />}><AgentesPage /></Suspense>} />
+                <Route path="/agentes/:id"         element={<Suspense fallback={<PageLoader />}><VerAgentePage /></Suspense>} />
+              </Route>
+
+              {/* ── Solo Administrador + Gerente (jefe_tienda y agente fuera: principio
+                  anticorrupción del plan/16 — precios, planilla, aprobar, financieras) ── */}
+              <Route element={<RolRoute roles={ADM_GER} />}>
                 <Route path="/revisar-fotos"       element={<Suspense fallback={<PageLoader />}><RevisarFotosPage /></Suspense>} />
                 <Route path="/revisar-stock"       element={<Suspense fallback={<PageLoader />}><RevisarStockPage /></Suspense>} />
                 <Route path="/planilla"            element={<Suspense fallback={<PageLoader />}><PlanillaPage /></Suspense>} />
+                {/* Liquidación de asistencias = descuentos de nómina → matriz: JT ❌ (Planilla/Liquidación) */}
+                <Route path="/asistencias/liquidacion" element={<Suspense fallback={<PageLoader />}><HistorialLiquidacionPage /></Suspense>} />
                 <Route path="/comisiones"          element={<Suspense fallback={<PageLoader />}><ComisionesPage /></Suspense>} />
-                <Route path="/inventario/kardex"   element={<Suspense fallback={<PageLoader />}><KardexInventarioPage /></Suspense>} />
                 <Route path="/financieras"         element={<Suspense fallback={<PageLoader />}><PanelFinancierasPage /></Suspense>} />
-                <Route path="/crm"                 element={<Suspense fallback={<PageLoader />}><CrmPage /></Suspense>} />
-                <Route path="/postpago"            element={<Suspense fallback={<PageLoader />}><PostpagoPage /></Suspense>} />
-                <Route path="/mapa-calor"          element={<Suspense fallback={<PageLoader />}><MapaCalorPage /></Suspense>} />
-                <Route path="/diagnostico"         element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
-                <Route path="/comprobantes"        element={<Suspense fallback={<PageLoader />}><ComprobantesPage /></Suspense>} />
                 <Route path="/admin/postulaciones" element={<Suspense fallback={<PageLoader />}><PostulacionesPage /></Suspense>} />
+                {/* Usuarios y Tiendas: gerente entra pero no puede crear Administradores
+                    (gate en UsuariosPage, no en la ruta) */}
                 <Route path="/usuarios"            element={<Suspense fallback={<PageLoader />}><UsuariosPage /></Suspense>} />
                 <Route path="/tiendas"             element={<Suspense fallback={<PageLoader />}><TiendasPage /></Suspense>} />
                 <Route path="/configuracion"       element={<Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense>} />
+              </Route>
+
+              {/* ── Solo Administrador ── */}
+              <Route element={<RolRoute roles={SOLO_ADMIN} />}>
+                <Route path="/diagnostico"         element={<Suspense fallback={<PageLoader />}><DiagnosticoPage /></Suspense>} />
+                <Route path="/integrador"          element={<Suspense fallback={<PageLoader />}><IntegradorPage /></Suspense>} />
                 <Route path="/configuracion/facturacion" element={<Suspense fallback={<PageLoader />}><ConfiguracionFacturacionPage /></Suspense>} />
               </Route>
             </Route>

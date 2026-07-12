@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { apiErrorData } from '../../lib/httpError'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { KpiCard } from '../../components/ui/KpiCard'
 import { PageHeader } from '../../components/PageHeader'
@@ -28,7 +29,7 @@ interface BcpData {
 export function ReporteBcpPage() {
   const { usuario } = useAuth()
   const qc = useQueryClient()
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin = esAdminOGerente(usuario)
 
   const [filters, setFilters] = useState({
     fecha_desde: new Date().toISOString().slice(0, 10),

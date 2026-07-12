@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
@@ -182,7 +183,7 @@ export function BitacoraStockPage() {
             onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
             className="w-auto" />
         </div>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <div>
             <label className="mb-1 block text-xs font-medium text-kyro-muted">Tienda</label>
             <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="w-44">

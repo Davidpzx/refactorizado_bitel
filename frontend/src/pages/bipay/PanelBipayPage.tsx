@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { KpiCard } from '../../components/ui/KpiCard'
@@ -70,7 +71,7 @@ const TIPOS_OPERACION = ['RECARGA', 'TRANSFERENCIA', 'AJUSTE', 'DECLARACION_DIA'
 export function PanelBipayPage() {
   const qc = useQueryClient()
   const { usuario } = useAuth()
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin = esAdminOGerente(usuario)
   const [tab, setTab] = useState<'saldo' | 'transacciones' | 'recarga' | 'transferir' | 'ajustar' | 'cuentas' | 'locks' | 'cuadre'>('saldo')
   // "Alertas Webhook" (legacy: botón rojo en cabecera) — salta al panel de Cuadre Bitel, sub-tab Auditoría, con el form de webhook abierto.
   const [webhookSignal, setWebhookSignal] = useState(0)

@@ -3,6 +3,7 @@ import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import { FileXls as FileSpreadsheet, PencilSimple as Pencil, Printer, Ticket as TicketIcon, Trash as Trash2, Prohibit as Ban } from '@phosphor-icons/react'
 import { useTickets, useCrearTicket, useActualizarTicket } from '../../hooks/useTickets'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
 import { DataTable } from '../../components/DataTable'
@@ -357,7 +358,7 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
 
 export function TicketsPage() {
   const { usuario }                        = useAuth()
-  const isAdmin                            = usuario?.rol === 'admin'
+  const isAdmin                            = esAdminOGerente(usuario)
   const { tiendas }                        = useTiendasSelect()
   const { agentes }                        = useAgentesSelect()
   const [desde, setDesde]                  = useState('')

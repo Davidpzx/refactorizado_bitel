@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DownloadSimple as Download, ArrowCounterClockwise as RotateCcw, ClipboardText as ClipboardList, CurrencyCircleDollar, Pulse } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { PageHeader } from '../../components/PageHeader'
 import { InventarioTabs } from './InventarioTabs'
 import { ListToolbar } from '../../components/ListToolbar'
@@ -63,7 +64,7 @@ const ESTADOS = [
 
 export function KardexInventarioPage() {
   const { usuario } = useAuth()
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
   const qc = useQueryClient()
 
   const [tienda, setTienda] = useState('')

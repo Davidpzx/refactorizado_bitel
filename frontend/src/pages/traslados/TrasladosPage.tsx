@@ -18,6 +18,7 @@ import {
   useStockChips,
 } from '../../hooks/useTraslados'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { DataTable } from '../../components/DataTable'
 import { PageHeader } from '../../components/PageHeader'
 import { InventarioTabs } from '../inventario/InventarioTabs'
@@ -479,7 +480,7 @@ function getEquiposColumns(
   gestionando: boolean,
   onConstancia: (t: Traslado) => void,
 ): ColumnDef<Traslado>[] {
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
 
   return [
     { accessorKey: 'id', header: 'ID' },
@@ -553,7 +554,7 @@ function getChipsColumns(
   gestionando: boolean,
   onConstancia: (t: TrasladoChip) => void,
 ): ColumnDef<TrasladoChip>[] {
-  const isAdmin = usuario?.rol === 'admin'
+  const isAdmin = esAdminOGerente(usuario)
 
   return [
     { accessorKey: 'id',             header: 'ID' },

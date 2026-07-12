@@ -18,12 +18,16 @@ import {
   LIMITES_USUARIO,
   type ErroresUsuario,
 } from '../../lib/validacionesUsuario'
+import { useAuthStore } from '../../store/authStore'
+import { esAdministrador, normalizarRol, ROL_LABELS, type RolCanonico } from '../../utils/roles'
 
 interface Usuario {
   id: number
   nombre: string
   email: string
-  rol: 'admin' | 'tienda'
+  // El backend puede devolver aún los alias legacy ('admin'/'tienda') para
+  // usuarios no migrados — se normaliza con `normalizarRol` al mostrar/editar.
+  rol: string
   tienda_id: string | null
   agente_id: number | null
   agente?: { id: number; nombres: string; dni: string } | null
@@ -52,7 +56,17 @@ interface TiendaOption {
   nombre: string
 }
 
-const ROLES = ['admin', 'tienda']
+// Modelo de 4 roles (plan/16-plan-roles.md). El orden es jerárquico (más → menos
+// alcance) y se usa tal cual en el <select> del formulario.
+const ROLES_CANONICOS: RolCanonico[] = ['administrador', 'gerente', 'jefe_tienda', 'agente']
+
+/** Color de badge por rol (usa las variantes del componente Badge). */
+const ROL_BADGE: Record<RolCanonico, 'indigo' | 'cyan' | 'warning' | 'outline'> = {
+  administrador: 'indigo',
+  gerente:       'cyan',
+  jefe_tienda:   'warning',
+  agente:        'outline',
+}
 
 /** Saca el mensaje de error del backend sin importar bajo qué clave venga; nunca devuelve texto vacío. */
 function mensajeErrorUsuario(e: ApiError, camposBackend: Record<string, string[]>): string {
@@ -66,6 +80,15 @@ function mensajeErrorUsuario(e: ApiError, camposBackend: Record<string, string[]
 function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSuccess: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
   const esEdicion = Boolean(usuario?.id)
+
+  // Plan 16: el gerente opera Usuarios pero NO puede crear/promover administradores
+  // (el backend lo bloquea con 403; aquí se oculta la opción para no ofrecerla).
+  const actor = useAuthStore((s) => s.usuario)
+  const puedeCrearAdmin = esAdministrador(actor)
+  const rolActualEsAdmin = normalizarRol(usuario?.rol) === 'administrador'
+  const rolesDisponibles = ROLES_CANONICOS.filter(
+    (r) => r !== 'administrador' || puedeCrearAdmin || rolActualEsAdmin,
+  )
 
   const { data: agentesData } = useQuery({
     queryKey: ['agentes-para-usuarios'],
@@ -88,7 +111,7 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
     nombre:    usuario?.nombre    ?? '',
     email:     usuario?.email     ?? '',
     password:  '',
-    rol:       usuario?.rol       ?? 'tienda',
+    rol:       (normalizarRol(usuario?.rol) ?? 'jefe_tienda') as RolCanonico,
     tienda_id: usuario?.tienda_id ?? '',
     agente_id: usuario?.agente_id ? String(usuario.agente_id) : '',
     activo:    usuario?.activo    ?? true,
@@ -105,9 +128,14 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
 
   const save = useMutation({
     mutationFn: (payload: typeof form) => {
+      // Solo jefe_tienda/agente pertenecen a una tienda; admin/gerente operan a
+      // nivel global. El vínculo con `agente_id` (scoping "solo lo suyo") es
+      // exclusivo del rol agente.
+      const conTienda = payload.rol === 'jefe_tienda' || payload.rol === 'agente'
       const data = {
         ...payload,
-        agente_id: payload.rol === 'tienda' && payload.agente_id ? Number(payload.agente_id) : null,
+        tienda_id: conTienda ? (payload.tienda_id || null) : null,
+        agente_id: payload.rol === 'agente' && payload.agente_id ? Number(payload.agente_id) : null,
       }
       return usuario
         ? api.put(`/v1/usuarios/${usuario.id}`, data).then(r => r.data)
@@ -206,13 +234,13 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="usuario-rol" className="mb-1 block text-xs text-kyro-muted">Rol</label>
-            <Select id="usuario-rol" value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value as 'admin' | 'tienda' }))}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            <Select id="usuario-rol" value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value as RolCanonico }))}>
+              {rolesDisponibles.map(r => <option key={r} value={r}>{ROL_LABELS[r]}</option>)}
             </Select>
           </div>
           <div>
             <label htmlFor="usuario-tienda" className="mb-1 block text-xs text-kyro-muted">Tienda</label>
-            {form.rol === 'admin' ? (
+            {form.rol === 'administrador' || form.rol === 'gerente' ? (
               <div className="flex h-9 items-center rounded-kyro border border-kyro-border bg-kyro-elevated px-3 text-xs text-kyro-muted">
                 Acceso a todas las tiendas
               </div>
@@ -232,9 +260,9 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
               </>
             )}
           </div>
-          {form.rol === 'tienda' && (
+          {form.rol === 'agente' && (
             <div className="sm:col-span-2">
-              <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado <span className="text-kyro-muted">(opcional)</span></label>
+              <label htmlFor="usuario-agente" className="mb-1 block text-xs text-kyro-muted">Agente vinculado</label>
               <Select
                 id="usuario-agente"
                 value={form.agente_id}
@@ -350,7 +378,12 @@ export function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={u.rol === 'admin' ? 'indigo' : 'cyan'}>{u.rol}</Badge>
+                    {(() => {
+                      const canon = normalizarRol(u.rol)
+                      return canon
+                        ? <Badge variant={ROL_BADGE[canon]}>{ROL_LABELS[canon]}</Badge>
+                        : <Badge variant="outline">{u.rol}</Badge>
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     {u.tienda_id

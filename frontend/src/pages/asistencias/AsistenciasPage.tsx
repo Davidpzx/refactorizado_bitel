@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
 import { PageHeader } from '../../components/PageHeader'
@@ -254,12 +255,12 @@ export function AsistenciasPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Panel de Asistencias" subtitle="Seguimiento de ingresos, salidas y revisiones pendientes" Icon={Clock}>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <Button variant="glassIndigo" size="sm" onClick={() => setShowManual(s => !s)}>
             <ClipboardList size={14} /> Asistencia Manual
           </Button>
         )}
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <Button variant="glassInfo" size="sm" onClick={() => setShowExc(s => !s)}>
             <AlertCircle size={14} /> Registrar excepción
           </Button>
@@ -267,7 +268,7 @@ export function AsistenciasPage() {
         <Button variant="success" size="sm" onClick={exportar} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
-        {usuario?.rol === 'admin' && (
+        {esAdminOGerente(usuario) && (
           <Button variant="glassIndigo" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
             <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
           </Button>
@@ -277,7 +278,7 @@ export function AsistenciasPage() {
       <AsistenciasTabs />
 
       {/* Formulario de asistencia manual (admin) */}
-      {showManual && usuario?.rol === 'admin' && (
+      {showManual && esAdminOGerente(usuario) && (
         <div className="kyro-card border-l-4 border-l-cyan-500 p-4">
           <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar asistencia manual (días pasados)</h3>
           <div className="flex flex-wrap items-end gap-3">
@@ -338,7 +339,7 @@ export function AsistenciasPage() {
       )}
 
       {/* Formulario de excepción (admin) */}
-      {showExc && usuario?.rol === 'admin' && (
+      {showExc && esAdminOGerente(usuario) && (
         <div className="kyro-card border-l-4 border-l-kyro-warning p-4">
           <h3 className="mb-3 text-sm font-semibold text-kyro-text">Registrar excepción de asistencia</h3>
           <div className="flex flex-wrap items-end gap-3">
@@ -396,7 +397,7 @@ export function AsistenciasPage() {
               className="kyro-input"
             />
           </div>
-          {usuario?.rol === 'admin' && (
+          {esAdminOGerente(usuario) && (
             <div>
               <label className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-wide text-kyro-muted">Agente</label>
               <Select value={filters.agente_id} onChange={e => setFilters(f => ({ ...f, agente_id: e.target.value }))} className="w-44">
@@ -488,7 +489,7 @@ export function AsistenciasPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {usuario?.rol === 'admin' && (
+                      {esAdminOGerente(usuario) && (
                         <TableActions>
                           <ActionIconButton tone="edit" label="Editar asistencia" icon={<Pencil size={15} />} onClick={() => abrirEdicion(a)} />
                           {esRevision && (

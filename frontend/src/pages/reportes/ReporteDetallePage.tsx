@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { KpiCard } from '../../components/ui/KpiCard'
 import { reportesApi, type HistorialReporteEntry } from '../../services/reportes.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { api } from '../../services/api'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { ReporteConVentas, VentaConDetalle } from '../../types/reporte'
@@ -794,7 +795,7 @@ export function ReporteDetallePage() {
               {reporte.estado_edicion === 'SOLICITADO' && (
                 <>
                   <Badge variant="warning">Edición solicitada</Badge>
-                  {usuario?.rol === 'admin' && (
+                  {esAdminOGerente(usuario) && (
                     <Button
                       size="sm"
                       variant="success"
@@ -920,7 +921,7 @@ export function ReporteDetallePage() {
           <SalidasCard reporte={reporte} />
           <CuadreFinalCard
             reporte={reporte}
-            isAdmin={usuario?.rol === 'admin' || usuario?.tienda_id === reporte.tienda_id}
+            isAdmin={esAdminOGerente(usuario) || usuario?.tienda_id === reporte.tienda_id}
             onCambiarDestino={(destino, obs) => marcarDestino.mutate({ destino, observacion: obs })}
             isPendingDestino={marcarDestino.isPending}
           />

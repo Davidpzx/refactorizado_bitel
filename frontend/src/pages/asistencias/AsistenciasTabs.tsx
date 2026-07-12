@@ -3,14 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import { CalendarCheck, GridFour, Calculator, Camera, MapPinLine } from '@phosphor-icons/react'
 import { adminPaginasApi } from '../../services/adminPaginas.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { PageTabs } from '../../components/ui/PageTabs'
 
+// `soloAdmin` marca las pestañas que la matriz (plan/16) reserva a admin/gerente:
+// Liquidación = descuentos de nómina (JT ❌) y Revisar fotos = modificar asistencia
+// (JT ❌). El jefe de tienda ve Gestión/Control/Presencia en solo lectura.
 const RUTAS = [
   { id: '/asistencias', label: 'Gestión', icon: CalendarCheck },
   { id: '/asistencias/control', label: 'Control mensual', icon: GridFour },
-  { id: '/asistencias/liquidacion', label: 'Liquidación', icon: Calculator },
+  { id: '/asistencias/liquidacion', label: 'Liquidación', icon: Calculator, soloAdmin: true },
   { id: '/asistencias/presencia', label: 'Presencia', icon: MapPinLine },
-  { id: '/revisar-fotos', label: 'Revisar fotos', icon: Camera },
+  { id: '/revisar-fotos', label: 'Revisar fotos', icon: Camera, soloAdmin: true },
 ] as const
 
 /** Pestañas de navegación entre las 4 vistas de asistencias, calcando el legacy `panel_asistencias.php`. */
@@ -22,16 +26,19 @@ export function AsistenciasTabs() {
   const { data: fotosPendientes } = useQuery({
     queryKey: ['fotos-pendientes'],
     queryFn: () => adminPaginasApi.fotosPendientes(),
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdminOGerente(usuario),
     staleTime: 30_000,
   })
   const fotosCount = fotosPendientes?.total ?? 0
 
-  const activo = RUTAS.find(r => r.id === location.pathname)?.id ?? RUTAS[0].id
+  const puedeModificar = esAdminOGerente(usuario)
+  const rutasVisibles = RUTAS.filter(r => !('soloAdmin' in r && r.soloAdmin) || puedeModificar)
+
+  const activo = rutasVisibles.find(r => r.id === location.pathname)?.id ?? rutasVisibles[0].id
 
   return (
     <PageTabs
-      tabs={RUTAS.map(r => ({
+      tabs={rutasVisibles.map(r => ({
         id: r.id,
         label: r.label,
         icon: r.icon,

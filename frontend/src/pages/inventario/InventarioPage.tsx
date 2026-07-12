@@ -23,6 +23,7 @@ import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InventarioForm } from './InventarioForm'
 import { InventarioTabs } from './InventarioTabs'
 import { useAuth } from '../../hooks/useAuth'
+import { esJefeTienda } from '../../utils/roles'
 import type { InventarioItem } from '../../types/inventario'
 
 interface ChipItem {
@@ -363,7 +364,10 @@ function CapitalInvertidoWidget({ tienda }: { tienda: string }) {
 
 export function InventarioPage() {
   const { usuario } = useAuth()
-  const esTienda    = usuario?.rol !== 'admin'
+  // Restringido a jefe_tienda: no ajusta stock directo (solo propone precio),
+  // no exporta ni ve capital invertido/bitácora — matriz plan/16 (agente no llega
+  // aquí, la ruta ya lo bloquea).
+  const esTienda    = esJefeTienda(usuario)
   const qc          = useQueryClient()
   const [search, setSearch]         = useState('')
   const [query, setQuery]           = useState('')

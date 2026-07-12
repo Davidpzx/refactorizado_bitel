@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Package, ArrowsLeftRight as ArrowLeftRight, Scroll as ScrollText, Cpu } from '@phosphor-icons/react'
 import { controlCenterApi } from '../../services/controlCenter.api'
 import { useAuth } from '../../hooks/useAuth'
+import { esAdminOGerente } from '../../utils/roles'
 import { PageTabs } from '../../components/ui/PageTabs'
 
 const RUTAS = [
@@ -23,10 +24,10 @@ export function InventarioTabs() {
     queryKey: ['control-center'],
     queryFn: () => controlCenterApi.get(),
     staleTime: 25_000,
-    enabled: usuario?.rol === 'admin',
+    enabled: esAdminOGerente(usuario),
   })
   const trasladosCount = cc?.traslados_pendientes.count ?? 0
-  const rutasVisibles = RUTAS.filter(r => !r.adminOnly || usuario?.rol === 'admin')
+  const rutasVisibles = RUTAS.filter(r => !r.adminOnly || esAdminOGerente(usuario))
 
   const activo = rutasVisibles.find(r => r.id === location.pathname)?.id ?? rutasVisibles[0].id
 

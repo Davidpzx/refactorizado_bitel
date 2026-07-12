@@ -1,5 +1,6 @@
 // Reglas de validación y sanitización para el formulario de usuarios del sistema.
 // Responsabilidad única (SRP): definir qué es un valor válido, sin saber nada de UI.
+import type { RolCanonico } from '../utils/roles'
 
 export const LIMITES_USUARIO = {
   nombre: 60,
@@ -20,7 +21,7 @@ export interface FormularioUsuario {
   nombre: string
   email: string
   password: string
-  rol: 'admin' | 'tienda'
+  rol: RolCanonico
   tienda_id: string
   agente_id: string
 }
