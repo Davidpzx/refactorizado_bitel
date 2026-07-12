@@ -236,6 +236,75 @@ class PhaseDPolishTest extends TestCase
         }
     }
 
+    // OPT-01: la reversion de chips al eliminar/reprocesar un reporte cargaba los
+    // movimientos y hacia los increments venta por venta (1+V+M queries). El fix agrupa
+    // movimientos y increments por chip: el numero de queries de reversion no debe crecer
+    // con el numero de ventas del reporte (aqui todas comparten el mismo lote de chips).
+    public function test_revertir_ventas_no_escala_linealmente_con_el_numero_de_ventas(): void
+    {
+        $tiendaId = $this->crearTienda('PUNDA50');
+        $usuario = $this->vendedorVinculado();
+        DB::table('inventario_chips')->insert([
+            'tienda_id' => $tiendaId,
+            'tienda_origen' => 'PUNDA50',
+            'tipo_chip' => 'FÍSICO',
+            'stock_actual' => 50,
+        ]);
+
+        $reporteId3 = $this->crearReporteConNVentas($usuario, '2026-06-01', 3);
+        $reporteId6 = $this->crearReporteConNVentas($usuario, '2026-06-02', 6);
+
+        $contador = 0;
+        DB::listen(function () use (&$contador) {
+            $contador++;
+        });
+
+        $contador = 0;
+        $this->actingAs($usuario, 'sanctum')
+            ->deleteJson("/api/v1/reportes/{$reporteId3}")
+            ->assertNoContent();
+        $queriesCon3Ventas = $contador;
+
+        $contador = 0;
+        $this->actingAs($usuario, 'sanctum')
+            ->deleteJson("/api/v1/reportes/{$reporteId6}")
+            ->assertNoContent();
+        $queriesCon6Ventas = $contador;
+
+        $this->assertGreaterThan(0, $queriesCon3Ventas);
+        $this->assertSame(
+            $queriesCon3Ventas,
+            $queriesCon6Ventas,
+            'La reversion de chips no debe escalar linealmente con el numero de ventas del reporte.'
+        );
+    }
+
+    private function crearReporteConNVentas(Usuario $usuario, string $fecha, int $numVentas): int
+    {
+        $ventas = [];
+        for ($i = 0; $i < $numVentas; $i++) {
+            $ventas[] = [
+                'vendedor_id' => $usuario->agente_id,
+                'tipo_venta' => 'PREPAGO',
+                'monto_total' => 0,
+                'plan_nombre' => 'Prepago',
+                'tipo_alta' => 'LN',
+                'cantidad' => 1,
+                'cobrado_unitario' => 0,
+            ];
+        }
+
+        $payload = $this->payloadLinea($usuario, 1);
+        $payload['fecha'] = $fecha;
+        $payload['ventas'] = $ventas;
+
+        $response = $this->actingAs($usuario, 'sanctum')
+            ->postJson('/api/v1/reportes', $payload)
+            ->assertCreated();
+
+        return (int) $response->json('id');
+    }
+
     private function crearTienda(string $codigo): int
     {
         return DB::table('tiendas')->insertGetId([

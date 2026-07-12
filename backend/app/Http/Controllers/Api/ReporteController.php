@@ -1089,27 +1089,52 @@ class ReporteController extends Controller
         // ID interno de la tienda para reponer inventario_chips al revertir.
         $idTiendaInterna = $this->idTiendaInterna((string) $reporte->tienda_id);
         $tieneChipsCol   = Schema::hasColumn('ventas', 'chips_descontados');
+        $tieneMovimientosTabla = Schema::hasTable('venta_chip_movimientos');
+
+        // Ventas que efectivamente descontaron chips (únicas que necesitan revisar movimientos).
+        $ventaIdsConChips = ($tieneChipsCol && $idTiendaInterna)
+            ? $ventas->filter(fn ($v) => (int) ($v->chips_descontados ?? 0) > 0)->pluck('id')
+            : collect();
+
+        // OPT-01: precarga TODOS los movimientos de chips de todas las ventas en UNA sola
+        // consulta (antes: un SELECT+lock por venta) y agrupa los incrementos por chip para
+        // hacer un único UPDATE por chip (antes: un UPDATE por movimiento) sin cambiar la
+        // semántica: si el chip ya no existe el increment sigue afectando 0 filas y esa
+        // cantidad se sigue contando como "faltante" para reponerChips().
+        $movimientosPorVenta = collect();
+        $chipIncrementoOk = [];
+        if ($tieneMovimientosTabla && $ventaIdsConChips->isNotEmpty()) {
+            $movimientos = DB::table('venta_chip_movimientos')
+                ->whereIn('venta_id', $ventaIdsConChips)
+                ->lockForUpdate()
+                ->get();
+            $movimientosPorVenta = $movimientos->groupBy('venta_id');
+
+            $incrementosPorChip = $movimientos
+                ->groupBy('inventario_chip_id')
+                ->map(fn ($grupo) => (int) $grupo->sum('cantidad'));
+
+            foreach ($incrementosPorChip as $chipId => $suma) {
+                $afectadas = DB::table('inventario_chips')
+                    ->where('id', $chipId)
+                    ->increment('stock_actual', $suma);
+                $chipIncrementoOk[$chipId] = $afectadas > 0;
+            }
+
+            DB::table('venta_chip_movimientos')->whereIn('venta_id', $ventaIdsConChips)->delete();
+        }
 
         foreach ($ventas as $venta) {
             // Reponer chips descontados al guardar (paridad: la edición revierte el stock previo).
             $chipsPrevios = $tieneChipsCol ? (int) ($venta->chips_descontados ?? 0) : 0;
             if ($chipsPrevios > 0 && $idTiendaInterna) {
                 $repuestos = 0;
-                if (Schema::hasTable('venta_chip_movimientos')) {
-                    $movimientos = DB::table('venta_chip_movimientos')
-                        ->where('venta_id', $venta->id)
-                        ->lockForUpdate()
-                        ->get();
-
-                    foreach ($movimientos as $movimiento) {
-                        $afectadas = DB::table('inventario_chips')
-                            ->where('id', $movimiento->inventario_chip_id)
-                            ->increment('stock_actual', (int) $movimiento->cantidad);
-                        if ($afectadas > 0) {
+                if ($tieneMovimientosTabla) {
+                    foreach ($movimientosPorVenta->get($venta->id, collect()) as $movimiento) {
+                        if ($chipIncrementoOk[$movimiento->inventario_chip_id] ?? false) {
                             $repuestos += (int) $movimiento->cantidad;
                         }
                     }
-                    DB::table('venta_chip_movimientos')->where('venta_id', $venta->id)->delete();
                 }
 
                 $faltante = max(0, $chipsPrevios - $repuestos);

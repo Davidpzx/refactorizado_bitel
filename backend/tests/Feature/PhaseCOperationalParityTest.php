@@ -227,4 +227,96 @@ class PhaseCOperationalParityTest extends TestCase
         $this->assertSame(2, DB::table('traslados_stock')->where('codigo_lote', 'LOTE-C-001')->where('estado', 'CONFIRMADO')->count());
         $this->assertSame(2, DB::table('inventario_tiendas')->where('tienda_id', 'PUNDA51')->where('estado', 'DISPONIBLE')->count());
     }
+
+    // OPT-02: confirmarLote() consultaba/bloqueaba cada inventario de origen (SELECT+lock
+    // por item) y volvia a buscar el accesorio destino por item (otro SELECT+lock por item).
+    // El fix agrupa ambas cosas en un solo whereIn cada una, asi que items ACCESORIO del
+    // mismo nombre en un mismo lote deben fusionarse en UNA sola fila destino con la
+    // cantidad sumada, y esas dos busquedas no deben escalar con la cantidad de items del
+    // lote (las N traslado->update() individuales si son inherentes: cada traslado es una
+    // fila propia que hay que marcar CONFIRMADO con su propio snapshot).
+    public function test_confirmar_lote_fusiona_accesorios_del_mismo_nombre_y_no_repite_busquedas_por_item(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+
+        $ids3 = $this->crearLoteAccesorios($admin, 'LOTE-ACC-003', 3);
+
+        [$busquedasCon3Items, $response3] = $this->confirmarLoteContandoBusquedas('LOTE-ACC-003', $admin);
+        $response3->assertOk()->assertJsonPath('confirmados', $ids3);
+
+        // Los 3 items del mismo nombre deben fusionarse en una unica fila destino con la
+        // cantidad acumulada (1+1+1), no en 3 filas separadas.
+        $this->assertSame(1, DB::table('inventario_tiendas')
+            ->where('tienda_id', 'PUNDA61')
+            ->where('producto_nombre', 'Cargador Tipo C')
+            ->where('estado', 'DISPONIBLE')
+            ->count());
+        $this->assertSame(3, (int) DB::table('inventario_tiendas')
+            ->where('tienda_id', 'PUNDA61')
+            ->where('producto_nombre', 'Cargador Tipo C')
+            ->where('estado', 'DISPONIBLE')
+            ->value('cantidad'));
+
+        $ids6 = $this->crearLoteAccesorios($admin, 'LOTE-ACC-006', 6);
+
+        [$busquedasCon6Items, $response6] = $this->confirmarLoteContandoBusquedas('LOTE-ACC-006', $admin);
+        $response6->assertOk()->assertJsonPath('confirmados', $ids6);
+
+        // Antes del fix esto era 1 SELECT+lock de origen + 1 SELECT+lock de accesorio POR
+        // item (2*N); con el fix es 1 de cada, sin importar cuantos items tenga el lote.
+        $this->assertSame(2, $busquedasCon3Items);
+        $this->assertSame(
+            $busquedasCon3Items,
+            $busquedasCon6Items,
+            'Las busquedas de origen/accesorio destino no deben escalar con el numero de items del lote.'
+        );
+    }
+
+    /** @return array{0: int, 1: \Illuminate\Testing\TestResponse} */
+    private function confirmarLoteContandoBusquedas(string $codigoLote, Usuario $admin): array
+    {
+        $busquedas = 0;
+        $listener = function ($query) use (&$busquedas) {
+            $sql = $query->sql;
+            $esSelectInventario = str_starts_with($sql, 'select') && str_contains($sql, 'inventario_tiendas');
+            $esBusquedaOrigenOAccesorio = str_contains($sql, '"estado" = ?') || str_contains($sql, '`estado` = ?');
+            if ($esSelectInventario && $esBusquedaOrigenOAccesorio) {
+                $busquedas++;
+            }
+        };
+
+        DB::listen($listener);
+        $response = $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/v1/traslados/lote/{$codigoLote}/confirmar", []);
+
+        return [$busquedas, $response];
+    }
+
+    private function crearLoteAccesorios(Usuario $admin, string $codigoLote, int $numItems): array
+    {
+        $ids = [];
+        for ($i = 0; $i < $numItems; $i++) {
+            $productoId = DB::table('inventario_tiendas')->insertGetId([
+                'tienda_id' => 'PUNDA60',
+                'producto_nombre' => 'Cargador Tipo C',
+                'tipo' => 'ACCESORIO',
+                'cantidad' => 1,
+                'estado' => 'TRASLADO',
+                'fecha_registro' => now(),
+            ]);
+            $ids[] = DB::table('traslados_stock')->insertGetId([
+                'producto_id' => $productoId,
+                'tienda_origen' => 'PUNDA60',
+                'tienda_destino' => 'PUNDA61',
+                'cantidad' => 1,
+                'estado' => 'PENDIENTE',
+                'creado_por' => $admin->id,
+                'codigo_lote' => $codigoLote,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return $ids;
+    }
 }

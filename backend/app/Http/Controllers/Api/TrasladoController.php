@@ -409,50 +409,112 @@ class TrasladoController extends Controller
                     throw new \RuntimeException('Solo la tienda destino puede confirmar este lote.');
                 }
 
-                $confirmados = [];
+                // OPT-02: bloquea TODOS los orígenes en un solo whereIn (orden determinista
+                // por id para evitar deadlocks entre confirmaciones concurrentes) en vez de
+                // un SELECT+lock por ítem.
+                $origenIds = $traslados->pluck('producto_id')->unique()->sort()->values();
+                $origenes = InventarioTienda::whereIn('id', $origenIds)
+                    ->where('estado', 'TRASLADO')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                // Paridad con el comportamiento por-ítem original: si dos traslados del mismo
+                // lote apuntaran al mismo producto_id, el segundo ya no lo encontraría "en
+                // transito" (el primero ya lo habría consumido/eliminado).
+                $vistos = [];
                 foreach ($traslados as $traslado) {
-                    $origen = InventarioTienda::whereKey($traslado->producto_id)
-                        ->where('estado', 'TRASLADO')
-                        ->lockForUpdate()
-                        ->first();
-                    if (! $origen) {
+                    $pid = $traslado->producto_id;
+                    if (! $origenes->has($pid) || ($vistos[$pid] ?? false)) {
                         throw new \RuntimeException("Item {$traslado->id}: producto no encontrado en transito.");
                     }
+                    $vistos[$pid] = true;
+                }
 
-                    $cantidad = (int) $traslado->cantidad;
+                // Agrupa la búsqueda/creación de accesorios destino por nombre (destino, tipo
+                // y estado son constantes para todo el lote) en vez de repetirla por ítem.
+                $nombresAccesorio = $traslados
+                    ->map(fn ($t) => $origenes[$t->producto_id])
+                    ->filter(fn ($o) => $o->tipo === 'ACCESORIO')
+                    ->map(fn ($o) => $o->producto_nombre)
+                    ->unique()
+                    ->values();
+
+                $accesoriosPorNombre = $nombresAccesorio->isEmpty()
+                    ? collect()
+                    : InventarioTienda::where('tienda_id', $destino)
+                        ->where('tipo', 'ACCESORIO')
+                        ->where('estado', 'DISPONIBLE')
+                        ->whereIn('producto_nombre', $nombresAccesorio)
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('producto_nombre');
+
+                // Borra todos los orígenes de una vez; sus datos ya están cacheados arriba.
+                InventarioTienda::whereIn('id', $origenIds)->delete();
+
+                // Suma la cantidad total por nombre de accesorio y hace UN solo
+                // incremento/creación por nombre (no uno por ítem): el resultado final
+                // (misma fila destino, misma cantidad acumulada) es idéntico al del bucle
+                // secuencial original, que iba sumando de a uno sobre la misma fila.
+                $destinoIdPorNombreAccesorio = [];
+                $cantidadPorNombreAccesorio = $traslados
+                    ->filter(fn ($t) => $origenes[$t->producto_id]->tipo === 'ACCESORIO')
+                    ->groupBy(fn ($t) => $origenes[$t->producto_id]->producto_nombre)
+                    ->map(fn ($grupo) => (int) $grupo->sum('cantidad'));
+
+                foreach ($cantidadPorNombreAccesorio as $nombre => $sumaCantidad) {
+                    $existente = $accesoriosPorNombre->get($nombre);
+                    if ($existente) {
+                        $existente->increment('cantidad', $sumaCantidad);
+                        $destinoIdPorNombreAccesorio[$nombre] = $existente->id;
+                        continue;
+                    }
+
+                    // Paridad: la fila nueva usa imei/precios del primer ítem de ese nombre
+                    // en el orden del lote (orderBy id), igual que el bucle original.
+                    $primerTraslado = $traslados->first(
+                        fn ($t) => $origenes[$t->producto_id]->tipo === 'ACCESORIO'
+                            && $origenes[$t->producto_id]->producto_nombre === $nombre
+                    );
+                    $origenRef = $origenes[$primerTraslado->producto_id];
+                    $nuevo = InventarioTienda::create([
+                        'tienda_id' => $destino,
+                        'tipo' => 'ACCESORIO',
+                        'producto_nombre' => $nombre,
+                        'imei_serial' => $origenRef->imei_serial,
+                        'cantidad' => $sumaCantidad,
+                        'precio_costo' => $origenRef->precio_costo,
+                        'precio_minimo' => $origenRef->precio_minimo,
+                        'precio_normal' => $origenRef->precio_normal,
+                        'estado' => 'DISPONIBLE',
+                        'fecha_registro' => now(),
+                    ]);
+                    $destinoIdPorNombreAccesorio[$nombre] = $nuevo->id;
+                }
+
+                $confirmados = [];
+                foreach ($traslados as $traslado) {
+                    $origen = $origenes[$traslado->producto_id];
                     $nombre = $origen->producto_nombre;
                     $imei = $origen->imei_serial;
                     $tipo = $origen->tipo;
-                    $precios = [
-                        'precio_costo' => $origen->precio_costo,
-                        'precio_minimo' => $origen->precio_minimo,
-                        'precio_normal' => $origen->precio_normal,
-                    ];
 
-                    $origen->delete();
-
-                    $destinoId = null;
                     if ($tipo === 'ACCESORIO') {
-                        $existente = InventarioTienda::where('tienda_id', $destino)
-                            ->where('producto_nombre', $nombre)
-                            ->where('tipo', 'ACCESORIO')
-                            ->where('estado', 'DISPONIBLE')
-                            ->lockForUpdate()
-                            ->first();
-                        if ($existente) {
-                            $existente->increment('cantidad', $cantidad);
-                            $destinoId = $existente->id;
-                        }
-                    }
-
-                    if (! $destinoId) {
+                        $destinoId = $destinoIdPorNombreAccesorio[$nombre];
+                    } else {
+                        // EQUIPO (u otro tipo no agrupable): cada ítem sigue creando su
+                        // propia fila destino, igual que el comportamiento original.
                         $nuevo = InventarioTienda::create([
                             'tienda_id' => $destino,
                             'tipo' => $tipo,
                             'producto_nombre' => $nombre,
                             'imei_serial' => $imei,
-                            'cantidad' => $cantidad,
-                            ...$precios,
+                            'cantidad' => (int) $traslado->cantidad,
+                            'precio_costo' => $origen->precio_costo,
+                            'precio_minimo' => $origen->precio_minimo,
+                            'precio_normal' => $origen->precio_normal,
                             'estado' => 'DISPONIBLE',
                             'fecha_registro' => now(),
                         ]);
@@ -530,11 +592,8 @@ class TrasladoController extends Controller
             $estadoFinal = $action === 'rechazar' ? 'RECHAZADO' : 'CANCELADO';
 
             if ($lote) {
-                $items = TrasladoStock::where('codigo_lote', $lote)->get();
-                foreach ($items as $item) {
-                    InventarioTienda::where('id', $item->producto_id)
-                        ->update(['estado' => 'DISPONIBLE']);
-                }
+                $productoIds = TrasladoStock::where('codigo_lote', $lote)->pluck('producto_id');
+                InventarioTienda::whereIn('id', $productoIds)->update(['estado' => 'DISPONIBLE']);
                 TrasladoStock::where('codigo_lote', $lote)->update(['estado' => $estadoFinal]);
             } else {
                 InventarioTienda::where('id', $traslado->producto_id)->update(['estado' => 'DISPONIBLE']);
