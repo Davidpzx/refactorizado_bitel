@@ -233,3 +233,12 @@ Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el b
   ```
   (JAVA_HOME debe ser un JDK 21 — el de sistema es 17; winget instalo Temurin 21 en paralelo, si aparece en Program Files/Eclipse Adoptium usarlo en su lugar.)
 - **9 de 10 tickets APP cerrados.** Solo falta APP-10: QA en dispositivo real (el usuario lo hace al llegar: subir app-debug.apk via el panel Presencia > Subir version, compartir enlace, instalar en equipo, probar huella/GPS/pings/consentimiento). Para distribucion final: assembleRelease + keystore de firma (aun no creado).
+
+## DEPLOY A PRODUCCION COMPLETO (2026-07-12 ~01:00 hora VPS)
+- Backup BD previo: /root/backups/migracion_pre_deploy_20260712_0053.sql
+- Deploys disparados via webhook Dokploy (POST /api/deploy/{token} con X-GitHub-Event: push) y verificados reales: backend, frontend y legacy (mundoandroid) — los 3 en done, endpoint nuevo respondiendo.
+- php artisan migrate --force en el contenedor backend: las 3 migraciones de la app aplicadas (presencia, consentimientos, app_terminal_version).
+- APK v1.0.0 (5.6 MB, debug build apuntando a produccion) subido al storage del contenedor + fila en app_terminal_version. Smoke test completo: version endpoint OK, descarga OK, sha256 del descargado == compilado.
+- LINK DE DESCARGA OPERATIVO: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
+- Nota cosmetica: url_descarga en el JSON sale con http:// (detras de Traefik el scheme no se fuerza) — el link https funciona igual; fix menor pendiente (URL::forceScheme o trustProxies).
+- OJO: el APK del storage vive DENTRO del contenedor — un redeploy del backend lo borra (no hay volumen para storage/app/app-terminal). Re-subirlo tras cada deploy o montar volumen. Anotado como pendiente.
