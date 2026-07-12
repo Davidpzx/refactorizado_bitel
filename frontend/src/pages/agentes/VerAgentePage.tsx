@@ -192,7 +192,7 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
   return (
     <section className="kyro-card relative overflow-hidden rounded-[18px] p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
-        <DollarSign size={15} className="text-kyro-gold" /> Adelantos
+        <DollarSign size={15} className="text-kyro-indigo" /> Adelantos
       </h3>
       <p className="mb-4 text-xs text-kyro-muted">Adelantos de sueldo; se descuentan en la planilla del mes.</p>
 
@@ -500,7 +500,7 @@ function BoletasPanel({ agenteId, nombre, sueldoBase }: { agenteId: string; nomb
     <section className="kyro-card rounded-[18px] p-5 lg:col-span-2">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Liquidación y Boletas</h3>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-indigo" /> Liquidación y Boletas</h3>
           <p className="text-xs text-kyro-muted">Resumen del mes en curso ({mesActual}) y liquidaciones generadas.</p>
         </div>
         <Button size="sm" variant="gold" onClick={() => (showForm ? setShowForm(false) : abrirFormulario())}>

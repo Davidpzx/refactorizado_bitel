@@ -52,7 +52,7 @@ export function DocumentosAgentePanel({ agenteId }: { agenteId: number }) {
         <h4 className="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-kyro-muted">{titulo}</h4>
         {valor ? (
           esPdf ? (
-            <a href={valor} download={`${campo}_${agenteId}.pdf`} className="text-xs font-semibold text-kyro-gold">
+            <a href={valor} download={`${campo}_${agenteId}.pdf`} className="text-xs font-semibold text-kyro-indigo">
               Descargar PDF del DNI
             </a>
           ) : (
@@ -63,7 +63,7 @@ export function DocumentosAgentePanel({ agenteId }: { agenteId: number }) {
         )}
         <div className="mt-2 flex gap-2">
           <button onClick={() => ref.current?.click()} disabled={subir.isPending}
-            className="rounded border border-kyro-gold/40 bg-kyro-gold/10 px-2.5 py-1 text-[0.68rem] font-semibold text-kyro-gold disabled:opacity-50">
+            className="rounded border border-kyro-indigo/40 bg-kyro-indigo/10 px-2.5 py-1 text-[0.68rem] font-semibold text-kyro-indigo disabled:opacity-50">
             {subir.isPending ? 'Subiendo...' : valor ? 'Reemplazar' : 'Subir'}
           </button>
           {valor && (
