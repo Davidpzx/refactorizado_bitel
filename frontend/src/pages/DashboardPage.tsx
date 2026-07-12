@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button'
 import { ActionIconButton, TableActions } from '../components/ui/ActionIconButton'
 import { PageHeader } from '../components/PageHeader'
 import { ListToolbar } from '../components/ListToolbar'
-import { StatCard } from '../components/ui/StatCard'
+import { KpiCard } from '../components/ui/KpiCard'
 import { MoneyGroup } from '../components/ui/MoneyGroup'
 import { ProfitBanner } from '../components/ui/ProfitBanner'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -27,7 +27,7 @@ function diferenciaClass(val: number) {
   if (val === 0) return 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400'
   return val < 0
     ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'
+    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
 }
 
 function destinoBadgeClass(destino: string) {
@@ -64,28 +64,6 @@ const KPI_ACCENT = {
   danger:     '#ef4444',
   warning:    '#f59e0b',
 } as const
-
-function KpiCardDiferencia({ value }: { value: number | string | null | undefined }) {
-  const num = Number(value ?? 0)
-  const colorClass = num === 0
-    ? 'text-gray-600 dark:text-zinc-400'
-    : num < 0
-    ? 'text-red-600 dark:text-red-400'
-    : 'text-yellow-600 dark:text-yellow-400'
-  const accent = num === 0 ? KPI_ACCENT.neutral : num < 0 ? KPI_ACCENT.danger : KPI_ACCENT.warning
-  const Icon = num < 0 ? TrendingDown : TrendingUp
-
-  return (
-    <StatCard
-      title="Diferencia Física"
-      accent={accent}
-      align="top"
-      valueColorClass={colorClass}
-      icon={value !== null ? <Icon size={18} /> : undefined}
-      value={value === null ? null : (num > 0 ? '+' : '') + fmt(num)}
-    />
-  )
-}
 
 function EstadoBadge({ estado, estadoEdicion }: { estado: string; estadoEdicion?: string }) {
   if (estadoEdicion === 'SOLICITADO') {
@@ -165,7 +143,7 @@ function ModalEditarDestino({
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button variant="gold" disabled={isPending || destino === (current ?? 'TIENDA')} onClick={() => mutate()}>
+          <Button disabled={isPending || destino === (current ?? 'TIENDA')} onClick={() => mutate()}>
             {isPending ? 'Guardando...' : 'Guardar'}
           </Button>
         </div>
@@ -215,6 +193,17 @@ export function DashboardPage() {
   const reportes = data?.reportes ?? []
   const anomaliasCount = anomaliasData?.count ?? 0
   const anomaliasList  = anomaliasData?.anomalias ?? []
+
+  // Diferencia física: success si sobra, danger si falta, neutral si cuadra.
+  // El endpoint /v1/dashboard/kpis solo devuelve agregados (sin series), así que
+  // los KpiCard van sin sparkline; el contexto es semántico, no inventado.
+  const difFisica = Number(totales?.diferencia_fisica ?? 0)
+  const DifIcon   = difFisica < 0 ? TrendingDown : TrendingUp
+  const difTone: 'neutral' | 'danger' | 'success' =
+    difFisica === 0 ? 'neutral' : difFisica < 0 ? 'danger' : 'success'
+  const difAccent = difFisica === 0
+    ? 'var(--color-kyro-muted)'
+    : difFisica < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-success)'
 
   function applyFilters() {
     setAppliedFilters({
@@ -267,7 +256,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => setShowAnomalias(true)}
-              className="relative flex h-9 items-center gap-2 rounded-lg border border-red-200/70 bg-white/80 px-3 text-xs font-semibold text-red-600/90 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-red-500/20 dark:bg-zinc-900/65 dark:text-red-400/90"
+              className="relative flex h-9 items-center gap-2 rounded-lg border border-red-200/70 bg-kyro-card px-3 text-xs font-semibold text-red-600/90 shadow-sm backdrop-blur-xl transition-all hover:border-red-300 hover:text-red-600 dark:border-red-500/20 dark:text-red-400/90"
               title="Reportes con anomalías"
             >
               <Bell size={18} weight={anomaliasCount > 0 ? 'fill' : 'regular'} />
@@ -282,7 +271,7 @@ export function DashboardPage() {
               variant="outline"
               size="sm"
               onClick={() => navigate('/tiendas')}
-              className="gap-1.5 border-kyro-gold/40 text-kyro-gold hover:bg-kyro-gold/10 dark:border-kyro-gold/30"
+              className="gap-1.5"
             >
               <Store size={14} /> Tiendas
             </Button>
@@ -328,7 +317,7 @@ export function DashboardPage() {
             </Select>
           </div>
         )}
-        <Button variant="gold" onClick={applyFilters} className="gap-1.5">
+        <Button onClick={applyFilters} className="gap-1.5">
           <Search size={14} /> Filtrar
         </Button>
         <Button
@@ -347,12 +336,42 @@ export function DashboardPage() {
         )}
       </ListToolbar>
 
-      {/* KPIs principales */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total General (Inc. Digital)" value={isLoading ? null : totales?.total_general}    formatMoney align="top" icon={<Wallet size={18} />}      accent={KPI_ACCENT.total}     valueColorClass="text-blue-700 dark:text-blue-400" />
-        <StatCard title="Físico Esperado (Sist.)"       value={isLoading ? null : totales?.fisico_esperado}  formatMoney align="top" icon={<CheckCircle size={18} />}  accent={KPI_ACCENT.esperado}  valueColorClass="text-green-700 dark:text-green-400" />
-        <StatCard title="Físico Declarado (Agente)"     value={isLoading ? null : totales?.fisico_declarado} formatMoney align="top" icon={<FileText size={18} />}     accent={KPI_ACCENT.declarado} valueColorClass="text-indigo-700 dark:text-indigo-400" />
-        <KpiCardDiferencia                               value={isLoading ? null : totales?.diferencia_fisica} />
+      {/* KPIs principales — KpiCard definitivo (DIS-FX-07). Oro reservado al monto
+          protagonista (Total General); esperado→info, declarado→indigo,
+          diferencia→success/danger según signo. Sin sparkline: el endpoint no
+          entrega series históricas (ver difFisica arriba). */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <KpiCard
+          title="Total General (Inc. Digital)"
+          value={isLoading ? null : Number(totales?.total_general ?? 0)}
+          monetary
+          tone="gold"
+          icon={<Wallet size={18} />}
+          subtitle={isLoading ? undefined : `${totales?.total_reportes ?? 0} reportes en el período`}
+        />
+        <KpiCard
+          title="Físico Esperado (Sist.)"
+          value={isLoading ? null : Number(totales?.fisico_esperado ?? 0)}
+          monetary
+          tone="info"
+          accent="var(--color-kyro-info)"
+          icon={<CheckCircle size={18} />}
+        />
+        <KpiCard
+          title="Físico Declarado (Agente)"
+          value={isLoading ? null : Number(totales?.fisico_declarado ?? 0)}
+          monetary
+          tone="indigo"
+          icon={<FileText size={18} />}
+        />
+        <KpiCard
+          title="Diferencia Física"
+          value={isLoading ? null : (difFisica > 0 ? '+' : '') + fmt(difFisica)}
+          tone={difTone}
+          accent={difAccent}
+          icon={<DifIcon size={18} />}
+          subtitle={isLoading ? undefined : difFisica === 0 ? 'Caja cuadrada' : difFisica < 0 ? 'Faltante frente al sistema' : 'Sobrante frente al sistema'}
+        />
       </div>
 
       {/* Dinero digital del período */}
@@ -399,7 +418,7 @@ export function DashboardPage() {
       )}
 
       {/* Tabla últimos reportes */}
-      <div className="relative overflow-hidden rounded-xl border border-gray-200/80 bg-white/80 shadow-[0_14px_35px_-24px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-900/65 dark:shadow-[0_20px_45px_-28px_rgba(0,0,0,0.95)]">
+      <div className="relative overflow-hidden rounded-[18px] border border-kyro-border bg-kyro-card shadow-kyro-card backdrop-blur-[18px]">
 
         <div className="flex items-center justify-between border-b border-gray-200/80 p-4 dark:border-white/[0.07]">
           <h2 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm">Últimos Reportes del Período</h2>
@@ -446,7 +465,7 @@ export function DashboardPage() {
                   ? 'border-b border-l-4 border-l-yellow-400 border-yellow-200 bg-yellow-50/80 animate-pulse dark:border-l-yellow-400 dark:border-yellow-400/20 dark:bg-yellow-400/[0.06]'
                   : isNegative
                   ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/50 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
-                  : 'border-b border-gray-100 transition-colors hover:bg-amber-50/40 dark:border-white/[0.05] dark:hover:bg-amber-400/[0.04]'
+                  : 'border-b border-gray-100 transition-colors hover:bg-kyro-indigo/[0.04] dark:border-white/[0.05] dark:hover:bg-kyro-indigo/[0.06]'
 
                 const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO'
                 const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'

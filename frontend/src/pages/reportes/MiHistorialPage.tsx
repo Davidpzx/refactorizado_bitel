@@ -11,8 +11,8 @@ import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
-import { StatCard } from '../../components/ui/StatCard'
-import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Eye, NotePencil as Edit, Signature as PenLine, UserCircle, Lifebuoy as LifeBuoy } from '@phosphor-icons/react'
+import { KpiCard } from '../../components/ui/KpiCard'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Eye, NotePencil as Edit, Signature as PenLine, UserCircle, Lifebuoy as LifeBuoy, CurrencyCircleDollar, Scales, WarningCircle } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -20,7 +20,7 @@ const fmt = (v: number | string | null | undefined) => pen.format(Number(v ?? 0)
 
 function diferenciaClass(val: number) {
   if (val === 0) return 'bg-kyro-elevated text-kyro-muted'
-  return val < 0 ? 'bg-kyro-danger/15 text-kyro-danger' : 'bg-kyro-warning/15 text-kyro-warning'
+  return val < 0 ? 'bg-kyro-danger/15 text-kyro-danger' : 'bg-kyro-success/15 text-kyro-success'
 }
 
 const ESTADOS = [
@@ -48,7 +48,7 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="kyro-card relative w-full max-w-md space-y-4 p-6">
+      <div className="kyro-card relative w-full max-w-md space-y-4 rounded-[20px] p-5">
         <h3 className="font-semibold text-kyro-text">Solicitar Edición de Reporte #{String(reporteId).padStart(4, '0')}</h3>
         <p className="text-sm text-kyro-muted">Explica brevemente el motivo por el que necesitas editar este reporte.</p>
         <textarea
@@ -63,7 +63,7 @@ function ModalSolicitarEdicion({ reporteId, onClose, onSuccess }: { reporteId: n
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button variant="gold" disabled={!motivo.trim() || isPending} onClick={() => mutate()}>
+          <Button disabled={!motivo.trim() || isPending} onClick={() => mutate()}>
             {isPending ? 'Enviando...' : 'Enviar Solicitud'}
           </Button>
         </div>
@@ -174,8 +174,8 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       {/* Mi Historial de Marcas y Descuentos (Table - 2/3 width) */}
-      <section className="kyro-card overflow-hidden xl:col-span-2">
-        <div className="border-b border-kyro-border p-4">
+      <section className="kyro-card overflow-hidden rounded-[18px] xl:col-span-2">
+        <div className="border-b border-kyro-border p-5">
           <h3 className="text-sm font-semibold text-kyro-text">Mi Historial de Marcas y Descuentos</h3>
           <p className="text-xs text-kyro-muted">{data.agente.nombres} · {data.periodo.desde} al {data.periodo.hasta}</p>
         </div>
@@ -328,8 +328,8 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
       </section>
 
       {/* Mis Comisiones (Right panel - 1/3 width) */}
-      <section className="kyro-card overflow-hidden xl:col-span-1">
-        <div className="flex items-center justify-between border-b border-kyro-border p-4">
+      <section className="kyro-card overflow-hidden rounded-[18px] xl:col-span-1">
+        <div className="flex items-center justify-between border-b border-kyro-border p-5">
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Mis Comisiones</h3>
             <p className="text-xs text-kyro-muted">Ventas atribuidas al agente.</p>
@@ -352,8 +352,8 @@ function HistorialOperativoPanel({ data }: { data?: HistorialOperativo }) {
 
       {/* Panel del equipo si es Jefe */}
       {data.agente.es_jefe && (
-        <section className="kyro-card overflow-hidden xl:col-span-3">
-          <div className="border-b border-kyro-border p-4">
+        <section className="kyro-card overflow-hidden rounded-[18px] xl:col-span-3">
+          <div className="border-b border-kyro-border p-5">
             <h3 className="text-sm font-semibold text-kyro-text">Equipo de tienda {data.agente.tienda_base}</h3>
             <p className="text-xs text-kyro-muted">Presencias, faltas y tardanza acumulada del periodo.</p>
           </div>
@@ -407,7 +407,7 @@ function SalvavidasPanel() {
   const usado     = data?.salvavidas_usado ?? false
 
   return (
-    <section className="kyro-card border-l-4 border-l-kyro-gold p-5">
+    <section className="kyro-card rounded-[18px] border-l-4 border-l-kyro-warning p-5">
       <h3 className="mb-1 text-sm font-semibold text-kyro-text">🛟 Salvavidas — recuperar tardanza</h3>
       <p className="mb-3 text-xs text-kyro-muted">Ingresa tu DNI para ver tus tardanzas de esta semana. Solo 1 recuperación por semana.</p>
       <div className="flex flex-wrap items-end gap-2">
@@ -416,7 +416,7 @@ function SalvavidasPanel() {
           <Input type="text" inputMode="numeric" maxLength={8} value={dni}
             onChange={e => setDni(e.target.value.replace(/\D/g, ''))} placeholder="8 dígitos" className="w-36" />
         </div>
-        <Button variant="gold" size="sm" disabled={dni.length !== 8 || isFetching} onClick={() => { setMsg(null); setConsultado(dni) }}>
+        <Button size="sm" disabled={dni.length !== 8 || isFetching} onClick={() => { setMsg(null); setConsultado(dni) }}>
           {isFetching ? 'Consultando...' : 'Consultar'}
         </Button>
       </div>
@@ -503,28 +503,20 @@ export function MiHistorialPage() {
       <HistorialOperativoPanel data={historialOperativo} />
 
       {/* KPIs personales de la página actual */}
-      {!isLoading && reportes.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard
-            title="Total vendido (página)"
-            accent="var(--color-kpi-total)"
-            valueColorClass="font-mono text-kyro-text"
-            value={fmt(totalVendido)}
-          />
-          <StatCard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <KpiCard title="Total vendido (página)" value={totalVendido} loading={isLoading} monetary tone="gold" icon={<CurrencyCircleDollar size={18} />} subtitle="Reportes visibles" />
+          <KpiCard
             title="Diferencia acumulada"
-            accent="var(--color-kpi-neutral)"
-            valueColorClass={`font-mono ${totalDiferencia < 0 ? 'text-kyro-danger' : totalDiferencia > 0 ? 'text-kyro-warning' : 'text-kyro-muted'}`}
-            value={`${totalDiferencia > 0 ? '+' : ''}${fmt(totalDiferencia)}`}
+            value={totalDiferencia}
+            loading={isLoading}
+            monetary
+            tone={totalDiferencia < 0 ? 'danger' : totalDiferencia > 0 ? 'success' : 'neutral'}
+            accent={totalDiferencia < 0 ? 'var(--color-kyro-danger)' : totalDiferencia > 0 ? 'var(--color-kyro-success)' : 'var(--color-kyro-indigo)'}
+            icon={<Scales size={18} />}
+            subtitle="Balance de la página actual"
           />
-          <StatCard
-            title="Reportes con descuadre"
-            accent="var(--color-kpi-declarado)"
-            valueColorClass={`font-mono ${reportesConDif > 0 ? 'text-kyro-danger' : 'text-kyro-success'}`}
-            value={`${reportesConDif} de ${reportes.length}`}
-          />
-        </div>
-      )}
+          <KpiCard title="Reportes con descuadre" value={`${reportesConDif} de ${reportes.length}`} loading={isLoading} tone="indigo" icon={<WarningCircle size={18} />} subtitle="En la página actual" />
+      </div>
 
       {/* Filters */}
       <ListToolbar description="Busca reportes por periodo y estado">
@@ -550,13 +542,13 @@ export function MiHistorialPage() {
             onChange={(estado) => setFilters(f => ({ ...f, estado }))}
           />
         </div>
-        <Button variant="gold" onClick={applyFilters}>Buscar</Button>
+        <Button onClick={applyFilters}>Buscar</Button>
         <Button variant="ghost" onClick={() => { const r = { fecha_desde: '', fecha_hasta: '', estado: '' }; setFilters(r); setApplied({ ...r, page: 1 }) }}>Limpiar</Button>
       </ListToolbar>
 
       {/* Table */}
-      <div className="kyro-card overflow-hidden">
-        <div className="p-4 border-b border-kyro-border flex items-center justify-between">
+      <div className="kyro-card overflow-hidden rounded-[18px]">
+        <div className="flex items-center justify-between border-b border-kyro-border p-5">
           <h2 className="font-semibold text-kyro-text text-sm">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros`}
           </h2>

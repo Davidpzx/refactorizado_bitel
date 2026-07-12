@@ -11,7 +11,8 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { Eye, Trash as Trash2, ClipboardText as ClipboardList } from '@phosphor-icons/react'
+import { KpiCard } from '../../components/ui/KpiCard'
+import { Eye, Trash as Trash2, ClipboardText as ClipboardList, CurrencyCircleDollar, Scales } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { Reporte } from '../../types/reporte'
 
@@ -71,7 +72,7 @@ function getColumns(
       cell: ({ row }) => {
         const diff = parseFloat(row.original.diferencia)
         return (
-          <span className={diff !== 0 ? 'text-kyro-danger font-medium' : 'text-kyro-success'}>
+          <span className={diff < 0 ? 'font-medium text-kyro-danger' : diff > 0 ? 'font-medium text-kyro-success' : 'text-kyro-muted'}>
             S/ {diff.toFixed(2)}
           </span>
         )
@@ -143,6 +144,15 @@ export function ReportesPage() {
     handleEliminar,
     eliminar.isPending,
   )
+  const reportes = data?.data ?? []
+  const ventaTotal = reportes.reduce((sum, reporte) => sum + Number(reporte.total_calculado || 0), 0)
+  const diferenciaAcumulada = reportes.reduce((sum, reporte) => sum + Number(reporte.diferencia || 0), 0)
+  const diferenciaTone = diferenciaAcumulada > 0 ? 'success' : diferenciaAcumulada < 0 ? 'danger' : 'neutral'
+  const diferenciaAccent = diferenciaAcumulada > 0
+    ? 'var(--color-kyro-success)'
+    : diferenciaAcumulada < 0
+      ? 'var(--color-kyro-danger)'
+      : 'var(--color-kyro-indigo)'
 
   return (
     <div className="space-y-6">
@@ -150,8 +160,14 @@ export function ReportesPage() {
         Icon={ClipboardList}
         title="Reportes Diarios"
         description="Historial de reportes de caja por tienda."
-        actions={<Link to="/reportes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-kyro-gold px-4 text-sm font-semibold text-[#1a1a1a] shadow-sm transition-all hover:opacity-90">+ Nuevo reporte</Link>}
+        actions={<Link to="/reportes/nuevo" className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-kyro-gold px-4 text-sm font-semibold text-[#1a1a1a] shadow-sm transition-all hover:opacity-90">+ Nuevo reporte</Link>}
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard title="Cierres" value={data?.total} loading={isLoading} tone="indigo" icon={<ClipboardList size={18} />} subtitle="En el periodo filtrado" />
+        <KpiCard title="Venta total" value={ventaTotal} loading={isLoading} monetary tone="gold" icon={<CurrencyCircleDollar size={18} />} subtitle="Total de la página actual" />
+        <KpiCard title="Diferencia acumulada" value={diferenciaAcumulada} loading={isLoading} monetary tone={diferenciaTone} accent={diferenciaAccent} icon={<Scales size={18} />} subtitle="Balance de la página actual" />
+      </div>
 
       <SegmentedToggle
         ariaLabel="Filtrar reportes por estado"
@@ -160,7 +176,7 @@ export function ReportesPage() {
         onChange={(id) => { setEstado(id); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
       />
 
-      <ListToolbar description="Acota el historial por tienda o rango de fechas.">
+      <ListToolbar description="Acota el historial por tienda o rango de fechas." className="[&>div>div:last-child]:gap-3">
         <Select
           value={tienda}
           onChange={(e) => { setTienda(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }}
@@ -192,7 +208,7 @@ export function ReportesPage() {
       </ListToolbar>
 
       <DataTable
-        data={data?.data ?? []}
+        data={reportes}
         columns={columns}
         pageCount={data?.last_page ?? 0}
         pagination={pagination}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Cpu, Trash as Trash2 } from '@phosphor-icons/react'
+import { Cpu, Trash as Trash2, Stack, HandCoins, WarningCircle } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { InventarioTabs } from './InventarioTabs'
@@ -11,6 +11,7 @@ import { Dialog } from '../../components/ui/dialog'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { useAuth } from '../../hooks/useAuth'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
+import { KpiCard } from '../../components/ui/KpiCard'
 
 interface ChipTienda {
   codigo: string
@@ -141,6 +142,15 @@ export function ChipsGestionPage() {
   })
 
   const chips = data?.data ?? []
+  const stockTotal = chips.reduce((total, chip) => total + chip.stock_actual, 0)
+  const chipsPorTienda = Object.values(chips.reduce<Record<string, { codigo: string; nombre: string; stock: number; lotes: Chip[] }>>((grupos, chip) => {
+    const codigo = chip.tienda?.codigo ?? 'SIN-TIENDA'
+    const grupo = grupos[codigo] ?? { codigo, nombre: chip.tienda?.nombre ?? '', stock: 0, lotes: [] }
+    grupo.stock += chip.stock_actual
+    grupo.lotes.push(chip)
+    grupos[codigo] = grupo
+    return grupos
+  }, {}))
 
   const handleCambiar = () => {
     if (!cambiarDialog) return
@@ -183,12 +193,18 @@ export function ChipsGestionPage() {
         description="Stock y movimientos de chips por tienda."
         actions={
           isAdmin ? (
-            <Button variant="gold" onClick={() => setAgregarDialog(true)}>+ Agregar Stock</Button>
+            <Button onClick={() => setAgregarDialog(true)}>+ Agregar Stock</Button>
           ) : undefined
         }
       />
 
       <InventarioTabs />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard title="Stock total" value={stockTotal} loading={isLoading} tone="indigo" icon={<Stack size={18} />} subtitle={`${chipsPorTienda.length} tiendas con stock`} />
+        <KpiCard title="Comprometidos" value="—" loading={isLoading} tone="indigo" icon={<HandCoins size={18} />} subtitle="El API no expone este dato" />
+        <KpiCard title="Bajo mínimo" value="—" loading={isLoading} tone="danger" accent="var(--color-kyro-danger)" icon={<WarningCircle size={18} />} subtitle="Sin mínimo configurado en el API" />
+      </div>
 
       {isError && (
         <div className="kyro-card p-4 text-sm text-kyro-danger">
@@ -207,43 +223,36 @@ export function ChipsGestionPage() {
             Cargando...
           </span>
         </div>
+      ) : chipsPorTienda.length === 0 ? (
+        <div className="kyro-card flex h-48 items-center justify-center rounded-[18px] text-sm text-kyro-muted">Sin chips registrados</div>
       ) : (
-        <div className="kyro-card relative overflow-hidden">
-          <div aria-hidden className="hidden" />
-          <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                <th className="kyro-table-head px-4 py-3 text-left">Tienda</th>
-                <th className="kyro-table-head px-4 py-3 text-left">Código Origen</th>
-                <th className="kyro-table-head px-4 py-3 text-left">Tipo</th>
-                <th className="kyro-table-head px-4 py-3 text-center">Stock</th>
-                <th className="kyro-table-head px-4 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chips.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-14 text-center text-gray-400 dark:text-zinc-500">Sin chips registrados</td>
-                </tr>
-              ) : (
-                chips.map((chip) => (
-                  <tr key={chip.id} className="group transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-400/[0.035]">
-                    <td className="border-b border-kyro-border px-4 py-3 text-kyro-text">
-                      <span className="font-semibold">{chip.tienda?.codigo ?? '—'}</span>
-                      <span className="ml-2 text-xs text-gray-400 dark:text-zinc-500">{chip.tienda?.nombre ?? ''}</span>
-                    </td>
-                    <td className="border-b border-kyro-border px-4 py-3 font-mono text-kyro-body">{chip.tienda_origen}</td>
-                    <td className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
-                      <Badge variant="outline">{chip.tipo_chip}</Badge>
-                    </td>
-                    <td className="border-b border-gray-100 px-4 py-3 text-center dark:border-white/[0.05]">
-                      <span className={chip.stock_actual > 0 ? 'font-mono font-bold text-emerald-600 dark:text-emerald-400' : 'font-mono text-gray-400 dark:text-zinc-600'}>
-                        {chip.stock_actual}
-                      </span>
-                    </td>
-                    <td className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
-                      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {chipsPorTienda.map((grupo) => (
+            <section key={grupo.codigo} className="kyro-card rounded-[18px] p-5">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold text-kyro-text">{grupo.codigo}</h2>
+                  <p className="text-xs text-kyro-muted">{grupo.nombre || 'Tienda sin nombre'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wide text-kyro-muted">Stock</p>
+                  <p className="tabular-nums text-2xl font-bold text-kyro-indigo">{grupo.stock}</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {grupo.lotes.map((chip) => (
+                  <div key={chip.id} className="rounded-xl bg-kyro-elevated/45 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-sm font-semibold text-kyro-text">{chip.tienda_origen}</span>
+                          <Badge variant="outline">{chip.tipo_chip}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-kyro-muted">Lote #{chip.id}</p>
+                      </div>
+                      <span className="tabular-nums text-lg font-bold text-kyro-success">{chip.stock_actual}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                         <Button
                           size="sm"
                           variant="glassIndigo"
@@ -265,7 +274,7 @@ export function ChipsGestionPage() {
                         {isAdmin && (
                           <Button
                             size="sm"
-                            variant="glassWarning"
+                            variant="glassSuccess"
                             onClick={() => {
                               setAjusteDialog(chip)
                               setCantidadReal(String(chip.stock_actual))
@@ -285,14 +294,12 @@ export function ChipsGestionPage() {
                             Eliminar
                           </Button>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -323,7 +330,6 @@ export function ChipsGestionPage() {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setCambiarDialog(null)}>Cancelar</Button>
             <Button
-              variant="gold"
               onClick={handleCambiar}
               disabled={cambiarCodigo.isPending || !codigoDestino || !cantidadCambiar}
             >
@@ -356,7 +362,7 @@ export function ChipsGestionPage() {
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setAjusteDialog(null)}>Cancelar</Button>
             <Button
-              variant="gold"
+              variant="success"
               disabled={!ajusteDialog || cantidadReal === '' || observacionAjuste.trim().length < 10 || ajustarStock.isPending}
               onClick={() => ajusteDialog && ajustarStock.mutate({
                 id: ajusteDialog.id,
@@ -379,7 +385,7 @@ export function ChipsGestionPage() {
         {historialData ? (
           <div className="space-y-3">
             <p className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 px-3 py-2.5 text-sm text-gray-600 dark:border-indigo-400/15 dark:bg-indigo-500/[0.07] dark:text-zinc-300">
-              Stock restante: <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{historialData.stock_restante}</span>
+              Stock restante: <span className="tabular-nums font-bold text-indigo-700 dark:text-indigo-300">{historialData.stock_restante}</span>
             </p>
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {historialData.timeline.length === 0 ? (
@@ -392,13 +398,13 @@ export function ChipsGestionPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-sm font-semibold text-gray-900 dark:text-zinc-100">{ev.cantidad}</span>
+                        <span className="tabular-nums text-sm font-semibold text-gray-900 dark:text-zinc-100">{ev.cantidad}</span>
                         <span className="text-xs text-gray-400 dark:text-zinc-500">{ev.fecha_hora}</span>
                       </div>
                       <p className="mt-0.5 text-sm text-gray-600 dark:text-zinc-400">{ev.detalle}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-zinc-500">
                         <span>Agente: {ev.agente}</span>
-                        <span>Antes: {ev.stock_anterior} → Después: {ev.stock_nuevo}</span>
+                        <span className="tabular-nums">Antes: {ev.stock_anterior} → Después: {ev.stock_nuevo}</span>
                       </div>
                     </div>
                   </div>
@@ -421,7 +427,7 @@ export function ChipsGestionPage() {
             <div>
               <label className="mb-1 block text-sm font-medium text-kyro-body">Tienda</label>
               <select
-                className="kyro-input w-full"
+                className="kyro-input h-10 w-full"
                 value={agregarForm.tienda_id}
                 onChange={(e) => {
                   const t = tiendas.find(t => String(t.id) === e.target.value)
@@ -474,7 +480,6 @@ export function ChipsGestionPage() {
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={() => setAgregarDialog(false)}>Cancelar</Button>
               <Button
-                variant="gold"
                 onClick={handleAgregar}
                 disabled={
                   agregarStock.isPending ||

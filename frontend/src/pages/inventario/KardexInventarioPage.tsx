@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DownloadSimple as Download, ArrowCounterClockwise as RotateCcw, ClipboardText as ClipboardList } from '@phosphor-icons/react'
+import { DownloadSimple as Download, ArrowCounterClockwise as RotateCcw, ClipboardText as ClipboardList, CurrencyCircleDollar, Pulse } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { PageHeader } from '../../components/PageHeader'
@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Dialog } from '../../components/ui/dialog'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
+import { KpiCard } from '../../components/ui/KpiCard'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,9 @@ export function KardexInventarioPage() {
   })
 
   const rows = data?.rows ?? []
+  const valorNeto = rows
+    .filter(row => row.estado === 'VENDIDO')
+    .reduce((total, row) => total + Number(row.precio ?? 0) - Number(row.precio_costo ?? 0), 0)
 
   // Restaurar item vendido
   const restaurar = useMutation({
@@ -136,7 +140,7 @@ export function KardexInventarioPage() {
         title="Kardex de Inventario"
         description="Historial completo de movimientos de stock."
         actions={
-          <Button variant="glassSuccess" size="sm" onClick={handleExportar} disabled={exportando}>
+          <Button variant="outline" size="sm" className="text-kyro-indigo" onClick={handleExportar} disabled={exportando}>
             <Download size={14} className="mr-1.5" />
             {exportando ? 'Exportando...' : 'Exportar Excel'}
           </Button>
@@ -144,6 +148,12 @@ export function KardexInventarioPage() {
       />
 
       <InventarioTabs />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard title="Movimientos" value={rows.length} loading={isLoading} tone="indigo" icon={<Pulse size={18} />} subtitle="Registros con los filtros actuales" />
+        <KpiCard title="Valor neto" value={valorNeto} loading={isLoading} monetary tone={valorNeto >= 0 ? 'gold' : 'danger'} accent={valorNeto >= 0 ? 'var(--color-kyro-indigo)' : 'var(--color-kyro-danger)'} icon={<CurrencyCircleDollar size={18} />} subtitle="Venta menos costo de ítems vendidos" />
+        <KpiCard title="Restauraciones" value="—" loading={isLoading} tone="indigo" icon={<RotateCcw size={18} />} subtitle="El endpoint no distingue restauraciones" />
+      </div>
 
       <ListToolbar description="Consulta el historial por tienda y estado de inventario.">
         <Select
@@ -184,7 +194,7 @@ export function KardexInventarioPage() {
           Sin registros para los filtros seleccionados.
         </div>
       ) : (
-        <div className="kyro-card relative overflow-x-auto">
+        <div className="kyro-card relative overflow-x-auto rounded-[18px]">
           <table className="w-full border-separate border-spacing-0 text-xs" style={{ minWidth: '1100px' }}>
             <thead className="[&_th]:kyro-table-head">
               <tr className="text-[0.65rem] uppercase tracking-wide">
@@ -204,7 +214,7 @@ export function KardexInventarioPage() {
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.id} className="text-xs text-kyro-body transition-colors hover:bg-kyro-elevated/50 [&>td]:border-b [&>td]:border-kyro-border">
+                <tr key={row.id} className="text-xs tabular-nums text-kyro-body transition-colors hover:bg-kyro-elevated/50 [&>td]:border-b [&>td]:border-kyro-border">
                   <td className="py-1.5 px-3 whitespace-nowrap">
                     <span className="font-mono text-[10px] text-kyro-muted">{row.tienda}</span>
                     {row.tienda_nombre && <span className="ml-1 text-xs text-muted-foreground/80">{row.tienda_nombre}</span>}

@@ -9,8 +9,8 @@ import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { StatCard } from '../../components/ui/StatCard'
-import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, ChartLineUp as TrendingUp, ChartLineDown as TrendingDown, Pulse as Activity, Storefront as Store, Users, MagnifyingGlass as Search, DownloadSimple as Download, BookOpen } from '@phosphor-icons/react'
+import { KpiCard } from '../../components/ui/KpiCard'
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, ChartLineUp as TrendingUp, ChartLineDown as TrendingDown, Pulse as Activity, Storefront as Store, MagnifyingGlass as Search, DownloadSimple as Download, BookOpen } from '@phosphor-icons/react'
 
 interface BitacoraKpis {
   total_mov: number
@@ -109,6 +109,7 @@ export function BitacoraStockPage() {
   const kpis = data?.kpis
   const movimientos = data?.movimientos?.data ?? []
   const meta = data?.movimientos
+  const balance = (kpis?.total_entradas ?? 0) - (kpis?.total_salidas ?? 0)
 
   function applyFilters() { setPage(1); setApplied({ ...filters, page: 1 }) }
   function resetFilters() {
@@ -158,52 +159,12 @@ export function BitacoraStockPage() {
       )}
 
       {/* KPI Cards */}
-      {kpis && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard
-            title="Total Movimientos"
-            accent="var(--color-kpi-total)"
-            icon={<Activity size={18} />}
-            valueColorClass="font-mono text-kyro-info"
-            value={kpis.total_mov.toLocaleString()}
-          />
-          <StatCard
-            title="Entradas (+)"
-            accent="var(--color-kyro-success)"
-            icon={<TrendingUp size={18} />}
-            valueColorClass="font-mono text-kyro-success"
-            value={`+${kpis.total_entradas.toLocaleString()}`}
-          />
-          <StatCard
-            title="Salidas (-)"
-            accent="var(--color-kyro-danger)"
-            icon={<TrendingDown size={18} />}
-            valueColorClass="font-mono text-kyro-danger"
-            value={`-${kpis.total_salidas.toLocaleString()}`}
-          />
-          <StatCard
-            title="Balance Neto"
-            accent="var(--color-kpi-neutral)"
-            icon={<Store size={18} />}
-            valueColorClass={`font-mono ${(kpis.total_entradas - kpis.total_salidas) >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}`}
-            value={`${kpis.total_entradas - kpis.total_salidas >= 0 ? '+' : ''}${(kpis.total_entradas - kpis.total_salidas).toLocaleString()}`}
-          />
-          <StatCard
-            title="Tiendas Afectadas"
-            accent="var(--color-kpi-total)"
-            icon={<Store size={18} />}
-            valueColorClass="font-mono text-kyro-text"
-            value={kpis.tiendas_afectadas.toLocaleString()}
-          />
-          <StatCard
-            title="Agentes Involucrados"
-            accent="var(--color-kyro-indigo)"
-            icon={<Users size={18} />}
-            valueColorClass="font-mono text-kyro-text"
-            value={kpis.agentes_involucrados.toLocaleString()}
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard title="Movimientos" value={kpis?.total_mov ?? (data ? '—' : undefined)} loading={isLoading} tone="indigo" icon={<Activity size={18} />} subtitle={kpis ? `${kpis.tiendas_afectadas} tiendas · ${kpis.agentes_involucrados} agentes` : undefined} />
+        <KpiCard title="Entradas" value={kpis?.total_entradas ?? (data ? '—' : undefined)} loading={isLoading} tone="success" accent="var(--color-kyro-success)" icon={<TrendingUp size={18} />} />
+        <KpiCard title="Salidas" value={kpis?.total_salidas ?? (data ? '—' : undefined)} loading={isLoading} tone="danger" accent="var(--color-kyro-danger)" icon={<TrendingDown size={18} />} />
+        <KpiCard title="Balance neto" value={kpis ? balance : (data ? '—' : undefined)} loading={isLoading} tone={balance >= 0 ? 'success' : 'danger'} accent={balance >= 0 ? 'var(--color-kyro-success)' : 'var(--color-kyro-danger)'} icon={<Store size={18} />} />
+      </div>
 
       {/* Filters */}
       <ListToolbar description="Acota el historial por fecha, tienda, agente, categoría o tipo de movimiento.">
@@ -270,7 +231,7 @@ export function BitacoraStockPage() {
             onChange={(accion) => setFilters(f => ({ ...f, accion }))}
           />
         </div>
-        <Button variant="gold" onClick={applyFilters}>Filtrar</Button>
+        <Button onClick={applyFilters}>Filtrar</Button>
         <Button variant="ghost" onClick={resetFilters}>Limpiar</Button>
         <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
           <Download size={14} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
@@ -278,7 +239,7 @@ export function BitacoraStockPage() {
       </ListToolbar>
 
       {/* Table */}
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card overflow-hidden rounded-[18px]">
         <div className="flex items-center justify-between border-b border-kyro-border p-4">
           <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} movimientos`}

@@ -30,7 +30,7 @@ type TabKey = 'equipos' | 'accesorios' | 'chips'
 
 const TABS = [
   { value: 'equipos', label: 'Equipos', tone: 'info' as const },
-  { value: 'accesorios', label: 'Accesorios', tone: 'gold' as const },
+  { value: 'accesorios', label: 'Accesorios', tone: 'indigo' as const },
   { value: 'chips', label: 'Chips', tone: 'success' as const },
 ]
 
@@ -62,17 +62,17 @@ export function MatrizInventarioPage() {
         title="Matriz de Inventario"
         description="Vista cruzada de stock por tienda y producto."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               to="/inventario"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-warning/50 hover:text-kyro-warning"
+              className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 text-xs font-semibold text-kyro-body shadow-sm transition-all hover:border-kyro-indigo/50 hover:text-kyro-indigo"
             >
               <ArrowLeft size={14} /> Volver
             </Link>
-            <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('EQUIPO')}>
+            <Button variant="outline" size="sm" className="text-kyro-indigo" onClick={() => handleExportar('EQUIPO')}>
               Exportar Equipos Excel
             </Button>
-            <Button variant="glassSuccess" size="sm" onClick={() => handleExportar('ACCESORIO')}>
+            <Button variant="outline" size="sm" className="text-kyro-indigo" onClick={() => handleExportar('ACCESORIO')}>
               Exportar Accesorios Excel
             </Button>
           </div>
@@ -94,20 +94,20 @@ export function MatrizInventarioPage() {
           </span>
         </div>
       ) : (
-        <div className="kyro-card relative overflow-hidden">
+        <div className="kyro-card relative overflow-hidden rounded-[18px]">
           <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                <th className="kyro-table-head sticky left-0 top-0 z-10 whitespace-nowrap px-4 py-3 text-left">
+                <th className="kyro-table-head sticky left-0 top-0 z-20 whitespace-nowrap px-3 py-2.5 text-left">
                   {tab === 'chips' ? 'Código Origen' : 'Producto'}
                 </th>
                 {tiendas.map((t) => (
-                  <th key={t.codigo} className="kyro-table-head whitespace-nowrap px-3 py-3 text-center">
+                  <th key={t.codigo} className="kyro-table-head sticky top-0 z-10 whitespace-nowrap px-3 py-2.5 text-center">
                     {t.codigo}
                   </th>
                 ))}
-                <th className="kyro-table-head bg-kyro-indigo/10 px-3 py-3 text-center font-bold text-kyro-gold">Total</th>
+                <th className="kyro-table-head sticky top-0 z-10 bg-kyro-indigo/10 px-3 py-2.5 text-center font-bold text-kyro-indigo">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -127,13 +127,13 @@ export function MatrizInventarioPage() {
                         ? 'group bg-kyro-success/5 transition-colors hover:bg-kyro-success/10'
                         : 'group transition-colors hover:bg-kyro-elevated/50'}
                     >
-                      <td className="sticky left-0 z-[1] whitespace-nowrap border-b border-kyro-border bg-kyro-panel px-4 py-2.5 font-medium text-kyro-text transition-colors group-hover:bg-inherit">
+                      <td className="sticky left-0 z-[1] whitespace-nowrap bg-kyro-panel px-3 py-2.5 font-medium text-kyro-text transition-colors group-hover:bg-inherit">
                         {fila.nombre}
                       </td>
                       {tiendas.map((t) => {
                         const val = fila[t.codigo] as number | undefined
                         return (
-                          <td key={t.codigo} className="border-b border-kyro-border px-3 py-2.5 text-center text-kyro-body">
+                          <td key={t.codigo} className="px-3 py-2.5 text-center tabular-nums text-kyro-body">
                             {val && val > 0 ? (
                               <span className="font-mono font-semibold text-kyro-success">{val}</span>
                             ) : (
@@ -142,7 +142,7 @@ export function MatrizInventarioPage() {
                           </td>
                         )
                       })}
-                      <td className="border-b border-kyro-border bg-kyro-indigo/5 px-3 py-2.5 text-center font-bold text-kyro-text">
+                      <td className="bg-kyro-indigo/5 px-3 py-2.5 text-center font-bold tabular-nums text-kyro-indigo">
                         {(fila.total as number) > 0 ? (
                           <Badge variant="default" className="min-w-9 justify-center font-mono">{fila.total}</Badge>
                         ) : (

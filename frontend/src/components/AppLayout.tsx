@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
-import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug } from '@phosphor-icons/react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug, MagnifyingGlass } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -91,12 +91,96 @@ function loadCollapsedSections(): Record<string, boolean> {
   }
 }
 
+/**
+ * Búsqueda global prominente del "Centro de Operaciones" (DIS-FX-01).
+ *
+ * Alcance elegido: filtro rápido de NAVEGACIÓN, no un buscador de datos.
+ * Filtra los ítems de menú visibles por rol (label + sección) y navega al
+ * seleccionar (Enter salta al primer resultado). No consulta agentes/reportes/
+ * tickets del backend — el placeholder es aspiracional; el motor es el menú.
+ * Glass tokenizado (dark + light) `h-10 rounded-xl`.
+ */
+function GlobalSearch({
+  items,
+  autoFocus = false,
+  onNavigate,
+}: {
+  items: NavItem[]
+  autoFocus?: boolean
+  onNavigate?: () => void
+}) {
+  const navigate = useNavigate()
+  const [q, setQ] = useState('')
+  const [focused, setFocused] = useState(false)
+
+  const term = q.trim().toLowerCase()
+  const results = term
+    ? items
+        .filter((it) => it.label.toLowerCase().includes(term) || it.section.toLowerCase().includes(term))
+        .slice(0, 8)
+    : []
+  const showResults = focused && term.length > 0
+
+  function go(to: string) {
+    navigate(to)
+    setQ('')
+    setFocused(false)
+    onNavigate?.()
+  }
+
+  return (
+    <div className="relative w-full">
+      <MagnifyingGlass
+        size={16}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-kyro-muted"
+        aria-hidden
+      />
+      <input
+        autoFocus={autoFocus}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 120)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && results[0]) go(results[0].to)
+          if (e.key === 'Escape') { setQ(''); e.currentTarget.blur() }
+        }}
+        placeholder="Buscar agente, reporte, ticket…"
+        aria-label="Buscar en el menú"
+        className="h-10 w-full rounded-xl border border-kyro-border bg-kyro-card pl-9 pr-3 text-sm text-kyro-text placeholder:text-kyro-muted shadow-kyro-card outline-none transition focus:border-kyro-indigo/60 focus:ring-2 focus:ring-kyro-indigo/20"
+      />
+      {showResults && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl border border-kyro-border bg-kyro-card shadow-kyro-popover backdrop-blur-[18px]">
+          {results.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-kyro-muted">Sin coincidencias en el menú.</p>
+          ) : (
+            results.map(({ to, label, section, Icon }) => (
+              <button
+                key={`${section}-${to}`}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => go(to)}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-kyro-body transition hover:bg-kyro-indigo/[0.08]"
+              >
+                <Icon size={16} className="shrink-0 text-kyro-indigo" />
+                <span className="flex-1 truncate">{label}</span>
+                <span className="shrink-0 text-[11px] uppercase tracking-wide text-kyro-muted">{section}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AppLayout() {
   const { usuario, logout, isLoggingOut } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const location = useLocation()
   const [collapsed, setCollapsed]   = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [ccOpen, setCcOpen]         = useState(false)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(loadCollapsedSections)
   const navItemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -177,17 +261,18 @@ export function AppLayout() {
     ? { background: '#18181b', borderBottom: '1px solid rgba(255,255,255,0.06)' }
     : { background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }
 
-  /* Sidebar claro = azul corporativo Bitel rgba(0,53,128,0.95) con acentos
-     dorados (calco del legacy); estos tonos solo aplican dentro del sidebar
-     (.kyro-sidebar) — el resto del tema claro no cambia. Contraste AA
-     verificado sobre el navy efectivo (~rgb(12,63,134)): blanco 10.1:1,
-     dorado #ffc200 6.3:1, red-300 5.3:1, white/75 5.7:1, white/70 5.0:1. */
+  /* Sidebar claro = azul corporativo Bitel rgba(0,53,128,0.95); solo el logo de
+     marca conserva el dorado (DIS-FX-01), la navegación activa pasa a indigo.
+     Estos tonos solo aplican dentro del sidebar (.kyro-sidebar) — el resto del
+     tema claro no cambia. Contraste AA verificado sobre el navy efectivo
+     (~rgb(12,63,134)): blanco 10.1:1, dorado #ffc200 (logo) 6.3:1, indigo
+     activo con texto blanco AA, red-300 5.3:1, white/75 5.7:1, white/70 5.0:1. */
   const headerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-[rgba(255,255,255,0.14)]'
   const footerBorder = isDark ? 'border-[rgba(255,255,255,0.06)]' : 'border-[rgba(255,255,255,0.14)]'
 
   const navActive = isDark
-    ? 'bg-kyro-elevated text-white border-l-[3px] border-kyro-gold'
-    : 'bg-[rgba(255,194,0,0.18)] text-kyro-gold border-l-[3px] border-kyro-gold'
+    ? 'bg-kyro-indigo/12 text-kyro-text border-l-[3px] border-kyro-indigo'
+    : 'bg-kyro-indigo/25 text-white border-l-[3px] border-kyro-indigo'
   const navInactive = isDark
     ? 'text-kyro-body hover:bg-kyro-elevated/50'
     : 'text-white/85 hover:bg-white/10 hover:text-white'
@@ -299,7 +384,7 @@ export function AppLayout() {
                     onClick={() => toggleSection(section)}
                     className="w-full flex items-center justify-between gap-2 pt-3 pb-1 px-3"
                   >
-                    <span className={`block border-l-[3px] border-kyro-gold pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide ${isDark ? 'text-kyro-muted' : 'text-white/75'}`}>
+                    <span className={`block border-l-[3px] border-kyro-indigo pl-2 text-[0.70rem] font-extrabold uppercase tracking-wide ${isDark ? 'text-kyro-muted' : 'text-white/75'}`}>
                       {sectionLabel(section, userRole)}
                     </span>
                     <CaretDown
@@ -347,7 +432,7 @@ export function AppLayout() {
                   >
                     {({ isActive }) => {
                       const badgeCount = badgeByRoute[to] ?? 0
-                      const iconColor = accent ? '' : isActive ? 'text-kyro-gold' : ''
+                      const iconColor = accent ? '' : isActive ? 'text-kyro-indigo' : ''
                       return (
                         <>
                           <span className="relative shrink-0" style={accent ? { color: accent } : undefined}>
@@ -360,7 +445,7 @@ export function AppLayout() {
                           {badgeCount > 0 && !collapsed && (
                             <span className={`badge-pulse text-[10px] rounded-full px-1.5 py-0.5 font-bold shrink-0
                               ${isActive
-                                ? isDark ? 'bg-[rgba(255,194,0,0.2)] text-[#ffc200]' : 'bg-amber-100 text-amber-700'
+                                ? isDark ? 'bg-kyro-indigo/20 text-kyro-indigo' : 'bg-indigo-100 text-indigo-700'
                                 : isDark ? 'bg-[rgba(239,68,68,0.2)] text-red-400 border border-red-500/30' : 'bg-red-100 text-red-600 border border-red-200'
                               }`}
                             >
@@ -389,7 +474,7 @@ export function AppLayout() {
                 <div className="flex items-center gap-2">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #ffc200, #d97706)' }}
+                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
                   >
                     {(usuario?.nombre ?? 'U').charAt(0).toUpperCase()}
                   </div>
@@ -478,6 +563,14 @@ export function AppLayout() {
 
       {/* Main content ────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Barra superior desktop: búsqueda global prominente y centrada (glass
+            light válido en ambos temas). Consume tokens kyro-* (no dark-only). */}
+        <header className="hidden lg:flex h-16 shrink-0 items-center border-b border-kyro-border px-6 lg:px-8 kyro-glass">
+          <div className="mx-auto w-full max-w-[560px]">
+            <GlobalSearch items={visibleItems} />
+          </div>
+        </header>
+
         {/* Mobile header */}
         <header
           style={mobileBg}
@@ -495,6 +588,16 @@ export function AppLayout() {
             SIS-KYRO
           </span>
           <div className="ml-auto flex items-center gap-2">
+            {/* Disparador de búsqueda de 40px (DIS-FX-01) */}
+            <button
+              onClick={() => setMobileSearchOpen((o) => !o)}
+              title="Buscar"
+              aria-label="Buscar"
+              aria-expanded={mobileSearchOpen}
+              className={`flex h-10 w-10 items-center justify-center rounded-md transition-colors ${mobileMenuCls}`}
+            >
+              <MagnifyingGlass size={18} />
+            </button>
             <button
               onClick={toggleTheme}
               title={isDark ? 'Modo claro' : 'Modo oscuro'}
@@ -527,7 +630,14 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="app-canvas flex-1 overflow-auto p-4 sm:p-6">
+        {/* Panel de búsqueda móvil (se despliega desde el disparador de 40px) */}
+        {mobileSearchOpen && (
+          <div style={mobileBg} className="lg:hidden px-4 py-3">
+            <GlobalSearch items={visibleItems} autoFocus onNavigate={() => setMobileSearchOpen(false)} />
+          </div>
+        )}
+
+        <main className="app-canvas flex-1 overflow-auto px-4 py-5 md:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
