@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button'
 import { Badge, type BadgeVariant } from '../../components/ui/badge'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { ListToolbar } from '../../components/ListToolbar'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 
 type Edits = Record<number, { precio_costo: string; precio_minimo: string; precio_normal: string }>
@@ -99,26 +100,26 @@ export function RevisarStockPage() {
   // ── Fila de edición reutilizada por ambas vistas ───────────────────────────────
   function FilaPrecio({ item }: { item: PrecioPendienteItem }) {
     return (
-      <tr className="border-b border-kyro-border text-kyro-body hover:bg-kyro-elevated">
-        <td className="px-3 py-2 text-kyro-body">{item.producto_nombre}</td>
-        <td className="px-3 py-2">
+      <tr className="border-b border-kyro-border text-kyro-body hover:bg-kyro-indigo/[0.04]">
+        <td className="px-3 py-2.5 text-kyro-body">{item.producto_nombre}</td>
+        <td className="px-3 py-2.5">
           <Badge variant={TIPO_BADGE[item.tipo] ?? 'outline'}>{item.tipo}</Badge>
         </td>
-        <td className="px-3 py-2 text-center font-mono text-xs">
+        <td className="px-3 py-2.5 text-center font-mono text-xs tabular-nums">
           <span className={(item.cantidad ?? 0) === 0 ? 'text-kyro-danger font-bold' : 'text-kyro-text'}>
             {item.cantidad ?? 0}
           </span>
         </td>
-        <td className="px-3 py-2 font-mono text-xs text-kyro-muted">{item.imei_serial ?? '—'}</td>
+        <td className="px-3 py-2.5 font-mono text-xs text-kyro-muted">{item.imei_serial ?? '—'}</td>
         {(['precio_costo', 'precio_minimo', 'precio_normal'] as const).map((campo) => (
-          <td key={campo} className="px-2 py-1">
+          <td key={campo} className="px-2 py-1.5">
             <Input type="number" step="0.01" min="0" placeholder="0.00"
-              className="text-amber-600 font-semibold dark:text-amber-400"
+              className={`kyro-money font-semibold ${okId === item.id ? 'text-kyro-gold' : 'text-kyro-text'}`}
               value={valor(item, campo)}
               onChange={(e) => setCampo(item.id, campo, e.target.value, item)} />
           </td>
         ))}
-        <td className="px-3 py-1">
+        <td className="px-3 py-1.5">
           <Button type="button" variant="glassIndigo" size="sm" disabled={guardar.isPending} onClick={() => onGuardar(item)}>
             {okId === item.id ? '✓' : 'Fijar'}
           </Button>
@@ -181,7 +182,7 @@ export function RevisarStockPage() {
           type="button"
           onClick={() => setTab('pendientes')}
           className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-            tab === 'pendientes' ? 'border-kyro-gold text-kyro-text' : 'border-transparent text-kyro-muted hover:text-kyro-body'
+            tab === 'pendientes' ? 'border-kyro-indigo text-kyro-text' : 'border-transparent text-kyro-muted hover:text-kyro-body'
           }`}
         >
           Pendientes
@@ -191,7 +192,7 @@ export function RevisarStockPage() {
           type="button"
           onClick={() => setTab('matriz')}
           className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-            tab === 'matriz' ? 'border-kyro-gold text-kyro-text' : 'border-transparent text-kyro-muted hover:text-kyro-body'
+            tab === 'matriz' ? 'border-kyro-indigo text-kyro-text' : 'border-transparent text-kyro-muted hover:text-kyro-body'
           }`}
         >
           Matriz completa
@@ -201,7 +202,7 @@ export function RevisarStockPage() {
       {tab === 'pendientes' ? (
         <>
           {/* Filtros Pendientes */}
-          <div className="flex flex-wrap items-end gap-3">
+          <ListToolbar description="Filtra por tienda, tipo y cantidad para fijar precios pendientes">
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
               <Select value={tienda} onChange={e => setTienda(e.target.value)} className="h-9 w-48">
@@ -237,7 +238,7 @@ export function RevisarStockPage() {
                 type="checkbox"
                 checked={soloSinStock}
                 onChange={e => setSoloSinStock(e.target.checked)}
-                className="h-4 w-4 rounded accent-kyro-gold"
+                className="h-4 w-4 rounded accent-kyro-indigo"
               />
               Solo sin stock
             </label>
@@ -247,9 +248,9 @@ export function RevisarStockPage() {
                 Limpiar
               </Button>
             )}
-          </div>
+          </ListToolbar>
 
-          <Card className="kyro-card overflow-x-auto p-0">
+          <Card className="kyro-card overflow-x-auto p-0 rounded-[18px]">
             {isLoading ? (
               <p className="p-6 text-sm text-kyro-muted">Cargando…</p>
             ) : pendientes.length === 0 ? (
@@ -260,8 +261,8 @@ export function RevisarStockPage() {
                 <tbody>
                   {gruposPendientes.map((g) => (
                     <Fragment key={g.tienda}>
-                      <tr className="bg-[rgba(255,194,0,0.04)]">
-                        <td colSpan={8} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-kyro-gold">
+                      <tr className="bg-kyro-indigo/[0.04]">
+                        <td colSpan={8} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-kyro-indigo">
                           <Storefront size={12} weight="bold" className="-mt-0.5 mr-1.5 inline" />
                           {g.tienda}
                         </td>
@@ -277,7 +278,7 @@ export function RevisarStockPage() {
       ) : (
         <>
           {/* Filtros Matriz (server-side) */}
-          <div className="flex flex-wrap items-end gap-3">
+          <ListToolbar description="Filtra la matriz completa de precios por tienda, categoría o búsqueda">
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
               <Select value={mTienda} onChange={e => setMTienda(e.target.value)} className="h-9 w-48">
@@ -316,7 +317,7 @@ export function RevisarStockPage() {
             {matrizData?.total ? (
               <span className="ml-auto text-xs text-kyro-muted">{matrizData.total} productos</span>
             ) : null}
-          </div>
+          </ListToolbar>
 
           {matrizLoading ? (
             <Card className="kyro-card p-6"><p className="text-sm text-kyro-muted">Cargando…</p></Card>
@@ -330,12 +331,12 @@ export function RevisarStockPage() {
                     <span className="rounded-full bg-kyro-elevated border border-kyro-border px-3 py-1 text-xs font-semibold text-kyro-text tracking-wide">
                       {g.tienda}
                     </span>
-                    <span className="rounded-full bg-kyro-elevated border border-kyro-border px-3 py-1 text-xs font-semibold text-kyro-gold tracking-wide">
+                    <span className="rounded-full bg-kyro-indigo/10 border border-kyro-indigo/25 px-3 py-1 text-xs font-semibold text-kyro-indigo tracking-wide">
                       {g.tipo}
                     </span>
                     <span className="text-xs text-kyro-muted">{g.items.length} ítem(s)</span>
                   </div>
-                  <Card className="kyro-card overflow-x-auto p-0">
+                  <Card className="kyro-card overflow-x-auto p-0 rounded-[18px]">
                     <table className="w-full text-sm">
                       <Cabecera />
                       <tbody>

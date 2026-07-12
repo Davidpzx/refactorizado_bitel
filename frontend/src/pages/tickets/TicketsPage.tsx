@@ -26,7 +26,7 @@ const FORMA_PAGO_TOGGLE = [
   { value: 'BIPAY', label: 'Bipay', tone: 'info' as const },
   { value: 'PLIN', label: 'Plin', tone: 'warning' as const },
   { value: 'TRANSFERENCIA', label: 'Transf.', tone: 'info' as const },
-  { value: 'MIXTO', label: 'Mixto', tone: 'gold' as const },
+  { value: 'MIXTO', label: 'Mixto', tone: 'indigo' as const },
 ]
 
 const FORMA_PAGO_COLORS: Record<string, string> = {
@@ -118,7 +118,7 @@ function getColumns(
     {
       accessorKey: 'monto',
       header: 'Monto',
-      cell: ({ row }) => `S/ ${parseFloat(row.original.monto).toFixed(2)}`,
+      cell: ({ row }) => <span className="kyro-money">S/ {parseFloat(row.original.monto).toFixed(2)}</span>,
     },
     {
       id: 'forma_pago',
@@ -267,11 +267,17 @@ function NuevoTicketForm({ onSuccess, onCancel }: { onSuccess: () => void; onCan
           </div>
         </div>
         {totalPago > 0 && (
-          <div className="mt-3 flex items-center gap-6 text-sm">
-            <span className="text-kyro-muted">Total recibido: <strong className="text-kyro-text">S/ {totalPago.toFixed(2)}</strong></span>
-            <span className={vuelto >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}>
-              Vuelto: <strong>S/ {vuelto.toFixed(2)}</strong>
-            </span>
+          <div className="mt-3 flex flex-wrap items-end gap-8">
+            <div>
+              <p className="text-xs text-kyro-muted">Total recibido</p>
+              <p className="text-[24px] font-bold leading-none text-kyro-text kyro-money">S/ {totalPago.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-kyro-muted">Vuelto</p>
+              <p className={`text-[24px] font-bold leading-none kyro-money ${vuelto >= 0 ? 'text-kyro-success' : 'text-kyro-danger'}`}>
+                S/ {vuelto.toFixed(2)}
+              </p>
+            </div>
           </div>
         )}
       </div>

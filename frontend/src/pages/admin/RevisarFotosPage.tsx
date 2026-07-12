@@ -46,19 +46,20 @@ export function RevisarFotosPage() {
       ) : items.length === 0 ? (
         <Card className="kyro-card p-6"><p className="text-sm text-kyro-success">✓ No hay fotos pendientes de revisión.</p></Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {items.map((f: FotoPendienteItem) => {
             const tieneGps = f.lat_entrada != null && f.lng_entrada != null
             const busy = accion.isPending && accion.variables?.id === f.id
             return (
-              <Card key={f.id} className="kyro-card flex flex-col overflow-hidden">
-                <button type="button" onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="relative aspect-square bg-kyro-base">
-                  <img src={srcFoto(f.foto_marcacion)} alt={f.nombres} className="w-full h-full object-cover" />
-                  <span className="absolute left-2 top-2 rounded-full bg-kyro-gold px-2 py-0.5 text-[10px] font-bold text-kyro-gold-ink">
+              <Card key={f.id} className="kyro-card flex flex-col overflow-hidden rounded-[18px] p-0">
+                <button type="button" onClick={() => setZoom(srcFoto(f.foto_marcacion))} className="group relative block aspect-square overflow-hidden bg-kyro-base">
+                  <img src={srcFoto(f.foto_marcacion)} alt={f.nombres} className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]" />
+                  <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/55 to-transparent" />
+                  <span className="absolute left-2 top-2 rounded-full bg-kyro-info px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
                     {f.metodo_marcacion ?? 'FOTO'}
                   </span>
                 </button>
-                <div className="p-3 flex-1 flex flex-col gap-1">
+                <div className="p-4 flex-1 flex flex-col gap-1">
                   <p className="text-sm font-bold text-kyro-text">{f.nombres}</p>
                   <p className="text-xs text-kyro-muted">{f.tienda_base ?? '—'} · {f.fecha} {f.hora_ingreso ?? ''}</p>
                   {tieneGps ? (
@@ -70,7 +71,7 @@ export function RevisarFotosPage() {
                     <span className="text-xs text-kyro-subtle">Sin coordenadas GPS</span>
                   )}
                   <div className="flex gap-2 mt-2">
-                    <Button type="button" variant="gold" size="sm" disabled={busy} className="flex-1"
+                    <Button type="button" variant="glassSuccess" size="sm" disabled={busy} className="flex-1"
                       onClick={() => accion.mutate({ id: f.id, accion: 'aprobar' })}>
                       Aprobar
                     </Button>
@@ -89,7 +90,7 @@ export function RevisarFotosPage() {
 
       {zoom && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setZoom(null)}>
-          <img src={zoom} alt="Marcación" className="max-h-full max-w-full rounded-kyro-lg border border-kyro-border" />
+          <img src={zoom} alt="Marcación" className="max-h-full max-w-full rounded-[20px] border border-kyro-border shadow-2xl" />
         </div>
       )}
     </div>

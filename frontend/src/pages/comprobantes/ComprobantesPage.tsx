@@ -61,7 +61,7 @@ const ESTADOS = [
 const TIPOS = [
   { value: '',             label: 'Todos',        tone: 'indigo' as const },
   { value: 'BOLETA',       label: 'Boleta',       tone: 'info'   as const },
-  { value: 'FACTURA',      label: 'Factura',      tone: 'gold'   as const },
+  { value: 'FACTURA',      label: 'Factura',      tone: 'indigo' as const },
   { value: 'NOTA_CREDITO', label: 'N. Crédito',   tone: 'warning' as const },
 ]
 
@@ -372,7 +372,7 @@ export function ComprobantesPage() {
                           <div className="text-xs text-kyro-subtle">{c.num_doc_cliente}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-kyro-gold">{pen(c.total, c.moneda)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-kyro-gold kyro-money">{pen(c.total, c.moneda)}</td>
                       <td className="px-4 py-3 text-center"><EstadoBadge c={c} /></td>
                       <td className="px-4 py-3 text-kyro-body">{c.tienda_id ?? '—'}</td>
                       <td className="px-4 py-3">

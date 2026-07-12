@@ -82,7 +82,7 @@ export function CpePublicoPage() {
 
   return (
     <div className="public-premium-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
-      <div className="public-premium-card w-full max-w-md rounded-3xl p-7 sm:p-8">
+      <div className="public-premium-card w-full max-w-md rounded-[20px] p-6 sm:p-7">
         {/* Logo / título */}
         <div className="mb-6 text-center">
           <div className="relative mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-300/40 bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_16px_35px_-16px_rgba(79,70,229,0.9)]">
@@ -162,9 +162,9 @@ export function CpePublicoPage() {
                   <span className="text-kyro-body">{new Date(comprobante.anulado_en).toLocaleDateString('es-PE')}</span>
                 </div>
               )}
-              <div className="mt-2 flex justify-between border-t border-kyro-border pt-2">
-                <span className="font-semibold text-kyro-text">Total</span>
-                <span className="font-mono text-lg font-bold text-kyro-text">
+              <div className="mt-3 flex items-end justify-between border-t border-kyro-border pt-3">
+                <span className="text-sm font-semibold text-kyro-muted">Total</span>
+                <span className="text-[32px] font-bold leading-none tracking-tight text-kyro-gold kyro-money">
                   {new Intl.NumberFormat('es-PE', { style: 'currency', currency: comprobante.moneda || 'PEN' }).format(Number(comprobante.total))}
                 </span>
               </div>
