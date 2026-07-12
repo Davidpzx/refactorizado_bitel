@@ -254,3 +254,9 @@ Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el b
 - Fix: volumen Docker 'refactor_backend_storage_app' montado en /app/storage/app via tabla mount de Dokploy (mismo patron que ya usaba el facturador en este VPS).
 - VERIFICADO con redeploy intencional: el APK sobrevive. sha256 del descargado sigue identico al compilado.
 - Link operativo y ahora estable: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
+
+## Diseño transversal + release firmado (2026-07-11/12 noche)
+- [x] APK RELEASE FIRMADO publicado en el canal (commit ec1da79 la config de firma): keystore kyro-release.keystore + keystore.properties en frontend/android/ (NO versionados — HACER BACKUP, sin ellos no hay actualizaciones compatibles). Firma verificada con apksigner (CN Mundo Android Technology EIRL). Menos friccion Play Protect que el debug. Si un equipo tenia el debug instalado: desinstalar primero (cambio de firma).
+- [x] DIS-FX-02/03/04/05/06 integrados (commit b1f1c67): 23 componentes compartidos alineados a la vision fintech (indigo estructural, oro solo dinero, radios 18/20/10px, KpiCard definitivo con skeleton). tsc+vite+vitest verificados por el orquestador (el sandbox de Codex no pudo correr vite).
+- [ ] DIS-FX-01 (AppLayout/sidebar + busqueda global) PENDIENTE — titan agoto sesion sin tocarlo; vuelve 10:20pm Lima. Siguiente en su cola.
+- [ ] Olas de pantallas DIS-FX-07..23 pendientes (Dashboard, Cuadre, Inventario, CRM, Planilla priorizados).
