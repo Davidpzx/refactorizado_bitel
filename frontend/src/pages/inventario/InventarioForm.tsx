@@ -278,7 +278,7 @@ export function InventarioForm({ item, onSuccess, onCancel }: Props) {
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
+        <Button type="submit" variant="default" disabled={isPending} className="flex-1">
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar item' : 'Registrar item'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>

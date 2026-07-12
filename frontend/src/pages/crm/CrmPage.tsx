@@ -16,7 +16,7 @@ import { Label } from '../../components/ui/label'
 import { Select } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { Dialog } from '../../components/ui/dialog'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { ChartLineUp as TrendingUp, Users, CheckCircle, XCircle, ChatText as MessageSquare, Megaphone, Star, ChatCircle as MessageCircle, Trash as Trash2 } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import type { ComponentType } from 'react'
@@ -33,24 +33,11 @@ type IconCmp = ComponentType<{ size?: number | string; className?: string }>
 
 const ESTADOS: { value: Lead['estado']; label: string; color: string; bg: string; accent: string; Icon: IconCmp }[] = [
   { value: 'NUEVO',      label: 'Nuevo',      color: 'text-kyro-info',    bg: 'border-kyro-info bg-kyro-panel',    accent: '#38bdf8', Icon: Users },
-  { value: 'CONTACTADO', label: 'Contactado', color: 'text-kyro-warning', bg: 'border-kyro-warning bg-kyro-panel', accent: '#ffc200', Icon: MessageSquare },
-  { value: 'INTERESADO', label: 'Interesado', color: 'text-kyro-gold',    bg: 'border-kyro-indigo bg-kyro-panel',  accent: '#6366f1', Icon: Star },
+  { value: 'CONTACTADO', label: 'Contactado', color: 'text-kyro-warning', bg: 'border-kyro-warning bg-kyro-panel', accent: '#fbbf24', Icon: MessageSquare },
+  { value: 'INTERESADO', label: 'Interesado', color: 'text-kyro-indigo',  bg: 'border-kyro-indigo bg-kyro-panel',  accent: '#6366f1', Icon: Star },
   { value: 'CONVERTIDO', label: 'Convertido', color: 'text-kyro-success', bg: 'border-kyro-success bg-kyro-panel', accent: '#22c55e', Icon: CheckCircle },
   { value: 'PERDIDO',    label: 'Perdido',    color: 'text-kyro-danger',  bg: 'border-kyro-danger bg-kyro-panel',  accent: '#ef4444', Icon: XCircle },
 ]
-
-/** Ícono en caja redondeada tintada (estilo KPI legacy CRM). */
-function KpiIcon({ accent, Icon }: { accent: string; Icon: IconCmp }) {
-  return (
-    <span
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-      style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}
-      aria-hidden
-    >
-      <Icon size={18} />
-    </span>
-  )
-}
 
 const FUENTES: Lead['fuente'][] = ['PRESENCIAL', 'WHATSAPP', 'REFERIDO', 'LLAMADA']
 
@@ -179,7 +166,7 @@ function LeadForm({
 
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" variant="gold" size="sm" disabled={isPending}>
+        <Button type="submit" variant="default" size="sm" disabled={isPending}>
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar' : 'Crear lead'}
         </Button>
       </div>
@@ -204,7 +191,7 @@ function LeadCard({
   const confirmDialog = useConfirmDialog()
 
   return (
-    <div className="kyro-card group space-y-3 p-3.5 text-xs transition-colors hover:border-kyro-gold">
+    <div className="kyro-card group space-y-3 p-4 text-xs transition-colors hover:border-kyro-indigo">
       {lead.cliente ? (
         <div>
           <p className="text-sm font-semibold tracking-tight text-kyro-text">{lead.cliente.nombre}</p>
@@ -278,7 +265,7 @@ function KanbanColumna({
   onEliminar: (id: number) => void
 }) {
   return (
-    <div className={`flex min-h-[200px] min-w-[220px] flex-col gap-2.5 rounded-kyro-lg border p-3.5 shadow-kyro-card ${config.bg}`}>
+    <div className={`flex min-h-[200px] min-w-[260px] flex-col gap-2.5 rounded-kyro-lg border p-4 shadow-kyro-card ${config.bg}`}>
       <div className="mb-1 flex items-center justify-between border-b border-kyro-border pb-2.5">
         <span className={`text-[0.7rem] font-bold uppercase tracking-[0.1em] ${config.color}`}>{config.label}</span>
         <Badge variant="outline" className="min-w-6 justify-center border-kyro-border bg-kyro-elevated text-xs">{leads.length}</Badge>
@@ -304,7 +291,7 @@ function KanbanColumna({
 const FUENTE_COLORS: Record<string, string> = {
   PRESENCIAL: 'var(--color-kpi-total)',
   WHATSAPP:   'var(--color-kyro-success)',
-  REFERIDO:   'var(--color-kyro-gold)',
+  REFERIDO:   '#a78bfa',
   LLAMADA:    'var(--color-kyro-warning)',
 }
 
@@ -342,13 +329,17 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
   const ranking         = data?.ranking_agentes ?? []
   const actividad       = data?.actividad_reciente ?? []
   const totalActividad  = tendencia.reduce((s, d) => s + d.leads, 0)
+  // Series reales del propio dashboard (no se inventan datos): tendencia diaria.
+  const leadsTrend = tendencia.map(d => d.leads)
+  const convTrend  = tendencia.map(d => d.convertidos)
 
-  const kpis = [
-    { label: 'Leads en período',   value: data?.total_leads   ?? 0, Icon: Users,        accent: '#0d6efd', text: 'text-kyro-text' },
-    { label: 'Tasa conversión',    value: `${data?.tasa_conversion ?? 0}%`, Icon: TrendingUp, accent: '#22c55e', text: 'text-kyro-success' },
-    { label: 'Convertidos',        value: data?.convertidos   ?? 0, Icon: CheckCircle,  accent: '#22c55e', text: 'text-kyro-success' },
-    { label: 'Perdidos',           value: data?.perdidos      ?? 0, Icon: XCircle,      accent: '#ef4444', text: 'text-kyro-danger' },
-    { label: 'Interacciones',      value: totalActividad,           Icon: MessageSquare, accent: '#6366f1', text: 'text-kyro-body' },
+  // KPI de leads: sin oro (no hay monto de pipeline). Tonos semánticos indigo/success/danger/info.
+  const kpis: { title: string; value: number | string; tone: 'neutral' | 'success' | 'danger' | 'info' | 'indigo'; accent: string; Icon: IconCmp; trend?: number[] }[] = [
+    { title: 'Leads en período', value: data?.total_leads ?? 0, tone: 'info', accent: 'var(--color-kyro-info)', Icon: Users, trend: leadsTrend },
+    { title: 'Tasa conversión', value: `${data?.tasa_conversion ?? 0}%`, tone: 'success', accent: 'var(--color-kyro-success)', Icon: TrendingUp },
+    { title: 'Convertidos', value: data?.convertidos ?? 0, tone: 'success', accent: 'var(--color-kyro-success)', Icon: CheckCircle, trend: convTrend },
+    { title: 'Perdidos', value: data?.perdidos ?? 0, tone: 'danger', accent: 'var(--color-kyro-danger)', Icon: XCircle },
+    { title: 'Interacciones', value: totalActividad, tone: 'indigo', accent: 'var(--color-kyro-indigo)', Icon: MessageSquare },
   ]
 
   return (
@@ -373,7 +364,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
             className="kyro-input h-9 w-40"
           />
         </div>
-        <Button variant="gold" size="sm" onClick={() => setApplied({ ...filters, tienda_id: tiendaId || undefined })}>
+        <Button variant="default" size="sm" onClick={() => setApplied({ ...filters, tienda_id: tiendaId || undefined })}>
           Aplicar
         </Button>
         <Button variant="outline" size="sm" onClick={() => {
@@ -389,16 +380,16 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
       {!isLoading && (
         <>
           {/* KPI Strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {kpis.map(k => (
-              <StatCard key={k.label} title={k.label} accent={k.accent} icon={<KpiIcon accent={k.accent} Icon={k.Icon} />} value={k.value} valueColorClass={k.text} />
+              <KpiCard key={k.title} title={k.title} value={k.value} tone={k.tone} accent={k.accent} icon={<k.Icon size={18} />} trend={k.trend} />
             ))}
           </div>
 
           {/* Gráficos fila 1: funnel + fuente */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Pipeline funnel */}
-            <div className="kyro-card p-4">
+            <div className="kyro-card p-5">
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
               <h3 className="mb-4 text-sm font-semibold text-kyro-text">Embudo por Estado</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -419,8 +410,8 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
             </div>
 
             {/* Por fuente — dona, como el "Desglose por tipo de operación" del legacy */}
-            <div className="kyro-card p-4">
-              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
+            <div className="kyro-card p-5">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
               <h3 className="mb-4 text-sm font-semibold text-kyro-text">Leads por Canal de Captación</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -449,7 +440,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
 
           {/* Tendencia diaria */}
           {tendencia.length > 0 && (
-            <div className="kyro-card p-4">
+            <div className="kyro-card p-5">
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-green-500/50 to-transparent" />
               <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text">
                 <TrendingUp size={15} className="text-kyro-success" />Tendencia de Captación Diaria
@@ -472,7 +463,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Ranking agentes CRM */}
             <div className="kyro-card overflow-hidden">
-              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/40 to-transparent" />
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-indigo-500/40 to-transparent" />
               <div className="border-b border-kyro-border p-4">
                 <h3 className="text-sm font-semibold text-kyro-text">Ranking Agentes — Captación CRM</h3>
               </div>
@@ -487,7 +478,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
                   </thead>
                   <tbody>
                     {ranking.map((a, i) => (
-                      <tr key={a.agente_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-gold/5' : 'hover:bg-kyro-gold/5'}`}>
+                      <tr key={a.agente_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-indigo/5' : 'hover:bg-kyro-indigo/5'}`}>
                         <td className="px-3 py-2.5 text-xs text-kyro-muted">
                           {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}
                         </td>
@@ -518,7 +509,7 @@ function CrmAnalytics({ tiendaId }: { tiendaId: string }) {
               </div>
               <div className="divide-y divide-kyro-border">
                 {actividad.map(act => (
-                  <div key={act.id} className="px-4 py-3 text-xs transition-colors hover:bg-kyro-gold/5">
+                  <div key={act.id} className="px-4 py-3 text-xs transition-colors hover:bg-kyro-indigo/5">
                     <div className="flex items-start justify-between gap-2">
                       <span className="font-medium text-kyro-text">
                         {TIPO_ICON[act.tipo] ?? '•'} {act.agente_nombres}
@@ -583,7 +574,7 @@ function TemperaturaCard({ item }: { item: CrmInteraccionTemp }) {
 function TemperaturaColumna({ etiqueta, items }: { etiqueta: TemperaturaEtiqueta; items: CrmInteraccionTemp[] }) {
   const colores = items[0]?.temperatura ?? { bg: 'rgba(148,163,184,.12)', text: '#94a3b8', border: 'rgba(148,163,184,.25)' }
   return (
-    <div className="flex min-h-[200px] min-w-[240px] flex-col gap-2.5 rounded-kyro-lg border p-3.5" style={{ background: 'rgba(0,0,0,0.15)', borderColor: colores.border }}>
+    <div className="flex min-h-[200px] min-w-[260px] flex-col gap-2.5 rounded-kyro-lg border bg-black/[0.03] p-4 dark:bg-black/20" style={{ borderColor: colores.border }}>
       <div className="mb-1 flex items-center justify-between border-b border-kyro-border pb-2.5">
         <span className="text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={{ color: colores.text }}>{etiqueta}</span>
         <Badge variant="outline" className="min-w-6 justify-center border-kyro-border bg-kyro-elevated text-xs">{items.length}</Badge>
@@ -890,14 +881,12 @@ export function CrmPage() {
               {pipeline.pipeline.map(p => {
                 const cfg = ESTADOS.find(e => e.value === p.estado)!
                 return (
-                  <StatCard key={p.estado} title={cfg.label} align="top" accent={cfg.accent}
-                    icon={<KpiIcon accent={cfg.accent} Icon={cfg.Icon} />}
-                    value={p.total} valueColorClass={cfg.color} />
+                  <KpiCard key={p.estado} title={cfg.label} accent={cfg.accent}
+                    icon={<cfg.Icon size={18} />} value={p.total} />
                 )
               })}
-              <StatCard title="Tasa conversión" align="top" accent="#22c55e"
-                icon={<KpiIcon accent="#22c55e" Icon={TrendingUp} />}
-                value={`${pipeline?.tasa_conversion ?? 0}%`} valueColorClass="text-kyro-success" />
+              <KpiCard title="Tasa conversión" tone="success" accent="var(--color-kyro-success)"
+                icon={<TrendingUp size={18} />} value={`${pipeline?.tasa_conversion ?? 0}%`} />
             </div>
           )}
 

@@ -18,7 +18,7 @@ import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Label } from '../../components/ui/label'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InventarioForm } from './InventarioForm'
 import { InventarioTabs } from './InventarioTabs'
@@ -89,7 +89,7 @@ function getColumns(
     {
       accessorKey: 'precio_normal',
       header: 'Precio',
-      cell: ({ row }) => `S/ ${parseFloat(row.original.precio_normal).toFixed(2)}`,
+      cell: ({ row }) => <span className="kyro-money">S/ {parseFloat(row.original.precio_normal).toFixed(2)}</span>,
     },
     {
       accessorKey: 'estado',
@@ -341,19 +341,19 @@ function CapitalInvertidoWidget({ tienda }: { tienda: string }) {
     staleTime: 60_000,
   })
 
-  const fmt = (v: number | undefined) => `S/ ${(v ?? 0).toFixed(2)}`
-
   return (
-    <div className="space-y-3 mb-4">
+    <div className="space-y-4 mb-4">
+      {/* Fila 1 — capital (monetario): oro RESERVADO al valor; icono/acento indigo. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Capital Invertido — Equipos" value={data ? fmt(data.capital_equipos) : null} accent="#ffc200" icon={<DeviceMobileCamera size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
-        <StatCard title="Capital Invertido — Accesorios" value={data ? fmt(data.capital_accesorios) : null} accent="#ffc200" icon={<Headphones size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
-        <StatCard title="Capital Invertido — Chips" value={data ? fmt(data.capital_chips) : null} accent="#ffc200" icon={<SimCard size={18} />} subtitle="Costo fijo: S/ 1.00 por unidad" />
+        <KpiCard title="Capital Invertido — Equipos" value={data ? data.capital_equipos : null} monetary tone="gold" icon={<DeviceMobileCamera size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
+        <KpiCard title="Capital Invertido — Accesorios" value={data ? data.capital_accesorios : null} monetary tone="gold" icon={<Headphones size={18} />} subtitle="Excluye productos con costo S/ 0.00" />
+        <KpiCard title="Capital Invertido — Chips" value={data ? data.capital_chips : null} monetary tone="gold" icon={<SimCard size={18} />} subtitle="Costo fijo: S/ 1.00 por unidad" />
       </div>
+      {/* Fila 2 — unidades (no monetario): indigo / violeta / cyan, NUNCA oro. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total Equipos" value={data?.total_uds_equipos != null ? `${data.total_uds_equipos} uds` : null} accent="#ffc200" icon={<DeviceMobileCamera size={18} />} />
-        <StatCard title="Total Accesorios" value={data?.total_uds_accesorios != null ? `${data.total_uds_accesorios} uds` : null} accent="#a78bfa" icon={<Headphones size={18} />} />
-        <StatCard title="Total Chips" value={data?.total_uds_chips != null ? `${data.total_uds_chips} uds` : null} accent="#22d3ee" icon={<SimCard size={18} />} />
+        <KpiCard title="Total Equipos" value={data?.total_uds_equipos != null ? `${data.total_uds_equipos} uds` : null} accent="#6366f1" icon={<DeviceMobileCamera size={18} />} />
+        <KpiCard title="Total Accesorios" value={data?.total_uds_accesorios != null ? `${data.total_uds_accesorios} uds` : null} accent="#a78bfa" icon={<Headphones size={18} />} />
+        <KpiCard title="Total Chips" value={data?.total_uds_chips != null ? `${data.total_uds_chips} uds` : null} accent="#22d3ee" icon={<SimCard size={18} />} />
       </div>
     </div>
   )
@@ -526,7 +526,7 @@ export function InventarioPage() {
             >
               <LayoutGrid size={14} /> Ver Matriz
             </Link>
-            <Button variant="gold" onClick={abrirCrear}>+ Nuevo item</Button>
+            <Button variant="default" onClick={abrirCrear}>+ Nuevo item</Button>
           </div>
         }
       />
@@ -552,7 +552,7 @@ export function InventarioPage() {
           onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button variant="gold" onClick={buscar}>Buscar</Button>
+        <Button variant="default" onClick={buscar}>Buscar</Button>
 
         <Select
           value={tienda}
@@ -717,7 +717,7 @@ export function InventarioPage() {
             {ajusteError && <p className="text-xs text-kyro-danger">{ajusteError}</p>}
             <div className="flex gap-3">
               <Button
-                variant="gold"
+                variant="default"
                 className="flex-1"
                 disabled={ajustarStock.isPending || cantidadReal === '' || observacionAjuste.trim().length < 10}
                 onClick={() => ajustarStock.mutate({
