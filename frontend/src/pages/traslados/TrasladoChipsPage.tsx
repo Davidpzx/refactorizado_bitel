@@ -179,7 +179,7 @@ function CrearChipDialog({
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" variant="gold" disabled={crear.isPending} className="flex-1">
+          <Button type="submit" variant="default" disabled={crear.isPending} className="flex-1">
             {crear.isPending ? 'Creando...' : 'Crear Traslado'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={crear.isPending}>
@@ -251,7 +251,7 @@ function ConfirmarChipDialog({
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" variant="gold" disabled={confirmar.isPending} className="flex-1">
+          <Button type="submit" variant="success" disabled={confirmar.isPending} className="flex-1">
             {confirmar.isPending ? 'Confirmando...' : 'Confirmar Recepción'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={confirmar.isPending}>
@@ -322,7 +322,7 @@ function getTrasladoColumns(
               </Button>
             )}
             {puedeConfirmar && (
-              <Button size="sm" variant="gold" onClick={() => onConfirmar(t)}>
+              <Button size="sm" variant="success" onClick={() => onConfirmar(t)}>
                 Confirmar
               </Button>
             )}
@@ -330,7 +330,7 @@ function getTrasladoColumns(
               <>
                 <Button
                   size="sm"
-                  variant="gold"
+                  variant="success"
                   onClick={() => onGestionar(t.id, 'aprobar')}
                   disabled={gestionando}
                 >
@@ -434,7 +434,7 @@ export function TrasladoChipsPage() {
         Icon={ArrowRightLeft}
         title="Traslados de Chips"
         description="Stock de chips por tienda y gestión de traslados."
-        actions={<Button variant="gold" onClick={() => setDialogCrear(true)}>+ Trasladar Chips</Button>}
+        actions={<Button variant="default" onClick={() => setDialogCrear(true)}>+ Trasladar Chips</Button>}
       />
 
       <section>

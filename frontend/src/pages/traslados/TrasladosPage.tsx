@@ -188,10 +188,10 @@ function CrearTrasladoDialog({
     <Dialog open={open} onClose={() => { resetAll(); onClose() }} title="Nuevo Traslado" maxWidth="md">
       {/* Toggle tipo */}
       <div className="flex gap-2 mb-5">
-        <Button type="button" size="sm" variant={tipoItem === 'inventario' ? 'gold' : 'outline'} onClick={() => setTipoItem('inventario')}>
+        <Button type="button" size="sm" variant={tipoItem === 'inventario' ? 'default' : 'outline'} onClick={() => setTipoItem('inventario')}>
           Equipo / Accesorio
         </Button>
-        <Button type="button" size="sm" variant={tipoItem === 'chip' ? 'gold' : 'outline'} onClick={() => setTipoItem('chip')}>
+        <Button type="button" size="sm" variant={tipoItem === 'chip' ? 'default' : 'outline'} onClick={() => setTipoItem('chip')}>
           Chips
         </Button>
       </div>
@@ -249,7 +249,7 @@ function CrearTrasladoDialog({
           </div>
           {mutError && <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al crear traslado.'}</p>}
           <div className="flex gap-3 pt-2">
-            <Button type="submit" variant="gold" disabled={crear.isPending} className="flex-1">
+            <Button type="submit" variant="default" disabled={crear.isPending} className="flex-1">
               {crear.isPending ? 'Creando...' : 'Crear Traslado'}
             </Button>
             <Button type="button" variant="outline" onClick={() => { resetAll(); onClose() }} disabled={crear.isPending}>Cancelar</Button>
@@ -309,7 +309,7 @@ function CrearTrasladoDialog({
           </div>
           {chipError && <p className="text-kyro-danger text-sm">{chipError}</p>}
           <div className="flex gap-3 pt-2">
-            <Button variant="gold" onClick={handleSubmitChip} disabled={crearChip.isPending} className="flex-1">
+            <Button variant="default" onClick={handleSubmitChip} disabled={crearChip.isPending} className="flex-1">
               {crearChip.isPending ? 'Creando...' : 'Crear Traslado'}
             </Button>
             <Button variant="outline" onClick={() => { resetAll(); onClose() }} disabled={crearChip.isPending}>Cancelar</Button>
@@ -390,7 +390,7 @@ function ConfirmarDialog({
           <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al confirmar.'}</p>
         )}
         <div className="flex gap-3 pt-2">
-          <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
+          <Button type="submit" variant="success" disabled={isPending} className="flex-1">
             {isPending ? 'Confirmando...' : 'Confirmar Recepción'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
@@ -459,7 +459,7 @@ function ConfirmarChipDialog({
           <p className="text-kyro-danger text-sm">{mutError.response?.data?.message ?? 'Error al confirmar.'}</p>
         )}
         <div className="flex gap-3 pt-2">
-          <Button type="submit" variant="gold" disabled={confirmar.isPending} className="flex-1">
+          <Button type="submit" variant="success" disabled={confirmar.isPending} className="flex-1">
             {confirmar.isPending ? 'Confirmando...' : 'Confirmar Recepción'}
           </Button>
           <Button type="button" variant="outline" onClick={onClose} disabled={confirmar.isPending}>Cancelar</Button>
@@ -521,14 +521,14 @@ function getEquiposColumns(
               <Button size="sm" variant="glassInfo" onClick={() => onConstancia(t)}>Constancia</Button>
             )}
             {puedeConfirmar && (
-              <Button size="sm" variant="gold" onClick={() => onConfirmar(t)}>Confirmar</Button>
+              <Button size="sm" variant="success" onClick={() => onConfirmar(t)}>Confirmar</Button>
             )}
             {puedeConfirmar && t.codigo_lote && (
-              <Button size="sm" variant="gold" onClick={() => onConfirmarLote(t)}>Confirmar lote</Button>
+              <Button size="sm" variant="success" onClick={() => onConfirmarLote(t)}>Confirmar lote</Button>
             )}
             {puedeAprobarRechazar && (
               <>
-                <Button size="sm" variant="gold" onClick={() => onGestionar(t.id, 'aprobar')} disabled={gestionando}>Aprobar</Button>
+                <Button size="sm" variant="success" onClick={() => onGestionar(t.id, 'aprobar')} disabled={gestionando}>Aprobar</Button>
                 <Button size="sm" variant="destructive" onClick={() => onGestionar(t.id, 'rechazar')} disabled={gestionando}>Rechazar</Button>
               </>
             )}
@@ -595,11 +595,11 @@ function getChipsColumns(
               <Button size="sm" variant="glassInfo" onClick={() => onConstancia(t)}>Constancia</Button>
             )}
             {puedeConfirmar && (
-              <Button size="sm" variant="gold" onClick={() => onConfirmar(t)}>Confirmar</Button>
+              <Button size="sm" variant="success" onClick={() => onConfirmar(t)}>Confirmar</Button>
             )}
             {puedeAprobarRechazar && (
               <>
-                <Button size="sm" variant="gold" onClick={() => onGestionar(t.id, 'aprobar')} disabled={gestionando}>Aprobar</Button>
+                <Button size="sm" variant="success" onClick={() => onGestionar(t.id, 'aprobar')} disabled={gestionando}>Aprobar</Button>
                 <Button size="sm" variant="destructive" onClick={() => onGestionar(t.id, 'rechazar')} disabled={gestionando}>Rechazar</Button>
               </>
             )}
@@ -766,7 +766,7 @@ export function TrasladosPage() {
         title="Traslados"
         description="Gestión de traslados de equipos, accesorios y chips entre tiendas."
         actions={
-          <Button variant="gold" onClick={() => setDialogCrear(true)}>
+          <Button variant="default" onClick={() => setDialogCrear(true)}>
             + Nuevo Traslado
           </Button>
         }
@@ -781,7 +781,7 @@ export function TrasladosPage() {
           onClick={() => setSeccion('equipos')}
           className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
             seccion === 'equipos'
-              ? 'bg-kyro-gold/10 text-kyro-gold border border-kyro-gold/30'
+              ? 'bg-kyro-indigo/10 text-kyro-indigo border border-kyro-indigo/30'
               : 'text-kyro-muted hover:text-kyro-body'
           }`}
         >
@@ -792,7 +792,7 @@ export function TrasladosPage() {
           onClick={() => setSeccion('chips')}
           className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
             seccion === 'chips'
-              ? 'bg-kyro-gold/10 text-kyro-gold border border-kyro-gold/30'
+              ? 'bg-kyro-indigo/10 text-kyro-indigo border border-kyro-indigo/30'
               : 'text-kyro-muted hover:text-kyro-body'
           }`}
         >
