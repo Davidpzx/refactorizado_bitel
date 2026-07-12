@@ -70,9 +70,9 @@ function FormSection({
   title: string; icon: ReactNode; children: ReactNode
 }) {
   return (
-    <section className="kyro-card p-5">
+    <section className="kyro-card rounded-[18px] p-5">
       <div className="mb-4 flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold">
+        <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-indigo">
           {icon}
         </span>
         <h2 className="text-[0.78rem] font-bold uppercase tracking-[0.12em] text-kyro-text">
@@ -151,7 +151,7 @@ export function ConfiguracionPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader
         title="Configuración de la Empresa"
         description="Datos de identificación fiscal y contacto"
@@ -230,7 +230,7 @@ export function ConfiguracionPage() {
               {(updateMutation.error as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al guardar.'}
             </p>
           )}
-          <Button type="submit" variant="gold" disabled={updateMutation.isPending || !isDirty} className="gap-2">
+          <Button type="submit" disabled={updateMutation.isPending || !isDirty} className="gap-2">
             <Save size={15} />
             {updateMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
@@ -272,12 +272,11 @@ export function ConfiguracionPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-kyro border-2 border-dashed border-kyro-border py-10 text-kyro-muted">
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-kyro-border p-6 text-kyro-muted">
             <Upload size={32} />
             <p className="text-sm">Sin logo configurado</p>
             <Button
               type="button"
-              variant="gold"
               onClick={() => fileRef.current?.click()}
               disabled={logoMutation.isPending}
             >

@@ -69,7 +69,7 @@ export function MonitorFraudePanel() {
         )}
       </div>
 
-      <div className="kyro-card overflow-hidden border-t-2 border-t-kyro-danger/50">
+      <div className="kyro-card overflow-hidden rounded-[18px] border-t-2 border-t-kyro-danger/50">
         {isLoading && <p className="px-4 py-10 text-center text-gray-400">Cargando alertas...</p>}
 
         {isError && (
@@ -148,7 +148,7 @@ export function MonitorFraudePanel() {
             </div>
 
             {hayOcultas && (
-              <div className="border-t border-kyro-danger/20 bg-black/20 p-3 text-center">
+              <div className="border-t border-kyro-danger/20 bg-kyro-elevated/40 p-3 text-center">
                 <Button variant="outline" onClick={() => setExpandido(v => !v)}>
                   {expandido ? (
                     <>Mostrar menos <CaretUp size={14} weight="bold" /></>

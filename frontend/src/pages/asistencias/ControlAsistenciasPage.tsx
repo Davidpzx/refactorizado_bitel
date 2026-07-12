@@ -105,7 +105,7 @@ export function ControlAsistenciasPage() {
         <span className="ml-auto">Clic en una celda para alternar excepcion de medio tiempo (½T)</span>
       </div>
 
-      <div className="kyro-card overflow-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+      <div className="kyro-card overflow-auto rounded-[18px]" style={{ maxHeight: 'calc(100vh - 260px)' }}>
         {isLoading && <p className="p-6 text-center text-kyro-subtle">Cargando matriz...</p>}
         {!isLoading && (data?.tiendas.length ?? 0) === 0 && (
           <p className="p-6 text-center text-kyro-subtle">Sin agentes activos para mostrar.</p>
@@ -130,7 +130,7 @@ export function ControlAsistenciasPage() {
                   </tr>
                   {t.agentes.map(agente => (
                     <tr key={agente.id} className="border-t border-kyro-border">
-                      <td className="sticky left-0 z-10 bg-kyro-panel px-2 py-1 font-semibold text-kyro-text">{agente.nombre}</td>
+                      <td className="sticky left-0 z-10 bg-kyro-elevated px-2 py-1 font-semibold text-kyro-text">{agente.nombre}</td>
                       {dias.map(d => {
                         const c = agente.dias[String(d)]
                         if (!c) return <td key={d} />

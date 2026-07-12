@@ -129,9 +129,9 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
   return (
     <form className="space-y-4" onSubmit={handleSubmit} noValidate>
       {err && <p ref={errorRef} className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs font-medium text-kyro-danger">{err}</p>}
-      <section className="kyro-card p-4">
+      <section className="kyro-card rounded-[18px] p-5">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><Store size={15} /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-indigo"><Store size={15} /></span>
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Identificación</h3>
             <p className="text-xs text-kyro-muted">Código y nombre visible de la sucursal.</p>
@@ -165,9 +165,9 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
         </div>
       </section>
 
-      <section className="kyro-card p-4">
+      <section className="kyro-card rounded-[18px] p-5">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><MapPin size={15} /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-indigo"><MapPin size={15} /></span>
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Ubicación y estado</h3>
             <p className="text-xs text-kyro-muted">
@@ -236,14 +236,14 @@ function TiendaForm({ tienda, onSuccess, onCancel }: { tienda?: Tienda; onSucces
             {errores.radioPermitido && <p className="mt-1 text-[11px] text-kyro-danger">{errores.radioPermitido}</p>}
           </div>
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
-            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
+            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-indigo" />
             Tienda activa
           </label>
         </div>
       </section>
       <div className="flex flex-col-reverse gap-2 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" variant="gold" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar tienda'}</Button>
+        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar tienda'}</Button>
       </div>
     </form>
   )
@@ -312,7 +312,7 @@ export function TiendasPage() {
         title="Tiendas"
         description="Catálogo de sucursales registradas en el sistema."
         Icon={Store}
-        actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
+        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nueva tienda</Button>}
       />
 
       <ListToolbar description="Busca sucursales por código o nombre.">
@@ -324,11 +324,12 @@ export function TiendasPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="gold" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
+        <Button onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1) }}>Limpiar</Button>}
       </ListToolbar>
 
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card relative overflow-hidden rounded-[18px]">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-indigo/60 to-transparent" />
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -342,7 +343,7 @@ export function TiendasPage() {
               {isLoading && <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
               {!isLoading && tiendas.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-kyro-muted">Sin tiendas registradas</td></tr>}
               {tiendas.map(t => (
-                <tr key={t.id} className="transition-colors hover:bg-kyro-elevated">
+                <tr key={t.id} className="transition-colors hover:bg-kyro-indigo/[0.04]">
                   <td className="px-4 py-3 font-mono font-bold text-kyro-info">{t.codigo}</td>
                   <td className="px-4 py-3 font-medium text-kyro-text">{t.nombre}</td>
                   <td className="px-4 py-3 text-xs text-kyro-muted">{t.direccion ?? '—'}</td>
@@ -360,8 +361,8 @@ export function TiendasPage() {
                           className={
                             'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-40 disabled:pointer-events-none ' +
                             (tieneGps
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-                              : 'border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-400')
+                              ? 'border-kyro-success/30 bg-kyro-success/10 text-kyro-success hover:bg-kyro-success/20'
+                              : 'border-kyro-info/30 bg-kyro-info/10 text-kyro-info hover:bg-kyro-info/20')
                           }
                           title={tieneGps ? `Ubicación: ${t.latitud}, ${t.longitud} — actualizar` : 'Añadir ubicación'}
                         >

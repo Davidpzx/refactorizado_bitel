@@ -8,7 +8,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { AsistenciasTabs } from './AsistenciasTabs'
 import { MonitorFraudePanel } from './MonitorFraudePanel'
 import { ListToolbar } from '../../components/ListToolbar'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { useAgentesSelect } from '../../hooks/useAgentesSelect'
@@ -268,7 +268,7 @@ export function AsistenciasPage() {
           <Download size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
         </Button>
         {usuario?.rol === 'admin' && (
-          <Button variant="gold" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
+          <Button variant="glassIndigo" size="sm" onClick={exportarNeiry} disabled={exportandoNeiry}>
             <Download size={14} /> {exportandoNeiry ? 'Exportando…' : 'Plantilla Neiry'}
           </Button>
         )}
@@ -321,7 +321,7 @@ export function AsistenciasPage() {
           </div>
           <div className="mt-3 flex gap-2">
             <Button
-              variant="gold"
+              variant="default"
               disabled={!manual.agente_id || !manual.motivo || manual.motivo.length < 5 || registrarManual.isPending}
               onClick={() => registrarManual.mutate()}
             >
@@ -363,7 +363,7 @@ export function AsistenciasPage() {
               </select>
             </div>
             <Button
-              variant="gold"
+              variant="default"
               disabled={!exc.agente_id || registrarExcepcion.isPending}
               onClick={() => registrarExcepcion.mutate()}
             >
@@ -405,7 +405,7 @@ export function AsistenciasPage() {
               </Select>
             </div>
           )}
-              <Button variant="gold" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
+              <Button variant="default" onClick={() => { setApplied({ ...filters }); setPage(1) }}>Buscar</Button>
           <Button variant="outline" onClick={() => {
             const reset = { fecha_desde: new Date().toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), agente_id: '' }
             setFilters(reset); setApplied(reset); setPage(1)
@@ -413,18 +413,21 @@ export function AsistenciasPage() {
         </div>
       </ListToolbar>
 
-      {/* KPI Cards */}
+      {/* KPI Cards (DIS-FX-26): presentes success · ausentes danger · tardanzas
+          warning · pendientes info. Sin oro (nada monetario). El endpoint sólo
+          expone conteos puntuales — sin series ni mes previo, no se inventan
+          sparkline ni delta. */}
       {kpis && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard title="Presentes" value={kpis.presentes} accent="#22c55e" valueColorClass="text-kyro-success" icon={<UserCheck size={13} />} />
-          <StatCard title="Ausentes" value={kpis.ausentes} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<UserX size={13} />} />
-          <StatCard title="Tardanzas" value={kpis.tardanzas} accent="#f59e0b" valueColorClass="text-kyro-warning" icon={<AlertCircle size={13} />} />
-          <StatCard title="Pend. Revisión" value={kpis.pendientes_revision} accent="#0d6efd" valueColorClass="text-kyro-info" icon={<Clock size={13} />} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard title="Presentes" value={kpis.presentes} tone="success" accent="var(--color-kyro-success)" icon={<UserCheck size={18} />} subtitle="Marcaron ingreso hoy" />
+          <KpiCard title="Ausentes" value={kpis.ausentes} tone="danger" accent="var(--color-kyro-danger)" icon={<UserX size={18} />} subtitle="Sin registro en el día" />
+          <KpiCard title="Tardanzas" value={kpis.tardanzas} accent="var(--color-kyro-warning)" icon={<AlertCircle size={18} />} subtitle="Ingreso fuera de hora" className="[&_.tabular-nums]:text-kyro-warning" />
+          <KpiCard title="Pend. Revisión" value={kpis.pendientes_revision} tone="info" accent="var(--color-kyro-info)" icon={<Clock size={18} />} subtitle="Requieren aprobación" />
         </div>
       )}
 
       {/* Tabla */}
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card overflow-hidden rounded-[18px]">
         <div className="flex items-center justify-between border-b border-kyro-border p-4">
           <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros`}
@@ -531,7 +534,7 @@ export function AsistenciasPage() {
 
       {editando && editForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="kyro-card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6">
+          <div className="kyro-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[20px] p-6">
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-kyro-text">Editar asistencia de {editando.nombres}</h3>
@@ -589,7 +592,7 @@ export function AsistenciasPage() {
               </p>
             )}
             <div className="mt-5 flex gap-3">
-              <Button variant="gold" className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
+              <Button variant="default" className="flex-1" disabled={editarRegistro.isPending} onClick={() => editarRegistro.mutate()}>
                 {editarRegistro.isPending ? 'Recalculando...' : 'Guardar y recalcular'}
               </Button>
               <Button variant="outline" onClick={() => { setEditando(null); setEditForm(null) }}>Cancelar</Button>

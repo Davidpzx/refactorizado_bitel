@@ -144,9 +144,9 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
   return (
     <form className="space-y-4" onSubmit={handleSubmit} noValidate>
       {err && <p ref={errorRef} className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs font-medium text-kyro-danger">{err}</p>}
-      <section className="kyro-card p-4">
+      <section className="kyro-card rounded-[18px] p-5">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><UserRound size={15} /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-indigo"><UserRound size={15} /></span>
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Datos de la cuenta</h3>
             <p className="text-xs text-kyro-muted">Identidad y credenciales de acceso.</p>
@@ -192,9 +192,9 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
         </div>
       </section>
 
-      <section className="kyro-card p-4">
+      <section className="kyro-card rounded-[18px] p-5">
         <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-gold"><ShieldCheck size={15} /></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-kyro bg-kyro-indigo/15 text-kyro-indigo"><ShieldCheck size={15} /></span>
           <div>
             <h3 className="text-sm font-semibold text-kyro-text">Acceso y permisos</h3>
             <p className="text-xs text-kyro-muted">Rol, tienda asignada y módulos habilitados.</p>
@@ -246,11 +246,11 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
             </div>
           )}
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
-            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
+            <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="h-4 w-4 accent-kyro-indigo" />
             Usuario activo
           </label>
           <label className="flex cursor-pointer items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body">
-            <input type="checkbox" checked={form.tiene_bcp} onChange={e => setForm(f => ({ ...f, tiene_bcp: e.target.checked }))} className="h-4 w-4 accent-kyro-gold" />
+            <input type="checkbox" checked={form.tiene_bcp} onChange={e => setForm(f => ({ ...f, tiene_bcp: e.target.checked }))} className="h-4 w-4 accent-kyro-indigo" />
             Módulo BCP
           </label>
           <div>
@@ -268,7 +268,7 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
       </section>
       <div className="flex flex-col-reverse gap-2 border-t border-kyro-border pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" variant="gold" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar usuario'}</Button>
+        <Button type="submit" disabled={save.isPending}>{save.isPending ? 'Guardando...' : 'Guardar usuario'}</Button>
       </div>
     </form>
   )
@@ -302,7 +302,7 @@ export function UsuariosPage() {
         title="Usuarios del Sistema"
         description="Gestión de accesos y roles."
         Icon={Users}
-        actions={<Button variant="gold" onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nuevo usuario</Button>}
+        actions={<Button onClick={() => { setEditando(undefined); setDialogOpen(true) }}><Plus size={15} /> Nuevo usuario</Button>}
       />
 
       <ListToolbar description="Busca cuentas por nombre o correo electrónico.">
@@ -314,11 +314,12 @@ export function UsuariosPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="gold" onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
+        <Button onClick={() => { setQuery(search); setPage(1) }}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1) }}>Limpiar</Button>}
       </ListToolbar>
 
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card relative overflow-hidden rounded-[18px]">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-indigo/60 to-transparent" />
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -332,14 +333,21 @@ export function UsuariosPage() {
               {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Cargando...</td></tr>}
               {!isLoading && usuarios.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-kyro-muted">Sin resultados</td></tr>}
               {usuarios.map(u => (
-                <tr key={u.id} className="transition-colors hover:bg-kyro-elevated">
+                <tr key={u.id} className="transition-colors hover:bg-kyro-indigo/[0.04]">
                   <td className="px-4 py-3 text-xs text-kyro-muted">#{u.id}</td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-kyro-text">{u.nombre}</p>
-                    <p className="text-xs text-kyro-muted">{u.email}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kyro-indigo/15 text-xs font-semibold uppercase text-kyro-indigo">
+                        {u.nombre.trim().charAt(0) || '?'}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-medium text-kyro-text">{u.nombre}</p>
+                        <p className="truncate text-xs text-kyro-muted">{u.email}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={u.rol === 'admin' ? 'gold' : 'cyan'}>{u.rol}</Badge>
+                    <Badge variant={u.rol === 'admin' ? 'indigo' : 'cyan'}>{u.rol}</Badge>
                   </td>
                   <td className="px-4 py-3">
                     {u.tienda_id

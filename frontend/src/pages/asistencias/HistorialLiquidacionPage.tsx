@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { PageHeader } from '../../components/PageHeader'
 import { AsistenciasTabs } from './AsistenciasTabs'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { Select } from '../../components/ui/select'
 import { Label } from '../../components/ui/label'
 import { Clock, ChartLineDown as TrendingDown, ShieldSlash as ShieldOff, CurrencyDollar as DollarSign } from '@phosphor-icons/react'
@@ -112,8 +112,9 @@ export function HistorialLiquidacionPage() {
 
       {data && (
         <>
-          <section className="kyro-card relative overflow-hidden p-5">
-            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-gold via-kyro-indigo to-transparent" />
+          <section className="kyro-card relative overflow-hidden rounded-[18px] p-5">
+            {/* DIS-FX-27: gradiente decorativo oro-índigo eliminado → hairline índigo neutro. */}
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-kyro-indigo/50 to-transparent" />
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-kyro-text">{data.agente.nombre}</p>
@@ -123,14 +124,17 @@ export function HistorialLiquidacionPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard title="Tardanza total" value={`${data.resumen.total_tardanzas_min} min`} accent="#f59e0b" valueColorClass="text-kyro-warning" icon={<Clock size={14} />} />
-            <StatCard title="Deuda acumulada" value={`${data.resumen.deuda_acumulada_min} min`} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<TrendingDown size={14} />} />
-            <StatCard title="Comodines usados" value={String(data.resumen.comodines_usados)} accent="#0d6efd" valueColorClass="text-kyro-info" icon={<ShieldOff size={14} />} />
-            <StatCard title="Descuento total" value={`S/ ${Number(data.resumen.total_descuento_soles).toFixed(2)}`} accent="#ef4444" valueColorClass="text-kyro-danger" icon={<DollarSign size={14} />} />
+          {/* Resumen de liquidación (DIS-FX-27). Oro reservado al único monto
+              protagonista (descuento total); tardanza warning, deuda danger,
+              comodines info. La respuesta no expone series → sin sparkline/delta. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard title="Tardanza total" value={`${data.resumen.total_tardanzas_min} min`} accent="var(--color-kyro-warning)" icon={<Clock size={18} />} className="[&_.tabular-nums]:text-kyro-warning" />
+            <KpiCard title="Deuda acumulada" value={`${data.resumen.deuda_acumulada_min} min`} tone="danger" accent="var(--color-kyro-danger)" icon={<TrendingDown size={18} />} />
+            <KpiCard title="Comodines usados" value={data.resumen.comodines_usados} tone="info" accent="var(--color-kyro-info)" icon={<ShieldOff size={18} />} />
+            <KpiCard title="Descuento total" value={Number(data.resumen.total_descuento_soles)} monetary tone="gold" icon={<DollarSign size={18} />} subtitle="Total a descontar del mes" />
           </div>
 
-          <section className="kyro-card overflow-hidden">
+          <section className="kyro-card overflow-hidden rounded-[18px]">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="kyro-table-head">
@@ -179,7 +183,7 @@ export function HistorialLiquidacionPage() {
                             ? <span className="text-xs text-kyro-warning">Corrido</span>
                             : <span className="text-xs text-kyro-muted">Regular</span>}
                         </td>
-                        <td className={`px-4 py-3 text-right font-mono font-bold ${Number(dia.descuento_soles) > 0 ? 'text-kyro-danger' : 'text-kyro-muted'}`}>
+                        <td className={`kyro-money px-4 py-3 text-right font-bold ${Number(dia.descuento_soles) > 0 ? 'text-kyro-danger' : 'text-kyro-muted'}`}>
                           S/ {Number(dia.descuento_soles).toFixed(2)}
                         </td>
                       </tr>

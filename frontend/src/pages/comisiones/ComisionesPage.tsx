@@ -14,6 +14,7 @@ import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
+import { KpiCard } from '../../components/ui/KpiCard'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ const TIPO_OPTIONS = [
   { value: '', label: 'Todos', tone: 'indigo' as const },
   { value: 'POSTPAGO', label: 'Postpago', tone: 'info' as const },
   { value: 'PREPAGO', label: 'Prepago', tone: 'success' as const },
-  { value: 'EQUIPO', label: 'Equipo', tone: 'gold' as const },
+  { value: 'EQUIPO', label: 'Equipo', tone: 'indigo' as const },
   { value: 'ACCESORIO', label: 'Accesorio', tone: 'warning' as const },
   { value: 'OTROS', label: 'Otros', tone: 'indigo' as const },
 ]
@@ -175,7 +176,7 @@ function PlanForm({ plan, onSuccess, onCancel }: { plan?: ComisionPlan; onSucces
       {err && <p className="text-kyro-danger text-sm">{err.response?.data?.message ?? 'Error al guardar.'}</p>}
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
+        <Button type="submit" disabled={isPending} className="flex-1">
           {isPending ? 'Guardando...' : plan ? 'Actualizar plan' : 'Crear plan'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
@@ -332,7 +333,7 @@ function GananciasOperativasSection() {
   )
 
   return (
-    <section id="ganancias-operativas" className="kyro-card relative overflow-hidden border-t-4 border-t-emerald-400 p-5">
+    <section id="ganancias-operativas" className="kyro-card relative overflow-hidden rounded-[18px] border-t-4 border-t-emerald-400 p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-400">
@@ -342,7 +343,7 @@ function GananciasOperativasSection() {
             Guarda las tarifas actuales (no modifica el historial) o usa Recálculo Masivo para corregir períodos pasados.
           </p>
         </div>
-        <Button variant="gold" size="sm" disabled={guardar.isPending || isLoading} onClick={() => { setMsg(null); guardar.mutate() }}>
+        <Button size="sm" disabled={guardar.isPending || isLoading} onClick={() => { setMsg(null); guardar.mutate() }}>
           {guardar.isPending ? 'Guardando...' : 'Guardar Tarifas'}
         </Button>
       </div>
@@ -417,7 +418,7 @@ function EstrategiaComisionesSection() {
   ) => {
     const Icon = color.icon
     return (
-      <section className={`relative overflow-hidden rounded-kyro border-t-4 ${color.border} bg-kyro-elevated/40 p-4`}>
+      <section className={`relative overflow-hidden rounded-[18px] border-t-4 ${color.border} bg-kyro-elevated/40 p-5`}>
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h4 className={`flex items-center gap-1.5 text-sm font-semibold ${color.text}`}>
@@ -439,7 +440,7 @@ function EstrategiaComisionesSection() {
             </div>
           ))}
         </div>
-        <Button variant="gold" className="mt-3 w-full" disabled={guardarProductividad.isPending}
+        <Button className="mt-3 w-full" disabled={guardarProductividad.isPending}
           onClick={() => guardarProductividad.mutate({ tipo, rangos })}>
           Guardar {tipo}
         </Button>
@@ -453,7 +454,7 @@ function EstrategiaComisionesSection() {
     const color = SERVICIO_COLORS[tipo]
     const Icon = color.icon
     return (
-      <section key={tipo} className={`relative overflow-hidden rounded-kyro border-t-4 ${color.border} bg-kyro-elevated/40 p-4`}>
+      <section key={tipo} className={`relative overflow-hidden rounded-[18px] border-t-4 ${color.border} bg-kyro-elevated/40 p-5`}>
         <div className="mb-3 flex items-center justify-between">
           <h4 className={`flex items-center gap-1.5 text-sm font-semibold uppercase ${color.text}`}>
             <Icon size={15} /> {tipo} — por monto
@@ -473,7 +474,7 @@ function EstrategiaComisionesSection() {
           ))}
         </div>
         <p className="mt-2 text-[11px] text-kyro-muted">El sistema evaluará el monto exacto de la operación y aplicará la ganancia del rango que corresponda.</p>
-        <Button variant="gold" className="mt-3 w-full" disabled={guardarServicio.isPending}
+        <Button className="mt-3 w-full" disabled={guardarServicio.isPending}
           onClick={() => guardarServicio.mutate({ tipo_servicio: tipo, rangos })}>
           Guardar {tipo.toUpperCase()}
         </Button>
@@ -482,7 +483,7 @@ function EstrategiaComisionesSection() {
   }
 
   return (
-    <section id="estrategia-comisiones" className="kyro-card relative overflow-hidden p-5">
+    <section id="estrategia-comisiones" className="kyro-card relative overflow-hidden rounded-[18px] p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
         <Sliders size={16} className="text-kyro-info" /> Estrategia de Comisiones
       </h3>
@@ -577,14 +578,40 @@ export function ComisionesPage() {
           <Button variant="glassIndigo" onClick={() => scrollToId('estrategia-comisiones')}>
             <Pencil size={15} className="mr-2" /> Estrategia y rangos
           </Button>
-          <Button variant="glassWarning" onClick={() => setModal('recalcular')}>
+          <Button variant="gold" onClick={() => setModal('recalcular')}>
             <RefreshCw size={15} className="mr-2" /> Recálculo masivo
           </Button>
-          <Button variant="gold" onClick={() => setModal('create')}>
+          <Button onClick={() => setModal('create')}>
             <Plus size={15} className="mr-2" /> Nuevo plan
           </Button>
         </div>
       </PageHeader>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard
+          title="Comisión proyectada"
+          value="—"
+          monetary
+          tone="gold"
+          icon={<Coins size={18} />}
+          subtitle="El API actual no proporciona la proyección"
+        />
+        <KpiCard
+          title="Planes activos"
+          value={planes.length}
+          loading={isLoading}
+          tone="indigo"
+          icon={<PhoneIcon size={18} />}
+          subtitle="Planes del catálogo filtrado"
+        />
+        <KpiCard
+          title="Variación mensual"
+          value="—"
+          tone="neutral"
+          icon={<TrendingUp size={18} />}
+          subtitle="Sin comparación mensual en el API"
+        />
+      </div>
 
       {/* Filtro */}
       <ListToolbar description="Filtra el catálogo por familia de servicio">
@@ -602,7 +629,7 @@ export function ComisionesPage() {
       </ListToolbar>
 
       {/* Tabla */}
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card overflow-hidden rounded-[18px]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="kyro-table-head">

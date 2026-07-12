@@ -82,6 +82,11 @@ export function QrDisplayPage() {
   const ttlLocal = Math.max(0, (data?.expires_in ?? 5) - segundosTranscurridos)
 
   return (
+    /* DIS-FX-28 — decisión de paridad: pantalla de KIOSCO (monitor de tienda que
+       proyecta el QR en vivo). Igual que el terminal, no sigue el theme claro/oscuro
+       de la app: se mantiene oscura con literales `zinc` para que se vea idéntica en
+       cualquier contexto — esa consistencia ES la paridad. El rojo es el acento
+       semántico "en vivo/atención"; no hay oro que reclasificar aquí. */
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-6 py-8 gap-8">
 
       {/* Cabecera */}
