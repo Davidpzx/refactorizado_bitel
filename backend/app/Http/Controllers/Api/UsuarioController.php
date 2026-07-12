@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\Permisos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -47,6 +48,15 @@ class UsuarioController extends Controller
             'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
         ]);
 
+        // Plan 16: el gerente opera el negocio pero no crea/promueve administradores
+        // (solo el propio administrador puede hacerlo).
+        if (Usuario::normalizarRol($data['rol']) === Usuario::ROL_ADMINISTRADOR
+            && ! Permisos::puede($request->user(), 'crear_administradores')) {
+            return response()->json([
+                'error' => 'No tienes permisos para crear usuarios administradores.',
+            ], 403);
+        }
+
         $data['password'] = Hash::make($data['password']);
         $data['activo']   = $data['activo'] ?? true;
 
@@ -71,6 +81,15 @@ class UsuarioController extends Controller
             'nombre.regex'     => 'El nombre no debe contener números ni símbolos.',
             'tienda_id.exists' => 'Selecciona una tienda válida de la lista.',
         ]);
+
+        // Plan 16: el gerente opera el negocio pero no crea/promueve administradores.
+        if (array_key_exists('rol', $data)
+            && Usuario::normalizarRol($data['rol']) === Usuario::ROL_ADMINISTRADOR
+            && ! Permisos::puede($request->user(), 'crear_administradores')) {
+            return response()->json([
+                'error' => 'No tienes permisos para promover usuarios a administrador.',
+            ], 403);
+        }
 
         if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
