@@ -219,13 +219,25 @@ class AsistenciaPresenciaTest extends TestCase
             ->assertJsonPath('data.0.incidencias_dia', 1);
     }
 
-    public function test_presencia_exige_rol_admin(): void
+    public function test_presencia_prohibida_al_agente(): void
     {
-        $tienda = Usuario::factory()->create(['rol' => 'tienda']);
+        // Plan 16 (R4): presencia es SOLO LECTURA para admin/gerente/jefe_tienda;
+        // el agente de ventas no accede. (jefe_tienda 200 se cubre en R6 QA.)
+        $agente = Usuario::factory()->agenteVentas()->create();
 
-        $this->actingAs($tienda, 'sanctum')
+        $this->actingAs($agente, 'sanctum')
             ->getJson('/api/v1/asistencias-admin/presencia')
             ->assertStatus(403);
+    }
+
+    public function test_presencia_visible_al_jefe_tienda(): void
+    {
+        // Plan 16 (R4): reetiquetado de lectura — el jefe_tienda VE la presencia.
+        $jefeTienda = Usuario::factory()->jefeTienda('T01')->create();
+
+        $this->actingAs($jefeTienda, 'sanctum')
+            ->getJson('/api/v1/asistencias-admin/presencia')
+            ->assertOk();
     }
 
     public function test_marcar_salida_borra_la_fila_de_presencia(): void

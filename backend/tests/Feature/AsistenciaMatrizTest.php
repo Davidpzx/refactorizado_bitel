@@ -41,13 +41,25 @@ class AsistenciaMatrizTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_no_admin_no_puede_ver_la_matriz(): void
+    public function test_agente_no_puede_ver_la_matriz(): void
     {
-        $tienda = Usuario::factory()->create(['rol' => 'tienda']);
+        // Plan 16 (R4): la matriz es SOLO LECTURA para admin/gerente/jefe_tienda;
+        // el agente de ventas no accede. (El jefe_tienda 200 se cubre en R6 QA.)
+        $agente = Usuario::factory()->agenteVentas()->create();
 
-        $this->actingAs($tienda, 'sanctum')
+        $this->actingAs($agente, 'sanctum')
             ->getJson('/api/v1/asistencias/matriz?mes=2026-07')
             ->assertStatus(403);
+    }
+
+    public function test_jefe_tienda_puede_ver_la_matriz(): void
+    {
+        // Plan 16 (R4): reetiquetado de lectura — el jefe_tienda VE la matriz.
+        $jefeTienda = Usuario::factory()->jefeTienda('T01')->create();
+
+        $this->actingAs($jefeTienda, 'sanctum')
+            ->getJson('/api/v1/asistencias/matriz?mes=2026-07')
+            ->assertOk();
     }
 
     public function test_matriz_agrupa_por_tienda_y_resuelve_estados(): void

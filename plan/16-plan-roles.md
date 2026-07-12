@@ -43,14 +43,16 @@
 
 ## Tickets — Refactor (`refactorizado_bitel`)
 
-| # | Ticket | Alcance | Modelo |
-|---|---|---|---|
-| R1 | Fundación: migración de roles + EnsureRole con jerarquía/alias + helper de permisos + factories/seeders | backend (migración data, middleware, User/Usuario model) — retrocompatible, suite verde | Opus 4.8 |
-| R2 | Matriz de rutas: reetiquetar los `role:` de routes/api.php según la matriz congelada (admin→administrador,gerente; tienda→+jefe_tienda; nuevos grupos agente) + tests 403 por rol | backend routes + tests | Opus 4.8 |
-| R3 | Scoping "solo lo mío" del agente: mis-reportes/mi-historial/sus comisiones/sus tickets filtrados por agente_id del usuario | backend controllers + tests | Sonnet 5 |
-| R4 | Endpoints de asistencia que modifican (manual, photo-action, tokens, autorizar-dispositivo, faltas, corregir horario) a `role:administrador,gerente` + tests | backend + tests | Sonnet 5 |
-| R5 | Frontend: sidebar/rutas por rol (AppLayout + AdminRoute→guards por rol), UsuariosPage con los 4 roles (gerente no crea administradores), ocultar acciones según matriz | frontend | Opus 4.8 |
-| R6 | Login/`auth/me` expone rol nuevo + `agente_id`; QA integral por rol (crear 4 usuarios de prueba, recorrer matriz) | full + tests | Sonnet 5 |
+**Estado: R1–R6 completados ✅ (suite backend 788 passed / 2577 assertions).**
+
+| # | ✔ | Ticket | Alcance | Modelo |
+|---|---|---|---|---|
+| R1 | [x] | Fundación: migración de roles + EnsureRole con jerarquía/alias + helper de permisos + factories/seeders | backend (migración data, middleware, User/Usuario model) — retrocompatible, suite verde | Opus 4.8 |
+| R2 | [x] | Matriz de rutas: reetiquetar los `role:` de routes/api.php según la matriz congelada (admin→administrador,gerente; tienda→+jefe_tienda; nuevos grupos agente) + tests 403 por rol | backend routes + tests | Opus 4.8 |
+| R3 | [x] | Scoping "solo lo mío" del agente: mis-reportes/mi-historial/sus comisiones/sus tickets filtrados por agente_id del usuario | backend controllers + tests | Sonnet 5 |
+| R4 | [x] | Cierre de asistencias: lectura (presencia/listado/matriz/fotos-pendientes/fraude) a `role:administrador,gerente,jefe_tienda`; modificación (manual, photo-action, tokens, dispositivo, faltas, corregir horario) sigue SOLO `administrador,gerente` + tests | backend + tests | Sonnet 5 / Opus 4.8 |
+| R5 | [x] | Frontend: sidebar/rutas por rol (AppLayout + AdminRoute→guards por rol), UsuariosPage con los 4 roles (gerente no crea administradores), ocultar acciones según matriz | frontend | Opus 4.8 |
+| R6 | [x] | Login/`auth/me` expone rol nuevo + `agente_id`; QA integral por rol (RolesR6QAIntegralTest: 4 roles × ~16 endpoints de las 4 secciones) | full + tests | Sonnet 5 / Opus 4.8 |
 
 ## Tickets — Legacy (`sistema-rolando-salas`, producción viva — cambios con doble cuidado)
 

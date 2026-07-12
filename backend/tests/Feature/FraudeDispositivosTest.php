@@ -111,13 +111,25 @@ class FraudeDispositivosTest extends TestCase
             ->assertJsonPath('data.0.dni_duenio_hash', null);
     }
 
-    public function test_no_admin_recibe_403(): void
+    public function test_agente_recibe_403(): void
     {
+        // Plan 16 (R4): el monitor de fraude es SOLO LECTURA para
+        // admin/gerente/jefe_tienda; el agente de ventas no accede.
         $this->alerta();
 
-        $this->actingAs(Usuario::factory()->vendedor()->create(), 'sanctum')
+        $this->actingAs(Usuario::factory()->agenteVentas()->create(), 'sanctum')
             ->getJson(self::URL)
             ->assertStatus(403);
+    }
+
+    public function test_jefe_tienda_puede_ver_fraude(): void
+    {
+        // Plan 16 (R4): reetiquetado de lectura — el jefe_tienda VE el monitor.
+        $this->alerta();
+
+        $this->actingAs(Usuario::factory()->jefeTienda()->create(), 'sanctum')
+            ->getJson(self::URL)
+            ->assertOk();
     }
 
     public function test_invitado_recibe_401(): void

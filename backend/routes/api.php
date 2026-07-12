@@ -477,21 +477,23 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Asistencias (panel admin) ─────────────────────────────────────────────
     // Anticorrupción (plan 16): todo lo que MODIFICA el registro de asistencia
     // (manual, faltas/permisos, corregir horario, aprobar fotos) es SOLO admin/gerente.
+    // Lo de SOLO LECTURA (presencia, listado, matriz, fotos-pendientes, fraude) lo
+    // ve también el jefe_tienda: role:administrador,gerente,jefe_tienda (R4).
     // APP-04 — semáforo de presencia en vivo (agentes en turno + último ping).
-    Route::get('asistencias-admin/presencia',        [AsistenciaPresenciaController::class, 'presencia'])->middleware('role:admin');
-    Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:admin');
+    Route::get('asistencias-admin/presencia',        [AsistenciaPresenciaController::class, 'presencia'])->middleware('role:administrador,gerente,jefe_tienda');
+    Route::get('asistencias',                        [AsistenciaController::class, 'index'])->middleware('role:administrador,gerente,jefe_tienda');
     Route::post('asistencias',                       [AsistenciaController::class, 'registrar'])->middleware('role:administrador,gerente');
     Route::post('asistencias/{id}/aprobar',          [AsistenciaController::class, 'aprobar'])->middleware('role:admin');
     Route::get('asistencias/exportar',               [AsistenciaController::class, 'exportar'])->middleware(['role:administrador,gerente', 'throttle:exports']);
-    Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes'])->middleware('role:admin');
-    Route::get('asistencias/fraude-dispositivos',    [AsistenciaController::class, 'fraudeDispositivos'])->middleware('role:admin');
+    Route::get('asistencias/fotos-pendientes',       [AsistenciaController::class, 'fotosPendientes'])->middleware('role:administrador,gerente,jefe_tienda');
+    Route::get('asistencias/fraude-dispositivos',    [AsistenciaController::class, 'fraudeDispositivos'])->middleware('role:administrador,gerente,jefe_tienda');
     Route::post('asistencias/{id}/photo-action',     [AsistenciaController::class, 'photoAction'])->middleware('role:administrador,gerente');
     Route::get('attendance/qr-stream/{tienda_id}',   [AsistenciaController::class, 'qrStream']);
     Route::get('asistencias/mis-tardanzas',           [AsistenciaController::class, 'misTardanzas']);
     Route::get('asistencias/mi-historial',             [AsistenciaController::class, 'miHistorial']);
     Route::post('asistencias/salvavidas',             [AsistenciaController::class, 'salvavidas']);
     Route::post('asistencias/excepcion',              [AsistenciaController::class, 'registrarExcepcion'])->middleware('role:administrador,gerente');
-    Route::get('asistencias/matriz',                  [AsistenciaController::class, 'matriz'])->middleware('role:admin');
+    Route::get('asistencias/matriz',                  [AsistenciaController::class, 'matriz'])->middleware('role:administrador,gerente,jefe_tienda');
     Route::post('asistencias/excepcion-jornada',      [AsistenciaController::class, 'excepcionJornada'])->middleware('role:administrador,gerente');
     Route::patch('asistencias/{id}',                  [AsistenciaController::class, 'editar'])->middleware('role:administrador,gerente');
     Route::delete('asistencias/{id}',                 [AsistenciaController::class, 'eliminar'])->middleware('role:admin');
