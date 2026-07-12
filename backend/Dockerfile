@@ -10,6 +10,13 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Subida del APK de la app de asistencia (~6-200 MB): los defaults de PHP (2M/8M)
+# rechazan el multipart de /v1/app-terminal/subir. Alineado con el max del validador.
+RUN { \
+        echo 'upload_max_filesize=200M'; \
+        echo 'post_max_size=210M'; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
 COPY . .
 
 RUN composer install --no-dev
