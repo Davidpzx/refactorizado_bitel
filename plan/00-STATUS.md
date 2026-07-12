@@ -248,3 +248,9 @@ Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el b
 - APK v1.0.0 subido via POST /v1/app-terminal/subir con cuenta admin (flujo oficial completo validado). Version endpoint OK, descarga OK, sha256 identico.
 - LINK: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
 - El fix de 200M tambien resolvio de paso el riesgo del APK-borrado-por-redeploy para ESTA vez (se re-subio post-deploy); el riesgo de fondo (storage sin volumen) sigue anotado.
+
+## FIX DEFINITIVO storage efimero (2026-07-12 01:15)
+- Causa raiz del "no se ha publicado ninguna version" que vio el usuario: cada push a GitHub dispara redeploy automatico (webhook), y el contenedor se recrea SIN storage persistente — el APK (y cualquier archivo subido: certificados, fotos) se borraba en cada deploy.
+- Fix: volumen Docker 'refactor_backend_storage_app' montado en /app/storage/app via tabla mount de Dokploy (mismo patron que ya usaba el facturador en este VPS).
+- VERIFICADO con redeploy intencional: el APK sobrevive. sha256 del descargado sigue identico al compilado.
+- Link operativo y ahora estable: https://refactor.kyrocodelabs.cloud/api/v1/app-terminal/descargar
