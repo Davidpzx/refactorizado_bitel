@@ -75,10 +75,13 @@ export function PanelBipayPage() {
   // "Alertas Webhook" (legacy: botón rojo en cabecera) — salta al panel de Cuadre Bitel, sub-tab Auditoría, con el form de webhook abierto.
   const [webhookSignal, setWebhookSignal] = useState(0)
 
-  // Saldo query
+  // Saldo query — el saldo Bipay se mira constantemente durante el día, se
+  // refresca solo cada 60s (sin gastar backend con la pestaña oculta).
   const { data: saldoData, isLoading: loadingSaldo } = useQuery({
     queryKey: ['bipay-saldo'],
     queryFn: () => api.get<SaldoData>('/v1/bipay/saldo').then(r => r.data),
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   // Transacciones

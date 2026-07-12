@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
+import { prefetchRoute, prefetchTopRoutes } from '../routesPrefetch'
 import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug, MagnifyingGlass } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
@@ -183,6 +184,7 @@ function GlobalSearch({
                 key={`${section}-${to}`}
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => prefetchRoute(to)}
                 onClick={() => go(to)}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-kyro-body transition hover:bg-kyro-indigo/[0.08]"
               >
@@ -213,6 +215,20 @@ export function AppLayout() {
     localStorage.setItem(SIDEBAR_SECTIONS_KEY, JSON.stringify(collapsedSections))
   }, [collapsedSections])
 
+  /* Navegación instantánea: en idle (tras el primer paint, sin competir con
+     nada crítico) se precargan los chunks de las páginas más usadas, para que
+     la primera vez que el usuario navegue a ellas no vea el `PageLoader`. */
+  useEffect(() => {
+    const ric = window.requestIdleCallback
+    const cic = window.cancelIdleCallback
+    if (ric && cic) {
+      const idleId = ric(prefetchTopRoutes)
+      return () => cic(idleId)
+    }
+    const timeoutId = window.setTimeout(prefetchTopRoutes, 1500)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
   function toggleSection(section: string) {
     setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
@@ -222,6 +238,7 @@ export function AppLayout() {
     queryFn: () => controlCenterApi.get(),
     staleTime: 25_000,
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     enabled: usuario?.rol === 'admin',
   })
@@ -454,6 +471,7 @@ export function AppLayout() {
                     to={to}
                     end={to === '/' || NAV_ITEMS.some(other => other.to !== to && other.to.startsWith(to + '/'))}
                     title={collapsed ? label : undefined}
+                    onMouseEnter={() => prefetchRoute(to)}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
                       [

@@ -75,7 +75,9 @@ export function AppTerminalDescarga() {
 
       {disponible ? (
         <div className="flex flex-wrap items-center gap-2">
-          <a href={data?.url_descarga} target="_blank" rel="noreferrer">
+          {/* Sin target=_blank: el endpoint responde Content-Disposition attachment —
+              la descarga arranca en la misma pestaña sin dejar una pestaña vacía. */}
+          <a href={data?.url_descarga} download>
             <Button type="button" variant="default" size="sm">
               <DownloadSimple size={14} className="mr-1.5" /> Descargar APK
             </Button>

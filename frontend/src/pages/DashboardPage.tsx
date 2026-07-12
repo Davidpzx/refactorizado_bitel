@@ -180,6 +180,10 @@ export function DashboardPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-kpis', appliedFilters],
     queryFn: () => dashboardApi.kpis(appliedFilters),
+    // El dashboard es la vista que la gerencia mira fija: se refresca sola
+    // cada 60s, pero no gasta backend con la pestaña oculta.
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   const { data: anomaliasData } = useQuery({
@@ -187,6 +191,8 @@ export function DashboardPage() {
     queryFn: () => dashboardApi.anomalias(),
     staleTime: 60_000,
     enabled: usuario?.rol === 'admin',
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   const totales  = data?.totales

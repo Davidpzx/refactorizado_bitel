@@ -199,6 +199,10 @@ export function ComprobantesPage() {
       hasta:             hasta || undefined,
       page,
     }),
+    // Cola viva de comprobantes (SUNAT procesa async): se refresca sola cada
+    // 30s para que el estado (aceptado/rechazado) llegue sin recargar.
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   })
 
   const invalidar = () => qc.invalidateQueries({ queryKey: ['comprobantes-cola'] })

@@ -48,6 +48,10 @@ export function MonitorFraudePanel() {
     queryFn: () => adminPaginasApi.fraudeDispositivos(),
     enabled: esAdmin,
     staleTime: 30_000,
+    // Panel de fraude vivo: se refresca solo cada 60s, sin gastar backend
+    // con la pestaña oculta.
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   if (!esAdmin) return null

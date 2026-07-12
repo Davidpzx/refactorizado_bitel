@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Detrás de Traefik (Dokploy): sin esto url()/redirect() generan http:// y,
+        // p. ej., el link de descarga del APK abre una pestaña que nunca descarga.
+        $middleware->trustProxies(at: '*');
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         $middleware->alias([

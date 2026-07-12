@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
@@ -78,13 +78,38 @@ const IntegradorPage     = lazy(() => import('./pages/admin/IntegradorPage').the
 const ConfiguracionFacturacionPage = lazy(() => import('./pages/admin/ConfiguracionFacturacionPage').then(m => ({ default: m.ConfiguracionFacturacionPage })))
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+      // Al cambiar filtros/página, conserva los datos anteriores mientras
+      // llega la respuesta nueva — evita el parpadeo a "Cargando" en tablas
+      // paginadas/filtradas (equivalente a `keepPreviousData` de v4 en v5).
+      placeholderData: keepPreviousData,
+      // v5 ya trae `refetchOnWindowFocus: true` por defecto; se deja explícito
+      // para que "volver a la pestaña" refresque todo sin depender de un
+      // default implícito que alguien podría cambiar sin darse cuenta.
+      refetchOnWindowFocus: true,
+    },
+  },
 })
 
+/** Skeleton sutil (mismo lenguaje visual que `KpiCard`: barras `animate-pulse`
+ *  sobre `bg-kyro-border`) en vez de un texto "Cargando…" — percibido más
+ *  rápido aunque tarde lo mismo, y no rompe de golpe el layout de la página
+ *  siguiente mientras se resuelve el chunk lazy. */
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-64 text-sm text-gray-400">
-      Cargando...
+    <div className="flex h-64 w-full flex-col gap-3 px-4 py-6" aria-busy="true" aria-label="Cargando">
+      <div className="h-6 w-1/3 animate-pulse rounded-md bg-kyro-border" />
+      <div className="h-4 w-2/3 animate-pulse rounded-md bg-kyro-border/60" />
+      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="h-24 animate-pulse rounded-[18px] bg-kyro-border/60" />
+        <div className="h-24 animate-pulse rounded-[18px] bg-kyro-border/60" />
+        <div className="h-24 animate-pulse rounded-[18px] bg-kyro-border/60" />
+        <div className="h-24 animate-pulse rounded-[18px] bg-kyro-border/60" />
+      </div>
+      <div className="h-40 w-full animate-pulse rounded-xl bg-kyro-border/40" />
     </div>
   )
 }
