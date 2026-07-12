@@ -72,12 +72,15 @@ function UsuarioForm({ usuario, onSuccess, onCancel }: { usuario?: Usuario; onSu
     queryFn: () => api.get<{ data: Array<{ id: number; nombres: string; dni: string; tienda_base: string }> }>('/v1/agentes', {
       params: { per_page: 500 },
     }).then(r => r.data),
+    // Catálogo para <select> del formulario, cambia poco (OPT-14).
+    staleTime: 10 * 60_000,
   })
   const agentes = agentesData?.data ?? []
 
   const { data: tiendasData } = useQuery({
     queryKey: ['tiendas-para-usuarios'],
     queryFn: () => api.get<{ data: TiendaOption[] }>('/v1/tiendas', { params: { per_page: 200 } }).then(r => r.data),
+    staleTime: 10 * 60_000,
   })
   const tiendas = tiendasData?.data ?? []
 

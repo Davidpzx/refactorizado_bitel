@@ -85,6 +85,8 @@ export function BitacoraStockPage() {
   const { data: agentesData } = useQuery({
     queryKey: ['agentes-para-bitacora'],
     queryFn: () => api.get<{ data: AgenteOption[] }>('/v1/agentes', { params: { per_page: 500 } }).then(r => r.data),
+    // Catálogo para <select> de filtros, cambia poco (OPT-14).
+    staleTime: 10 * 60_000,
   })
   const agentes = agentesData?.data ?? []
 

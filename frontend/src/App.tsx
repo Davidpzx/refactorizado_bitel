@@ -4,9 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Capacitor } from '@capacitor/core'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
-import { AppLayout } from './components/AppLayout'
 
-import { LoginPage } from './pages/auth/LoginPage'
+// AppLayout carga 39 iconos Phosphor + ControlCenterPanel: se difiere para no
+// pagar ese peso en rutas públicas (login/terminal/postular/cpe) ni en el
+// primer paint antes de que ProtectedRoute resuelva la sesión (OPT-11).
+const AppLayout = lazy(() => import('./components/AppLayout').then(m => ({ default: m.AppLayout })))
+const LoginPage  = lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 
 // La app nativa (Capacitor) abre directo en el terminal de asistencia, no en el dashboard.
 // Se reescribe la URL antes de que BrowserRouter monte para evitar un parpadeo del dashboard/login.
@@ -91,7 +94,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
 
           {/* ── Rutas públicas ── */}
           <Route path="/terminal"           element={
@@ -105,7 +108,7 @@ export default function App() {
           <Route path="/cpe/:id/imprimir"  element={<Suspense fallback={<PageLoader />}><CpeImpresionPage /></Suspense>} />
 
           <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
+            <Route element={<Suspense fallback={<PageLoader />}><AppLayout /></Suspense>}>
               {/* ── Rutas accesibles a todos los roles autenticados ── */}
               <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
               <Route path="/mi-historial"        element={<Suspense fallback={<PageLoader />}><MiHistorialPage /></Suspense>} />

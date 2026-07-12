@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import jsQR from 'jsqr'
+import type { default as jsQRFn } from 'jsqr'
 import { api } from '../../services/api'
 import { obtenerPosicionActual, type ErrorPermisoGps } from '../../utils/geolocalizacionNativa'
 import DeviceIdentity, { esPlataformaNativa, type DeviceInfo } from '../../plugins/deviceIdentity'
@@ -226,8 +226,13 @@ function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
   }, [])
 
   // A4 — cámara trasera + lectura QR con jsQR (con fallback a ingreso manual).
+  // jsQR (chunk ~150 KB) se importa dinámicamente en paralelo a la solicitud de
+  // cámara — así el escáner solo paga ese peso al entrar a este paso, no en el
+  // bundle inicial del terminal (OPT-13). Se precarga junto al getUserMedia para
+  // que ambos estén listos casi al mismo tiempo (no se retrasa el primer scan).
   useEffect(() => {
     let cancelled = false
+    let jsQR: typeof jsQRFn | null = null
     const stop = () => {
       cancelAnimationFrame(rafRef.current)
       streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -235,7 +240,7 @@ function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
     }
     const tick = () => {
       const v = videoRef.current, c = canvasRef.current
-      if (v && c && v.readyState === v.HAVE_ENOUGH_DATA) {
+      if (jsQR && v && c && v.readyState === v.HAVE_ENOUGH_DATA) {
         c.width = v.videoWidth; c.height = v.videoHeight
         const ctx = c.getContext('2d', { willReadFrequently: true })
         if (ctx) {
@@ -252,8 +257,11 @@ function EscanerQR({ onToken }: { onToken: (token: string) => void }) {
       }
       rafRef.current = requestAnimationFrame(tick)
     }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-      .then((s) => {
+    Promise.all([
+      import('jsqr').then((m) => { jsQR = m.default }),
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }),
+    ])
+      .then(([, s]) => {
         if (cancelled) { s.getTracks().forEach((t) => t.stop()); return }
         streamRef.current = s
         if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play().catch(() => {}) }

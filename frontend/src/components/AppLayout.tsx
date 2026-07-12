@@ -91,6 +91,30 @@ function loadCollapsedSections(): Record<string, boolean> {
   }
 }
 
+/** Cache local del logo de empresa (OPT-15) — ver comentario en el `useQuery` que lo usa. */
+const LOGO_CACHE_KEY = 'kyro:logo-empresa-cache'
+
+function leerCacheLogo(): { logo: string | null; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(LOGO_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.ts !== 'number') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function escribirCacheLogo(logo: string | null | undefined) {
+  try {
+    if (logo === undefined) return
+    localStorage.setItem(LOGO_CACHE_KEY, JSON.stringify({ logo, ts: Date.now() }))
+  } catch {
+    // localStorage lleno/inhabilitado (privado): degrada a pedir el logo cada sesión, sin romper.
+  }
+}
+
 /**
  * Búsqueda global prominente del "Centro de Operaciones" (DIS-FX-01).
  *
@@ -204,13 +228,29 @@ export function AppLayout() {
   const anomaliasCount = cc?.anomalias_caja.count ?? 0
 
   /* Logo de marca: logo de empresa configurable (ConfiguracionPage) si existe,
-     SVG dorado del legacy como fallback. El endpoint con-logo es solo admin. */
+     SVG dorado del legacy como fallback. El endpoint con-logo es solo admin.
+     OPT-15: el logo (data URI base64, ~cientos de KB) vive en BD/API — migrar a
+     storage+URL con Cache-Control requiere tocar el filesystem read-only de
+     producción (ver migración `create_configuracion_empresa_table`), así que
+     queda para otra iteración. Mejora mínima aplicada aquí: persistir el
+     último logo conocido en localStorage junto a su timestamp y usarlo como
+     `initialData`, para que un reload completo de la SPA (que resetea el
+     cache en memoria de React Query) no dispare una petición nueva si sigue
+     dentro del staleTime — hoy cada F5 volvía a pedir el base64 aunque nada
+     hubiera cambiado. Se invalida solo cuando cambia el valor (mutaciones de
+     ConfiguracionPage ya invalidan esta queryKey). */
   const { data: logoEmpresa } = useQuery({
     queryKey: ['configuracion-con-logo'],
     queryFn: () => api.get<{ logo_base64?: string | null }>('/v1/configuracion/con-logo').then((r) => r.data.logo_base64 ?? null),
     staleTime: 5 * 60_000,
     enabled: usuario?.rol === 'admin',
+    initialData: () => leerCacheLogo()?.logo,
+    initialDataUpdatedAt: () => leerCacheLogo()?.ts,
   })
+
+  useEffect(() => {
+    if (logoEmpresa !== undefined) escribirCacheLogo(logoEmpresa)
+  }, [logoEmpresa])
 
   /* Conteo de badge por ruta del sidebar (Control Center vivo) */
   const badgeByRoute: Record<string, number> = {

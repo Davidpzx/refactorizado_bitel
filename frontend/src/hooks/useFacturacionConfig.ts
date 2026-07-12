@@ -4,7 +4,9 @@ import { facturacionConfigApi, type FacturacionConfigPayload } from '../services
 const KEY = ['facturacion-config']
 
 export function useFacturacionConfigs() {
-  return useQuery({ queryKey: KEY, queryFn: facturacionConfigApi.index })
+  // Config fiscal (company_id/branch_id/series): catálogo administrativo que
+  // solo cambia al guardar (mutation ya invalida la key) — no necesita 30 s (OPT-14).
+  return useQuery({ queryKey: KEY, queryFn: facturacionConfigApi.index, staleTime: 10 * 60_000 })
 }
 
 /** id = null crea una config nueva (global o de tienda); id numérico actualiza la existente. */
