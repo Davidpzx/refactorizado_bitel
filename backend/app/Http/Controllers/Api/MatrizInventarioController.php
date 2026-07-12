@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -126,7 +127,7 @@ class MatrizInventarioController extends Controller
     public function exportar(Request $request): StreamedResponse
     {
         $user    = $request->user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $tipo    = strtoupper($request->input('tipo', 'EQUIPO'));
 
         $items = DB::table('inventario_tiendas as it')

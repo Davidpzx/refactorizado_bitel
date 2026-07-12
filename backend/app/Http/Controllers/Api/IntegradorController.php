@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use App\Services\CuadreBitelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -300,7 +301,7 @@ class IntegradorController extends Controller
                 DB::raw('(c.id IS NOT NULL) AS configurada'),
             ]);
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             $q->where('t.codigo', $user->tienda_id ?? '');
         }
 
@@ -588,8 +589,8 @@ class IntegradorController extends Controller
     private function autorizarTienda(Request $request, string $codigo): ?JsonResponse
     {
         $user = $request->user();
-        $ok = $user->rol === 'admin'
-            || ($user->rol === 'tienda' && $codigo !== '' && $codigo === strtoupper((string) ($user->tienda_id ?? '')));
+        $ok = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)
+            || ($user->esRol(Usuario::ROL_JEFE_TIENDA) && $codigo !== '' && $codigo === strtoupper((string) ($user->tienda_id ?? '')));
 
         return $ok ? null : response()->json(['ok' => false, 'error' => 'No tienes permiso sobre esa tienda.'], 403);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use App\Support\RankingVentaScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class EstadisticasController extends Controller
     {
         $user = $request->user();
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             // Fallar CERRADO: un usuario tienda sin tienda_id asignada no debe ver nada.
             // Los consumidores hacen `if ($tienda)` / `->when($tienda, ...)`, y un valor
             // falsy saltaria el filtro completo exponiendo todas las tiendas. Mismo

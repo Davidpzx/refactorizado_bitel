@@ -97,10 +97,11 @@ class AuthController extends Controller
                 ->first();
 
             if ($usuario && $this->pinValido((string) $usuario->getAttribute('pin_seguridad'), $request->pin)) {
-                if ($usuario->rol === 'admin') {
+                // Admin y gerente no dependen de un turno de agente abierto (plan 16).
+                if ($usuario->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
                     return response()->json([
                         'valid' => true,
-                        'rol' => 'admin',
+                        'rol' => $usuario->rolCanonico(),
                         'nombre' => $usuario->nombre,
                     ]);
                 }

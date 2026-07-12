@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\InteraccionCrm;
 use App\Models\Lead;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class LeadController extends Controller
     {
         $user = $request->user();
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return $user->tienda_id ?: '__SIN_TIENDA__';
         }
 

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reporte;
+use App\Models\Usuario;
+use App\Support\Permisos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +25,8 @@ class DashboardController extends Controller
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('r.fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('r.fecha', '<=', $f));
 
-        if ($user->rol !== 'admin') {
+        $veGlobal = Permisos::puede($user, 'ver_dashboard_global');
+        if (! $veGlobal) {
             // Fallar CERRADO: un usuario tienda/vendedor sin tienda_id asignada no debe ver nada.
             // Mismo criterio que EstadisticasController::tiendaScope.
             $base->where('r.tienda_id', $user->tienda_id ?: '__SIN_TIENDA__');
@@ -43,7 +46,7 @@ class DashboardController extends Controller
         ")->first();
 
         $ganancia_total = null;
-        if ($user->rol === 'admin') {
+        if ($veGlobal) {
             $ids = (clone $base)->pluck('r.id');
             $ganancia_total = DB::table('ventas as v')
                 ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
@@ -67,8 +70,8 @@ class DashboardController extends Controller
                 DB::raw("COALESCE(a.nombres, 'Agente') AS agente_nombre"),
             ]);
 
-        // Ganancia por fila (paridad legacy panel_gerencia.php), solo admin — mismo patrón que HistorialController.
-        if ($user->rol === 'admin') {
+        // Ganancia por fila (paridad legacy panel_gerencia.php), solo admin/gerente — mismo patrón que HistorialController.
+        if ($veGlobal) {
             $reportesQuery->selectSub(
                 DB::table('ventas as v')
                     ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
@@ -239,7 +242,7 @@ class DashboardController extends Controller
             })
             ->where('fecha', '>=', now()->subDays(30)->toDateString());
 
-        if ($user->rol === 'tienda') {
+        if ($user->esRol(Usuario::ROL_JEFE_TIENDA)) {
             $query->where('tienda_id', $user->tienda_id);
         }
 

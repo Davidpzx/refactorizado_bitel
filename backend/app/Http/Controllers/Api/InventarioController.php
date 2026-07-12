@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\InventarioTienda;
+use App\Models\Usuario;
 use App\Models\VentaEquipo;
 use App\Services\ReporteDetalleNormalizer;
+use App\Support\Permisos;
 use App\Support\PlanillaGuard;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
@@ -26,8 +28,8 @@ class InventarioController extends Controller
         $user = $request->user();
         $items = InventarioTienda::query()
             ->when($request->q,      fn($q, $t) => $q->buscar($t))
-            ->when($user->rol !== 'admin', fn($q) => $q->porTienda($user->tienda_id))
-            ->when($user->rol === 'admin' && $request->filled('tienda'), fn($q) => $q->porTienda($request->tienda))
+            ->when(! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), fn($q) => $q->porTienda($user->tienda_id))
+            ->when($user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE) && $request->filled('tienda'), fn($q) => $q->porTienda($request->tienda))
             ->when($request->tipo,   fn($q, $t) => $q->porTipo($t))
             ->when($request->estado, fn($q, $e) => $q->porEstado($e))
             ->orderByDesc('fecha_registro')
@@ -144,7 +146,7 @@ class InventarioController extends Controller
             'dni_autoriza.regex'       => 'DNI inválido (debe tener 8 dígitos).',
         ]);
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             if ((string) $validated['tienda_id'] !== (string) $user->tienda_id) {
                 return response()->json(['message' => 'No puedes registrar stock para otra tienda.'], 403);
             }
@@ -251,7 +253,7 @@ class InventarioController extends Controller
     public function show(Request $request, InventarioTienda $inventario): JsonResponse
     {
         abort_if(
-            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $inventario->tienda_id),
+            TiendaGuard::bloqueaAcceso($request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), $request->user()->tienda_id, $inventario->tienda_id),
             403,
             'No tienes permisos sobre este inventario.'
         );
@@ -342,8 +344,8 @@ class InventarioController extends Controller
     public function fijarPrecioAgente(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol === 'admin') {
-            return response()->json(['success' => false, 'msg' => 'Los administradores usan el panel de gerencia.'], 403);
+        if ($user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
+            return response()->json(['success' => false, 'msg' => 'Los administradores y gerentes usan el panel de gerencia.'], 403);
         }
 
         $validated = $request->validate([
@@ -448,8 +450,8 @@ class InventarioController extends Controller
     public function recalcularGanancias(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'msg' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'fijar_precios')) {
+            return response()->json(['success' => false, 'msg' => 'Solo administradores o gerentes.'], 403);
         }
 
         $prod = InventarioTienda::find($id);
@@ -512,7 +514,7 @@ class InventarioController extends Controller
     public function kardex(Request $request): JsonResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $tienda  = trim($request->input('tienda', ''));
 
         if (!$esAdmin) {
@@ -622,7 +624,7 @@ class InventarioController extends Controller
     public function capitalInvertido(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json([
                 'capital_equipos' => 0, 'capital_accesorios' => 0, 'capital_chips' => 0,
                 'total_uds_equipos' => 0, 'total_uds_accesorios' => 0, 'total_uds_chips' => 0,
@@ -661,7 +663,7 @@ class InventarioController extends Controller
     public function stockEstancado(Request $request): JsonResponse
     {
         $user    = Auth::user();
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['ok' => false, 'data' => [], 'capital_inmovilizado' => 0]);
         }
 
@@ -696,7 +698,7 @@ class InventarioController extends Controller
     public function campanaCostos(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['ok' => true, 'count' => 0, 'items' => [], 'data' => []]);
         }
 
@@ -740,7 +742,7 @@ class InventarioController extends Controller
     public function exportarKardex(Request $request): StreamedResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $tienda  = trim($request->input('tienda', ''));
         if (!$esAdmin) $tienda = $user->tienda_id ?? '';
 
@@ -835,8 +837,8 @@ class InventarioController extends Controller
     public function restaurar(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['ok' => false, 'message' => 'Solo administradores.'], 403);
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
+            return response()->json(['ok' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $equipo = InventarioTienda::find($id);

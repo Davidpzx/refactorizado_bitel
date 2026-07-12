@@ -7,8 +7,10 @@ use App\Http\Requests\StoreAgenteRequest;
 use App\Http\Requests\UpdateAgenteRequest;
 use App\Models\Agente;
 use App\Models\Reporte;
+use App\Models\Usuario;
 use App\Services\AgenteService;
 use App\Services\HistorialAgenteService;
+use App\Support\Permisos;
 use App\Support\TiendaGuard;
 use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
@@ -46,7 +48,11 @@ class AgenteController extends Controller
     {
         $user = Auth::user();
         abort_if(
-            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $agente->tienda_base),
+            TiendaGuard::bloqueaAcceso(
+                $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE),
+                $user->tienda_id,
+                $agente->tienda_base
+            ),
             403,
             'No tienes permisos sobre este agente.'
         );
@@ -145,7 +151,8 @@ class AgenteController extends Controller
     public function tokenSeguridad(int $id, Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
+        // Anticorrupción (plan 16): token de emergencia/seguridad es SOLO admin/gerente.
+        if (! Permisos::puede($user, 'modificar_asistencias')) {
             return response()->json(['success' => false, 'mensaje' => 'No autorizado.'], 403);
         }
 
@@ -175,7 +182,7 @@ class AgenteController extends Controller
     public function editarFechasLaborales(int $id, Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
+        if (! Permisos::puede($user, 'gestionar_planilla')) {
             return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
         }
 
@@ -217,7 +224,7 @@ class AgenteController extends Controller
     public function registrarAdelanto(int $id, Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
+        if (! Permisos::puede($user, 'gestionar_planilla')) {
             return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
         }
 
@@ -254,7 +261,7 @@ class AgenteController extends Controller
     public function eliminarAdelanto(int $id, int $adelantoId, Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
+        if (! Permisos::puede($user, 'gestionar_planilla')) {
             return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
         }
         if (! Schema::hasTable('adelantos')) {

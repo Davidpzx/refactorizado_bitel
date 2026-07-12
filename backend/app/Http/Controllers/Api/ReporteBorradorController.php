@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReporteBorrador;
+use App\Models\Usuario;
 use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,11 +16,27 @@ class ReporteBorradorController extends Controller
     {
     }
 
+    /**
+     * R3: el rol agente SIEMPRE se resuelve por su propio usuarios.agente_id — nunca por
+     * el fallback de DNI/correo de UserAgentResolver (que podría enlazarlo con otro
+     * agente). Sin agente_id vinculado, 403 claro (no el 422 genérico del resolver).
+     */
+    private function resolverAgenteId(Usuario $user): int
+    {
+        if ($user->esRol(Usuario::ROL_AGENTE)) {
+            abort_if(! $user->agente_id, 403, 'Tu usuario no está vinculado a un agente.');
+
+            return (int) $user->agente_id;
+        }
+
+        return $this->userAgentResolver->resolveOrFail($user)->id;
+    }
+
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
-        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
+        $agenteId = $this->resolverAgenteId($user);
         $fecha = $this->fechaOperativa();
 
         $borrador = ReporteBorrador::query()
@@ -56,7 +73,7 @@ class ReporteBorradorController extends Controller
 
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
-        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
+        $agenteId = $this->resolverAgenteId($user);
         $fecha = $this->fechaOperativa();
         $payload = $request->isJson()
             ? $request->json()->all()
@@ -102,7 +119,7 @@ class ReporteBorradorController extends Controller
     {
         $user = $request->user();
         $tiendaId = $this->tiendaId($request);
-        $agenteId = $this->userAgentResolver->resolveOrFail($user)->id;
+        $agenteId = $this->resolverAgenteId($user);
 
         ReporteBorrador::query()
             ->where('agente_id', $agenteId)

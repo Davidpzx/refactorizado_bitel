@@ -133,13 +133,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Reportes — rutas especiales ANTES del apiResource ────────────────────
     // R3: +agente (scoping "solo lo mío" por agente_id — ver R3)
-    Route::get('reportes/mis-reportes', [ReporteController::class, 'misReportes']);
+    Route::get('reportes/mis-reportes', [ReporteController::class, 'misReportes'])->middleware('role:administrador,gerente,jefe_tienda,agente');
     Route::get('reportes/vendedores', [ReporteController::class, 'vendedores']);
     // R3: +agente (scoping "solo lo mío" por agente_id — ver R3)
-    Route::get('reportes/borrador', [ReporteBorradorController::class, 'show'])->middleware('open.shift');
-    Route::post('reportes/borrador', [ReporteBorradorController::class, 'store'])->middleware('open.shift');
-    Route::delete('reportes/borrador', [ReporteBorradorController::class, 'destroy'])->middleware('open.shift');
-    Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy'])->middleware('open.shift');
+    Route::get('reportes/borrador', [ReporteBorradorController::class, 'show'])->middleware(['open.shift', 'role:administrador,gerente,jefe_tienda,agente']);
+    Route::post('reportes/borrador', [ReporteBorradorController::class, 'store'])->middleware(['open.shift', 'role:administrador,gerente,jefe_tienda,agente']);
+    Route::delete('reportes/borrador', [ReporteBorradorController::class, 'destroy'])->middleware(['open.shift', 'role:administrador,gerente,jefe_tienda,agente']);
+    Route::post('reportes/borrador/eliminar', [ReporteBorradorController::class, 'destroy'])->middleware(['open.shift', 'role:administrador,gerente,jefe_tienda,agente']);
 
     Route::patch('reportes/{reporte}/destino-efectivo', [ReporteController::class, 'actualizarDestino']);
     Route::post('reportes/{reporte}/agregar-venta',    [ReporteController::class, 'agregarVenta']);
@@ -154,7 +154,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('reporte-categorias/{id}/fijar-costo',      [ReporteController::class, 'fijarCosto']);
 
     Route::get('reportes', [ReporteController::class, 'index'])->middleware('role:admin');
-    Route::post('reportes', [ReporteController::class, 'store'])->middleware(['role:admin,tienda', 'open.shift']);
+    // R3: +agente (crea el suyo — ver R3)
+    Route::post('reportes', [ReporteController::class, 'store'])->middleware(['role:admin,tienda,gerente,agente', 'open.shift']);
     Route::get('reportes/{reporte}', [ReporteController::class, 'show']);
     Route::match(['put', 'patch'], 'reportes/{reporte}', [ReporteController::class, 'update']);
     Route::delete('reportes/{reporte}', [ReporteController::class, 'destroy']);
@@ -207,8 +208,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::apiResource('comprobantes', ComprobanteController::class)->middleware('role:administrador,gerente,jefe_tienda');
 
     // ── Comisiones de Planes ──────────────────────────────────────────────────
-    // R3: +agente (solo las suyas — comisiones propias)
-    Route::get('comisiones-planes',                    [ComisionPlanController::class, 'index']);
+    // R3 (decisión): este endpoint es el catálogo de TARIFAS por plan (config global,
+    // igual para todos), no las comisiones ganadas por un agente — no hay "solo las
+    // suyas" que aplicar aquí. El agente ve sus totales propios via GET
+    // reportes/mis-reportes (ya scopeado por agente_id); no existe un endpoint de
+    // "comisiones-del-agente" separado, así que se documenta el uso de mis-reportes
+    // como la vía para "sus comisiones" en vez de crear uno nuevo.
+    Route::get('comisiones-planes',                    [ComisionPlanController::class, 'index'])->middleware('role:administrador,gerente,jefe_tienda,agente');
     Route::post('comisiones-planes',                   [ComisionPlanController::class, 'store'])->middleware('role:admin');
     Route::put('comisiones-planes/{comisionesPlan}',   [ComisionPlanController::class, 'update'])->middleware('role:admin');
     Route::delete('comisiones-planes/{comisionesPlan}',[ComisionPlanController::class, 'destroy'])->middleware('role:admin');
@@ -350,12 +356,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('bipay/cajero/cierre',      [BipayController::class, 'cierreCajero'])->middleware('role:administrador,gerente,jefe_tienda'); // SEC-03
 
     // ── Tickets Emitidos (SEC-03: admin/gerente/jefe_tienda; scoping por tienda en el controller) ──
+    // R3: +agente (crea los suyos) — fuera del grupo de abajo porque ese grupo es admin/gerente/jefe_tienda.
+    Route::post('tickets', [TicketController::class, 'store'])
+        ->middleware(['open.shift', 'role:administrador,gerente,jefe_tienda,agente']);
     Route::middleware('role:administrador,gerente,jefe_tienda')->group(function () {
         Route::get('tickets',              [TicketController::class, 'index']);
         Route::get('tickets/exportar',     [TicketController::class, 'exportar'])->middleware('throttle:exports');
         Route::get('tickets/{id}',         [TicketController::class, 'show']);
-        // R3: +agente (crea los suyos)
-        Route::post('tickets',             [TicketController::class, 'store'])->middleware('open.shift');
         Route::patch('tickets/{id}',       [TicketController::class, 'update']);
         Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
     });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class BitacoraStockController extends Controller
                 });
             });
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             // $user->tienda_id es el código string (e.g. 'PUNDA50') → resolvemos a int.
             // Fallar CERRADO: sin tienda válida no debe ver nada (-1 no existe como PK).
             $tiendaIntId = DB::table('tiendas')->where('codigo', $user->tienda_id)->value('id');
@@ -163,7 +164,7 @@ class BitacoraStockController extends Controller
             ->when($request->fecha_desde, fn($q, $f) => $q->whereDate('h.fecha_hora', '>=', $f))
             ->when($request->fecha_hasta, fn($q, $f) => $q->whereDate('h.fecha_hora', '<=', $f));
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             // Mismo criterio fail-closed que baseQuery(): resolver código → int id.
             $tiendaIntId = DB::table('tiendas')->where('codigo', $user->tienda_id)->value('id');
             $query->where('h.tienda_id', $tiendaIntId ?: -1);

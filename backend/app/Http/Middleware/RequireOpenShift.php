@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Usuario;
 use App\Services\UserAgentResolver;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -20,8 +21,17 @@ class RequireOpenShift
     {
         $user = $request->user();
 
-        if ($user?->rol === 'admin') {
+        if ($user?->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return $next($request);
+        }
+
+        // R3: el rol agente se resuelve SIEMPRE por su propio agente_id — nunca por el
+        // fallback de DNI/correo — y recibe un 403 claro (no el 422 genérico del
+        // resolver) si su usuario no está vinculado a un agente.
+        if ($user?->esRol(Usuario::ROL_AGENTE) && ! $user->agente_id) {
+            return new JsonResponse([
+                'message' => 'Tu usuario no está vinculado a un agente.',
+            ], 403);
         }
 
         $agente = $this->userAgentResolver->resolveOrFail($user);

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agente;
+use App\Models\Usuario;
 use App\Services\HistorialAgenteService;
 use App\Services\UserAgentResolver;
+use App\Support\Permisos;
 use Carbon\Carbon;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\QrCode;
@@ -424,7 +426,7 @@ class AsistenciaController extends Controller
 
     public function liquidacionAsistencias(Request $request, int $id): JsonResponse
     {
-        abort_if($request->user()?->rol !== 'admin', 403);
+        abort_if(! Permisos::puede($request->user(), 'gestionar_planilla'), 403);
 
         $agente = DB::table('agentes')->where('id', $id)->first();
         if (! $agente) {
@@ -683,7 +685,8 @@ class AsistenciaController extends Controller
 
         $tiendaId = $this->identificadorTienda($tienda);
         $user = $request->user();
-        if ($user?->rol !== 'admin' && strtoupper((string) $user?->tienda_id) !== strtoupper($tiendaId)) {
+        if (! $user?->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)
+            && strtoupper((string) $user?->tienda_id) !== strtoupper($tiendaId)) {
             abort(403, 'No puedes generar el QR de otra tienda.');
         }
 
@@ -1733,8 +1736,8 @@ class AsistenciaController extends Controller
     public function editar(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'modificar_asistencias')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $asistencia = DB::table('asistencias as a')
@@ -1935,8 +1938,8 @@ class AsistenciaController extends Controller
     public function eliminar(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'modificar_asistencias')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
         $asistencia = DB::table('asistencias')->where('id', $id)->first();
         if (! $asistencia) {
@@ -2101,8 +2104,8 @@ class AsistenciaController extends Controller
     public function registrarExcepcion(Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'modificar_asistencias')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $validated = $request->validate([
@@ -2165,8 +2168,9 @@ class AsistenciaController extends Controller
     public function matriz(Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user?->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        // Asistencias VER (plan 16): admin/gerente + jefe_tienda en solo lectura.
+        if (! $user?->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE, Usuario::ROL_JEFE_TIENDA)) {
+            return response()->json(['success' => false, 'message' => 'No autorizado.'], 403);
         }
         if (! $this->tablaExiste()) {
             return response()->json(['error' => 'Sistema de asistencias no configurado.'], 503);
@@ -2281,8 +2285,8 @@ class AsistenciaController extends Controller
     public function excepcionJornada(Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user?->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'modificar_asistencias')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
         if (! Schema::hasTable('excepciones_jornada')) {
             return response()->json(['success' => false, 'message' => 'Tabla excepciones_jornada no configurada.'], 503);

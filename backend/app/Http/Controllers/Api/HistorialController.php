@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Reporte;
+use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class HistorialController extends Controller
 
         $query = Reporte::query();
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             $query->where('reportes.tienda_id', $user->tienda_id);
         } elseif ($request->tienda) {
             $query->where('reportes.tienda_id', $request->tienda);
@@ -49,7 +50,7 @@ class HistorialController extends Controller
             ]);
 
         // Ganancia por fila (paridad legacy gerencia/historial_completo.php), solo admin.
-        if ($user->rol === 'admin') {
+        if ($user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             $gananciaSub = DB::table('ventas as v')
                 ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')
                 ->leftJoin('venta_lineas as vl', 'vl.venta_id', '=', 'v.id')
@@ -88,7 +89,7 @@ class HistorialController extends Controller
         ")->first();
 
         $gananciaTotal = null;
-        if ($user->rol === 'admin') {
+        if ($user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             $ids = $this->baseQuery($request)->pluck('reportes.id');
             $gananciaTotal = DB::table('ventas as v')
                 ->leftJoin('venta_equipos as ve', 've.venta_id', '=', 'v.id')

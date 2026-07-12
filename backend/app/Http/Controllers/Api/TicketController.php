@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use App\Services\UserAgentResolver;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,11 @@ class TicketController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user     = Auth::user();
-        $esAdmin  = $user->rol === 'admin';
+        // R3: agente sin agente_id vinculado no puede crear tickets (ni a nombre de otros).
+        if ($user->esRol(Usuario::ROL_AGENTE) && ! $user->agente_id) {
+            return response()->json(['ok' => false, 'message' => 'Tu usuario no está vinculado a un agente.'], 403);
+        }
+        $esAdmin  = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $agenteId = $esAdmin
             ? (int) $request->input('agente_id', 0)
             : $this->userAgentResolver->resolveOrFail($user)->id;
@@ -128,7 +133,7 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket no encontrado.'], 404);
         }
         abort_if(
-            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $ticket->tienda_id),
+            TiendaGuard::bloqueaAcceso($request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), $request->user()->tienda_id, $ticket->tienda_id),
             403,
             'No tienes permisos sobre este ticket.'
         );
@@ -145,7 +150,7 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket no encontrado.'], 404);
         }
         abort_if(
-            TiendaGuard::bloqueaAcceso($request->user()->rol === 'admin', $request->user()->tienda_id, $ticket->tienda_id),
+            TiendaGuard::bloqueaAcceso($request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), $request->user()->tienda_id, $ticket->tienda_id),
             403,
             'No tienes permisos sobre este ticket.'
         );
@@ -187,8 +192,8 @@ class TicketController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $deleted = DB::table('tickets_emitidos')->where('id', $id)->delete();
@@ -202,7 +207,7 @@ class TicketController extends Controller
     private function baseQuery(Request $request)
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $query = DB::table('tickets_emitidos');
 

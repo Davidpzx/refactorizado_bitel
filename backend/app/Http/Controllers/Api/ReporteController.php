@@ -8,12 +8,14 @@ use App\Models\HistorialReporte;
 use App\Models\Reporte;
 use App\Models\ReporteBorrador;
 use App\Models\ReporteSalida;
+use App\Models\Usuario;
 use App\Models\Venta;
 use App\Models\VentaEquipo;
 use App\Models\VentaLinea;
 use App\Services\ComisionService;
 use App\Services\ComisionOperativaService;
 use App\Services\UserAgentResolver;
+use App\Support\Permisos;
 use App\Support\PlanillaGuard;
 use App\Support\ResourceCache;
 use App\Support\TiendaGuard;
@@ -473,11 +475,15 @@ class ReporteController extends Controller
         ]);
 
         $user = $request->user();
-        $esAdmin = $user->rol === 'admin';
+        // R3: agente sin agente_id vinculado no puede crear reportes (ni a nombre de otros).
+        if ($user->esRol(Usuario::ROL_AGENTE) && ! $user->agente_id) {
+            abort(403, 'Tu usuario no está vinculado a un agente. Un administrador debe asignarlo.');
+        }
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $tiendaSolicitada = trim((string) $validated['tienda_id']);
 
         if (! $esAdmin && ($validated['_modo_dios'] ?? false) && $tiendaSolicitada !== trim((string) $user->tienda_id)) {
-            abort(403, 'Solo admin puede cuadrar por otra tienda.');
+            abort(403, 'Solo admin o gerente puede cuadrar por otra tienda.');
         }
 
         $agenteId = $esAdmin
@@ -602,7 +608,8 @@ class ReporteController extends Controller
     public function update(Request $request, Reporte $reporte): JsonResponse
     {
         $this->autorizarPropietarioOAdmin($request, $reporte);
-        if ($request->has('destino_efectivo') && $request->user()->rol !== 'admin') {
+        if ($request->has('destino_efectivo')
+            && ! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             abort(403, 'Solo administración puede cambiar el destino del efectivo.');
         }
 
@@ -681,8 +688,18 @@ class ReporteController extends Controller
     {
         $user = $request->user();
 
+        // R3: el agente ve SIEMPRE lo suyo por agente_id (no por usuario_id — quien
+        // registró el reporte puede ser otro usuario de la misma tienda).
+        if ($user->esRol(Usuario::ROL_AGENTE) && ! $user->agente_id) {
+            return response()->json(['message' => 'Tu usuario no está vinculado a un agente.'], 403);
+        }
+
         $reportes = Reporte::query()
-            ->where('usuario_id', $user->id)
+            ->when(
+                $user->esRol(Usuario::ROL_AGENTE),
+                fn ($q) => $q->where('agente_id', $user->agente_id),
+                fn ($q) => $q->where('usuario_id', $user->id)
+            )
             ->when($request->fecha_desde, fn ($q, $f) => $q->whereDate('fecha', '>=', $f))
             ->when($request->fecha_hasta, fn ($q, $f) => $q->whereDate('fecha', '<=', $f))
             ->when($request->estado,      fn ($q, $e) => $q->where('estado', $e))
@@ -698,7 +715,11 @@ class ReporteController extends Controller
     {
         $user = $request->user();
         abort_if(
-            TiendaGuard::bloqueaAcceso($user->rol === 'admin', $user->tienda_id, $reporte->tienda_id),
+            TiendaGuard::bloqueaAcceso(
+                $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE),
+                $user->tienda_id,
+                $reporte->tienda_id
+            ),
             403,
             'No tienes permisos sobre este reporte.'
         );
@@ -755,7 +776,7 @@ class ReporteController extends Controller
 
     public function aprobarEdicion(Request $request, Reporte $reporte): JsonResponse
     {
-        abort_unless($request->user()->rol === 'admin', 403);
+        abort_unless($request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), 403);
 
         if ($reporte->estado_edicion !== 'SOLICITADO') {
             return response()->json(['error' => 'No hay solicitud de edición pendiente.'], 422);
@@ -778,7 +799,7 @@ class ReporteController extends Controller
 
     public function denegarEdicion(Request $request, Reporte $reporte): JsonResponse
     {
-        abort_unless($request->user()->rol === 'admin', 403);
+        abort_unless($request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE), 403);
 
         if ($reporte->estado_edicion !== 'SOLICITADO') {
             return response()->json(['error' => 'No hay solicitud de edición pendiente.'], 422);
@@ -1180,9 +1201,9 @@ class ReporteController extends Controller
     {
         $user = $request->user();
 
-        // Paridad legacy (procesar_edicion.php:49-54): admin siempre pasa; no-admin solo
-        // puede reprocesar SU PROPIO reporte y únicamente cuando la edición ya fue aprobada.
-        if ($user->rol !== 'admin') {
+        // Paridad legacy (procesar_edicion.php:49-54): admin/gerente siempre pasa; el resto
+        // solo puede reprocesar SU PROPIO reporte y únicamente cuando la edición ya fue aprobada.
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             abort_unless(
                 (string) $reporte->tienda_id === (string) $user->tienda_id
                     && $reporte->estado_edicion === 'APROBADO',
@@ -1734,7 +1755,8 @@ class ReporteController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->rol === 'admin' || (int) $reporte->usuario_id === (int) $user->id,
+            $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)
+                || (int) $reporte->usuario_id === (int) $user->id,
             403,
             'No tienes permisos sobre este reporte.'
         );
@@ -1743,7 +1765,7 @@ class ReporteController extends Controller
     public function fijarCosto(Request $request, int $ventaEquipoId): JsonResponse
     {
         $user = $request->user();
-        if ($user->rol !== 'admin') {
+        if (! Permisos::puede($user, 'fijar_precios')) {
             return response()->json(['success' => false, 'message' => 'Acceso denegado.'], 403);
         }
 

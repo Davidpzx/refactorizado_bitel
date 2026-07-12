@@ -7,6 +7,8 @@ use App\Models\Agente;
 use App\Models\InventarioTienda;
 use App\Models\Tienda;
 use App\Models\TrasladoStock;
+use App\Models\Usuario;
+use App\Support\Permisos;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +22,7 @@ class TrasladoController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user     = Auth::user();
-        $esAdmin  = $user->rol === 'admin';
+        $esAdmin  = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $query = TrasladoStock::with(['producto', 'creadoPor', 'enviadoPor', 'confirmadoPor'])
             ->orderByDesc('created_at');
@@ -61,7 +63,7 @@ class TrasladoController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $authDni = trim($request->input('auth_dni', ''));
 
@@ -245,7 +247,7 @@ class TrasladoController extends Controller
     public function confirmar(Request $request, int $id): JsonResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $observacion     = substr(trim($request->input('observacion', '')), 0, 200);
         $authDni         = trim($request->input('auth_dni', ''));
@@ -354,7 +356,7 @@ class TrasladoController extends Controller
     public function confirmarLote(Request $request, string $codigoLote): JsonResponse
     {
         $user = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
         $codigoLote = trim($codigoLote);
         $observacion = substr(trim($request->input('observacion', '')), 0, 200);
         $authAgenteId = (int) $request->input('auth_agente_id', 0);
@@ -552,8 +554,8 @@ class TrasladoController extends Controller
     public function gestionar(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'aprobar_traslados')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $action     = trim($request->input('action', ''));
@@ -614,8 +616,8 @@ class TrasladoController extends Controller
     public function pendientesAprobacion(): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'aprobar_traslados')) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $traslados = TrasladoStock::with(['producto'])

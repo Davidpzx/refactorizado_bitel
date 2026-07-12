@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -13,7 +14,7 @@ class ControlCenterController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
@@ -32,7 +33,7 @@ class ControlCenterController extends Controller
 
     public function marcarNotificacion(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json([
                 'success' => false,
                 'mensaje' => 'No autorizado',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Permisos;
 use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -107,8 +108,8 @@ class PostulanteController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'postulaciones_rrhh')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $query = DB::table('postulantes_temp')
@@ -134,8 +135,8 @@ class PostulanteController extends Controller
     public function show(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'postulaciones_rrhh')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $postulante = DB::table('postulantes_temp')->find($id);
@@ -150,8 +151,8 @@ class PostulanteController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'postulaciones_rrhh')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $allowed = ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'ENTREVISTA'];
@@ -175,8 +176,8 @@ class PostulanteController extends Controller
     public function aprobar(Request $request, int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'postulaciones_rrhh')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $validated = $request->validate([
@@ -274,8 +275,8 @@ class PostulanteController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'postulaciones_rrhh')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         DB::table('postulantes_temp')->where('id', $id)->delete();

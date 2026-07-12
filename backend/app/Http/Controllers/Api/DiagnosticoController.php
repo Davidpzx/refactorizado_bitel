@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Permisos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,8 @@ class DiagnosticoController extends Controller
     public function index(): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
+        // Diagnóstico técnico: exclusivo administrador (plan 16, ni el gerente lo tiene).
+        if (! Permisos::puede($user, 'config_tecnica')) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
+use App\Models\Usuario;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class ChipsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $query = InventarioChip::with('tienda')
             ->where('stock_actual', '>', 0);
@@ -47,8 +48,8 @@ class ChipsController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $tiendaId     = (int) $request->input('tienda_id', 0);
@@ -139,7 +140,7 @@ class ChipsController extends Controller
     public function cambiarCodigo(Request $request, int $id): JsonResponse
     {
         $user    = Auth::user();
-        $esAdmin = $user->rol === 'admin';
+        $esAdmin = $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
 
         $codigoDestino = trim($request->input('codigo_destino', ''));
         $cantidad      = (int) $request->input('cantidad', 0);
@@ -203,8 +204,8 @@ class ChipsController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
+            return response()->json(['success' => false, 'message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $chip = InventarioChip::find($id);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,7 +93,7 @@ class BipayController extends Controller
     // Paridad legacy gerencia/panel_bipay.php (?export=excel, líneas 341-368).
     public function exportarTransacciones(Request $request): StreamedResponse|JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
         if (!empty($this->tablasFaltantes())) {
@@ -273,7 +274,7 @@ class BipayController extends Controller
     // ── POST /bipay/transferir — Transferencia entre cuentas (admin, D3) ─────────
     public function transferir(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
         if (! empty($this->tablasFaltantes())) {
@@ -345,7 +346,7 @@ class BipayController extends Controller
     // ── POST /bipay/ajustar — Ajuste manual de saldo con motivo (admin, D3) ──────
     public function ajustar(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
         if (! empty($this->tablasFaltantes())) {
@@ -780,7 +781,7 @@ class BipayController extends Controller
 
     private function contextoCajero(Request $request): mixed
     {
-        if ($request->user()->rol !== 'tienda') {
+        if (! $request->user()->esRol(Usuario::ROL_JEFE_TIENDA)) {
             return response()->json([
                 'ok' => false,
                 'msg' => 'Solo usuarios de tienda pueden usar la consola Bipay/Anypay.',
@@ -904,7 +905,7 @@ class BipayController extends Controller
     // Paridad legacy gerencia/panel_bipay.php (acción nueva_cuenta).
     public function crearCuenta(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
         if (! Schema::hasTable('cuentas_bipay')) {
@@ -945,7 +946,7 @@ class BipayController extends Controller
     // ── PUT /bipay/cuentas/{id} — Editar cuenta (admin) ─────────────────────────
     public function editarCuenta(Request $request, int $id): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
         if (! Schema::hasTable('cuentas_bipay')) {
@@ -983,7 +984,7 @@ class BipayController extends Controller
     // ── DELETE /bipay/cuentas/{id} — Eliminar cuenta (admin) ────────────────────
     public function eliminarCuenta(Request $request, int $id): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
         if (! Schema::hasTable('cuentas_bipay')) {
@@ -1014,7 +1015,7 @@ class BipayController extends Controller
     // acción `vincular_huerfana`.
     public function vincularHuerfana(Request $request, int $id): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['success' => false, 'message' => 'Solo administradores.'], 403);
         }
         if (! Schema::hasTable('cuentas_bipay')) {
@@ -1053,7 +1054,7 @@ class BipayController extends Controller
     // no tiene tabla bipay_locks; ver spec 2026-07-03-bipay-panel-avanzado-design.md).
     public function locksActivos(Request $request): JsonResponse
     {
-        if ($request->user()->rol !== 'admin') {
+        if (! $request->user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
         if (! Schema::hasTable('bipay_cooldowns')) {

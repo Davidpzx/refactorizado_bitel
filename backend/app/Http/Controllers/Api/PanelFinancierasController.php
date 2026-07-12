@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Permisos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,8 +17,8 @@ class PanelFinancierasController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'gestionar_financieras')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         $filtroFinanciera = trim($request->input('financiera', ''));
@@ -135,8 +136,8 @@ class PanelFinancierasController extends Controller
     public function confirmarDesembolso(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'gestionar_financieras')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         return DB::transaction(function () use ($id, $user) {
@@ -183,8 +184,8 @@ class PanelFinancierasController extends Controller
     public function revertirDesembolso(int $id): JsonResponse
     {
         $user = Auth::user();
-        if ($user->rol !== 'admin') {
-            return response()->json(['message' => 'Solo administradores.'], 403);
+        if (! Permisos::puede($user, 'gestionar_financieras')) {
+            return response()->json(['message' => 'Solo administradores o gerentes.'], 403);
         }
 
         return DB::transaction(function () use ($id) {

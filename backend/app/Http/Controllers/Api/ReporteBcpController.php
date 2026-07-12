@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use App\Services\UserAgentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,7 +110,7 @@ class ReporteBcpController extends Controller
         $agente = $this->userAgentResolver->resolveOrFail($user);
         $sucursalId = (int) $data['sucursal_id'];
 
-        if ($user->rol !== 'admin') {
+        if (! $user->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             $sucursalId = (int) DB::table('tiendas')
                 ->where('codigo', $user->tienda_id)
                 ->value('id');

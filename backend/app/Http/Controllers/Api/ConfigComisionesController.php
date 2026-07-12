@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,7 +168,8 @@ class ConfigComisionesController extends Controller
 
     private function guardAdmin(string $tabla): ?JsonResponse
     {
-        if (Auth::user()->rol !== 'admin') {
+        // Matriz plan 16: "Comisiones (config planes)" es admin+gerente exclusivo.
+        if (! Auth::user()->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE)) {
             return response()->json(['success' => false, 'msg' => 'Acceso denegado.'], 403);
         }
         if (! Schema::hasTable($tabla)) {
