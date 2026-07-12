@@ -281,3 +281,6 @@ Nota: plan/08-mejoras-diseno-bloque1/2 (fase anterior) quedan SUPERSEDIDOS por p
 ## REDISEÑO COMPLETO — 45/45 TICKETS DIS-FX CERRADOS Y EN PRODUCCION (2026-07-12)
 Olas D2-D8 integradas y desplegadas: commits 8a2f0ba, c19f0f7, 22e3f56, a4a9dd5, e90445c, 1382dcf, 1a735f9, 28a990d (+ transversales b1f1c67 y base 65955e0). Todas las pantallas del sistema alineadas a la vision fintech (plan/10): indigo estructural, oro reservado a dinero, KpiCard con sparkline/skeleton, superficies 18px, dialogos 20px, modo claro cuidado. DIS-FX-45 (Login) verificado ya conforme, sin cambios.
 QUEDA EN LA COLA: olas O1-O3 (16 optimizaciones de plan/12 — backend N+1/indices/paginacion/caching + frontend bundle) y el cierre (QA visual de flujos clave + resumen ejecutivo). Codex vuelve 12:53pm; titan activa.
+
+## Pausa por cuotas (2026-07-12 mediodia) — reanudacion programada 12:58pm
+titan agoto sesion sin arrancar OPT-01/02 (0.3 caso 1, nada perdido); Codex fuera hasta 12:53pm. Cron en sesion programado para despachar O1 (titan: OPT-01+02; Codex: OPT-03..06), luego O2 (OPT-07..10), O3 (OPT-11..16), QA de humo y plan/14-resumen-ejecutivo-final.md. Si esta terminal muere antes, relanzar a mano con ese mismo reparto.
