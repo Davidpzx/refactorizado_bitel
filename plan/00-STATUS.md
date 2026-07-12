@@ -220,3 +220,16 @@ Van 5 de 10 tickets APP: 001(scaffold), 02(plugin nativo), 03(GPS), 04(backend p
 Suite backend: 714/714. Frontend tsc+build limpios.
 **7 de 10 tickets APP integrados**: 01,02,03,04,05,06,07,08 (backend). Faltan: APP-09a (canal descarga + boton refactor), APP-09b (mismo boton en legacy panel_asistencias.php -- pedido explicito del usuario, dos sistemas), APP-10 (QA dispositivo real).
 Correccion de alcance: APP-09 se dividio en 09a/09b porque el usuario pidio el boton de descarga en AMBOS sistemas (legacy Y refactor), no solo el refactor.
+
+## APP-09a/09b integrados + APK COMPILADO EN ESTA MAQUINA (2026-07-11, noche)
+- [x] APP-09a (titan/Sonnet, commit 815e5a0): endpoints version/descargar/subir + seccion AppTerminalDescarga en pestaña Presencia + banner de actualizacion en app nativa. 718/718 tests.
+- [x] APP-09b (david, commit c2ea099 EN EL LEGACY E:/laragon/www/sistema-rolando-salas): boton "Descargar App" + copiar enlace WhatsApp en gerencia/panel_asistencias.php, apunta al canal del refactor. PHP lint OK. Pendiente deploy legacy.
+- [x] ANDROID SDK instalado en C:/Android (cmdline-tools + platform-tools + platforms;android-36 + build-tools;36.0.0). local.properties creado (gitignored). settings.gradle con foojay toolchain resolver (Capacitor 8 exige Java 21; Gradle lo auto-descarga a ~/.gradle/jdks).
+- [x] **APK COMPILADO Y VERIFICADO**: frontend/android/app/build/outputs/apk/debug/app-debug.apk (5.6 MB). Comando validado:
+  ```
+  cd frontend && npm run build:android
+  cd android
+  ANDROID_HOME=C:/Android JAVA_HOME=C:/Users/Usuario/.gradle/jdks/eclipse_adoptium-21-amd64-windows.2 ./gradlew assembleDebug
+  ```
+  (JAVA_HOME debe ser un JDK 21 — el de sistema es 17; winget instalo Temurin 21 en paralelo, si aparece en Program Files/Eclipse Adoptium usarlo en su lugar.)
+- **9 de 10 tickets APP cerrados.** Solo falta APP-10: QA en dispositivo real (el usuario lo hace al llegar: subir app-debug.apk via el panel Presencia > Subir version, compartir enlace, instalar en equipo, probar huella/GPS/pings/consentimiento). Para distribucion final: assembleRelease + keystore de firma (aun no creado).

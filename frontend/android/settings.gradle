@@ -1,3 +1,9 @@
+// Auto-descarga del JDK que exija el build (Capacitor 8 pide Java 21) cuando la
+// máquina no lo tiene instalado — evita el fallo "Cannot find a Java installation".
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
