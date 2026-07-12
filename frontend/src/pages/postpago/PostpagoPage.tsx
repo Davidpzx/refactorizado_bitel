@@ -11,7 +11,7 @@ import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { FileXls as FileSpreadsheet, Warning as AlertTriangle, ChartLineUp as TrendingUp, Phone, ArrowsClockwise as RefreshCw, Lightning as Zap, Star, CellSignalFull as Signal } from '@phosphor-icons/react'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ const TIPO_COLOR: Record<string, string> = {
   PORTABILIDAD: 'var(--color-kpi-total)',
   ALTA_NUEVA:   'var(--color-kyro-success)',
   RENOVACION:   'var(--color-kyro-indigo)',
-  UPGRADE:      'var(--color-kyro-gold)',
+  UPGRADE:      'var(--color-kyro-warning)',
   PAQUETE:      'var(--color-kyro-warning)',
 }
 
@@ -82,7 +82,12 @@ const TIPO_LABEL: Record<string, string> = {
   PAQUETE:      'Paquete',
 }
 
-const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 2 })
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: 'var(--color-kyro-elevated)',
+  border: '1px solid var(--color-kyro-border)',
+  borderRadius: 10,
+  color: 'var(--color-kyro-text)',
+}
 
 function tipoAltaBadge(tipo: string) {
   const map: Record<string, 'default' | 'success' | 'warning' | 'destructive' | 'outline'> = {
@@ -126,8 +131,8 @@ function TablaActivaciones({
   const ventas = data?.data ?? []
 
   return (
-    <div className="kyro-card overflow-hidden">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/40 to-transparent" />
+    <div className="kyro-card overflow-hidden rounded-[18px]">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
       {isLoading && (
         <div className="py-16 text-center text-sm text-kyro-muted">Cargando activaciones...</div>
       )}
@@ -146,7 +151,7 @@ function TablaActivaciones({
                 {ventas.map(v => (
                   <tr
                     key={`${v.id}-${v.tipo_alta}`}
-                    className={`border-b border-kyro-border transition-colors ${v.es_remate ? 'bg-kyro-danger/5' : 'hover:bg-kyro-gold/5'}`}
+                    className={`border-b border-kyro-border transition-colors ${v.es_remate ? 'bg-kyro-danger/5' : 'hover:bg-kyro-indigo/[0.04]'}`}
                   >
                     <td className="px-3 py-2.5 text-xs text-kyro-muted">{v.fecha}</td>
                     <td className="px-3 py-2.5 font-mono text-xs text-kyro-subtle">{v.tienda_id}</td>
@@ -282,32 +287,32 @@ export function PostpagoPage() {
           <label className="mb-1 block text-xs text-kyro-muted">Desde</label>
           <input type="date" value={filters.desde}
             onChange={e => setFilters(f => ({ ...f, desde: e.target.value }))}
-            className="kyro-input h-9 w-40" />
+            className="kyro-input h-10 w-40 rounded-[10px]" />
         </div>
         <div>
           <label className="mb-1 block text-xs text-kyro-muted">Hasta</label>
           <input type="date" value={filters.hasta}
             onChange={e => setFilters(f => ({ ...f, hasta: e.target.value }))}
-            className="kyro-input h-9 w-40" />
+            className="kyro-input h-10 w-40 rounded-[10px]" />
         </div>
         <div>
           <label className="mb-1 block text-xs text-kyro-muted">Tienda</label>
           <input type="text" placeholder="Todas" value={filters.tienda_id}
             onChange={e => setFilters(f => ({ ...f, tienda_id: e.target.value }))}
-            className="kyro-input h-9 w-28" />
+            className="kyro-input h-10 w-28 rounded-[10px]" />
         </div>
         <div>
           <label className="mb-1 block text-xs text-kyro-muted">Tipo Alta</label>
           <select value={filters.tipo_alta}
             onChange={e => setFilters(f => ({ ...f, tipo_alta: e.target.value }))}
-            className="kyro-input h-9 w-36">
+            className="kyro-input h-10 w-36 rounded-[10px]">
             <option value="">Todos</option>
             {Object.entries(TIPO_LABEL).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
           </select>
         </div>
-        <Button variant="gold" size="sm" onClick={() => setApplied({ ...filters })}>Buscar</Button>
+        <Button size="sm" onClick={() => setApplied({ ...filters })}>Buscar</Button>
         <Button variant="outline" size="sm" onClick={() => {
           const r = { desde: mes1, hasta: hoy, tienda_id: '', tipo_alta: '' }
           setFilters(r); setApplied(r)
@@ -319,17 +324,39 @@ export function PostpagoPage() {
       {/* KPI Strip */}
       {loadingResumen && <div className="py-6 text-center text-sm text-kyro-muted">Cargando resumen...</div>}
       {!loadingResumen && t && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {[
-            { label: 'Activaciones',   value: t.total_activaciones, icon: <Zap size={14} />,          accent: '#0d6efd', text: 'text-kyro-text' },
-            { label: 'Portabilidades', value: t.portabilidades,     icon: <Phone size={14} />,         accent: '#0d6efd', text: 'text-kyro-text' },
-            { label: 'Altas Nuevas',   value: t.altas_nuevas,       icon: <Star size={14} />,          accent: '#22c55e', text: 'text-kyro-success' },
-            { label: 'Renovaciones',   value: t.renovaciones,       icon: <RefreshCw size={14} />,     accent: '#6366f1', text: 'text-kyro-body' },
-            { label: 'Remates ⚠️',    value: t.remates,            icon: <AlertTriangle size={14} />, accent: '#ef4444', text: 'text-kyro-danger' },
-            { label: 'Comisión activa', value: pen.format(Number(t.comision_activa)), icon: <TrendingUp size={14} />, accent: '#22c55e', text: 'text-kyro-success' },
-          ].map(k => (
-            <StatCard key={k.label} title={k.label} accent={k.accent} icon={k.icon} value={k.value} valueColorClass={k.text} />
-          ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <KpiCard
+            title="Activaciones"
+            value={t.total_activaciones}
+            tone="info"
+            accent="var(--color-kyro-info)"
+            icon={<Zap size={14} />}
+            trend={resumen.tendencia.map(item => Number(item.activaciones))}
+          />
+          <KpiCard
+            title="Portabilidades"
+            value={t.portabilidades}
+            tone="indigo"
+            icon={<Phone size={14} />}
+            trend={resumen.tendencia.map(item => Number(item.portabilidades))}
+          />
+          <KpiCard title="Altas nuevas" value={t.altas_nuevas} tone="info" icon={<Star size={14} />} />
+          <KpiCard title="Renovaciones" value={t.renovaciones} tone="indigo" icon={<RefreshCw size={14} />} />
+          <KpiCard
+            title="Remates"
+            value={t.remates}
+            tone="danger"
+            accent="var(--color-kyro-danger)"
+            icon={<AlertTriangle size={14} />}
+            trend={resumen.tendencia.map(item => Number(item.remates))}
+          />
+          <KpiCard
+            title="Comisión activa"
+            value={Number(t.comision_activa)}
+            monetary
+            tone="gold"
+            icon={<TrendingUp size={14} />}
+          />
         </div>
       )}
 
@@ -348,7 +375,7 @@ export function PostpagoPage() {
       {/* ── Tab: Riesgo Churn ──────────────────────────────────────────────── */}
       {tab === 'churn' && (
         <div className="space-y-4">
-          <div className="kyro-card border border-kyro-danger/30 bg-kyro-danger/5 p-4">
+          <div className="kyro-card rounded-[18px] border border-kyro-danger/30 bg-kyro-danger/5 p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-kyro-danger">
               <AlertTriangle size={16} />
               Clientes en Riesgo de Churn
@@ -367,7 +394,7 @@ export function PostpagoPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Por tipo de alta */}
-            <div className="kyro-card p-4">
+            <div className="kyro-card rounded-[18px] p-5">
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
               <h3 className="mb-4 text-sm font-semibold text-kyro-text">Activaciones por Tipo</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -376,7 +403,7 @@ export function PostpagoPage() {
                   <XAxis dataKey="tipo_alta" tick={{ fontSize: 10 }}
                     tickFormatter={v => TIPO_LABEL[v] ?? v} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip formatter={(v) => [Number(v), 'Activaciones']}
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [Number(v), 'Activaciones']}
                     labelFormatter={l => TIPO_LABEL[l as string] ?? l} />
                   <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                     {resumen.por_tipo.map(p => (
@@ -388,21 +415,21 @@ export function PostpagoPage() {
             </div>
 
             {/* Top planes */}
-            <div className="kyro-card overflow-hidden">
-              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
+            <div className="kyro-card overflow-hidden rounded-[18px]">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
               <div className="border-b border-kyro-border p-4">
                 <h3 className="text-sm font-semibold text-kyro-text">Top Planes Postpago</h3>
               </div>
               <div className="divide-y divide-kyro-border">
                 {resumen.top_planes.map((p, i) => (
-                  <div key={p.plan} className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-kyro-gold/5">
+                  <div key={p.plan} className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-kyro-indigo/[0.04]">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-5 shrink-0 text-xs text-kyro-muted">
                         {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
                       </span>
                       <span className="truncate text-kyro-body">{p.plan}</span>
                     </div>
-                    <span className="ml-2 shrink-0 font-bold text-kpi-total">{p.total}</span>
+                    <span className="ml-2 shrink-0 font-bold tabular-nums text-kyro-indigo">{p.total}</span>
                   </div>
                 ))}
                 {resumen.top_planes.length === 0 && (
@@ -414,7 +441,7 @@ export function PostpagoPage() {
 
           {/* Tendencia diaria */}
           {resumen.tendencia.length > 0 && (
-            <div className="kyro-card p-4">
+            <div className="kyro-card rounded-[18px] p-5">
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-green-500/50 to-transparent" />
               <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text">
                 <TrendingUp size={15} className="text-kyro-success" />Tendencia Diaria
@@ -425,7 +452,7 @@ export function PostpagoPage() {
                   <XAxis dataKey="fecha" tick={{ fontSize: 10 }}
                     tickFormatter={v => v.slice(5)} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip labelFormatter={v => `Fecha: ${v}`} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelFormatter={v => `Fecha: ${v}`} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Line type="monotone" dataKey="activaciones"   stroke="var(--color-kpi-total)"      strokeWidth={2} dot={false} name="Activaciones" />
                   <Line type="monotone" dataKey="portabilidades" stroke="var(--color-kyro-indigo)"    strokeWidth={2} dot={false} name="Portabilidades" />

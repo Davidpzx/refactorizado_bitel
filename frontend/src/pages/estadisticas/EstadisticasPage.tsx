@@ -11,7 +11,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageTabs } from '../../components/ui/PageTabs'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { DownloadSimple as Download, ChartLineUp as TrendingUp, ChartBar as BarChart2, MagnifyingGlass as Search } from '@phosphor-icons/react'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
@@ -29,16 +29,23 @@ const COLORS = {
 // Color legacy por categoría (headers de tabla coloreados, "Productividad por Tienda").
 // Inline style: gana sobre `.kyro-table-head th { color }` (selector descendente).
 const CAT_HEAD_COLOR: Record<string, string> = {
-  Postpago:   '#3b82f6',
-  Prepago:    '#a855f7',
-  Equipos:    '#f59e0b',
-  Accesorios: '#22c55e',
+  Postpago:   'var(--color-kyro-info)',
+  Prepago:    'var(--color-kyro-indigo)',
+  Equipos:    'var(--color-kyro-warning)',
+  Accesorios: 'var(--color-kyro-success)',
+}
+
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: 'var(--color-kyro-elevated)',
+  border: '1px solid var(--color-kyro-border)',
+  borderRadius: 10,
+  color: 'var(--color-kyro-text)',
 }
 
 const RANK_CATS = [
   { value: 'todo', label: 'Todas', tone: 'indigo' as const },
   { value: 'equipos', label: 'Equipos', tone: 'info' as const },
-  { value: 'postpago', label: 'Postpago', tone: 'gold' as const },
+  { value: 'postpago', label: 'Postpago', tone: 'info' as const },
   { value: 'chips', label: 'Chips', tone: 'success' as const },
 ]
 
@@ -193,26 +200,26 @@ export function EstadisticasPage() {
             <label className="block text-xs text-kyro-muted mb-1">Desde</label>
             <input type="date" value={filters.fecha_desde}
               onChange={e => setFilters(f => ({ ...f, fecha_desde: e.target.value }))}
-              className="kyro-input h-9 w-40"
+              className="kyro-input h-10 w-40 rounded-[10px]"
             />
           </div>
           <div>
             <label className="block text-xs text-kyro-muted mb-1">Hasta</label>
             <input type="date" value={filters.fecha_hasta}
               onChange={e => setFilters(f => ({ ...f, fecha_hasta: e.target.value }))}
-              className="kyro-input h-9 w-40"
+              className="kyro-input h-10 w-40 rounded-[10px]"
             />
           </div>
           {usuario?.rol === 'admin' && (
             <div>
               <label className="block text-xs text-kyro-muted mb-1">Tienda</label>
-              <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="h-9 w-44">
+              <Select value={filters.tienda} onChange={e => setFilters(f => ({ ...f, tienda: e.target.value }))} className="h-10 w-44 rounded-[10px]">
                 <option value="">Todas</option>
                 {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
               </Select>
             </div>
           )}
-          <Button variant="gold" onClick={() => setApplied({ ...filters })}>Buscar</Button>
+          <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
           <Button variant="outline" onClick={() => {
             const reset = { fecha_desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), fecha_hasta: new Date().toISOString().slice(0, 10), tienda: '' }
             setFilters(reset); setApplied(reset)
@@ -221,27 +228,25 @@ export function EstadisticasPage() {
 
       {/* KPI Cards */}
       {totales && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: 'Total Ventas',  value: totales.total_ventas, sub: pen.format(Number(totales.monto_total)), accent: '#0d6efd' },
-            { label: 'Postpago',      value: totales.postpago,     sub: `${totales.total_ventas > 0 ? Math.round(totales.postpago * 100 / totales.total_ventas) : 0}%`, accent: '#0d6efd' },
-            { label: 'Prepago/Chips', value: totales.prepago,      sub: '', accent: '#a78bfa' },
-            { label: 'Eq. Cuotas',   value: totales.eq_cuotas,    sub: '', accent: '#f59e0b' },
-            { label: 'Eq. Contado',  value: totales.eq_contado,   sub: '', accent: '#f59e0b' },
-            { label: 'Accesorios',   value: totales.accesorios,   sub: '', accent: '#22c55e' },
-          ].map(kpi => (
-            <StatCard
-              key={kpi.label}
-              title={kpi.label}
-              accent={kpi.accent}
-              value={
-                <span className="flex flex-col gap-0.5">
-                  <span>{kpi.value}</span>
-                  {kpi.sub && <span className="text-xs font-normal text-kyro-subtle">{kpi.sub}</span>}
-                </span>
-              }
-            />
-          ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <KpiCard
+            title="Monto vendido"
+            value={Number(totales.monto_total)}
+            monetary
+            tone="gold"
+            subtitle={`${totales.total_ventas.toLocaleString('es-PE')} ventas`}
+          />
+          <KpiCard
+            title="Postpago"
+            value={totales.postpago}
+            tone="info"
+            trend={series.map(item => Number(item.postpago))}
+            subtitle={`${totales.total_ventas > 0 ? Math.round(totales.postpago * 100 / totales.total_ventas) : 0}% del total`}
+          />
+          <KpiCard title="Prepago / Chips" value={totales.prepago} tone="indigo" trend={series.map(item => Number(item.prepago))} />
+          <KpiCard title="Equipos a cuotas" value={totales.eq_cuotas} tone="info" />
+          <KpiCard title="Equipos al contado" value={totales.eq_contado} tone="indigo" />
+          <KpiCard title="Accesorios" value={totales.accesorios} tone="info" trend={series.map(item => Number(item.accesorios))} />
         </div>
       )}
 
@@ -258,7 +263,7 @@ export function EstadisticasPage() {
       {!isLoading && tab === 'resumen' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Bar por categoría */}
-          <div className="kyro-card p-4">
+          <div className="kyro-card rounded-[18px] p-5">
             <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text"><span className="h-2 w-2 rounded-full bg-kyro-indigo" />Ventas por Categoría</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -266,7 +271,7 @@ export function EstadisticasPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => [Number(v ?? 0), 'Ventas']} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [Number(v ?? 0), 'Ventas']} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {categoriaBar.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Bar>
@@ -275,16 +280,16 @@ export function EstadisticasPage() {
           </div>
 
           {/* Line series de tiempo */}
-          <div className="kyro-card p-4">
-            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 to-transparent" />
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text"><TrendingUp size={15} className="text-kyro-gold" />Tendencia Diaria</h3>
+          <div className="kyro-card rounded-[18px] p-5">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-kyro-text"><TrendingUp size={15} className="text-kyro-indigo" />Tendencia Diaria</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={series} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-kyro-border)" />
                 <XAxis dataKey="dia" tick={{ fontSize: 10 }}
                   tickFormatter={v => v.slice(5)} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip labelFormatter={v => `Día: ${v}`} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelFormatter={v => `Día: ${v}`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="postpago"  stroke={COLORS.postpago}   strokeWidth={2} dot={false} name="Postpago" />
                 <Line type="monotone" dataKey="prepago"   stroke={COLORS.prepago}    strokeWidth={2} dot={false} name="Prepago" />
@@ -298,8 +303,8 @@ export function EstadisticasPage() {
 
       {/* TAB: Por Tienda */}
       {!isLoading && tab === 'tiendas' && (
-        <div className="kyro-card overflow-hidden">
-          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/40 to-transparent" />
+        <div className="kyro-card overflow-hidden rounded-[18px]">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
           <div className="border-b border-kyro-border p-4">
             <h3 className="text-sm font-semibold text-kyro-text">Ranking por Tienda</h3>
           </div>
@@ -314,7 +319,7 @@ export function EstadisticasPage() {
               </thead>
               <tbody>
                 {porTienda.map((t, i) => (
-                  <tr key={t.tienda_id} className="border-b border-kyro-border transition-colors hover:bg-kyro-gold/5">
+                  <tr key={t.tienda_id} className="border-b border-kyro-border transition-colors hover:bg-kyro-indigo/[0.04]">
                     <td className="px-4 py-3 text-gray-400 text-xs">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-mono font-medium text-slate-700 dark:text-zinc-300">{t.tienda_id}</td>
                     <td className="px-4 py-3 font-bold text-blue-700 dark:text-blue-400">{t.postpago}</td>
@@ -348,8 +353,8 @@ export function EstadisticasPage() {
 
       {/* TAB: Ranking Agentes */}
       {!isLoading && tab === 'ranking' && (
-        <div className="kyro-card overflow-hidden">
-          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-amber-400/70 via-indigo-500/40 to-transparent" />
+        <div className="kyro-card overflow-hidden rounded-[18px]">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
           <div className="flex flex-col gap-3 border-b border-kyro-border p-4 sm:flex-row sm:items-end sm:justify-between">
             <h3 className="text-sm font-semibold text-kyro-text">Ranking de Productividad por Agente</h3>
             <div className="flex flex-wrap items-end gap-3">
@@ -366,7 +371,7 @@ export function EstadisticasPage() {
               {rankingFiltrado && (
                 <div>
                   <label className="block text-xs text-kyro-muted mb-1">Subfiltro</label>
-                  <select value={rankSub} onChange={e => setRankSub(e.target.value)} className="kyro-input h-9 w-48">
+                  <select value={rankSub} onChange={e => setRankSub(e.target.value)} className="kyro-input h-10 w-48 rounded-[10px]">
                     <option value="">Todos</option>
                     {subcategorias.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
@@ -388,7 +393,7 @@ export function EstadisticasPage() {
               </thead>
               <tbody>
                 {ranking.map((a, i) => (
-                  <tr key={a.vendedor_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-gold/5' : 'hover:bg-kyro-gold/5'}`}>
+                  <tr key={a.vendedor_id} className={`border-b border-kyro-border transition-colors ${i < 3 ? 'bg-kyro-indigo/[0.04]' : 'hover:bg-kyro-indigo/[0.04]'}`}>
                     <td className="px-4 py-3 text-xs text-kyro-muted">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}</td>
                     <td className="px-4 py-3 font-medium text-kyro-text">{a.nombres}</td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-500">{a.tienda_base}</td>
@@ -429,14 +434,14 @@ function TopList({ title, items, color }: { title: string; items: { name: string
     blue: 'text-blue-700 dark:text-blue-400', orange: 'text-orange-700 dark:text-orange-400', green: 'text-green-700 dark:text-green-400',
   }
   return (
-    <div className="kyro-card overflow-hidden">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 via-amber-400/35 to-transparent" />
+    <div className="kyro-card overflow-hidden rounded-[18px]">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/70 to-transparent" />
       <div className="border-b border-kyro-border p-4">
         <h3 className="text-sm font-semibold text-kyro-text">{title}</h3>
       </div>
       <div className="divide-y divide-kyro-border">
         {items.map((item, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-amber-50/40 dark:hover:bg-amber-400/[0.04]">
+          <div key={i} className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-kyro-indigo/[0.04]">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs text-kyro-muted w-5 shrink-0">
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`}

@@ -59,12 +59,12 @@ interface HorarioResp {
 // ── Paleta de colores ─────────────────────────────────────────────────────────
 
 function colorCalor(ratio: number): string {
-  if (ratio <= 0)   return 'rgba(255,255,255,0.04)'
-  if (ratio < 0.15) return 'rgba(99,102,241,0.25)'
-  if (ratio < 0.35) return 'rgba(99,102,241,0.50)'
-  if (ratio < 0.55) return 'rgba(245,158,11,0.55)'
-  if (ratio < 0.75) return 'rgba(245,158,11,0.80)'
-  return 'rgba(239,68,68,0.90)'
+  if (ratio <= 0)   return 'var(--color-kyro-elevated)'
+  if (ratio < 0.15) return 'color-mix(in srgb, var(--color-kyro-indigo) 25%, transparent)'
+  if (ratio < 0.35) return 'color-mix(in srgb, var(--color-kyro-indigo) 50%, transparent)'
+  if (ratio < 0.55) return 'color-mix(in srgb, var(--color-kyro-warning) 55%, transparent)'
+  if (ratio < 0.75) return 'color-mix(in srgb, var(--color-kyro-warning) 80%, transparent)'
+  return 'color-mix(in srgb, var(--color-kyro-danger) 90%, transparent)'
 }
 
 // ── TAB 1: Calendario ─────────────────────────────────────────────────────────
@@ -132,33 +132,27 @@ function TabCalendario({ year, setYear }: { year: number; setYear: (y: number) =
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <button onClick={() => setYear(year - 1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-kyro-muted hover:text-kyro-text transition-colors"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>‹</button>
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-kyro-border bg-kyro-elevated text-kyro-muted transition-colors hover:border-kyro-indigo/40 hover:text-kyro-indigo">‹</button>
           <span className="font-bold text-kyro-text text-lg tabular-nums">{year}</span>
           <button onClick={() => setYear(year + 1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-kyro-muted hover:text-kyro-text transition-colors"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>›</button>
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-kyro-border bg-kyro-elevated text-kyro-muted transition-colors hover:border-kyro-indigo/40 hover:text-kyro-indigo">›</button>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-1 rounded-[10px] border border-kyro-border bg-kyro-elevated p-1">
           {([
             ['total_actividad', 'Total actividad'],
             ['ventas_count',    'Ventas ERP'],
             ['bipay_lineas',    'Líneas Bipay'],
           ] as const).map(([k, lbl]) => (
             <button key={k} onClick={() => setMetrica(k)}
-              className="px-3 py-1 rounded-md text-xs font-medium transition-all"
-              style={metrica === k
-                ? { background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)' }
-                : { color: 'var(--color-kyro-muted)' }}>
+              className={`h-9 rounded-[10px] px-3 text-xs font-medium transition-all ${metrica === k ? 'bg-kyro-indigo text-white' : 'text-kyro-muted hover:bg-kyro-indigo/10 hover:text-kyro-text'}`}>
               {lbl}
             </button>
           ))}
         </div>
 
         <button onClick={() => refetch()} disabled={isFetching}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-kyro-muted)' }}>
+          className="ml-auto flex h-9 items-center gap-1.5 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 text-xs font-medium text-kyro-muted transition-all hover:border-kyro-indigo/40 hover:text-kyro-indigo">
           <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} />
           {isFetching ? 'Cargando…' : 'Actualizar'}
         </button>
@@ -166,12 +160,11 @@ function TabCalendario({ year, setYear }: { year: number; setYear: (y: number) =
 
       {/* Tooltip */}
       {hover && (
-        <div className="mb-3 px-3 py-2 rounded-lg text-xs inline-flex gap-4"
-          style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="mb-3 inline-flex gap-4 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 py-2 text-xs tabular-nums shadow-kyro-card">
           <span className="text-kyro-muted">{hover.fecha}</span>
           <span className="text-kyro-text">Ventas: <b>{hover.ventas_count}</b></span>
-          <span style={{ color: 'var(--color-kyro-gold)' }}>Bipay líneas: <b>{hover.bipay_lineas}</b></span>
-          <span style={{ color: '#60a5fa' }}>Bipay neto: <b>S/ {hover.bipay_neto.toFixed(2)}</b></span>
+          <span className="text-kyro-indigo">Bipay líneas: <b>{hover.bipay_lineas}</b></span>
+          <span className="text-kyro-info">Bipay neto: <b>S/ {hover.bipay_neto.toFixed(2)}</b></span>
         </div>
       )}
 
@@ -300,10 +293,10 @@ function TabGeografico() {
         radius: r,
         fillColor: color,
         fillOpacity: 0.85,
-        color: 'rgba(255,255,255,0.3)',
+        color: 'var(--color-kyro-border)',
         weight: 1,
       }).addTo(map).bindPopup(
-        `<b style="color:#ffc200">${t.nombre}</b><br>
+        `<b style="color:var(--color-kyro-indigo)">${t.nombre}</b><br>
          Ventas: ${t.ventas_count}<br>
          Bipay neto: S/ ${t.bipay_neto.toFixed(2)}<br>
          Bipay líneas: ${t.bipay_lineas}`
@@ -325,16 +318,15 @@ function TabGeografico() {
         <div className="flex items-center gap-2">
           <label className="text-xs text-kyro-muted">Desde</label>
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-            className="kyro-input h-8 text-xs px-2" />
+            className="kyro-input h-9 rounded-[10px] px-2 text-xs" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-kyro-muted">Hasta</label>
           <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-            className="kyro-input h-8 text-xs px-2" />
+            className="kyro-input h-9 rounded-[10px] px-2 text-xs" />
         </div>
         <button onClick={() => refetch()} disabled={isFetching}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-kyro-muted)' }}>
+          className="flex h-9 items-center gap-1.5 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 text-xs font-medium text-kyro-muted transition-all hover:border-kyro-indigo/40 hover:text-kyro-indigo">
           <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} />
           {isFetching ? 'Cargando…' : 'Actualizar'}
         </button>
@@ -355,8 +347,7 @@ function TabGeografico() {
       )}
 
       {/* Mapa Leaflet */}
-      <div ref={mapRef} style={{ height: 480, borderRadius: 10, overflow: 'hidden',
-        border: '1px solid rgba(255,255,255,0.1)' }} />
+      <div ref={mapRef} className="h-[480px] overflow-hidden rounded-[18px] border border-kyro-border" />
 
       {/* Ranking lateral */}
       {data && data.tiendas.length > 0 && (
@@ -365,8 +356,7 @@ function TabGeografico() {
           {data.tiendas.slice(0, 8).map((t, i) => {
             const ratio = data.max_valor > 0 ? t.valor / data.max_valor : 0
             return (
-              <div key={t.codigo} className="flex items-center gap-3 py-2 px-3 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={t.codigo} className="flex items-center gap-3 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 py-2">
                 <span className="text-[10px] font-mono w-5 text-kyro-muted">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-kyro-text truncate">{t.nombre}</p>
@@ -374,7 +364,7 @@ function TabGeografico() {
                     {t.ventas_count} ventas · Bipay S/ {t.bipay_neto.toFixed(0)}
                   </p>
                 </div>
-                <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-1.5 w-24 overflow-hidden rounded-full bg-kyro-border">
                   <div className="h-full rounded-full" style={{ width: `${ratio * 100}%`, background: colorCalor(ratio) }} />
                 </div>
               </div>
@@ -419,35 +409,32 @@ function TabHorario() {
         <div className="flex items-center gap-2">
           <label className="text-xs text-kyro-muted">Desde</label>
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-            className="kyro-input h-8 text-xs px-2" />
+            className="kyro-input h-9 rounded-[10px] px-2 text-xs" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-kyro-muted">Hasta</label>
           <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-            className="kyro-input h-8 text-xs px-2" />
+            className="kyro-input h-9 rounded-[10px] px-2 text-xs" />
         </div>
         <button onClick={() => refetch()} disabled={isFetching}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-kyro-muted)' }}>
+          className="flex h-9 items-center gap-1.5 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 text-xs font-medium text-kyro-muted transition-all hover:border-kyro-indigo/40 hover:text-kyro-indigo">
           <RefreshCw size={12} className={isFetching ? 'animate-spin' : ''} />
           {isFetching ? 'Cargando…' : 'Actualizar'}
         </button>
       </div>
 
       {esFallback && (
-        <p className="text-[11px] text-kyro-warning mb-3 px-3 py-1.5 rounded-lg"
-          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+        <p className="mb-3 rounded-[10px] border border-kyro-warning/20 bg-kyro-warning/10 px-3 py-2 text-[11px] text-kyro-warning">
           ℹ️ Tabla <code>bitel_operaciones_detalle</code> no disponible — mostrando distribución por día de semana de reportes ERP.
         </p>
       )}
 
       {/* Tooltip */}
       {hover && !esFallback && (
-        <div className="mb-3 px-3 py-2 rounded-lg text-xs inline-flex gap-4"
-          style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="mb-3 inline-flex gap-4 rounded-[10px] border border-kyro-border bg-kyro-elevated px-3 py-2 text-xs tabular-nums shadow-kyro-card">
           <span className="text-kyro-muted">{DIAS_LABEL[hover.dia]} {String(hover.hora).padStart(2, '0')}:00</span>
           <span className="text-kyro-text">Operaciones: <b>{hover.cnt}</b></span>
-          <span style={{ color: '#60a5fa' }}>Monto: <b>S/ {hover.monto_abs.toFixed(2)}</b></span>
+          <span className="text-kyro-info">Monto: <b>S/ {hover.monto_abs.toFixed(2)}</b></span>
         </div>
       )}
 
@@ -463,8 +450,7 @@ function TabHorario() {
               return (
                 <div key={dIdx} className="flex items-center gap-3">
                   <span className="text-xs text-kyro-muted w-8">{dia}</span>
-                  <div className="flex-1 h-7 rounded-md overflow-hidden relative"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="relative h-7 flex-1 overflow-hidden rounded-md bg-kyro-elevated">
                     <div className="h-full rounded-md transition-all"
                       style={{ width: `${ratio * 100}%`, background: colorCalor(ratio) }} />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-kyro-text">
@@ -534,13 +520,13 @@ export default function MapaCalorPage() {
   const [year, setYear] = useState(new Date().getFullYear())
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
       <PageHeader
         title="Mapa de Calor"
         subtitle="Análisis de actividad por tiempo y ubicación"
       />
 
-      <GlassPanel className="kyro-card p-4">
+      <GlassPanel className="kyro-card rounded-[18px] p-5">
         <div className="flex items-center gap-3 mb-5 flex-wrap">
           <PageTabs tabs={TABS} active={tab} onChange={setTab} />
           <div className="ml-auto flex items-center gap-1.5 text-xs text-kyro-muted">

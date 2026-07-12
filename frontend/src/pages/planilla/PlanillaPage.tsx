@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
 import { format, startOfMonth } from 'date-fns'
-import { CaretDown as ChevronDown, CaretUp as ChevronUp, CurrencyDollar as DollarSign, FileText, ArrowCounterClockwise as RotateCcw } from '@phosphor-icons/react'
+import { CaretDown as ChevronDown, CaretUp as ChevronUp, CurrencyDollar as DollarSign, FileText, ArrowCounterClockwise as RotateCcw, Users, Money, TrendDown, HandCoins, Wallet } from '@phosphor-icons/react'
 import { usePlanilla, useGuardarAjustePlanilla, useResetarComisionesPlanilla } from '../../hooks/usePlanilla'
 import { PageHeader } from '../../components/PageHeader'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -265,38 +265,38 @@ function FilaTabla({
   return (
     <>
       <tr className="border-b border-kyro-border text-xs transition-colors hover:bg-kyro-indigo/5">
-        <td className="px-3 py-2 font-medium text-kyro-body">{fila.nombres}</td>
-        <td className="px-1 py-2 text-center font-mono text-gray-400 dark:text-zinc-500">{fila.tienda_base}</td>
-        <td className="py-1 px-1 text-center">{estadoBadge}</td>
-        <td className="px-1 py-2 text-right font-mono text-sky-600 dark:text-sky-400">{fmt(fila.sueldo_base)}</td>
-        <td className="py-1 px-1 text-center">
+        <td className="px-2 py-2.5 font-medium text-kyro-body">{fila.nombres}</td>
+        <td className="px-2 py-2.5 text-center kyro-money text-gray-400 dark:text-zinc-500">{fila.tienda_base}</td>
+        <td className="px-2 py-2.5 text-center">{estadoBadge}</td>
+        <td className="px-2 py-2.5 text-right kyro-money text-sky-600 dark:text-sky-400">{fmt(fila.sueldo_base)}</td>
+        <td className="px-2 py-2.5 text-center">
           <CeldaEditable valor={fila.dias_trabajados} campo="dias_trabajados" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="px-1 py-2 text-right font-mono text-blue-600 dark:text-blue-400">{fmt(fila.sueldo_dias_lab)}</td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money text-blue-600 dark:text-blue-400">{fmt(fila.sueldo_dias_lab)}</td>
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.comision_jefe} campo="comision_jefe" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.comision_equipo} campo="comision_equipo" fila={fila} mes={mes} esComision onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.comision_planes} campo="comision_planes" fila={fila} mes={mes} esComision onSave={onSave} />
         </td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.comision_online} campo="comision_online" fila={fila} mes={mes} esComision onSave={onSave} />
         </td>
-        <td className="px-1 py-2 text-right font-mono font-bold text-amber-600 dark:text-amber-400">{fmt(fila.total_remuneracion)}</td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money font-bold text-kyro-gold">{fmt(fila.total_remuneracion)}</td>
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.retencion_uniforme} campo="retencion_uniforme" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="px-1 py-2 text-right font-mono text-red-600 dark:text-red-400">{fmt(fila.faltas_permisos)}</td>
-        <td className="px-1 py-2 text-right font-mono text-red-600 dark:text-red-400">{fmt(fila.tardanzas)}</td>
-        <td className="py-1 px-1 text-right font-mono">
+        <td className="px-2 py-2.5 text-right kyro-money text-red-600 dark:text-red-400">{fmt(fila.faltas_permisos)}</td>
+        <td className="px-2 py-2.5 text-right kyro-money text-red-600 dark:text-red-400">{fmt(fila.tardanzas)}</td>
+        <td className="px-2 py-2.5 text-right kyro-money">
           <CeldaEditable valor={fila.faltante_efectivo} campo="faltante_efectivo" fila={fila} mes={mes} onSave={onSave} />
         </td>
-        <td className="px-1 py-2 text-right font-mono font-bold text-red-600 dark:text-red-400">{fmt(fila.total_descuentos)}</td>
-        <td className="px-1 py-2 text-right font-mono text-sm font-bold text-cyan-600 dark:text-cyan-400">{fmt(fila.total_pagar)}</td>
-        <td className="py-1 px-1 text-center">
+        <td className="px-2 py-2.5 text-right kyro-money font-bold text-red-600 dark:text-red-400">{fmt(fila.total_descuentos)}</td>
+        <td className="px-2 py-2.5 text-right kyro-money text-sm font-bold text-kyro-gold">{fmt(fila.total_pagar)}</td>
+        <td className="px-2 py-2.5 text-center">
           <TableActions className="justify-center">
             <ActionIconButton
               tone="view"
@@ -438,18 +438,75 @@ export function PlanillaPage() {
         </div>
       </PageHeader>
 
-      {/* KPIs */}
+      {/* ── Resumen de planilla (KpiCard, DIS-FX-17) ──
+          5 KPI: agentes índigo · remuneración oro · descuentos danger ·
+          adelantos warning · Total a pagar héroe oro (32px). Las comisiones
+          pasan a un desglose (no card propia). Sin sparkline/delta: la respuesta
+          de planilla no expone series ni totales del mes previo — no se inventan. */}
       {t && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-          <StatCard title="Agentes" value={tiendaFiltro ? `${agentesVisibles.length} / ${data.agentes.length}` : String(data.agentes.length)} accent="#6c757d" />
-          <StatCard title="Total Remun." value={fmtSol(t.total_remuneracion)} accent="#6366f1" valueColorClass="text-kyro-gold" />
-          <StatCard title="Com. Planes" value={fmtSol(t.com_planes)} accent="#10b981" valueColorClass="text-kyro-info" />
-          <StatCard title="Com. Equipos" value={fmtSol(t.com_equipo)} accent="#10b981" valueColorClass="text-kyro-info" />
-          <StatCard title="Com. Online" value={fmtSol(t.com_online)} accent="#10b981" valueColorClass="text-kyro-info" />
-          <StatCard title="Descuentos" value={fmtSol(t.total_descuentos)} accent="#ef4444" valueColorClass="text-kyro-danger" />
-          <StatCard title="Adelantos" value={fmtSol(t.adelantos)} accent="#f59e0b" valueColorClass="text-kyro-warning" />
-          <StatCard title="TOTAL A PAGAR" value={fmtSol(t.total_pagar)} accent="#10b981" valueColorClass="text-kyro-success" />
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <KpiCard
+              title="Agentes"
+              value={tiendaFiltro ? `${agentesVisibles.length} / ${data.agentes.length}` : String(data.agentes.length)}
+              tone="indigo"
+              icon={<Users size={18} />}
+              subtitle={tiendaFiltro ? 'En tienda / total' : 'En planilla del mes'}
+            />
+            <KpiCard
+              title="Remuneración"
+              value={t.total_remuneracion}
+              monetary
+              tone="gold"
+              icon={<Money size={18} />}
+              subtitle="Sueldos + comisiones"
+            />
+            <KpiCard
+              title="Descuentos"
+              value={t.total_descuentos}
+              monetary
+              tone="danger"
+              accent="var(--color-kyro-danger)"
+              icon={<TrendDown size={18} />}
+              subtitle="Retenciones, faltas y faltantes"
+            />
+            <KpiCard
+              title="Adelantos"
+              value={t.adelantos}
+              monetary
+              accent="var(--color-kyro-warning)"
+              icon={<HandCoins size={18} />}
+              subtitle="Incluidos en descuento"
+              className="[&_.kyro-money]:text-kyro-warning"
+            />
+            <KpiCard
+              title="Total a pagar"
+              value={t.total_pagar}
+              monetary
+              tone="gold"
+              icon={<Wallet size={18} />}
+              subtitle="Neto del mes"
+              className="[&_.kyro-money]:text-[32px]"
+            />
+          </div>
+
+          {/* Desglose de comisiones (antes 3 cards propias) — índigo/info, nunca oro. */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[18px] border border-kyro-border bg-kyro-card px-4 py-3 shadow-kyro-card">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Comisiones</span>
+            <span className="text-[13px] text-kyro-muted">
+              Planes <span className="kyro-money font-semibold text-kyro-info">{fmtSol(t.com_planes)}</span>
+            </span>
+            <span className="text-[13px] text-kyro-muted">
+              Equipos <span className="kyro-money font-semibold text-kyro-info">{fmtSol(t.com_equipo)}</span>
+            </span>
+            <span className="text-[13px] text-kyro-muted">
+              Online <span className="kyro-money font-semibold text-kyro-info">{fmtSol(t.com_online)}</span>
+            </span>
+            <span className="ml-auto text-[13px] text-kyro-muted">
+              Total <span className="kyro-money font-semibold text-kyro-indigo">{fmtSol(t.com_planes + t.com_equipo + t.com_online)}</span>
+            </span>
+          </div>
+        </>
       )}
 
       {isLoading && (
@@ -463,7 +520,7 @@ export function PlanillaPage() {
         <div className="kyro-card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs" style={{ minWidth: '1600px' }}>
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="kyro-table-head">
                   <th className="py-2 px-2 text-left">Agente</th>
                   <th className="py-2 px-1 text-center">Tienda</th>
@@ -499,13 +556,13 @@ export function PlanillaPage() {
               {t && (
                 <tfoot>
                   <tr className="border-t-2 border-indigo-200/80 bg-indigo-50/60 text-xs font-bold dark:border-indigo-400/20 dark:bg-indigo-400/[0.05]">
-                    <td colSpan={5} className="px-3 py-3 text-gray-600 dark:text-zinc-300">TOTALES</td>
-                    <td className="px-1 py-3 text-right font-mono text-blue-600 dark:text-blue-400">{fmt(t.sueldo_dias_lab)}</td>
+                    <td colSpan={5} className="px-2 py-2.5 text-gray-600 dark:text-zinc-300">TOTALES</td>
+                    <td className="px-2 py-2.5 text-right kyro-money text-blue-600 dark:text-blue-400">{fmt(t.sueldo_dias_lab)}</td>
                     <td colSpan={4}></td>
-                    <td className="px-1 py-3 text-right font-mono text-amber-600 dark:text-amber-400">{fmt(t.total_remuneracion)}</td>
+                    <td className="px-2 py-2.5 text-right kyro-money text-kyro-gold">{fmt(t.total_remuneracion)}</td>
                     <td colSpan={4}></td>
-                    <td className="px-1 py-3 text-right font-mono text-red-600 dark:text-red-400">{fmt(t.total_descuentos)}</td>
-                    <td className="px-1 py-3 text-right font-mono text-sm text-cyan-600 dark:text-cyan-400">{fmt(t.total_pagar)}</td>
+                    <td className="px-2 py-2.5 text-right kyro-money text-red-600 dark:text-red-400">{fmt(t.total_descuentos)}</td>
+                    <td className="px-2 py-2.5 text-right kyro-money text-sm text-kyro-gold">{fmt(t.total_pagar)}</td>
                     <td></td>
                   </tr>
                 </tfoot>

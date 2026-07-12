@@ -9,6 +9,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, Eye, FileXls as FileSpreadsheet, CheckCircle, XCircle, PencilSimple as Pencil, Trash as Trash2, Wallet, ChartLineUp as TrendingUp, Scales as Scale, Money as Banknote } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { api } from '../../services/api'
@@ -183,42 +184,43 @@ export function HistorialPage() {
       />
 
       {totales && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="kyro-card border-l-4 border-l-kpi-total p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-info"><Wallet size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total General</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-info">{fmt(totales.total_general)}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kyro-success p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><Scale size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Físico Esperado</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-success">{fmt(totales.fisico_esperado)}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kpi-neutral p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-muted"><Banknote size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Físico Declarado</p>
-            </div>
-            <p className="mt-2 font-mono text-xl font-bold text-kyro-text">{fmt(totales.fisico_declarado)}</p>
-          </div>
-          <div className="kyro-card border-l-4 border-l-kyro-warning p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-warning"><Scale size={15} /></span>
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Diferencia Física</p>
-            </div>
-            <p className={`mt-2 font-mono text-xl font-bold ${Number(totales.diferencia_fisica) === 0 ? 'text-kyro-muted' : Number(totales.diferencia_fisica) < 0 ? 'text-kyro-danger' : 'text-kyro-warning'}`}>
-              {fmt(totales.diferencia_fisica)}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            title="Venta total"
+            value={Number(totales.total_general)}
+            monetary
+            tone="gold"
+            icon={<Wallet size={16} />}
+            subtitle={`${totales.total_reportes.toLocaleString('es-PE')} reportes`}
+          />
+          <KpiCard
+            title="Efectivo esperado"
+            value={Number(totales.fisico_esperado)}
+            monetary
+            tone="info"
+            accent="var(--color-kyro-info)"
+            icon={<Scale size={16} />}
+          />
+          <KpiCard
+            title="Efectivo declarado"
+            value={Number(totales.fisico_declarado)}
+            monetary
+            tone="indigo"
+            icon={<Banknote size={16} />}
+          />
+          <KpiCard
+            title="Diferencia física"
+            value={Number(totales.diferencia_fisica)}
+            monetary
+            tone={Number(totales.diferencia_fisica) < 0 ? 'danger' : Number(totales.diferencia_fisica) > 0 ? 'success' : 'neutral'}
+            accent={Number(totales.diferencia_fisica) < 0 ? 'var(--color-kyro-danger)' : Number(totales.diferencia_fisica) > 0 ? 'var(--color-kyro-success)' : 'var(--color-kyro-indigo)'}
+            icon={<Scale size={16} />}
+          />
         </div>
       )}
 
       {usuario?.rol === 'admin' && kpisData?.ganancia_total != null && (
-        <div className="kyro-card flex items-center justify-between border-l-4 border-l-kyro-success p-4">
+        <div className="kyro-card flex items-center justify-between rounded-[18px] border-l-4 border-l-kyro-success p-5">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-kyro-border bg-kyro-elevated text-kyro-success"><TrendingUp size={18} /></span>
             <div>
@@ -232,15 +234,15 @@ export function HistorialPage() {
 
       {totales && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="kyro-card border-l-4 border-l-purple-400 p-4">
+          <div className="kyro-card rounded-[18px] border-l-4 border-l-purple-400 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Yape</p>
             <p className="mt-1 font-mono text-lg font-bold text-purple-500">{fmt(totales.total_yape)}</p>
           </div>
-          <div className="kyro-card border-l-4 border-l-sky-400 p-4">
+          <div className="kyro-card rounded-[18px] border-l-4 border-l-sky-400 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Bipay</p>
             <p className="mt-1 font-mono text-lg font-bold text-sky-500">{fmt(totales.total_bipay)}</p>
           </div>
-          <div className="kyro-card border-l-4 border-l-emerald-400 p-4">
+          <div className="kyro-card rounded-[18px] border-l-4 border-l-emerald-400 p-4">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-kyro-muted">Total Transferencia</p>
             <p className="mt-1 font-mono text-lg font-bold text-emerald-500">{fmt(totales.total_transferencia)}</p>
           </div>
@@ -254,7 +256,7 @@ export function HistorialPage() {
             type="date"
             value={filters.fecha_desde}
             onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
-            className="kyro-input h-9 w-40"
+            className="kyro-input h-10 w-40 rounded-[10px]"
           />
         </div>
         <div>
@@ -263,21 +265,21 @@ export function HistorialPage() {
             type="date"
             value={filters.fecha_hasta}
             onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
-            className="kyro-input h-9 w-40"
+            className="kyro-input h-10 w-40 rounded-[10px]"
           />
         </div>
         {usuario?.rol === 'admin' && (
           <>
             <div>
               <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">Tienda</label>
-              <Select value={filters.tienda} onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))} className="h-9 w-44">
+              <Select value={filters.tienda} onChange={(e) => setFilters((f) => ({ ...f, tienda: e.target.value }))} className="h-10 w-44 rounded-[10px]">
                 <option value="">Todas</option>
                 {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
               </Select>
             </div>
             <div>
               <label className="block text-xs text-gray-500 dark:text-zinc-400 mb-1">ID Agente</label>
-              <Select value={filters.agente_id} onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))} className="h-9 w-44">
+              <Select value={filters.agente_id} onChange={(e) => setFilters((f) => ({ ...f, agente_id: e.target.value }))} className="h-10 w-44 rounded-[10px]">
                 <option value="">Todos</option>
                 {agentes.map(a => <option key={a.id} value={a.id}>{a.nombres}</option>)}
               </Select>
@@ -294,11 +296,11 @@ export function HistorialPage() {
             onChange={(estado) => setFilters((f) => ({ ...f, estado }))}
           />
         </div>
-        <Button variant="gold" onClick={applyFilters}>Buscar</Button>
+        <Button onClick={applyFilters}>Buscar</Button>
         <Button variant="ghost" onClick={resetFilters}>Limpiar</Button>
       </ListToolbar>
 
-      <div className="kyro-card overflow-hidden">
+      <div className="kyro-card overflow-hidden rounded-[18px]">
         <div className="flex items-center justify-between border-b border-kyro-border p-4">
           <h2 className="text-sm font-semibold text-kyro-text">
             {isLoading ? 'Cargando...' : `${meta?.total ?? 0} registros encontrados`}
@@ -344,7 +346,7 @@ export function HistorialPage() {
                   ? 'border-b border-l-4 border-l-yellow-400 border-yellow-200 bg-yellow-50/80 animate-pulse dark:border-l-yellow-400 dark:border-yellow-400/20 dark:bg-yellow-400/[0.06]'
                   : isNegative
                   ? 'border-b border-l-4 border-l-red-400 border-red-100 bg-red-50/40 dark:border-l-red-400 dark:border-red-400/20 dark:bg-red-400/[0.06]'
-                  : 'border-b border-kyro-border transition-colors hover:bg-kyro-gold/5'
+                  : 'border-b border-kyro-border transition-colors hover:bg-kyro-indigo/[0.04]'
 
                 const canEdit    = usuario?.rol === 'admin' || r.estado_edicion === 'APROBADO' || r.estado === 'borrador'
                 const editPending = r.estado_edicion === 'SOLICITADO' && usuario?.rol !== 'admin'
@@ -404,7 +406,7 @@ export function HistorialPage() {
                         {isSolicitado && usuario?.rol === 'admin' && (
                           <>
                             <Button
-                              variant="gold"
+                              variant="success"
                               size="sm"
                               disabled={aprobarEdicion.isPending && aprobarEdicion.variables === r.id}
                               onClick={async () => {
