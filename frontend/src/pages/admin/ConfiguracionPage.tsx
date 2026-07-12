@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { FloppyDisk as Save, UploadSimple as Upload, Trash as Trash2, Buildings as Building2, SealCheck as CheckCircle2, Bank as Landmark, UserGear as UserCog, Phone, Image as ImageIcon } from '@phosphor-icons/react'
+import { FloppyDisk as Save, UploadSimple as Upload, Trash as Trash2, Buildings as Building2, SealCheck as CheckCircle2, Bank as Landmark, UserGear as UserCog, Phone, Image as ImageIcon, ArrowsClockwise as Sync, WarningCircle as WarningCircle2 } from '@phosphor-icons/react'
 import { api } from '../../services/api'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -45,6 +45,8 @@ const configuracionApi = {
   },
   deleteLogo: () =>
     api.delete<{ message: string }>('/v1/configuracion/logo').then(r => r.data),
+  syncLogoFacturacion: (claveSol: string) =>
+    api.post<{ ok: boolean; msg: string }>('/v1/configuracion/sync-logo-facturacion', { clave_sol: claveSol }).then(r => r.data),
 }
 
 // ── Form schema ───────────────────────────────────────────────────────────────
@@ -52,9 +54,9 @@ const configuracionApi = {
 const schema = z.object({
   razon_social:        z.string().min(1, 'Razón social requerida').max(200),
   nombre_comercial:    z.string().max(200).optional().or(z.literal('')),
-  ruc:                 z.string().min(1, 'RUC requerido').max(11),
+  ruc:                 z.string().regex(/^\d{11}$/, 'El RUC debe tener 11 dígitos numéricos'),
   gerente_general:     z.string().max(100).optional().or(z.literal('')),
-  gerente_dni:         z.string().max(8).optional().or(z.literal('')),
+  gerente_dni:         z.union([z.string().regex(/^\d{8}$/, 'El DNI debe tener 8 dígitos numéricos'), z.literal('')]),
   sistema_nombre:      z.string().max(100).optional().or(z.literal('')),
   telefono_contacto:   z.string().max(20).optional().or(z.literal('')),
   direccion_principal: z.string().max(255).optional().or(z.literal('')),
@@ -90,6 +92,8 @@ export function ConfiguracionPage() {
   const qc          = useQueryClient()
   const [saved, setSaved] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [claveSol, setClaveSol] = useState('')
+  const [syncFeedback, setSyncFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
   const fileRef     = useRef<HTMLInputElement>(null)
 
   const { data, isLoading } = useQuery({
@@ -135,6 +139,17 @@ export function ConfiguracionPage() {
     onSuccess: () => {
       setLogoPreview(null)
       qc.invalidateQueries({ queryKey: ['configuracion-con-logo'] })
+    },
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: () => configuracionApi.syncLogoFacturacion(claveSol),
+    onSuccess: (res) => {
+      setSyncFeedback({ ok: res.ok, msg: res.msg })
+    },
+    onError: (err) => {
+      const msg = (err as { response?: { data?: { msg?: string; message?: string } } }).response?.data
+      setSyncFeedback({ ok: false, msg: msg?.msg ?? msg?.message ?? 'No se pudo sincronizar con el servicio de facturación.' })
     },
   })
 
@@ -293,6 +308,50 @@ export function ConfiguracionPage() {
           className="hidden"
         />
         <p className="mt-4 text-xs text-kyro-muted">PNG, JPG o WebP — máximo 2 MB. Se convierte a base64 para inclusión en documentos PDF.</p>
+      </FormSection>
+
+      {/* Sincronización con Facturación */}
+      <FormSection title="Sincronización con Facturación" icon={<Sync size={16} />}>
+        <p className="mb-4 text-sm text-kyro-body">
+          Envía los datos de la empresa y el logo actual a la company del servicio de facturación electrónica,
+          para que aparezcan en las boletas y facturas emitidas. Requiere confirmar la Clave SOL.
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <Label htmlFor="clave_sol">Clave SOL</Label>
+            <Input
+              id="clave_sol"
+              type="password"
+              value={claveSol}
+              onChange={e => setClaveSol(e.target.value)}
+              placeholder="Confirma tu Clave SOL"
+              className="mt-1"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="glassInfo"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending || claveSol.trim() === ''}
+            className="gap-2"
+          >
+            <Sync size={15} />
+            {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar con facturación'}
+          </Button>
+        </div>
+        {syncFeedback && (
+          <div
+            className={
+              'mt-3 flex items-center gap-2 rounded-kyro border px-4 py-3 text-sm ' +
+              (syncFeedback.ok
+                ? 'border-kyro-success/30 bg-kyro-success/10 text-kyro-success'
+                : 'border-kyro-danger/30 bg-kyro-danger/10 text-kyro-danger')
+            }
+          >
+            {syncFeedback.ok ? <CheckCircle2 size={16} /> : <WarningCircle2 size={16} />}
+            {syncFeedback.msg}
+          </div>
+        )}
       </FormSection>
     </div>
   )

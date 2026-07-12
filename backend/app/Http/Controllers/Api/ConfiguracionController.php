@@ -55,16 +55,27 @@ class ConfiguracionController extends Controller
             return response()->json(['error' => 'Tabla configuracion_empresa no existe.'], 422);
         }
 
+        // Campos opcionales vacíos ('') se normalizan a null para que las
+        // reglas `regex`/`email` no se evalúen sobre cadenas vacías.
+        $request->merge(array_map(
+            static fn ($valor) => $valor === '' ? null : $valor,
+            $request->only(['gerente_dni', 'correo_contacto', 'nombre_comercial', 'gerente_general', 'sistema_nombre', 'telefono_contacto', 'direccion_principal'])
+        ));
+
         $data = $request->validate([
             'razon_social'        => ['required', 'string', 'max:200'],
             'nombre_comercial'    => ['nullable', 'string', 'max:200'],
-            'ruc'                 => ['required', 'string', 'max:11'],
+            'ruc'                 => ['required', 'string', 'size:11', 'regex:/^\d{11}$/'],
             'gerente_general'     => ['nullable', 'string', 'max:100'],
-            'gerente_dni'         => ['nullable', 'string', 'max:8'],
+            'gerente_dni'         => ['nullable', 'string', 'regex:/^\d{8}$/'],
             'sistema_nombre'      => ['nullable', 'string', 'max:100'],
             'telefono_contacto'   => ['nullable', 'string', 'max:20'],
             'direccion_principal' => ['nullable', 'string', 'max:255'],
             'correo_contacto'     => ['nullable', 'email', 'max:100'],
+        ], [
+            'ruc.regex'         => 'El RUC debe tener 11 dígitos numéricos.',
+            'ruc.size'          => 'El RUC debe tener 11 dígitos numéricos.',
+            'gerente_dni.regex' => 'El DNI del gerente debe tener 8 dígitos numéricos.',
         ]);
 
         // UPSERT — crea id=1 si no existe
