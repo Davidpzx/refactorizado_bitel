@@ -4,6 +4,7 @@ import { api } from '../../services/api'
 import { apiErrorData } from '../../lib/httpError'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { PageHeader } from '../../components/PageHeader'
 import { ListToolbar } from '../../components/ListToolbar'
 import { CreditCard, Warning as AlertTriangle, CheckCircle } from '@phosphor-icons/react'
@@ -70,7 +71,7 @@ export function ReporteBcpPage() {
 
   if (data?.warning && !esAdmin) {
     return (
-      <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
+      <div className="flex items-center gap-3 rounded-[18px] border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
         <AlertTriangle size={18} /> {data.warning}
       </div>
     )
@@ -85,14 +86,14 @@ export function ReporteBcpPage() {
       </PageHeader>
 
       {data?.warning && (
-        <div className="flex items-center gap-3 rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
+        <div className="flex items-center gap-3 rounded-[18px] border border-kyro-warning/30 bg-kyro-warning/10 p-4 text-sm text-kyro-warning shadow-kyro-card">
           <AlertTriangle size={18} /> {data.warning}
         </div>
       )}
 
       {/* Agente: formulario de envío */}
       {!esAdmin && !data?.warning && (
-        <div className="kyro-card max-w-xl p-6">
+        <div className="kyro-card max-w-xl rounded-[18px] p-5">
           <h2 className="mb-4 text-sm font-semibold text-kyro-text">Enviar Reporte BCP</h2>
           {success && (
             <div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success">
@@ -197,30 +198,28 @@ export function ReporteBcpPage() {
                   className="kyro-input w-auto"
                 />
               </div>
-              <Button variant="gold" onClick={() => setApplied({ ...filters })}>Buscar</Button>
+              <Button onClick={() => setApplied({ ...filters })}>Buscar</Button>
             </div>
           </ListToolbar>
 
           {/* KPIs */}
           {data?.kpis && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: 'Total Efectivo',    value: pen.format(data.kpis.total_efectivo), border: 'border-l-kpi-transfer' },
-                { label: 'Total Tarjeta',     value: pen.format(data.kpis.total_tarjeta), border: 'border-l-kpi-total' },
-                { label: 'Total Operaciones', value: String(data.kpis.total_operaciones ?? 0), border: 'border-l-kpi-total' },
-                { label: 'Registros',         value: String(data.kpis.total_registros), border: 'border-l-kpi-neutral' },
-              ].map(k => (
-                <div key={k.label} className={`kyro-card border-l-4 p-4 ${k.border}`}>
-                  <p className="mb-1 text-xs text-kyro-muted">{k.label}</p>
-                  <p className="text-xl font-bold text-kyro-text">{k.value}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <KpiCard title="Saldo en efectivo" value={data.kpis.total_efectivo} monetary
+                subtitle="Total del periodo" />
+              <KpiCard title="Saldo en tarjeta" value={data.kpis.total_tarjeta} monetary tone="gold"
+                subtitle="Total del periodo" />
+              <KpiCard title="Operaciones" value={data.kpis.total_operaciones ?? 0} tone="indigo"
+                subtitle={`${data.kpis.total_registros} reportes`} />
+              <KpiCard title="Incidencias"
+                value={data.reportes.filter((reporte) => Boolean(reporte.incidencias_sistema?.trim())).length}
+                tone="danger" accent="var(--color-kyro-danger)" subtitle="Reportadas en el periodo" />
             </div>
           )}
 
           {/* Alertas */}
           {(data?.alertas ?? []).length > 0 && (
-            <div className="rounded-kyro-lg border border-kyro-warning/30 bg-kyro-warning/10 p-4">
+            <div className="rounded-[18px] border border-kyro-warning/30 bg-kyro-warning/10 p-4">
               <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-kyro-warning">
                 <AlertTriangle size={15} /> Tiendas con menos de 200 operaciones hoy
               </h3>
@@ -235,7 +234,7 @@ export function ReporteBcpPage() {
           )}
 
           {/* Tabla */}
-          <div className="kyro-card overflow-hidden">
+          <div className="kyro-card overflow-hidden rounded-[18px]">
             <div className="border-b border-kyro-border p-4">
               <h2 className="text-sm font-semibold text-kyro-text">
                 {isLoading ? 'Cargando...' : `${data?.reportes?.length ?? 0} registros`}

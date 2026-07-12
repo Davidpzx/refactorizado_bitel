@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CaretLeft as ChevronLeft, CaretRight as ChevronRight, BellRinging as BellRing } from '@phosphor-icons/react'
 import { Button } from '../../components/ui/button'
+import { KpiCard } from '../../components/ui/KpiCard'
+import { PageTabs } from '../../components/ui/PageTabs'
 import {
   cuadreBitelApi, auditoriaBipayApi, integradorApi,
   type CuadreCategorial, type CierreAuditoria, type WebhookConfig,
@@ -74,7 +76,7 @@ function TabPanel({ fecha }: { fecha: string }) {
         <button
           onClick={() => solicitarHistorico.mutate()}
           disabled={solicitarHistorico.isPending || data.queue?.estado === 'PENDIENTE' || data.queue?.estado === 'PROCESANDO'}
-          className="rounded-lg border border-kyro-gold/40 bg-kyro-gold/10 px-3 py-1.5 text-xs font-semibold text-kyro-gold disabled:opacity-50"
+          className="rounded-[10px] border border-kyro-indigo/40 bg-kyro-indigo/10 px-3 py-1.5 text-xs font-semibold text-kyro-indigo disabled:opacity-50"
         >
           {data.queue?.estado === 'LISTO' || data.queue?.estado === 'ERROR' ? 'Re-solicitar histórico Bitel' : 'Solicitar histórico Bitel'}
         </button>
@@ -82,7 +84,7 @@ function TabPanel({ fecha }: { fecha: string }) {
 
       {/* Anomalías de apoyo */}
       {data.anomalias.length > 0 && (
-        <div className="kyro-card border border-kyro-warning/30 p-4">
+        <div className="kyro-card rounded-[18px] border border-kyro-warning/30 p-5">
           <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-kyro-warning">
             Posibles apoyos sin confirmar (venta Bitel alta, ERP casi vacío)
           </h3>
@@ -104,7 +106,7 @@ function TabPanel({ fecha }: { fecha: string }) {
                 <button
                   disabled={!destinoApoyo[a.tienda] || confirmarApoyo.isPending}
                   onClick={() => confirmarApoyo.mutate({ origen: a.tienda, destino: destinoApoyo[a.tienda] })}
-                  className="rounded bg-kyro-gold px-2.5 py-1 text-xs font-bold text-black disabled:opacity-40"
+                  className="rounded-[10px] bg-kyro-indigo px-2.5 py-1 text-xs font-bold text-white disabled:opacity-40"
                 >
                   Confirmar apoyo
                 </button>
@@ -117,7 +119,7 @@ function TabPanel({ fecha }: { fecha: string }) {
       {/* Cuadres por tienda / grupo */}
       <div className="grid gap-4 lg:grid-cols-2">
         {cuadres.map(([cod, c]: [string, CuadreCategorial]) => (
-          <div key={cod} className="kyro-card p-4">
+          <div key={cod} className="kyro-card rounded-[18px] p-5">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <span className="font-bold">{cod}</span>
@@ -169,17 +171,22 @@ function TabGlobal({ fecha }: { fecha: string }) {
   if (isLoading) return <p className="py-10 text-center text-sm text-kyro-muted">Cargando...</p>
   if (!data) return null
 
+  const pendientes = data.tiendas.filter((tienda) => Math.abs(tienda.diferencia) >= 0.01).length
+
   return (
     <div className="space-y-4">
-      <div className="kyro-card flex flex-wrap items-center justify-between gap-4 p-4">
-        <div className="text-sm">
-          <div>Recarga BiPay declarada (reportes): <b className="text-kyro-gold">{soles(data.declarado_total)}</b></div>
-          <div>Movimientos sin agente (scraping): <b>{soles(data.scrapeado_total)}</b></div>
-          <div>Diferencia: <b className={data.ok ? 'text-kyro-success' : 'text-kyro-danger'}>{soles(data.diferencia)}</b></div>
-        </div>
-        <EstadoBadge ok={data.ok} estado={data.estado} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard title="Declarado" value={data.declarado_total} monetary tone="gold"
+          subtitle="Recarga BiPay en reportes" />
+        <KpiCard title="Scraper" value={data.scrapeado_total} monetary
+          subtitle="Movimientos sin agente" />
+        <KpiCard title="Diferencia" value={data.diferencia} monetary
+          tone={data.ok ? 'success' : 'danger'} accent={data.ok ? 'var(--color-kyro-success)' : 'var(--color-kyro-danger)'}
+          subtitle={data.estado} />
+        <KpiCard title="Pendientes" value={pendientes} accent="var(--color-kyro-warning)"
+          subtitle="Tiendas con diferencia" />
       </div>
-      <div className="kyro-card overflow-x-auto">
+      <div className="kyro-card rounded-[18px] overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-[0.65rem] uppercase text-kyro-muted">
             <tr>
@@ -247,8 +254,8 @@ function TabMovimientos({ fecha }: { fecha: string }) {
       {Object.entries(data.tiendas).map(([tienda, info]) => {
         const todosAgentes = data.agentes_por_tienda[tienda] ?? []
         return (
-          <div key={tienda} className="kyro-card p-4">
-            <h3 className="mb-2 font-bold text-kyro-gold">{tienda}</h3>
+          <div key={tienda} className="kyro-card rounded-[18px] p-5">
+            <h3 className="mb-2 font-bold text-kyro-indigo">{tienda}</h3>
 
             {todosAgentes.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-2">
@@ -259,7 +266,7 @@ function TabMovimientos({ fecha }: { fecha: string }) {
                       key={ag}
                       onClick={() => toggleAgente(ag, todosAgentes)}
                       className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold ${
-                        activo ? 'border-kyro-gold/40 bg-kyro-gold/10 text-kyro-gold' : 'border-white/10 text-kyro-muted'
+                        activo ? 'border-kyro-indigo/40 bg-kyro-indigo/10 text-kyro-indigo' : 'border-white/10 text-kyro-muted'
                       }`}
                     >
                       {ag}
@@ -304,7 +311,7 @@ function TabMovimientos({ fecha }: { fecha: string }) {
               <div>
                 <button
                   onClick={() => setAbierto((s) => ({ ...s, [tienda]: !s[tienda] }))}
-                  className="mb-1 text-[0.68rem] font-semibold text-kyro-gold"
+                  className="mb-1 text-[0.68rem] font-semibold text-kyro-indigo"
                 >
                   {abierto[tienda] ? '▾ Ocultar' : '▸ Ver'} desglose ({info.registros.length} registros)
                 </button>
@@ -315,7 +322,7 @@ function TabMovimientos({ fecha }: { fecha: string }) {
                         {info.registros.map((r, i) => (
                           <tr key={i} className="border-t border-white/5">
                             <td className="py-1 whitespace-nowrap text-kyro-muted">{r.fecha_hora.slice(11, 19)}</td>
-                            <td className="px-2 text-kyro-gold">{r.agente}</td>
+                            <td className="px-2 text-kyro-indigo">{r.agente}</td>
                             <td className="max-w-[280px] truncate" title={r.descripcion}>{r.descripcion}</td>
                             <td className={`text-right font-semibold ${r.monto >= 0 ? 'text-kyro-success' : 'text-kyro-warning'}`}>{soles(r.monto)}</td>
                           </tr>
@@ -382,13 +389,13 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
         <Button variant="glassDanger" size="sm" className="gap-1.5" onClick={() => setWebhookOpen((v) => !v)}>
           <BellRing size={14} /> Alertas Webhook
         </Button>
-        <Button variant="gold" size="sm" disabled={cruce.isPending} onClick={() => cruce.mutate()}>
+        <Button size="sm" disabled={cruce.isPending} onClick={() => cruce.mutate()}>
           {cruce.isPending ? 'Cruzando...' : 'Ejecutar cruce del día'}
         </Button>
       </div>
 
       {webhookOpen && (
-        <div className="kyro-card border-t-2 border-t-kyro-danger space-y-2 p-4">
+        <div className="kyro-card rounded-[18px] border-t-2 border-t-kyro-danger space-y-2 p-5">
           <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase text-kyro-danger">
             <BellRing size={13} /> Alertas de descuadre (Discord / Slack)
           </h3>
@@ -405,12 +412,12 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
             <input type="number" step="0.01" className="kyro-input w-32"
               placeholder="Umbral S/" value={webhook.bipay_webhook_umbral ?? ''}
               onChange={(e) => setWebhook((w) => ({ ...w, bipay_webhook_umbral: e.target.value }))} />
-            <Button variant="gold" size="sm" onClick={() => guardarWebhook.mutate()}>Guardar</Button>
+            <Button size="sm" onClick={() => guardarWebhook.mutate()}>Guardar</Button>
           </div>
         </div>
       )}
 
-      <div className="kyro-card overflow-x-auto">
+      <div className="kyro-card rounded-[18px] overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-[0.65rem] uppercase text-kyro-muted">
             <tr>
@@ -431,7 +438,7 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
                 <td className={`px-3 py-1.5 text-right font-bold ${Number(c.diferencia) === 0 ? 'text-kyro-success' : 'text-kyro-danger'}`}>{soles(c.diferencia)}</td>
                 <td className="px-3 py-1.5 text-center"><EstadoBadge estado={c.estado} /></td>
                 <td className="px-3 py-1.5 text-right">
-                  <button className="mr-2 text-kyro-gold" onClick={() => setDetalleId(detalleId === c.id ? null : c.id)}>Detalles</button>
+                  <button className="mr-2 text-kyro-indigo" onClick={() => setDetalleId(detalleId === c.id ? null : c.id)}>Detalles</button>
                   {c.estado === 'DESCUADRADO' && (
                     <button className="text-kyro-warning" onClick={() => setAjusteId(c.id)}>Justificar</button>
                   )}
@@ -446,14 +453,14 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
       </div>
 
       {ajusteId !== null && (
-        <div className="kyro-card space-y-2 p-4">
+        <div className="kyro-card rounded-[18px] space-y-2 p-5">
           <h3 className="text-xs font-bold uppercase text-kyro-muted">Justificar descuadre #{ajusteId}</h3>
           <textarea className="w-full rounded border border-white/10 bg-transparent px-2 py-1.5 text-xs" rows={2}
             placeholder="Observación / justificación (obligatoria)" value={observacion}
             onChange={(e) => setObservacion(e.target.value)} />
           <div className="flex gap-2">
             <button onClick={() => ajustar.mutate()} disabled={!observacion.trim() || ajustar.isPending}
-              className="rounded bg-kyro-gold px-3 py-1 text-xs font-bold text-black disabled:opacity-40">Ajustar</button>
+              className="rounded-[10px] bg-kyro-indigo px-3 py-1 text-xs font-bold text-white disabled:opacity-40">Ajustar</button>
             <button onClick={() => setAjusteId(null)} className="text-xs text-kyro-muted">Cancelar</button>
           </div>
         </div>
@@ -461,8 +468,8 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
 
       {detalle && detalleId !== null && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="kyro-card p-4">
-            <h3 className="mb-2 text-xs font-bold uppercase text-kyro-gold">Movimientos Bitel (scraper)</h3>
+          <div className="kyro-card rounded-[18px] p-5">
+            <h3 className="mb-2 text-xs font-bold uppercase text-kyro-indigo">Movimientos Bitel (scraper)</h3>
             <div className="max-h-80 overflow-y-auto">
               <table className="w-full text-[0.68rem]">
                 <tbody>
@@ -471,7 +478,7 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
                       <td className="py-1 whitespace-nowrap text-kyro-muted">{String(s.fecha_hora).slice(11, 16)}</td>
                       <td className="max-w-[260px] truncate px-2" title={s.descripcion}>
                         <b>{s.tipo_operacion}</b> {s.descripcion}
-                        {s.codigo_personal && <span className="ml-1 text-kyro-gold">({s.codigo_personal})</span>}
+                        {s.codigo_personal && <span className="ml-1 text-kyro-indigo">({s.codigo_personal})</span>}
                       </td>
                       <td className="text-right font-semibold">{soles(s.monto)}</td>
                     </tr>
@@ -481,8 +488,8 @@ function TabAuditoria({ fecha, webhookOpenDefault = false }: { fecha: string; we
               </table>
             </div>
           </div>
-          <div className="kyro-card p-4">
-            <h3 className="mb-2 text-xs font-bold uppercase text-kyro-gold">Declaraciones en reportes (ERP)</h3>
+          <div className="kyro-card rounded-[18px] p-5">
+            <h3 className="mb-2 text-xs font-bold uppercase text-kyro-indigo">Declaraciones en reportes (ERP)</h3>
             <div className="max-h-80 overflow-y-auto">
               <table className="w-full text-[0.68rem]">
                 <thead className="text-[0.6rem] uppercase text-kyro-muted">
@@ -530,7 +537,7 @@ function TabMorosidad() {
         <input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)}
           className="rounded border border-white/10 bg-transparent px-2 py-1.5 text-xs" />
         <button onClick={() => solicitar.mutate()} disabled={solicitar.isPending}
-          className="rounded-lg bg-kyro-gold px-3 py-1.5 text-xs font-bold text-black disabled:opacity-50">
+          className="rounded-[10px] bg-kyro-indigo px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">
           Solicitar extracción de deudas
         </button>
         {data?.solicitud && (
@@ -548,7 +555,7 @@ function TabMorosidad() {
             ['Suspendidas', data.clientes_estado.suspendidos],
             ['Deuda total', soles(Number(data.clientes_estado.deuda_total ?? 0))],
           ].map(([lbl, val]) => (
-            <div key={String(lbl)} className="kyro-card p-3 text-center">
+            <div key={String(lbl)} className="kyro-card rounded-[18px] p-3 text-center">
               <div className="text-lg font-bold">{val ?? 0}</div>
               <div className="text-[0.65rem] uppercase text-kyro-muted">{lbl}</div>
             </div>
@@ -556,7 +563,7 @@ function TabMorosidad() {
         </div>
       )}
 
-      <div className="kyro-card overflow-x-auto">
+      <div className="kyro-card rounded-[18px] overflow-x-auto">
         {isLoading ? <p className="py-8 text-center text-sm text-kyro-muted">Cargando...</p> : (
           <table className="w-full text-xs">
             <thead className="text-[0.65rem] uppercase text-kyro-muted">
@@ -610,16 +617,7 @@ export function CuadreBitelPanel({ initialTab, openWebhook = false }: { initialT
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="kyro-card flex w-fit flex-wrap gap-1 p-1">
-          {TABS.map((t) => (
-            <Button key={t.id} variant="ghost" size="sm" onClick={() => setTab(t.id)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                tab === t.id ? 'bg-kyro-elevated text-kyro-text shadow-sm' : 'text-kyro-muted hover:bg-kyro-elevated hover:text-kyro-text'
-              }`}>
-              {t.label}
-            </Button>
-          ))}
-        </div>
+        <PageTabs tabs={TABS} active={tab} onChange={(id) => setTab(id as Tab)} />
         {tab !== 'morosidad' && (
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" onClick={() => setFecha((f) => sumarDias(f, -1))} aria-label="Día anterior">
@@ -629,7 +627,7 @@ export function CuadreBitelPanel({ initialTab, openWebhook = false }: { initialT
             <Button variant="outline" size="sm" disabled={fecha >= hoy()} onClick={() => setFecha((f) => sumarDias(f, 1))} aria-label="Día siguiente">
               <ChevronRight size={14} />
             </Button>
-            <Button variant="gold" size="sm" onClick={() => setFecha(hoy())}>Hoy</Button>
+            <Button size="sm" onClick={() => setFecha(hoy())}>Hoy</Button>
           </div>
         )}
       </div>

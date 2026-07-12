@@ -4,8 +4,7 @@ import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/button'
 import { ActionIconButton, TableActions } from '../../components/ui/ActionIconButton'
-import { MoneyTotal } from '../../components/ui/MoneyTotal'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { ListToolbar } from '../../components/ListToolbar'
 import { PageHeader } from '../../components/PageHeader'
 import { apiErrorData } from '../../lib/httpError'
@@ -17,7 +16,7 @@ const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' 
 
 const BIPAY = '#38bdf8'
 const ANYPAY = '#a78bfa'
-const GOLD = '#6366f1'
+const INDIGO = '#6366f1'
 
 interface Cuenta {
   id: number
@@ -263,24 +262,34 @@ export function PanelBipayPage() {
       {/* KPIs ────────────────────────────────────────────────────────────────── */}
       {saldoData?.kpis && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[
-            { label: 'Total Bipay',  value: saldoData.kpis.total_bipay,  color: BIPAY,  Icon: CreditCard },
-            { label: 'Total Anypay', value: saldoData.kpis.total_anypay, color: ANYPAY, Icon: Layers },
-            { label: 'Saldo Global', value: saldoData.kpis.total_saldo,  color: GOLD,   Icon: Wallet },
-          ].map(k => (
-            <StatCard
-              key={k.label}
-              title={k.label}
-              accent={k.color}
-              icon={<k.Icon size={20} />}
-              value={<MoneyTotal value={k.value} color={k.color} size="1.4rem" />}
-            />
-          ))}
+          <KpiCard
+            title="Saldo Global"
+            value={saldoData.kpis.total_saldo}
+            monetary
+            tone="gold"
+            icon={<Wallet size={20} />}
+            subtitle="Saldo consolidado"
+          />
+          <KpiCard
+            title="Total Bipay"
+            value={saldoData.kpis.total_bipay}
+            monetary
+            tone="info"
+            accent={BIPAY}
+            icon={<CreditCard size={20} />}
+          />
+          <KpiCard
+            title="Total Anypay"
+            value={saldoData.kpis.total_anypay}
+            monetary
+            accent={ANYPAY}
+            icon={<Layers size={20} />}
+          />
         </div>
       )}
 
       {/* Tabs ─────────────────────────────────────────────────────────────────── */}
-      <div className="kyro-card flex w-fit gap-1 p-1">
+      <div className="kyro-card rounded-[18px] flex w-fit gap-1 p-1">
         {TABS.map(t => (
           <Button key={t.id} variant="ghost" size="sm" onClick={() => { setWebhookSignal(0); setTab(t.id) }}
             className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -305,7 +314,7 @@ export function PanelBipayPage() {
 
       {/* TAB: Saldo por cuenta ─────────────────────────────────────────────────── */}
       {tab === 'saldo' && (
-        <div className="kyro-card overflow-hidden">
+        <div className="kyro-card rounded-[18px] overflow-hidden">
           <div
             className="flex items-center gap-2 border-b px-4 py-3"
             style={{ borderColor: `color-mix(in srgb, ${BIPAY} 30%, transparent)`, background: `color-mix(in srgb, ${BIPAY} 9%, transparent)` }}
@@ -378,7 +387,7 @@ export function PanelBipayPage() {
                 {TIPOS_OPERACION.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <Button variant="gold" onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
+            <Button onClick={() => setTxApplied({ ...txFilters })}>Buscar</Button>
             {esAdmin && (
               <Button variant="outline" onClick={exportarTransaccionesExcel} disabled={exportando} className="gap-2">
                 <FileSpreadsheet size={14} /> {exportando ? 'Exportando…' : 'Exportar Excel'}
@@ -386,7 +395,7 @@ export function PanelBipayPage() {
             )}
           </ListToolbar>
 
-          <div className="kyro-card overflow-hidden">
+          <div className="kyro-card rounded-[18px] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -428,7 +437,7 @@ export function PanelBipayPage() {
 
       {/* TAB: Nueva Recarga ────────────────────────────────────────────────────── */}
       {tab === 'recarga' && (
-        <div className="kyro-card max-w-md border-t-2 border-t-kpi-transfer p-6">
+        <div className="kyro-card max-w-md rounded-[18px] border-t-2 border-t-kpi-transfer p-5">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
             <RefreshCw size={15} className="text-kpi-transfer" /> Registrar Recarga de Saldo
           </h2>
@@ -495,7 +504,7 @@ export function PanelBipayPage() {
 
       {/* TAB: Transferir ───────────────────────────────────────────────────────── */}
       {tab === 'transferir' && (
-        <div className="kyro-card max-w-md border-t-2 border-t-kpi-bipay p-6">
+        <div className="kyro-card max-w-md rounded-[18px] border-t-2 border-t-kpi-bipay p-5">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
             <Send size={15} style={{ color: BIPAY }} /> Transferir Saldo entre Cuentas
           </h2>
@@ -534,9 +543,9 @@ export function PanelBipayPage() {
 
       {/* TAB: Ajustar Saldo ────────────────────────────────────────────────────── */}
       {tab === 'ajustar' && (
-        <div className="kyro-card max-w-md border-t-2 border-t-kyro-gold p-6">
+        <div className="kyro-card max-w-md rounded-[18px] border-t-2 border-t-kyro-indigo p-5">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
-            <SlidersHorizontal size={15} style={{ color: GOLD }} /> Ajuste Manual de Saldo
+            <SlidersHorizontal size={15} style={{ color: INDIGO }} /> Ajuste Manual de Saldo
           </h2>
           {ajusteMsg && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-success/30 bg-kyro-success/10 p-3 text-sm text-kyro-success"><CheckCircle2 size={15} /> {ajusteMsg}</div>)}
           {ajusteErr && (<div className="mb-4 flex items-center gap-2 rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 p-3 text-sm text-kyro-danger"><XCircle size={15} /> {ajusteErr}</div>)}
@@ -562,7 +571,7 @@ export function PanelBipayPage() {
               <label className="mb-1 block text-xs text-gray-500 dark:text-zinc-400">Motivo del ajuste (obligatorio)</label>
               <input type="text" value={ajusteForm.motivo} onChange={e => setAjusteForm(f => ({ ...f, motivo: e.target.value }))} placeholder="Conteo físico, corrección, etc." className={inputCls} />
             </div>
-            <Button variant="gold" disabled={ajustar.isPending || !ajusteForm.cuenta_id || ajusteForm.motivo.trim().length < 5}
+            <Button disabled={ajustar.isPending || !ajusteForm.cuenta_id || ajusteForm.motivo.trim().length < 5}
               onClick={() => ajustar.mutate({ cuenta_id: Number(ajusteForm.cuenta_id), saldo_bipay: Number(ajusteForm.saldo_bipay || 0), saldo_anypay: Number(ajusteForm.saldo_anypay || 0), motivo: ajusteForm.motivo })}>
               {ajustar.isPending ? 'Ajustando…' : 'Aplicar Ajuste'}
             </Button>
@@ -574,7 +583,7 @@ export function PanelBipayPage() {
       {tab === 'cuentas' && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Lista */}
-          <div className="kyro-card overflow-hidden lg:col-span-2">
+          <div className="kyro-card rounded-[18px] overflow-hidden lg:col-span-2">
             <div
               className="flex items-center gap-2 border-b px-4 py-3"
               style={{ borderColor: `color-mix(in srgb, ${BIPAY} 30%, transparent)`, background: `color-mix(in srgb, ${BIPAY} 9%, transparent)` }}
@@ -627,7 +636,7 @@ export function PanelBipayPage() {
           </div>
 
           {/* Formulario */}
-          <div className="kyro-card border-t-2 border-t-kpi-bipay p-6">
+          <div className="kyro-card rounded-[18px] border-t-2 border-t-kpi-bipay p-5">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-kyro-text">
               <CreditCard size={15} style={{ color: BIPAY }} /> {editandoCuenta ? 'Editar cuenta' : 'Nueva cuenta'}
             </h2>
@@ -677,7 +686,7 @@ export function PanelBipayPage() {
                 </div>
               )}
               <div className="flex gap-2 pt-1">
-                <Button variant="gold" className="flex-1"
+                <Button className="flex-1"
                   disabled={guardarCuenta.isPending || !cuentaForm.alias || !cuentaForm.numero_cuenta || (cuentaForm.tipo === 'HIJO' && !cuentaForm.cuenta_madre_id)}
                   onClick={() => { setCuentaMsg(''); setCuentaErr(''); guardarCuenta.mutate({
                     alias: cuentaForm.alias, tipo: cuentaForm.tipo, numero_cuenta: cuentaForm.numero_cuenta,
@@ -694,7 +703,7 @@ export function PanelBipayPage() {
 
           {/* Cuentas Huérfanas (HIJO sin cuenta_madre_id) — pendientes de vincular a MADRE */}
           {huerfanas.length > 0 && (
-            <div className="kyro-card border-t-2 border-t-kyro-muted p-6 lg:col-span-3">
+            <div className="kyro-card rounded-[18px] border-t-2 border-t-kyro-muted p-5 lg:col-span-3">
               <div className="mb-3 flex items-center gap-2">
                 <AlertTriangle size={16} className="text-kyro-muted" />
                 <div>
@@ -720,7 +729,7 @@ export function PanelBipayPage() {
                         <input type="text" placeholder="Alias (opcional)" value={vincularForm.alias}
                           onChange={e => setVincularForm(f => ({ ...f, alias: e.target.value }))} className={inputCls} />
                         <div className="flex gap-2">
-                          <Button variant="gold" size="sm" disabled={vincularHuerfana.isPending || !vincularForm.razon_social.trim()}
+                          <Button size="sm" disabled={vincularHuerfana.isPending || !vincularForm.razon_social.trim()}
                             onClick={() => vincularHuerfana.mutate({ razon_social: vincularForm.razon_social, alias: vincularForm.alias || undefined })}>
                             {vincularHuerfana.isPending ? 'Vinculando…' : 'Confirmar'}
                           </Button>
@@ -743,7 +752,7 @@ export function PanelBipayPage() {
 
       {/* TAB: Locks Activos (admin) ────────────────────────────────────────────── */}
       {tab === 'locks' && (
-        <div className="kyro-card overflow-hidden">
+        <div className="kyro-card rounded-[18px] overflow-hidden">
           <div className="border-b border-kyro-border px-4 py-3">
             <h2 className="flex items-center gap-2 text-sm font-bold text-kyro-danger"><Lock size={15} /> Locks Activos (tiendas operando)</h2>
           </div>

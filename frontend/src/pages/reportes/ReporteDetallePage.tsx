@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { CaretLeft as ChevronLeft, FileText, FileXls as FileSpreadsheet, CheckCircle } from '@phosphor-icons/react'
+import { CaretLeft as ChevronLeft, FileText, FileXls as FileSpreadsheet, CheckCircle, Wallet, TrendUp, Scales } from '@phosphor-icons/react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReporte } from '../../hooks/useReportes'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { reportesApi, type HistorialReporteEntry } from '../../services/reportes.api'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../services/api'
@@ -247,7 +248,7 @@ function SeccionVentas({
 
   return (
     <Card className="kyro-card">
-      <CardHeader className="py-2.5 px-4">
+      <CardHeader className="px-5 py-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
             {titulo}
@@ -269,7 +270,7 @@ function SeccionVentas({
           <div>{ventas.map((v, i) => renderFila(v, i))}</div>
         )}
         {ventas.length > 0 && totalLabel && (
-          <div className="px-4 py-2 border-t border-kyro-border bg-kyro-elevated/50 flex justify-between items-center">
+          <div className="px-5 py-3 border-t border-kyro-border bg-kyro-elevated/50 flex justify-between items-center">
             <span className="text-xs text-kyro-muted font-medium">{totalLabel}</span>
             <span className="text-sm font-bold text-kyro-text tabular-nums">{sol(total)}</span>
           </div>
@@ -301,19 +302,19 @@ function DineroDigitalCard({ reporte }: { reporte: ReporteConVentas }) {
 
   return (
     <Card className="kyro-card">
-      <CardHeader className="py-2.5 px-4">
+      <CardHeader className="px-5 py-4">
         <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
           Dinero Digital y Retiros
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 py-3">
+      <CardContent className="p-5">
         {!hayDigital && !hayAdicional ? (
           <p className="text-sm text-kyro-subtle italic">Sin movimientos digitales.</p>
         ) : (
           <div className="space-y-0.5">
             {/* Medios de pago digital */}
             {yape > 0 && (
-              <FilaRecibo label="Yape" valor={sol(yape)} colorValor="text-kyro-gold" indent />
+              <FilaRecibo label="Yape" valor={sol(yape)} colorValor="text-kyro-info" indent />
             )}
             {bipay > 0 && (
               <FilaRecibo label="Bipay" valor={sol(bipay)} colorValor="text-kyro-info" indent />
@@ -377,12 +378,12 @@ function SalidasCard({ reporte }: { reporte: ReporteConVentas }) {
 
   return (
     <Card className="kyro-card">
-      <CardHeader className="px-4 py-2.5">
+      <CardHeader className="px-5 py-4">
         <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
           Salidas y Gastos
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 px-4 py-3">
+      <CardContent className="space-y-2 p-5">
         {reporte.salidas.map(salida => (
           <div key={salida.id ?? `${salida.tipo}-${salida.monto}-${salida.observacion ?? ''}`} className="border-b border-kyro-border pb-2 last:border-0">
             <div className="flex items-center justify-between">
@@ -437,12 +438,12 @@ function CuadreFinalCard({
 
   return (
     <Card className="kyro-card">
-      <CardHeader className="py-2.5 px-4">
+      <CardHeader className="px-5 py-4">
         <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
           Cuadre Final de Efectivo
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 py-3">
+      <CardContent className="p-5">
         <div className="space-y-0.5">
           <FilaRecibo label="Caja inicial" valor={sol(reporte.caja_inicial)} />
           <FilaRecibo label="Total ventas (calculado)" valor={sol(reporte.total_calculado)} />
@@ -487,7 +488,7 @@ function CuadreFinalCard({
                 <button
                   type="button"
                   onClick={() => { setShowForm(s => !s); setNuevoDestino(''); setObsDestino('') }}
-                  className="text-[10px] text-kyro-info hover:text-kyro-gold underline"
+                  className="text-[10px] text-kyro-info hover:text-kyro-indigo underline"
                 >
                   {showForm ? 'Cancelar' : 'Cambiar'}
                 </button>
@@ -516,7 +517,7 @@ function CuadreFinalCard({
               />
               <Button
                 size="sm"
-                variant="gold"
+                variant="default"
                 className="w-full"
                 disabled={!nuevoDestino || isPendingDestino}
                 onClick={() => {
@@ -548,7 +549,7 @@ const ACCION_CONFIG: Record<HistorialReporteEntry['accion'], { label: string; co
   solicito_edicion:    { label: 'Edición solicitada',      color: 'text-kyro-warning', dot: 'bg-kyro-warning' },
   edicion_aprobada:    { label: 'Edición aprobada',        color: 'text-kyro-info',    dot: 'bg-kyro-info' },
   edicion_rechazada:   { label: 'Edición rechazada',       color: 'text-kyro-danger',  dot: 'bg-kyro-danger' },
-  edicion_reporte:     { label: 'Reporte editado',         color: 'text-kyro-gold',    dot: 'bg-kyro-gold' },
+  edicion_reporte:     { label: 'Reporte editado',         color: 'text-kyro-indigo',  dot: 'bg-kyro-indigo' },
   edicion_critica:     { label: 'Edición crítica',         color: 'text-kyro-danger',  dot: 'bg-kyro-danger' },
   edicion_restaurada:  { label: 'Reporte restaurado',      color: 'text-kyro-success', dot: 'bg-kyro-success' },
   destino_modificado:  { label: 'Destino modificado',      color: 'text-kyro-info',    dot: 'bg-kyro-info' },
@@ -703,9 +704,18 @@ export function ReporteDetallePage() {
   const apoyo     = ventas.filter(v => v.tipo_venta === 'APOYO')
 
   const totalVentas = ventas.reduce((acc, v) => acc + montoVenta(v), 0)
+  // Ganancia + comisión: ganancia_snap de equipos + comisión por línea (× cantidad).
+  const gananciaComision = ventas.reduce((acc, v) => {
+    const g = n(v.equipo?.ganancia_snap)
+    const c = n(v.linea?.comision_unitaria) * Math.max(1, v.linea?.cantidad ?? 1)
+    return acc + g + c
+  }, 0)
   const diff        = n(reporte.diferencia)
   const diffOk      = Math.abs(diff) < 0.01
   const diffGrave   = Math.abs(diff) > 10
+  const difAccent   = diffOk
+    ? 'var(--color-kyro-success)'
+    : diffGrave ? 'var(--color-kyro-danger)' : 'var(--color-kyro-warning)'
 
   return (
     <div className="pb-12">
@@ -765,6 +775,9 @@ export function ReporteDetallePage() {
               <h1 className="text-lg font-orbitron font-bold text-kyro-text leading-tight">
                 {reporte.tienda_id} — {fmtFecha(reporte.fecha)}
               </h1>
+              <p className="text-sm text-kyro-muted mt-0.5">
+                Agente: <span className="font-medium text-kyro-body">{reporte.agente_nombre ?? `#${reporte.agente_id}`}</span>
+              </p>
               {reporte.nombre_cubre && (
                 <p className="text-sm text-kyro-muted mt-0.5">
                   Cubre: <span className="font-medium text-kyro-body">{reporte.nombre_cubre}</span>
@@ -784,7 +797,7 @@ export function ReporteDetallePage() {
                   {usuario?.rol === 'admin' && (
                     <Button
                       size="sm"
-                      variant="gold"
+                      variant="success"
                       disabled={aprobarEdicion.isPending}
                       onClick={async () => {
                         const ok = await confirmDialog({
@@ -805,38 +818,45 @@ export function ReporteDetallePage() {
             </div>
           </div>
 
-          {/* Métricas rápidas */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="kyro-card border-l-4 border-l-kpi-neutral px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Tienda</p>
-              <p className="text-sm font-bold text-kyro-text">{reporte.tienda_id}</p>
-            </div>
-            <div className="kyro-card border-l-4 border-l-kpi-neutral px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Agente</p>
-              <p className="text-sm font-bold text-kyro-text">{reporte.agente_nombre ?? `#${reporte.agente_id}`}</p>
-            </div>
-            <div className="kyro-card border-l-4 border-l-kpi-total px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Total ventas</p>
-              <p className="text-sm font-bold text-kyro-text tabular-nums">{sol(totalVentas)}</p>
-              {ventas.length > 0 && (
-                <p className="text-[10px] text-kyro-subtle mt-0.5">{ventas.length} transacciones</p>
-              )}
-            </div>
-            <div className={`kyro-card border-l-4 px-3 py-2.5 ${
-              diffOk ? 'border-l-kyro-success' : diffGrave ? 'border-l-kyro-danger' : 'border-l-kyro-warning'
-            }`}>
-              <p className="text-[10px] uppercase tracking-widest text-kyro-subtle font-semibold mb-0.5">Diferencia</p>
-              <p className={`text-sm font-bold tabular-nums ${
-                diffOk ? 'text-kyro-success' : diffGrave ? 'text-kyro-danger' : 'text-kyro-warning'
-              }`}>
-                {diffOk ? '✓ Cuadrado' : sol(reporte.diferencia)}
-              </p>
-              <p className="text-[10px] text-kyro-subtle mt-0.5">
-                Efectivo: {sol(reporte.efectivo_entregado)}
-              </p>
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* ── Cabecera de 4 KPI (DIS-FX-10) ──
+          Oro reservado a total vendido y ganancia/comisión (montos protagonistas);
+          efectivo esperado en info, diferencia semántica. Sin sparkline: el detalle
+          de un reporte no expone series históricas — no se inventan tendencias. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <KpiCard
+          title="Total vendido"
+          value={totalVentas}
+          monetary
+          tone="gold"
+          icon={<Wallet size={18} />}
+          subtitle={ventas.length > 0 ? `${ventas.length} transacciones` : undefined}
+        />
+        <KpiCard
+          title="Ganancia / Comisión"
+          value={gananciaComision}
+          monetary
+          tone="gold"
+          icon={<TrendUp size={18} />}
+        />
+        <KpiCard
+          title="Efectivo esperado"
+          value={n(reporte.efectivo_esperado)}
+          monetary
+          tone="info"
+          accent="var(--color-kyro-info)"
+          icon={<CheckCircle size={18} />}
+          subtitle={`Declarado: ${sol(reporte.efectivo_entregado)}`}
+        />
+        <KpiCard
+          title="Diferencia"
+          value={<span style={{ color: difAccent }}>{diffOk ? '✓ Cuadrado' : sol(reporte.diferencia)}</span>}
+          accent={difAccent}
+          icon={<Scales size={18} />}
+          subtitle={diffOk ? 'Caja cuadrada' : diffGrave ? 'Descuadre — requiere revisión' : 'Diferencia leve'}
+        />
       </div>
 
       {/* ── Grid principal ── */}
@@ -912,12 +932,12 @@ export function ReporteDetallePage() {
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           {reporte.obs_dia && (
             <Card>
-              <CardHeader className="py-2.5 px-4">
+              <CardHeader className="px-5 py-4">
                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
                   Notas del día
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1">
+              <CardContent className="p-5">
                 <p className="text-sm text-kyro-body whitespace-pre-wrap leading-relaxed">
                   {reporte.obs_dia}
                 </p>
@@ -926,12 +946,12 @@ export function ReporteDetallePage() {
           )}
           {reporte.observaciones && (
             <Card>
-              <CardHeader className="py-2.5 px-4">
+              <CardHeader className="px-5 py-4">
                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
                   Observaciones de cuadre
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1">
+              <CardContent className="p-5">
                 <p className="text-sm text-kyro-body whitespace-pre-wrap leading-relaxed">
                   {reporte.observaciones}
                 </p>
@@ -940,12 +960,12 @@ export function ReporteDetallePage() {
           )}
           {reporte.motivo_edicion && (
             <Card>
-              <CardHeader className="py-2.5 px-4">
+              <CardHeader className="px-5 py-4">
                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-warning">
                   Motivo de edición
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1">
+              <CardContent className="p-5">
                 <p className="text-sm text-kyro-warning whitespace-pre-wrap leading-relaxed">
                   {reporte.motivo_edicion}
                 </p>
@@ -966,12 +986,12 @@ export function ReporteDetallePage() {
 
       {/* ── Historial de Auditoría ── */}
       <Card className="kyro-card mt-6">
-        <CardHeader className="py-3 px-4 border-b border-kyro-border">
+        <CardHeader className="px-5 py-4 border-b border-kyro-border">
           <CardTitle className="text-xs font-bold uppercase tracking-widest text-kyro-muted">
             Historial de auditoría
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 py-4">
+        <CardContent className="p-5">
           <HistorialTimeline reporteId={reporte.id} />
         </CardContent>
       </Card>

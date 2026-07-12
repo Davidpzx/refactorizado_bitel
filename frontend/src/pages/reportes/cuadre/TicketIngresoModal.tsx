@@ -72,7 +72,7 @@ export function TicketIngresoModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-md p-4 max-h-[90vh] overflow-auto">
+      <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-md rounded-[20px] p-5 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-kyro-info">Ticket de Ingreso</h3>
           <Button type="button" variant="ghost" size="iconSm" aria-label="Cerrar ticket de ingreso" onClick={onClose}>×</Button>
@@ -98,10 +98,19 @@ export function TicketIngresoModal({
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mt-3 text-center text-xs">
-          <div><div className="text-kyro-muted text-[10px]">Total</div><div className="font-semibold text-kyro-body">S/ {total.toFixed(2)}</div></div>
-          <div><div className="text-kyro-muted text-[10px]">Recibido</div><div className="font-semibold text-kyro-body">S/ {recibido.toFixed(2)}</div></div>
-          <div><div className="text-kyro-muted text-[10px]">Vuelto</div><div className="font-semibold" style={{ color: vuelto < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-success)' }}>S/ {vuelto.toFixed(2)}</div></div>
+        <div className="grid grid-cols-3 gap-2 mt-3 text-center items-end">
+          <div>
+            <div className="text-kyro-muted text-[10px]">Total</div>
+            <div className="kyro-money text-[24px] leading-none font-bold text-kyro-body">S/ {total.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-kyro-muted text-[10px]">Recibido</div>
+            <div className="text-sm font-semibold text-kyro-body tabular-nums">S/ {recibido.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-kyro-muted text-[10px]">Vuelto</div>
+            <div className="kyro-money text-[24px] leading-none font-bold" style={{ color: vuelto < 0 ? 'var(--color-kyro-danger)' : 'var(--color-kyro-success)' }}>S/ {vuelto.toFixed(2)}</div>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-3">

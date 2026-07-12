@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Select } from '../../components/ui/select'
 import { Input } from '../../components/ui/input'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle'
 import { Warning as AlertTriangle, Funnel as Filter, Handshake, ArrowCounterClockwise as RotateCcw, MagnifyingGlass as Search, Clock, CheckCircle } from '@phosphor-icons/react'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
@@ -146,29 +146,37 @@ export function PanelFinancierasPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
-        <StatCard
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
           title="Pendiente de cobro"
           value={totales ? Number(totales.pendiente) : null}
-          formatMoney
-          topAccentColor="amber"
-          valueColorClass="text-amber-600 dark:text-amber-400"
+          monetary
+          accent="var(--color-kyro-warning)"
+          icon={<Clock size={20} />}
           subtitle={`${totales?.count_pendiente ?? 0} venta${(totales?.count_pendiente ?? 0) === 1 ? '' : 's'} — ${mes}`}
         />
-        <StatCard
+        <KpiCard
           title="Confirmado este mes"
           value={totales ? Number(totales.confirmado) : null}
-          formatMoney
-          topAccentColor="green"
-          valueColorClass="text-emerald-700 dark:text-emerald-400"
+          monetary
+          tone="success"
+          accent="var(--color-kyro-success)"
+          icon={<CheckCircle size={20} />}
           subtitle="Desembolsos aprobados"
         />
-        <StatCard
+        <KpiCard
+          title="Desembolsos"
+          value={data ? items.length : null}
+          tone="indigo"
+          icon={<Handshake size={20} />}
+          subtitle={`Registros del periodo ${mes}`}
+        />
+        <KpiCard
           title="Total facturado (cuotas)"
           value={totales ? Number(totales.total) : null}
-          formatMoney
-          topAccentColor="indigo"
-          valueColorClass="text-indigo-700 dark:text-indigo-400"
+          monetary
+          tone="gold"
+          icon={<Handshake size={20} />}
           subtitle="Inicial + Saldo financieras"
         />
       </div>
@@ -237,7 +245,7 @@ export function PanelFinancierasPage() {
           Cargando...
         </div>
       ) : (
-        <div className="kyro-card relative overflow-x-auto">
+        <div className="kyro-card relative overflow-x-auto rounded-[18px]">
           <div
             aria-hidden
             className="absolute top-0 left-0 right-0 h-px"
@@ -287,14 +295,14 @@ export function PanelFinancierasPage() {
                     <td className="px-4 py-3 text-kyro-body">
                       {item.detalle?.producto_nombre ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-amber-600 dark:text-amber-400">
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                       S/ {Number(item.precio_venta).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400">
+                    <td className="px-4 py-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">
                       S/ {Number(item.efectivo_inicial).toFixed(2)}
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-semibold ${
+                      className={`px-4 py-3 text-right font-semibold tabular-nums ${
                         item.comision_estado === 'PENDIENTE'
                           ? 'text-red-500 dark:text-red-400'
                           : 'text-kyro-subtle'

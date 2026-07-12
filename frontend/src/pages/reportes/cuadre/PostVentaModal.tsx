@@ -47,7 +47,7 @@ export function PostVentaModal({ ticketId, ventaId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-sm p-4 space-y-4">
+      <GlassPanel className="kyro-card !bg-kyro-panel !border-kyro-border !shadow-kyro-card relative z-10 w-full max-w-sm rounded-[20px] p-5 space-y-4">
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -88,7 +88,7 @@ export function PostVentaModal({ ticketId, ventaId, onClose }: Props) {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant={tipo === '03' ? 'gold' : 'outline'}
+                    variant={tipo === '03' ? 'default' : 'outline'}
                     size="sm"
                     className="flex-1"
                     onClick={() => handleTipo('03')}
@@ -97,7 +97,7 @@ export function PostVentaModal({ ticketId, ventaId, onClose }: Props) {
                   </Button>
                   <Button
                     type="button"
-                    variant={tipo === '01' ? 'gold' : 'outline'}
+                    variant={tipo === '01' ? 'default' : 'outline'}
                     size="sm"
                     className="flex-1"
                     onClick={() => handleTipo('01')}

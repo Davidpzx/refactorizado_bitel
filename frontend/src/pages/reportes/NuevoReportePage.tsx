@@ -15,6 +15,7 @@ import { GlassPanel } from '../../components/ui/GlassPanel'
 import { SectionPanel } from '../../components/ui/SectionPanel'
 import { AddRowButton } from '../../components/ui/AddRowButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { PageHeader } from '../../components/PageHeader'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { borradorApi } from '../../services/borrador.api'
@@ -195,10 +196,10 @@ function InputGroup({ label, tone = 'default', children }: {
   const text   = tone === 'danger' ? 'text-kyro-danger' : 'text-kyro-muted'
   return (
     <div className="flex w-full items-stretch">
-      <span className={`flex w-1/2 items-center rounded-l-md border border-r-0 ${border} bg-black/20 px-2 text-xs ${text}`}>
+      <span className={`flex w-1/2 items-center rounded-l-md border border-r-0 ${border} bg-kyro-elevated px-2 text-xs ${text}`}>
         {label}
       </span>
-      <span className={`flex items-center border-y ${border} bg-black/20 px-2 text-xs ${text}`}>S/</span>
+      <span className={`flex items-center border-y ${border} bg-kyro-elevated px-2 text-xs ${text}`}>S/</span>
       {children}
     </div>
   )
@@ -405,7 +406,7 @@ const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: 
   { value: 'PREPAGO',     label: 'Prepago / Chip',     color: 'var(--color-kyro-info)'    },
   { value: 'EQUIPO',      label: 'Equipo / Accesorio', color: 'var(--color-kyro-warning)' },
   { value: 'OTROS_FLUJO', label: 'Otros Ingresos',     color: 'var(--color-kyro-body)'    },
-  { value: 'APOYO',       label: 'Ventas de Apoyo',    color: 'var(--color-kyro-gold)'    },
+  { value: 'APOYO',       label: 'Ventas de Apoyo',    color: 'var(--color-kyro-indigo)'  },
 ]
 
 function AgregarRegistroModal({
@@ -525,7 +526,7 @@ function AgregarRegistroModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 kyro-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+      <div className="relative z-10 kyro-card w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[20px] p-5 space-y-4 shadow-2xl">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-kyro-border pb-3">
@@ -561,7 +562,7 @@ function AgregarRegistroModal({
               </p>
               {/^\d{8}$/.test(m.cliente_dni) && dniStatus !== 'found' && dniStatus !== 'found_no_verificado' && (
                 <button type="button" onClick={recuperarClienteCrm} disabled={crmStatus === 'loading'}
-                  className="mt-0.5 rounded border border-kyro-gold/40 bg-kyro-gold/10 px-2 py-0.5 text-[9px] font-bold text-kyro-gold disabled:opacity-50">
+                  className="mt-0.5 rounded border border-kyro-indigo/40 bg-kyro-indigo/10 px-2 py-0.5 text-[9px] font-bold text-kyro-indigo disabled:opacity-50">
                   {crmStatus === 'loading' ? 'Buscando…' : 'Recuperar Cliente (CRM)'}
                 </button>
               )}
@@ -583,7 +584,7 @@ function AgregarRegistroModal({
                 onClick={() => cambiarTipo(tipo)}
                 className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all border"
                 style={m.tipo_registro === tipo
-                  ? { background: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)', color: '#fff', borderColor: tipo === 'VENTA' ? 'var(--color-kyro-gold)' : 'var(--color-kyro-info)' }
+                  ? { background: tipo === 'VENTA' ? 'var(--color-kyro-indigo)' : 'var(--color-kyro-info)', color: '#fff', borderColor: tipo === 'VENTA' ? 'var(--color-kyro-indigo)' : 'var(--color-kyro-info)' }
                   : { background: 'transparent', color: 'var(--color-kyro-muted)', borderColor: 'var(--color-kyro-border)' }}
               >{tipo === 'VENTA' ? '🛒 Venta' : '💬 Consulta'}</button>
             ))}
@@ -799,7 +800,7 @@ function AgregarRegistroModal({
 
             {/* Agregar otro producto */}
             <button type="button" onClick={addCarritoItem}
-              className="w-full text-xs text-kyro-muted border border-dashed border-kyro-border rounded-lg py-2 hover:border-kyro-gold hover:text-kyro-gold transition-colors">
+              className="w-full text-xs text-kyro-muted border border-dashed border-kyro-border rounded-lg py-2 hover:border-kyro-indigo hover:text-kyro-indigo transition-colors">
               + Agregar otro producto
             </button>
 
@@ -862,7 +863,7 @@ function AgregarRegistroModal({
 
         {/* Confirmar */}
         <div className="flex gap-2 pt-3 border-t border-kyro-border">
-          <Button type="button" variant="gold" className="flex-1 gap-2 h-10"
+          <Button type="button" variant="default" className="flex-1 gap-2 h-10"
             disabled={
               !m.cliente_dni || !m.vendedor_id ||
               (m.tipo_registro === 'VENTA' && !m.seccion) ||
@@ -1667,6 +1668,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const totalApoyo        = sub('APOYO')
   const ingresosFijos     = recarga_bipay + pago_servicio + pago_krece + pago_payjoy + tickets_tusamy
   const otrosFijos        = totalOtrosFlujo + ingresosFijos
+  // Ventas brutas = las 4 secciones de venta real (sin ingresos fijos/flujo).
+  const ventasBrutas      = totalPostpago + totalPrepago + totalEquipos + totalApoyo
 
   // total_sistema (legacy): suma de las 5 secciones de venta
   const totalSistema = totalPostpago + totalPrepago + totalEquipos + otrosFijos + totalApoyo
@@ -1766,7 +1769,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               </Button>
             )}
             {esEdicion && esTienda && (
-              <Button variant="gold" type="button" className="gap-2" onClick={() => guardarBorrador(false)}>
+              <Button variant="glassIndigo" type="button" className="gap-2" onClick={() => guardarBorrador(false)}>
                 <Save size={15} /> Guardar Borrador
               </Button>
             )}
@@ -1840,8 +1843,50 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           )}
         </GlassPanel>
 
+        {/* ── Resumen del cuadre (KpiCard, DIS-FX-09) ──
+            Oro reservado solo al Total Sistema (monto protagonista); ventas
+            índigo, ingresos success, salidas danger. Sin sparkline: el cuadre
+            no expone series históricas — el subtítulo da contexto real, no delta
+            inventado. */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <KpiCard
+            title="Ventas"
+            value={ventasBrutas}
+            monetary
+            tone="indigo"
+            icon={<Money size={18} />}
+            subtitle={`${postpagoRows.length + prepagoRows.length + equipoRows.length + apoyoRows.length} registros`}
+          />
+          <KpiCard
+            title="Ingresos"
+            value={otrosFijos}
+            monetary
+            tone="success"
+            accent="var(--color-kyro-success)"
+            icon={<Coins size={18} />}
+            subtitle={`${otrosRows.length} de flujo · fijos`}
+          />
+          <KpiCard
+            title="Salidas"
+            value={total_salidas}
+            monetary
+            tone="danger"
+            accent="var(--color-kyro-danger)"
+            icon={<Export size={18} />}
+            subtitle={`${salidaItems.length} salida${salidaItems.length === 1 ? '' : 's'}`}
+          />
+          <KpiCard
+            title="Total Sistema"
+            value={totalSistema}
+            monetary
+            tone="gold"
+            icon={<Sigma size={18} />}
+            subtitle="Consolidado del día"
+          />
+        </div>
+
         {/* ── Cuerpo: dos columnas ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,380px)] gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
 
           {/* ═══════════ COLUMNA IZQUIERDA: Ventas ═══════════ */}
           <div>
@@ -1856,8 +1901,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 type="button"
                 onClick={() => setVentaModalOpen(true)}
                 disabled={ventaSaving}
-                className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'var(--color-kyro-gold)', color: 'var(--color-kyro-gold-ink)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-gold) 35%, transparent)' }}
+                className="w-full mb-4 flex items-center justify-center gap-2 h-11 rounded-lg font-semibold text-sm text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'var(--color-kyro-indigo)', boxShadow: '0 0 18px color-mix(in srgb, var(--color-kyro-indigo) 35%, transparent)' }}
               >
                 <Plus size={18} /> {ventaSaving ? 'Guardando venta...' : 'Agregar Registro'}
               </button>
@@ -1991,11 +2036,11 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
             {/* ── TOTAL SISTEMA (Consolidado) ── */}
             <div
-              className="mb-4 rounded-lg p-3 text-center shadow-sm"
-              style={{ background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.35)' }}
+              className="mb-4 rounded-[18px] p-3 text-center shadow-sm"
+              style={{ background: 'rgba(255,194,0,0.07)', border: '1px solid rgba(255,194,0,0.35)' }}
             >
-              <p className="mb-1 flex items-center justify-center gap-1.5 text-[0.78rem] uppercase tracking-[2px] text-slate-400">
-                <Sigma size={14} weight="fill" style={{ color: ACCENT.total }} /> Total Sistema (Consolidado)
+              <p className="mb-1 flex items-center justify-center gap-1.5 text-[0.78rem] uppercase tracking-[2px] text-kyro-muted">
+                <Sigma size={14} weight="fill" style={{ color: 'var(--color-kyro-gold)' }} /> Total Sistema (Consolidado)
               </p>
               <div className="mb-2 flex flex-wrap justify-around gap-x-3 gap-y-1 text-[0.75rem] text-slate-500">
                 {[
@@ -2011,7 +2056,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                   </span>
                 ))}
               </div>
-              <MoneyTotal value={totalSistema} color={ACCENT.total} size="1.9rem" />
+              <MoneyTotal value={totalSistema} color="var(--color-kyro-gold)" size="1.9rem" />
             </div>
 
           </div>
@@ -2107,18 +2152,18 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 <CheckCircle size={15} weight="fill" /> Cuadre Final
               </div>
 
-              <div className="p-4" style={{ background: 'rgba(0,0,0,0.3)' }}>
+              <div className="p-4" style={{ background: 'color-mix(in srgb, var(--color-kyro-base) 55%, transparent)' }}>
 
-                <div className="mb-4 border-b border-white/10 pb-3">
+                <div className="mb-4 border-b border-kyro-border pb-3">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-[0.85rem] text-kyro-muted">Total en Cajón (Efectivo + Caja):</span>
-                    <span className="font-bold" style={{ color: ACCENT.cajon }}>S/ {totalEnCajon.toFixed(2)}</span>
+                    <span className="font-bold text-kyro-body tabular-nums">S/ {totalEnCajon.toFixed(2)}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-white/10 pt-3">
-                    <span className="text-[0.9rem] font-bold uppercase tracking-wide" style={{ color: ACCENT.esperado }}>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-kyro-border pt-3">
+                    <span className="text-[0.9rem] font-bold uppercase tracking-wide" style={{ color: 'var(--color-kyro-gold)' }}>
                       Efectivo Esperado:
                     </span>
-                    <MoneyTotal value={efectivoEsperado} color={ACCENT.esperado} size="1.6rem" />
+                    <MoneyTotal value={efectivoEsperado} color="var(--color-kyro-gold)" size="1.6rem" />
                   </div>
                 </div>
 
@@ -2132,7 +2177,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                   </span>
                   <span
                     className="flex items-center border-y px-2 text-sm font-bold"
-                    style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
+                    style={{ background: 'var(--color-kyro-base)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
                   >
                     S/
                   </span>
@@ -2142,7 +2187,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                     placeholder="0.00"
                     aria-label="Mi efectivo entregado"
                     className="h-10 min-w-0 flex-1 rounded-r-md border border-l-0 px-2 text-lg font-bold outline-none"
-                    style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
+                    style={{ background: 'var(--color-kyro-base)', borderColor: 'rgba(34,197,94,0.4)', color: ACCENT.esperado }}
                   />
                 </div>
 
@@ -2264,10 +2309,10 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <div className="pb-8 space-y-2">
             <Button
               type="button"
-              variant="outline"
+              variant="gold"
               disabled={cerrandoCaja || stockInsuficiente || ventaSaving || !savedReporteId}
               onClick={handleCerrarCaja}
-              className="w-full h-12 gap-2 text-base font-semibold border-2 border-kyro-indigo/50 text-kyro-indigo hover:bg-kyro-indigo/10"
+              className="w-full h-12 gap-2 text-base font-semibold"
             >
               <Receipt size={18} />
               {cerrandoCaja ? 'Cerrando caja...' : 'Guardar y Cerrar Caja · Empezar Nuevo'}
