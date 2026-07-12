@@ -6,20 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\ComisionPlan;
 use App\Models\Reporte;
 use App\Services\ComisionOperativaService;
+use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class ComisionPlanController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $planes = ComisionPlan::query()
-            ->when($request->tipo_servicio, fn($q, $t) => $q->where('tipo_servicio', $t))
+        $tipo = (string) $request->input('tipo_servicio', '');
+        $planes = Cache::remember(
+            ResourceCache::key('comisiones-planes', $tipo ?: 'todos'),
+            ResourceCache::TTL_SECONDS,
+            fn () => ComisionPlan::query()
+            ->when($tipo, fn($q, $t) => $q->where('tipo_servicio', $t))
             ->orderByRaw("CASE tipo_servicio WHEN 'POSTPAGO' THEN 1 WHEN 'PREPAGO' THEN 2 WHEN 'EQUIPO' THEN 3 WHEN 'ACCESORIO' THEN 4 ELSE 5 END ASC")
             ->orderBy('nombre_plan')
-            ->get();
+            ->get()
+        );
 
         return response()->json($planes);
     }
@@ -38,6 +45,7 @@ class ComisionPlanController extends Controller
         ]);
 
         $plan = ComisionPlan::create($data);
+        ResourceCache::invalidate('comisiones-planes');
 
         return response()->json($plan, 201);
     }
@@ -56,6 +64,7 @@ class ComisionPlanController extends Controller
         ]);
 
         $comisionesPlan->update($data);
+        ResourceCache::invalidate('comisiones-planes');
 
         return response()->json($comisionesPlan);
     }
@@ -63,6 +72,7 @@ class ComisionPlanController extends Controller
     public function destroy(ComisionPlan $comisionesPlan): JsonResponse
     {
         $comisionesPlan->delete();
+        ResourceCache::invalidate('comisiones-planes');
         return response()->json(null, 204);
     }
 

@@ -251,6 +251,86 @@ class CrmTemperaturaTest extends TestCase
         $this->assertEquals('Upselling', $resultado['etiqueta']);
     }
 
+    // ── OPT-08: temperatura calculada/filtrada en SQL, no en PHP ────────────────
+
+    public function test_endpoint_temperatura_por_dni_ignora_el_filtro_de_tienda_del_feed(): void
+    {
+        // El calculador mira TODO el historial del cliente, sin importar los
+        // filtros del listado (tienda_codigo). La interacción "Caliente" vive en
+        // una tienda distinta a la que se está filtrando en el feed: debe seguir
+        // ganando porque el CASE en SQL es un EXISTS correlacionado sin filtro de
+        // tienda, igual que TemperaturaCalculator::calcular().
+        $id = $this->crearCliente('50000001');
+        $this->crearInteraccion($id, [
+            'tienda_codigo'  => 'OTRA_TIENDA',
+            'fecha_hora'     => now()->subHours(1),
+            'motivo_rechazo' => null,
+        ]);
+        $this->crearInteraccion($id, [
+            'tienda_codigo'  => 'PUNDA50',
+            'fecha_hora'     => now()->subMonths(6),
+            'motivo_rechazo' => 'Evaluación Crediticia',
+        ]);
+
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?tienda_codigo=PUNDA50')
+            ->assertOk();
+
+        $data = $response->json('data');
+        $this->assertCount(1, $data);
+        $this->assertEquals('Caliente', $data[0]['temperatura']['etiqueta']);
+    }
+
+    public function test_endpoint_lista_temperatura_pagina_en_sql_sin_cargar_todos_los_candidatos(): void
+    {
+        // Presupuesto de queries: paginar (con o sin filtro de temperatura) debe
+        // ejecutar un número de queries independiente del volumen de candidatos
+        // (antes: 1 query de fetch total + N calculos de 3 queries cada uno).
+        for ($i = 1; $i <= 10; $i++) {
+            $id = $this->crearCliente('6000' . str_pad((string) $i, 4, '0', STR_PAD_LEFT));
+            $this->crearInteraccion($id, ['fecha_hora' => now()->subHours($i), 'motivo_rechazo' => null]);
+        }
+
+        DB::enableQueryLog();
+        $response = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?temperatura=Caliente&per_page=3')
+            ->assertOk();
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertEquals(10, $response->json('total'));
+        $this->assertCount(3, $response->json('data'));
+        $this->assertLessThan(10, $queries, 'El número de queries no debe escalar con la cantidad de candidatos.');
+    }
+
+    public function test_endpoint_lista_temperatura_etiqueta_frio_y_upselling_via_sql(): void
+    {
+        $frio = $this->crearCliente('60100001');
+        $this->crearInteraccion($frio, [
+            'fecha_hora'     => now()->subMonths(6),
+            'motivo_rechazo' => 'Evaluación Crediticia',
+        ]);
+
+        $upselling = $this->crearCliente('60100002');
+        $this->crearInteraccion($upselling, [
+            'tipo_operacion' => 'Prepago',
+            'fecha_hora'     => now()->subDays(31),
+            'motivo_rechazo' => null,
+        ]);
+
+        $respuestaFrio = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?temperatura=Frío')
+            ->assertOk();
+        $this->assertEquals(1, $respuestaFrio->json('total'));
+        $this->assertEquals('60100001', $respuestaFrio->json('data.0.dni'));
+
+        $respuestaUpselling = $this->actingAs($this->usuario, 'sanctum')
+            ->getJson('/api/v1/crm/temperatura?temperatura=Upselling')
+            ->assertOk();
+        $this->assertEquals(1, $respuestaUpselling->json('total'));
+        $this->assertEquals('60100002', $respuestaUpselling->json('data.0.dni'));
+    }
+
     // ── Export (T4.1 — paridad gerencia/exportar_crm_excel.php) ─────────────────
 
     public function test_endpoint_exportar_crm_sin_autenticar_devuelve_401(): void

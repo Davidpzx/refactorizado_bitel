@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Models\FacturacionConfig;
 use App\Services\Facturacion\SincronizarLogoFacturacionService;
 use App\Services\LogoProcessorService;
+use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -22,15 +24,13 @@ class ConfiguracionController extends Controller
             return response()->json($this->defaults());
         }
 
-        $row = DB::table('configuracion_empresa')->where('id', 1)->first();
-
-        if (!$row) {
-            return response()->json($this->defaults());
-        }
-
-        $data = (array) $row;
-        // No exponer el logo en este endpoint (puede ser muy grande)
-        unset($data['logo_base64']);
+        $data = Cache::remember(ResourceCache::key('configuracion-empresa', 'sin-logo'), ResourceCache::TTL_SECONDS, function (): array {
+            $row = DB::table('configuracion_empresa')->where('id', 1)->first();
+            if (!$row) return $this->defaults();
+            $data = (array) $row;
+            unset($data['logo_base64']);
+            return $data;
+        });
 
         return response()->json($data);
     }
@@ -41,9 +41,12 @@ class ConfiguracionController extends Controller
             return response()->json($this->defaults());
         }
 
-        $row = DB::table('configuracion_empresa')->where('id', 1)->first();
+        $data = Cache::remember(ResourceCache::key('configuracion-empresa', 'con-logo'), ResourceCache::TTL_SECONDS, function (): array {
+            $row = DB::table('configuracion_empresa')->where('id', 1)->first();
+            return $row ? (array) $row : $this->defaults();
+        });
 
-        return response()->json($row ? (array) $row : $this->defaults());
+        return response()->json($data);
     }
 
     public function update(Request $request): JsonResponse
@@ -70,6 +73,7 @@ class ConfiguracionController extends Controller
             ['id'],
             array_keys($data)
         );
+        ResourceCache::invalidate('configuracion-empresa');
 
         return response()->json(['message' => 'Configuración guardada.']);
     }
@@ -94,6 +98,7 @@ class ConfiguracionController extends Controller
 
         DB::table('configuracion_empresa')
             ->upsert(['id' => 1, 'logo_base64' => $dataUrl], ['id'], ['logo_base64']);
+        ResourceCache::invalidate('configuracion-empresa');
 
         return response()->json(['message' => 'Logo actualizado.', 'logo_base64' => $dataUrl]);
     }
@@ -103,6 +108,7 @@ class ConfiguracionController extends Controller
         DB::table('configuracion_empresa')
             ->where('id', 1)
             ->update(['logo_base64' => null]);
+        ResourceCache::invalidate('configuracion-empresa');
 
         return response()->json(['message' => 'Logo eliminado.']);
     }

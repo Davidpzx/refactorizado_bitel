@@ -320,6 +320,14 @@ class TrasladoChipsController extends Controller
             $query->where('tienda_id', $request->tienda_id);
         }
 
-        return response()->json(['data' => $query->orderByDesc('stock_actual')->get()]);
+        $query->orderByDesc('stock_actual')->orderByDesc('id');
+
+        if ($request->hasAny(['page', 'per_page'])) {
+            $perPage = max(1, min($request->integer('per_page', 50), 200));
+            return response()->json($query->paginate($perPage));
+        }
+
+        // El frontend pagina este stock en memoria y espera {data: Chip[]}.
+        return response()->json(['data' => $query->limit(500)->get()]);
     }
 }

@@ -15,10 +15,12 @@ use App\Services\ComisionService;
 use App\Services\ComisionOperativaService;
 use App\Services\UserAgentResolver;
 use App\Support\PlanillaGuard;
+use App\Support\ResourceCache;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -397,12 +399,16 @@ class ReporteController extends Controller
     {
         $tiendaId = trim((string) ($request->input('tienda_id') ?: $request->user()->tienda_id));
 
-        $vendedores = DB::table('agentes')
-            ->select(['id', 'dni', 'nombres', 'tienda_base'])
-            ->where('estado', 'ACTIVO')
-            ->orderByRaw('CASE WHEN tienda_base = ? THEN 0 ELSE 1 END', [$tiendaId])
-            ->orderBy('nombres')
-            ->get();
+        $vendedores = Cache::remember(
+            ResourceCache::key('reporte-vendedores', sha1($tiendaId)),
+            ResourceCache::TTL_SECONDS,
+            fn () => DB::table('agentes')
+                ->select(['id', 'dni', 'nombres', 'tienda_base'])
+                ->where('estado', 'ACTIVO')
+                ->orderByRaw('CASE WHEN tienda_base = ? THEN 0 ELSE 1 END', [$tiendaId])
+                ->orderBy('nombres')
+                ->get()
+        );
 
         return response()->json($vendedores);
     }

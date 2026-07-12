@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tienda;
+use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -51,6 +52,7 @@ class TiendaController extends Controller
         $data['activo'] = $data['activo'] ?? true;
 
         $tienda = Tienda::create($data);
+        ResourceCache::invalidate('tiendas-publicas');
 
         return response()->json($tienda, 201);
     }
@@ -69,6 +71,7 @@ class TiendaController extends Controller
         ]);
 
         $tienda->update($data);
+        ResourceCache::invalidate('tiendas-publicas');
 
         return response()->json($tienda);
     }
@@ -76,6 +79,7 @@ class TiendaController extends Controller
     public function destroy(Tienda $tienda): JsonResponse
     {
         $tienda->delete();
+        ResourceCache::invalidate('tiendas-publicas');
         return response()->json(null, 204);
     }
 }

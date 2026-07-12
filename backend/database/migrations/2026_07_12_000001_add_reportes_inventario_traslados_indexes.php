@@ -21,6 +21,9 @@ return new class extends Migration
         'traslados_stock' => [
             'idx_traslados_stock_lote_estado_id' => ['codigo_lote', 'estado', 'id'],
         ],
+        'interacciones_crm' => [
+            'idx_interacciones_lead_fecha_id' => ['lead_id', 'fecha', 'id'],
+        ],
     ];
 
     public function up(): void

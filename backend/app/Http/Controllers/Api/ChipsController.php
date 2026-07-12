@@ -31,7 +31,16 @@ class ChipsController extends Controller
             $query->where('tienda_id', $request->tienda_id);
         }
 
-        return response()->json(['data' => $query->orderByDesc('stock_actual')->get()]);
+        $query->orderByDesc('stock_actual')->orderByDesc('id');
+
+        // Retrocompatible: sin parametros las pantallas consumen {data: Chip[]}.
+        // Quien envia page/per_page opta por el shape paginado de Laravel.
+        if ($request->hasAny(['page', 'per_page'])) {
+            $perPage = max(1, min($request->integer('per_page', 50), 200));
+            return response()->json($query->paginate($perPage));
+        }
+
+        return response()->json(['data' => $query->limit(500)->get()]);
     }
 
     // ── POST /chips — Agregar stock manualmente (admin) ───────────────────────

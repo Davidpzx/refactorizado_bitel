@@ -99,11 +99,13 @@ class LeadController extends Controller
 
     // ── Interacciones CRM ────────────────────────────────────────────────────────
 
-    public function interacciones(Lead $lead): JsonResponse
+    public function interacciones(Request $request, Lead $lead): JsonResponse
     {
+        $limit = max(1, min($request->integer('limit', 20), 100));
         $interacciones = $lead->interacciones()
-            ->latest('fecha')
-            ->get();
+            ->orderByDesc('fecha')
+            ->orderByDesc('id')
+            ->cursorPaginate($limit, ['*'], 'cursor');
         return response()->json($interacciones);
     }
 

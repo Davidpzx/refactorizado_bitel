@@ -10,6 +10,7 @@ use App\Models\Reporte;
 use App\Services\AgenteService;
 use App\Services\HistorialAgenteService;
 use App\Support\TiendaGuard;
+use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,7 @@ class AgenteController extends Controller
     public function store(StoreAgenteRequest $request): JsonResponse
     {
         $agente = $this->service->crear($request->validated());
+        ResourceCache::invalidate('reporte-vendedores');
         return response()->json($agente, 201);
     }
 
@@ -64,6 +66,7 @@ class AgenteController extends Controller
         $antes    = clone $agente; // snapshot de atributos previos para la auditoría
         $agente   = $this->service->actualizar($agente, $request->validated());
         $this->historial->auditarActualizacion($antes, $agente, $request->user()?->id);
+        ResourceCache::invalidate('reporte-vendedores');
 
         return response()->json($agente);
     }
@@ -94,6 +97,7 @@ class AgenteController extends Controller
             return response()->json(['error' => 'No se puede eliminar: el agente tiene reportes asociados.'], 422);
         }
         $agente->delete();
+        ResourceCache::invalidate('reporte-vendedores');
         return response()->json(null, 204);
     }
 
@@ -344,6 +348,7 @@ class AgenteController extends Controller
             ARRAY_FILTER_USE_BOTH
         );
         $agente->update($columnasAgente);
+        ResourceCache::invalidate('reporte-vendedores');
 
         $this->historial->auditarFicha($antes, $agente->fresh(), $request->user()?->id);
 

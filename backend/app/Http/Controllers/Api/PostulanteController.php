@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -264,6 +266,7 @@ class PostulanteController extends Controller
             ]];
         });
 
+        if ($resultado['status'] === 201) ResourceCache::invalidate('reporte-vendedores');
         return response()->json($resultado['body'], $resultado['status']);
     }
 
@@ -282,10 +285,10 @@ class PostulanteController extends Controller
     // ── GET /api/v1/postulaciones/tiendas (público — para el formulario) ────────
     public function tiendas(): JsonResponse
     {
-        $tiendas = DB::table('tiendas')
+        $tiendas = Cache::remember(ResourceCache::key('tiendas-publicas'), ResourceCache::TTL_SECONDS, fn () => DB::table('tiendas')
             ->orderBy('nombre')
             ->select('codigo', 'nombre')
-            ->get();
+            ->get());
         return response()->json(['data' => $tiendas]);
     }
 
