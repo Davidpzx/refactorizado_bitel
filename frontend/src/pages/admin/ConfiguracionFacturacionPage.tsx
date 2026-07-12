@@ -27,7 +27,7 @@ function sunatErrorMessage(e: unknown): string {
 function CardSectionTitle({ icon: Icon, children }: { icon: typeof Info; children: ReactNode }) {
   return (
     <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-kyro-text">
-      <Icon size={17} weight="bold" className="text-kyro-gold" />
+      <Icon size={17} weight="bold" className="text-kyro-indigo" />
       {children}
     </p>
   )
@@ -203,10 +203,10 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
   return (
     <div className="space-y-5">
       {/* Estado actual */}
-      <div className="kyro-card p-5">
+      <div className="kyro-card rounded-[18px] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-kyro-gold/30 bg-kyro-gold/10 text-kyro-gold">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-kyro-indigo/30 bg-kyro-indigo/10 text-kyro-indigo">
               <ShieldCheck size={20} weight="bold" />
             </span>
             <div>
@@ -230,27 +230,27 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
       </div>
 
       {/* Educativa */}
-      <div className="kyro-card p-5">
+      <div className="kyro-card rounded-[18px] p-5">
         <CardSectionTitle icon={Info}>¿Qué necesito para emitir facturas reales?</CardSectionTitle>
         <ul className="space-y-2.5 text-sm text-kyro-body">
           <li className="flex gap-2.5">
-            <Certificate size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-gold" />
+            <Certificate size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-indigo" />
             <span><strong className="text-kyro-text">Certificado digital</strong> (.pfx, .p12 o .pem) entregado por tu proveedor de firma electrónica, junto con su contraseña.</span>
           </li>
           <li className="flex gap-2.5">
-            <Key size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-gold" />
+            <Key size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-indigo" />
             <span><strong className="text-kyro-text">Usuario y clave SOL</strong> — las mismas credenciales con las que entras a SUNAT Operaciones en Línea.</span>
           </li>
           <li className="flex gap-2.5">
-            <Buildings size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-gold" />
+            <Buildings size={16} weight="bold" className="mt-0.5 shrink-0 text-kyro-indigo" />
             <span><strong className="text-kyro-text">RUC y razón social</strong> del emisor, guardados en la sección de abajo.</span>
           </li>
         </ul>
       </div>
 
       {/* Activar facturación real */}
-      <div className="kyro-card p-5">
-        <div className="mb-1 h-px w-full bg-gradient-to-r from-indigo-500/40 via-kyro-gold/40 to-transparent" aria-hidden />
+      <div className="kyro-card rounded-[18px] p-5">
+        <div className="mb-1 h-px w-full bg-gradient-to-r from-kyro-indigo/60 to-transparent" aria-hidden />
         <CardSectionTitle icon={LockKey}>Activar Facturación Real</CardSectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs font-semibold text-kyro-muted">
@@ -259,7 +259,7 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
               type="file"
               accept=".pem,.pfx,.p12"
               onChange={(e) => setCertificado(e.target.files?.[0] ?? null)}
-              className="mt-1 rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-xs text-kyro-body file:mr-3 file:rounded-md file:border-0 file:bg-kyro-gold file:px-2.5 file:py-1 file:text-xs file:font-bold file:text-black"
+              className="mt-1 h-10 rounded-[10px] border border-kyro-border bg-transparent px-2 py-1.5 text-xs text-kyro-body file:mr-3 file:rounded-lg file:border-0 file:bg-kyro-indigo file:px-2.5 file:py-1 file:text-xs file:font-bold file:text-white"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-kyro-muted">
@@ -317,7 +317,7 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
       </div>
 
       {/* Datos del emisor y series */}
-      <div className="kyro-card p-5">
+      <div className="kyro-card rounded-[18px] p-5">
         <CardSectionTitle icon={ListNumbers}>Datos del emisor y series</CardSectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs font-semibold text-kyro-muted">
@@ -358,7 +358,7 @@ function FacturacionWizard({ tiendaSeleccionada, tiendaNombre, own, global: glob
       </div>
 
       {/* Avanzado */}
-      <div className="kyro-card p-5">
+      <div className="kyro-card rounded-[18px] p-5">
         <button
           type="button"
           onClick={() => setAvanzadoAbierto((v) => !v)}
@@ -441,7 +441,7 @@ export function ConfiguracionFacturacionPage() {
         Icon={Receipt}
       />
 
-      <div className="kyro-card flex flex-wrap items-center gap-3 p-4">
+      <div className="kyro-card flex flex-wrap items-center gap-3 rounded-[18px] p-5">
         <Buildings size={18} className="text-kyro-muted" />
         <label className="text-xs font-semibold uppercase tracking-wide text-kyro-muted">Configurando</label>
         <Select value={tiendaSeleccionada} onChange={(e) => setTiendaSeleccionada(e.target.value)} className="w-72">
@@ -454,7 +454,7 @@ export function ConfiguracionFacturacionPage() {
           <Badge variant="indigo">Usando la config. global</Badge>
         )}
         {tiendaSeleccionada && configs?.find((c) => c.tienda_id === tiendaSeleccionada) && (
-          <Badge variant="gold">Config. propia de esta tienda</Badge>
+          <Badge variant="indigo">Config. propia de esta tienda</Badge>
         )}
       </div>
 

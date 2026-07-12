@@ -42,7 +42,18 @@ function getColumns(
     {
       id: 'nombres',
       header: 'Nombres',
-      cell: ({ row }) => [row.original.nombres, row.original.apellidos].filter(Boolean).join(' '),
+      cell: ({ row }) => {
+        const nombre = [row.original.nombres, row.original.apellidos].filter(Boolean).join(' ')
+        const iniciales = nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
+        return (
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kyro-indigo/15 text-xs font-semibold uppercase text-kyro-indigo">
+              {iniciales}
+            </span>
+            <span className="font-medium text-kyro-body">{nombre}</span>
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'tienda_base',
@@ -242,7 +253,7 @@ export function AgentesPage() {
                 <Download size={15} /> Excel + Fichas
               </Button>
             )}
-            <Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
+            <Button variant="default" onClick={abrirCrear}><Plus size={15} /> Nuevo agente</Button>
           </div>
         }
       />
@@ -264,7 +275,7 @@ export function AgentesPage() {
           <option value="">Todas las tiendas</option>
           {tiendas.map(t => <option key={t.codigo} value={t.codigo}>{t.codigo} — {t.nombre}</option>)}
         </Select>
-        <Button variant="gold" onClick={buscar}><Search size={14} /> Buscar</Button>
+        <Button variant="default" onClick={buscar}><Search size={14} /> Buscar</Button>
         {(query || tiendaFiltro) && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </ListToolbar>
 

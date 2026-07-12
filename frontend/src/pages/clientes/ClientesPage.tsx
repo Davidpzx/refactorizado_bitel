@@ -38,7 +38,17 @@ function getColumns(
     {
       accessorKey: 'nombre',
       header: 'Nombre',
-      cell: ({ row }) => <span className="font-medium text-kyro-body">{row.original.nombre}</span>,
+      cell: ({ row }) => {
+        const iniciales = row.original.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?'
+        return (
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kyro-indigo/15 text-xs font-semibold uppercase text-kyro-indigo">
+              {iniciales}
+            </span>
+            <span className="font-medium text-kyro-body">{row.original.nombre}</span>
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'tipo_documento',
@@ -131,7 +141,7 @@ export function ClientesPage() {
       <PageHeader
         title="Clientes"
         description="Base de clientes del sistema CRM."
-        actions={<Button variant="gold" onClick={abrirCrear}><Plus size={15} /> Nuevo cliente</Button>}
+        actions={<Button variant="default" onClick={abrirCrear}><Plus size={15} /> Nuevo cliente</Button>}
       />
 
       {/* Tabs — comparte cabecera con CRM y Marketing (legacy: misma sección) */}
@@ -139,8 +149,6 @@ export function ClientesPage() {
         tabs={[...CRM_TABS_REMOTOS.map(t => ({ id: t.id, label: t.label })), { id: 'clientes', label: 'Clientes' }]}
         active="clientes"
         onChange={(id) => navigate(id === 'clientes' ? '/clientes' : '/crm')}
-        activeColor="#c084fc"
-        activeTextColor="#1a1033"
       />
 
       <ListToolbar description="Busca por documento o nombre del cliente.">
@@ -154,7 +162,7 @@ export function ClientesPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="gold" onClick={buscar}><Search size={14} /> Buscar</Button>
+        <Button variant="default" onClick={buscar}><Search size={14} /> Buscar</Button>
         {query && <Button variant="ghost" onClick={limpiar}>Limpiar</Button>}
       </ListToolbar>
 

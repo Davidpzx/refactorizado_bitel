@@ -96,9 +96,9 @@ function FormSection({
   children: ReactNode
 }) {
   return (
-    <section className="kyro-card p-4">
+    <section className="kyro-card rounded-[18px] p-5">
       <div className="mb-4 flex items-center gap-2.5 border-b border-kyro-border pb-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-kyro border border-kyro-indigo bg-kyro-elevated text-kyro-gold">
+        <span className="flex h-8 w-8 items-center justify-center rounded-kyro border border-kyro-indigo bg-kyro-elevated text-kyro-indigo">
           {icon}
         </span>
         <div>
@@ -334,7 +334,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
               <FieldError>{errors.observacion?.message}</FieldError>
             </div>
             <label className="flex cursor-pointer items-center gap-3 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
-              <input id="permiso_largo" type="checkbox" {...register('permiso_largo')} className="h-4 w-4 rounded border-kyro-border accent-kyro-gold" />
+              <input id="permiso_largo" type="checkbox" {...register('permiso_largo')} className="h-4 w-4 rounded border-kyro-border accent-kyro-indigo" />
               Permiso largo (licencia con retorno programado)
             </label>
             {permisoLargoValue && (
@@ -408,7 +408,7 @@ export function AgenteForm({ agente, onSuccess, onCancel }: Props) {
             <FieldError>{errors.pin_seguridad?.message}</FieldError>
           </div>
           <label className="flex cursor-pointer items-center gap-3 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2.5 text-sm text-kyro-body sm:col-span-2">
-            <input id="es_gerencia" type="checkbox" {...register('es_gerencia')} className="h-4 w-4 rounded border-kyro-border accent-kyro-gold" />
+            <input id="es_gerencia" type="checkbox" {...register('es_gerencia')} className="h-4 w-4 rounded border-kyro-border accent-kyro-indigo" />
             Personal de gerencia
           </label>
         </div>

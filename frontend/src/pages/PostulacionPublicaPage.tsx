@@ -227,16 +227,16 @@ function PostulacionForm() {
       </Section>
 
       <Section title="Sistema de pensión">
-        <div className="flex gap-6 mb-3">
+        <div className="mb-3 flex flex-wrap gap-4">
           {(['ONP', 'AFP', 'NINGUNO'] as const).map((op) => (
-            <label key={op} className="flex items-center gap-2 text-sm cursor-pointer">
+            <label key={op} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[10px] border border-gray-200/75 bg-white/40 px-3 text-sm dark:border-white/10 dark:bg-white/[0.025]">
               <input
                 type="radio"
                 name="sistema_pension"
                 value={op}
                 checked={sistemaPension === op}
                 onChange={() => setSistemaPension(op)}
-                className="accent-blue-600"
+                className="h-4 w-4 accent-indigo-600"
               />
               {op}
             </label>
@@ -282,7 +282,7 @@ function PostulacionForm() {
                 type="checkbox"
                 checked={val}
                 onChange={(e) => set(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
+                className="h-4 w-4 accent-indigo-600"
               />
               {label}
             </label>
@@ -469,7 +469,7 @@ function PostulacionForm() {
   )
 }
 
-const inputCls = 'w-full rounded-lg border border-gray-300/80 bg-white/75 px-3 py-2 text-sm text-gray-800 shadow-sm transition-all placeholder:text-gray-400 hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:placeholder:text-zinc-600'
+const inputCls = 'h-10 w-full rounded-[10px] border border-gray-300/80 bg-white/75 px-3 text-sm text-gray-800 shadow-sm transition-all placeholder:text-gray-400 hover:border-indigo-300 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:placeholder:text-zinc-600'
 
 function Section({
   title,
@@ -481,7 +481,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-gray-200/75 bg-white/45 p-4 shadow-[0_12px_30px_-26px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.07] dark:bg-white/[0.025] sm:p-5">
+    <section className="rounded-[18px] border border-gray-200/75 bg-white/45 p-5 shadow-[0_12px_30px_-26px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/[0.07] dark:bg-white/[0.025]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="flex-1 border-b border-gray-200/80 pb-2 text-xs font-bold uppercase tracking-[0.14em] text-gray-700 dark:border-white/[0.07] dark:text-zinc-200">
           {title}
@@ -516,7 +516,7 @@ export function PostulacionPublicaPage() {
       <div className="public-premium-shell min-h-screen px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-amber-400 shadow-[0_0_18px_rgba(99,102,241,0.35)]" />
+            <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-300 shadow-[0_0_18px_rgba(99,102,241,0.35)]" />
             <h1
               className="text-2xl font-bold uppercase tracking-[0.16em] text-gray-900 dark:text-zinc-50"
               style={{ fontFamily: "'Orbitron', sans-serif" }}

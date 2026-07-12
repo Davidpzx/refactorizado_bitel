@@ -82,8 +82,8 @@ export function AgenteSeguridadDialog({ agente, onClose }: Props) {
           {data.tiene_token && (
             <div className="space-y-3">
               <p className="text-xs text-kyro-muted">Este agente ya tiene un token de acceso activo.</p>
-              <div className="flex items-center justify-between gap-3 rounded-kyro border border-dashed border-kyro-gold/40 bg-black/20 px-4 py-3">
-                <span className="font-mono text-2xl font-bold tracking-[0.3em] text-kyro-gold">
+              <div className="flex items-center justify-between gap-3 rounded-kyro border border-dashed border-kyro-indigo/40 bg-kyro-elevated px-4 py-3">
+                <span className="font-mono text-2xl font-bold tracking-[0.3em] text-kyro-indigo">
                   {mostrarToken ? data.token : '••••••'}
                 </span>
                 <button
@@ -99,7 +99,7 @@ export function AgenteSeguridadDialog({ agente, onClose }: Props) {
                 {data.tipo_token === 'permanente' ? 'Token permanente (no caduca)' : `Token diario · expira ${formatearFechaCorta(data.expiracion_token ?? '')}`}
               </p>
 
-              <Button variant="gold" className="w-full gap-2" onClick={copiarToken}>
+              <Button variant="default" className="w-full gap-2" onClick={copiarToken}>
                 {copiado ? <Check size={15} /> : <Copy size={15} />} {copiado ? '¡Copiado!' : 'Copiar token'}
               </Button>
 

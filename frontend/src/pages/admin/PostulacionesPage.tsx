@@ -271,7 +271,7 @@ function DetallePostulacion({
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button variant="gold" onClick={handleGuardar} disabled={actualizar.isPending}>
+            <Button variant="default" onClick={handleGuardar} disabled={actualizar.isPending}>
               {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </div>
@@ -295,7 +295,7 @@ function DocumentoPreview({ titulo, valor }: { titulo: string; valor: string | n
     <div>
       <h4 className="mb-1 text-[0.65rem] font-bold uppercase tracking-wider text-kyro-muted">{titulo}</h4>
       {esPdf ? (
-        <a href={valor} download={`${titulo}.pdf`} className="text-xs font-semibold text-kyro-gold">
+        <a href={valor} download={`${titulo}.pdf`} className="text-xs font-semibold text-kyro-indigo">
           Descargar PDF
         </a>
       ) : (
@@ -380,7 +380,7 @@ export function PostulacionesPage() {
           onKeyDown={(e) => { if (e.key === 'Enter') buscar() }}
           className="max-w-xs"
         />
-        <Button variant="gold" onClick={buscar}>Buscar</Button>
+        <Button variant="default" onClick={buscar}>Buscar</Button>
 
         <SegmentedToggle
           ariaLabel="Filtrar postulaciones por estado"

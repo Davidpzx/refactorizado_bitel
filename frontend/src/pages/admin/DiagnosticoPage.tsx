@@ -43,12 +43,14 @@ interface DiagnosticoResponse {
 
 function TableSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      <h2 className="mb-2 px-1 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-kyro-body">{title}</h2>
-      <div className="kyro-card overflow-hidden">
+    <section className="kyro-card overflow-hidden rounded-[18px]">
+      <h2 className="border-b border-kyro-border px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-kyro-body">
+        {title}
+      </h2>
+      <div className="overflow-x-auto">
         {children}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -70,7 +72,9 @@ export function DiagnosticoPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real" Icon={Stethoscope}>
+        <PageHeader title="Diagnóstico del Sistema" subtitle="Estado técnico y consistencia operativa en tiempo real" Icon={Stethoscope} />
+
+        <div className={`rounded-[18px] border p-4 ${data.traslados_pendientes > 0 || data.chips_traslados_pendientes > 0 ? 'border-kyro-warning/30 bg-kyro-warning/10' : 'border-kyro-success/30 bg-kyro-success/10'}`}>
           <div className="flex flex-wrap items-center gap-2">
             {data.traslados_pendientes > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-kyro-warning/30 bg-kyro-warning/10 px-3 py-1.5 text-xs font-semibold text-kyro-warning">
@@ -88,18 +92,18 @@ export function DiagnosticoPage() {
               </span>
             )}
           </div>
-        </PageHeader>
+        </div>
 
         <TableSection title="Sesión actual">
-          <table className="w-full text-sm text-kyro-body">
-            <thead className="kyro-table-head">
+          <table className="w-full text-sm tabular-nums text-kyro-body">
+            <thead className="kyro-table-head text-xs [&_th]:sticky [&_th]:top-0 [&_th]:z-10">
               <tr>
                 <th className="px-4 py-2.5 text-left">user_id</th>
                 <th className="px-4 py-2.5 text-left">tienda_id</th>
                 <th className="px-4 py-2.5 text-left">rol</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-kyro-border">
               <tr>
                 <td className="px-4 py-2.5 text-kyro-body">{data.sesion.user_id}</td>
                 <td className="px-4 py-2.5 text-kyro-body">{data.sesion.tienda_id}</td>
@@ -114,8 +118,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Tiendas">
-          <table className="w-full text-sm text-kyro-body">
-            <thead className="kyro-table-head">
+          <table className="w-full text-sm tabular-nums text-kyro-body">
+            <thead className="kyro-table-head text-xs [&_th]:sticky [&_th]:top-0 [&_th]:z-10">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">codigo</th>
@@ -143,8 +147,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Usuarios">
-          <table className="w-full text-sm text-kyro-body">
-            <thead className="kyro-table-head">
+          <table className="w-full text-sm tabular-nums text-kyro-body">
+            <thead className="kyro-table-head text-xs [&_th]:sticky [&_th]:top-0 [&_th]:z-10">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">nombre</th>
@@ -168,8 +172,8 @@ export function DiagnosticoPage() {
         </TableSection>
 
         <TableSection title="Chips">
-          <table className="w-full text-sm text-kyro-body">
-            <thead className="kyro-table-head">
+          <table className="w-full text-sm tabular-nums text-kyro-body">
+            <thead className="kyro-table-head text-xs [&_th]:sticky [&_th]:top-0 [&_th]:z-10">
               <tr>
                 <th className="px-4 py-2.5 text-left">id</th>
                 <th className="px-4 py-2.5 text-left">tienda_codigo</th>

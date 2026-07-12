@@ -16,7 +16,7 @@ import { CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-
 import { useAuth } from '../../hooks/useAuth'
 import { DocumentosAgentePanel } from '../../components/agente/DocumentosAgentePanel'
 import { formatearFechaCorta } from '../../lib/fechas'
-import { StatCard } from '../../components/ui/StatCard'
+import { KpiCard } from '../../components/ui/KpiCard'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 
 const pen = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' })
@@ -63,10 +63,10 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
   })
 
   return (
-    <section className="kyro-card relative overflow-hidden p-5">
-      <CardTopAccent color="amber" />
+    <section className="kyro-card relative overflow-hidden rounded-[18px] p-5">
+      <CardTopAccent color="indigo" />
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
-        <Calendar size={15} className="text-kyro-gold" /> Fechas laborales
+        <Calendar size={15} className="text-kyro-indigo" /> Fechas laborales
       </h3>
       <p className="mb-4 text-xs text-kyro-muted">Ingreso y vigencia del periodo de prueba.</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -86,7 +86,7 @@ function FechasLaboralesPanel({ agenteId, agente }: { agenteId: string; agente: 
       {msg && <p className={`mt-3 rounded-kyro px-3 py-2 text-xs ${msg.startsWith('Error') ? 'bg-kyro-danger/10 text-kyro-danger' : 'bg-kyro-success/10 text-kyro-success'}`}>{msg}</p>}
       <div className="mt-3 flex justify-end">
         <Button
-          variant="gold"
+          variant="default"
           size="sm"
           disabled={mut.isPending}
           onClick={() => {
@@ -121,16 +121,16 @@ function TokenSeguridadPanel({ agenteId }: { agenteId: string }) {
   })
 
   return (
-    <section className="kyro-card relative overflow-hidden p-5">
+    <section className="kyro-card relative overflow-hidden rounded-[18px] p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
-        <ShieldCheck size={15} className="text-kyro-gold" /> Token de seguridad
+        <ShieldCheck size={15} className="text-kyro-indigo" /> Token de seguridad
       </h3>
       <p className="mb-4 text-xs text-kyro-muted">Genera o revoca credenciales de acceso temporal.</p>
 
       {resultado?.token && (
         <div className="mb-4 rounded-kyro border border-kyro-indigo bg-kyro-indigo/10 p-3">
           <p className="mb-1 text-xs text-kyro-muted">Token generado ({resultado.tipo}):</p>
-          <p className="break-all font-mono text-2xl font-bold tracking-widest text-kyro-gold">{resultado.token}</p>
+          <p className="break-all font-mono text-2xl font-bold tracking-widest text-kyro-indigo">{resultado.token}</p>
           <p className="mt-1 text-xs text-kyro-subtle">Expira: {resultado.expiracion}</p>
         </div>
       )}
@@ -190,7 +190,7 @@ function AdelantosPanel({ agenteId }: { agenteId: string }) {
   const confirmDialog = useConfirmDialog()
 
   return (
-    <section className="kyro-card relative overflow-hidden p-5">
+    <section className="kyro-card relative overflow-hidden rounded-[18px] p-5">
       <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text">
         <DollarSign size={15} className="text-kyro-gold" /> Adelantos
       </h3>
@@ -327,7 +327,7 @@ function PerfilRrhhEditor({ agenteId, initial }: { agenteId: string; initial: Pe
   const set = (key: keyof PerfilRrhh, value: string | boolean) => setForm(current => ({ ...current, [key]: value }))
 
   return (
-    <section id="ficha-rrhh" className="kyro-card relative overflow-hidden p-5 lg:col-span-2">
+    <section id="ficha-rrhh" className="kyro-card relative overflow-hidden rounded-[18px] p-5 lg:col-span-2">
       <CardTopAccent color="purple" />
       <div className="mb-4 flex items-center justify-between">
         <div>
@@ -497,7 +497,7 @@ function BoletasPanel({ agenteId, nombre, sueldoBase }: { agenteId: string; nomb
   const boletas = data ?? []
 
   return (
-    <section className="kyro-card p-5 lg:col-span-2">
+    <section className="kyro-card rounded-[18px] p-5 lg:col-span-2">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text"><Receipt size={15} className="text-kyro-gold" /> Liquidación y Boletas</h3>
@@ -616,9 +616,9 @@ function SeguridadDispositivoPanel({ agenteId }: { agenteId: string }) {
   const confirmDialog = useConfirmDialog()
 
   return (
-    <section id="dispositivo" className="kyro-card relative overflow-hidden p-5">
+    <section id="dispositivo" className="kyro-card relative overflow-hidden rounded-[18px] p-5">
       <CardTopAccent color="indigo" />
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Smartphone size={15} className="text-kyro-gold" /> Dispositivo</h3>
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-kyro-text"><Smartphone size={15} className="text-kyro-indigo" /> Dispositivo</h3>
       <p className="mb-3 text-xs text-kyro-muted">Vinculacion del celular y token activo.</p>
       <div className="space-y-2 text-xs text-kyro-body">
         <p>Dispositivo: <strong>{data?.dispositivo_vinculado ? 'Vinculado' : 'Sin vincular'}</strong></p>
@@ -659,7 +659,7 @@ function HistorialAgenteModal({ agenteId, onClose }: { agenteId: string; onClose
       <div className="kyro-card relative flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-kyro-border p-4">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-kyro-text">
-            <History size={15} className="text-kyro-gold" /> Historial del agente
+            <History size={15} className="text-kyro-indigo" /> Historial del agente
           </h3>
           <Button size="iconSm" variant="ghost" aria-label="Cerrar" onClick={onClose}><X size={16} /></Button>
         </div>
@@ -753,11 +753,11 @@ export function VerAgentePage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-kyro-muted transition-colors hover:text-kyro-gold">
+      <Link to="/agentes" className="inline-flex items-center gap-1.5 text-sm text-kyro-muted transition-colors hover:text-kyro-indigo">
         <ArrowLeft size={15} /> Volver a agentes
       </Link>
 
-      <section className="kyro-card relative overflow-hidden p-5 sm:p-6">
+      <section className="kyro-card relative overflow-hidden rounded-[18px] p-5 sm:p-6">
         <CardTopAccent color="cyan" />
         <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-kyro-indigo/10 blur-3xl" />
         <div className="relative flex flex-wrap items-start gap-5">
@@ -823,24 +823,25 @@ export function VerAgentePage() {
 
       {stats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard
+          <KpiCard
             title="Total reportes"
             value={stats.total_reportes}
-            accent="#0d6efd"
-            icon={<FileText size={14} />}
+            tone="indigo"
+            icon={<FileText size={16} />}
           />
-          <StatCard
+          <KpiCard
             title="Total vendido"
-            value={fmt(stats.total_vendido)}
-            accent="#0d6efd"
-            icon={<DollarSign size={14} />}
+            value={Number(stats.total_vendido)}
+            monetary
+            tone="gold"
+            icon={<DollarSign size={16} />}
           />
-          <StatCard
+          <KpiCard
             title="Diferencia acumulada"
             value={`${dif > 0 ? '+' : ''}${fmt(dif)}`}
-            accent={dif < 0 ? '#ef4444' : dif > 0 ? '#f59e0b' : '#6c757d'}
-            valueColorClass={dif < 0 ? 'text-kyro-danger' : dif > 0 ? 'text-kyro-warning' : 'text-kyro-body'}
-            icon={<TrendingUp size={14} />}
+            tone={dif < 0 ? 'danger' : dif > 0 ? 'success' : 'neutral'}
+            accent={dif < 0 ? 'var(--color-kyro-danger)' : dif > 0 ? 'var(--color-kyro-success)' : 'var(--color-kyro-indigo)'}
+            icon={<TrendingUp size={16} />}
           />
         </div>
       )}
@@ -857,8 +858,8 @@ export function VerAgentePage() {
         </div>
       )}
 
-      <section className="kyro-card relative overflow-hidden">
-        <div aria-hidden className="absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-kyro-gold via-kyro-indigo to-transparent" />
+      <section className="kyro-card relative overflow-hidden rounded-[18px]">
+        <div aria-hidden className="absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-kyro-indigo via-kyro-indigo to-transparent" />
         <div className="flex flex-col gap-2 border-b border-kyro-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-kyro-text">Historial de reportes</h2>

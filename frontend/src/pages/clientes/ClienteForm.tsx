@@ -87,7 +87,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="dni_ruc">DNI / RUC *</Label>
           <div className="flex gap-2 mt-1">
@@ -131,7 +131,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
         {errors.nombre && <p className="mt-1 text-xs text-kyro-danger">{errors.nombre.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="telefono">Teléfono</Label>
           <Input id="telefono" {...register('telefono')} placeholder="987654321" maxLength={15} className="mt-1" />
@@ -150,7 +150,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: Props) {
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" variant="gold" disabled={isPending} className="flex-1">
+        <Button type="submit" variant="default" disabled={isPending} className="flex-1">
           {isPending ? 'Guardando...' : esEdicion ? 'Actualizar cliente' : 'Registrar cliente'}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
