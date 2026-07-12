@@ -277,3 +277,7 @@ Regla de despacho: al terminar cada ola, verificar diffs + tsc + vite build (+ s
 - CIERRE: QA visual (plan/12 sección A flujos clave post-rediseño) + deploy final + resumen ejecutivo.
 Fuera de la cola (requieren al usuario): APP-10 (probar APK en equipo real), rotación INTEGRADOR_API_KEY, backup del keystore.
 Nota: plan/08-mejoras-diseno-bloque1/2 (fase anterior) quedan SUPERSEDIDOS por plan/11 donde se solapan — no ejecutar en paralelo; rescatar solo lo que plan/11 no cubra (revisar al cierre).
+
+## REDISEÑO COMPLETO — 45/45 TICKETS DIS-FX CERRADOS Y EN PRODUCCION (2026-07-12)
+Olas D2-D8 integradas y desplegadas: commits 8a2f0ba, c19f0f7, 22e3f56, a4a9dd5, e90445c, 1382dcf, 1a735f9, 28a990d (+ transversales b1f1c67 y base 65955e0). Todas las pantallas del sistema alineadas a la vision fintech (plan/10): indigo estructural, oro reservado a dinero, KpiCard con sparkline/skeleton, superficies 18px, dialogos 20px, modo claro cuidado. DIS-FX-45 (Login) verificado ya conforme, sin cambios.
+QUEDA EN LA COLA: olas O1-O3 (16 optimizaciones de plan/12 — backend N+1/indices/paginacion/caching + frontend bundle) y el cierre (QA visual de flujos clave + resumen ejecutivo). Codex vuelve 12:53pm; titan activa.
