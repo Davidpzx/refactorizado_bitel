@@ -1,10 +1,12 @@
 import type { HTMLAttributes } from 'react'
 
 export function Card({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
+  const hasExplicitPadding = /(?:^|\s)!?p[trblxy]?-[^\s]+/.test(className)
   return (
     <div
       className={[
-        'premium-surface',
+        'premium-surface rounded-[18px] [&::before]:!bg-[linear-gradient(90deg,rgba(99,102,241,0.7),transparent_78%)]',
+        hasExplicitPadding ? '' : 'p-5',
         className,
       ].join(' ')}
       {...props}
@@ -13,11 +15,11 @@ export function Card({ className = '', ...props }: HTMLAttributes<HTMLDivElement
 }
 
 export function CardHeader({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={['flex flex-col space-y-1.5 border-b border-gray-200/80 p-4 dark:border-white/[0.07]', className].join(' ')} {...props} />
+  return <div className={['flex flex-col space-y-1.5 border-b border-gray-200/80 px-5 py-4 dark:border-white/[0.07]', className].join(' ')} {...props} />
 }
 
 export function CardContent({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={['p-4', className].join(' ')} {...props} />
+  return <div className={['p-5', className].join(' ')} {...props} />
 }
 
 export function CardTitle({ className = '', ...props }: HTMLAttributes<HTMLHeadingElement>) {

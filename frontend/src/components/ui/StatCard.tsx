@@ -11,7 +11,11 @@ interface StatCardProps {
   title: string
   /** Valor a mostrar. `null`/`undefined` renderiza un placeholder de carga. */
   value: ReactNode
-  /** Color del acento (borde). Por defecto oro Kyro. Ignorado si se pasa `topAccentColor`. */
+  /**
+   * Color del acento (borde). Por defecto indigo Kyro (NUNCA oro: el oro queda
+   * reservado a dinero — pásalo explícito sólo en montos protagonistas).
+   * Ignorado si se pasa `topAccentColor`.
+   */
   accent?: string
   /** Ícono opcional a la izquierda del contenido (variante `d-flex gap-3` del legacy). */
   icon?: ReactNode
@@ -45,7 +49,7 @@ interface StatCardProps {
 export function StatCard({
   title,
   value,
-  accent = '#ffc200',
+  accent = '#6366f1',
   icon,
   align = 'left',
   topAccentColor,

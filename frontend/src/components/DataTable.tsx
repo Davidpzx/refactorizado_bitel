@@ -46,24 +46,24 @@ export function DataTable<TData>({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm
+        className="relative overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-sm
           dark:border-[rgba(255,255,255,0.08)] dark:bg-[#18181b]
           dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.55)]"
       >
         {/* hairline de acento superior */}
         <div
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: 'linear-gradient(90deg, rgba(255,194,0,0.45), transparent 60%)' }}
+          className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-kyro-indigo/60 to-transparent"
+          data-accent="indigo"
         />
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-separate border-spacing-0">
+          <table className="w-full border-separate border-spacing-0 text-sm tabular-nums">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="sticky top-0 z-10 px-4 py-3 text-left text-[0.68rem] font-semibold uppercase
+                      className="sticky top-0 z-10 px-4 py-3 text-left text-xs font-semibold uppercase
                         tracking-[0.08em] text-gray-500 bg-gray-50/95 backdrop-blur border-b border-gray-200
                         dark:text-zinc-400 dark:bg-[rgba(39,39,42,0.6)] dark:border-[rgba(255,255,255,0.07)]"
                     >
@@ -100,22 +100,22 @@ export function DataTable<TData>({
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="group transition-colors hover:bg-amber-50/40 dark:hover:bg-[rgba(255,194,0,0.04)]"
+                    className="group transition-colors hover:bg-kyro-indigo/[0.04]"
                   >
                     {row.getVisibleCells().map((cell, ci) => (
                       <td
                         key={cell.id}
                         className="px-4 py-3 text-gray-700 border-b border-gray-100 align-middle
                           dark:text-zinc-300 dark:border-[rgba(255,255,255,0.045)]
-                          group-hover:border-amber-100/60 dark:group-hover:border-[rgba(255,194,0,0.12)]
+                          group-hover:border-kyro-indigo/10
                           relative"
                       >
                         {ci === 0 && (
                           <span
                             aria-hidden
-                            className="absolute left-0 top-0 bottom-0 w-[2px] scale-y-0 origin-center
+                            className="absolute left-0 top-0 bottom-0 w-[2px] origin-center scale-y-0 bg-kyro-indigo
                               transition-transform group-hover:scale-y-100"
-                            style={{ background: '#ffc200' }}
+                            data-accent="indigo"
                           />
                         )}
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

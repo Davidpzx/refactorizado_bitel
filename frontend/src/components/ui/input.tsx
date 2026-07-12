@@ -6,7 +6,7 @@ export function Input({ className = '', ...props }: InputProps) {
   return (
     <input
       className={[
-        'flex h-9 w-full rounded-lg border border-gray-300/90 bg-white/90 px-3 py-1 text-sm text-gray-800',
+        'flex h-10 w-full rounded-[10px] border border-gray-300/90 bg-white/90 px-3 py-1 text-sm text-gray-800',
         'shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200',
         'placeholder:text-gray-400 hover:border-gray-400',
         'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',

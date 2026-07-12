@@ -82,7 +82,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => close(false)}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-[#3f3f46] px-4 text-sm font-medium text-zinc-100 transition-all duration-200 hover:brightness-125 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-white dark:focus:ring-offset-zinc-950"
+                className="inline-flex h-9 flex-1 items-center justify-center rounded-[10px] bg-[#3f3f46] px-4 text-sm font-medium text-zinc-100 transition-all duration-200 hover:brightness-125 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-white dark:focus:ring-offset-zinc-950"
               >
                 {pending.cancelLabel ?? 'Cancelar'}
               </button>

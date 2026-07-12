@@ -17,40 +17,40 @@ export function SectionPanel({
   icon?: ReactNode; number?: number
 }) {
   return (
-    <GlassPanel className="relative mb-4 overflow-hidden">
+    <GlassPanel className="relative mb-4 overflow-hidden p-0">
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 z-10 h-[2px]"
-        style={{ background: accent, boxShadow: `0 0 10px 1px color-mix(in srgb, ${accent} 55%, transparent)` }}
+        className="absolute inset-x-0 top-0 z-10 h-[2px] bg-kyro-indigo shadow-[0_0_10px_1px_rgba(99,102,241,0.45)]"
+        data-accent={accent}
       />
 
       <div
-        className="flex items-center gap-2 border-b border-white/5 px-3 py-2 text-sm font-bold"
-        style={{ color: accent }}
+        className="flex items-center gap-2 border-b border-kyro-indigo/10 px-4 py-3 text-sm font-bold text-kyro-indigo"
+        data-accent={accent}
       >
         {icon}
         {number !== undefined && <span className="tabular-nums">{number}.</span>}
         <span>{title}</span>
         {count > 0 && (
           <span
-            className="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-            style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}
+            className="ml-auto rounded-full bg-kyro-indigo/10 px-1.5 py-0.5 text-[10px] font-bold text-kyro-indigo"
+            data-accent={accent}
           >
             {count}
           </span>
         )}
       </div>
 
-      <div className="px-3 py-3">
+      <div className="flex flex-col gap-3 p-4">
         {children}
         {onAdd && (
-          <AddRowButton label={addLabel ?? 'Agregar'} accent={accent} onClick={onAdd} className="mt-2" />
+          <AddRowButton label={addLabel ?? 'Agregar'} onClick={onAdd} />
         )}
         {subtotal !== undefined && (
-          <div className="mt-2 pr-1 text-right text-[11px] text-kyro-muted">
-            Cantidad: <b style={{ color: accent }}>{count}</b>
+          <div className="pr-1 text-right text-xs text-kyro-muted">
+            Cantidad: <b className="text-kyro-indigo tabular-nums">{count}</b>
             {' | '}
-            {subtotalLabel ?? 'Subtotal'}: <b style={{ color: accent }}>S/ {subtotal.toFixed(2)}</b>
+            {subtotalLabel ?? 'Subtotal'}: <b className="text-kyro-gold tabular-nums">S/ {subtotal.toFixed(2)}</b>
           </div>
         )}
       </div>

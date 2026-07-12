@@ -19,7 +19,7 @@ interface Props<T> {
 
 const toneStyles: Record<Tone, { hex: string; ink: string }> = {
   indigo: { hex: '#6366f1', ink: '#ffffff' },
-  gold: { hex: '#ffc200', ink: '#1a1a1a' },
+  gold: { hex: '#6366f1', ink: '#ffffff' },
   success: { hex: '#22c55e', ink: '#052e16' },
   warning: { hex: '#fbbf24', ink: '#451a03' },
   danger: { hex: '#ef4444', ink: '#ffffff' },
@@ -27,8 +27,8 @@ const toneStyles: Record<Tone, { hex: string; ink: string }> = {
 }
 
 const sizeClasses: Record<NonNullable<Props<unknown>['size']>, string> = {
-  sm: 'text-xs h-7 px-3',
-  md: 'text-sm h-8 px-4',
+  sm: 'text-xs h-8 px-3',
+  md: 'text-sm h-9 px-4',
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -77,7 +77,7 @@ export function SegmentedToggle<T>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="inline-flex rounded-lg border border-gray-200 bg-gray-100/70 p-1 gap-1 dark:border-white/8 dark:bg-zinc-900/60"
+      className="inline-flex gap-1 rounded-[10px] border border-gray-200 bg-gray-100/70 p-1 dark:border-white/8 dark:bg-zinc-900/60"
     >
       {options.map((option) => {
         const selected = option.value === value
@@ -92,7 +92,7 @@ export function SegmentedToggle<T>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => handleKeyDown(event, option.value)}
             className={[
-              'inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-all duration-[250ms]',
+              'inline-flex items-center justify-center gap-1.5 rounded-[10px] font-medium transition-all duration-[250ms]',
               'focus:outline-none focus:ring-2 focus:ring-indigo-500/35 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950',
               'motion-reduce:scale-100 motion-reduce:transition-none',
               sizeClasses[size],

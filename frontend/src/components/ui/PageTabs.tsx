@@ -24,7 +24,7 @@ export function PageTabs({ tabs, active, onChange, className = '', activeColor, 
 
   return (
     <div
-      className={`inline-flex items-center gap-1 rounded-lg p-1 ${
+      className={`inline-flex items-center gap-1 rounded-[10px] p-1 ${
         isDark ? 'bg-zinc-800/60' : 'bg-gray-100'
       } ${className}`}
     >
@@ -35,11 +35,11 @@ export function PageTabs({ tabs, active, onChange, className = '', activeColor, 
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            style={isActive && activeColor ? { background: activeColor, color: activeTextColor ?? '#1a1a1a' } : undefined}
+            style={isActive && activeColor ? { background: activeColor, color: activeTextColor ?? '#ffffff' } : undefined}
             className={[
-              'inline-flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all',
+              'inline-flex h-8 items-center rounded-[8px] px-3 text-sm font-medium transition-all',
               isActive
-                ? activeColor ? 'font-semibold' : 'bg-[#ffc200] text-[#1a1a1a] font-semibold'
+                ? activeColor ? 'font-semibold' : 'bg-kyro-indigo text-white font-semibold'
                 : isDark
                   ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200',

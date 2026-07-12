@@ -26,7 +26,7 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: Dial
       />
       <div
         className={[
-          'relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl',
+          'relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[20px] border border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl',
           'dark:border-white/10 dark:bg-zinc-900/95 dark:shadow-[0_28px_80px_-24px_rgba(0,0,0,0.95)]',
           maxWidthClasses[maxWidth],
         ].join(' ')}
@@ -34,13 +34,13 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'md' }: Dial
         <div
           aria-hidden
           className="absolute inset-x-0 top-0 h-px"
-          style={{ background: 'linear-gradient(90deg, #6366f1, #ffc200 45%, transparent 85%)' }}
+          style={{ background: 'linear-gradient(90deg, #6366f1, transparent 85%)' }}
         />
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200/80 px-5 py-4 dark:border-white/[0.07]">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200/80 p-5 dark:border-white/[0.07]">
           <h2 className="text-base font-bold tracking-tight text-gray-900 dark:text-zinc-50">{title}</h2>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-xl leading-none text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] text-xl leading-none text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
             aria-label="Cerrar"
           >
             ×

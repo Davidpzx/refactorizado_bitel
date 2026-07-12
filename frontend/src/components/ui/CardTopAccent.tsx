@@ -11,6 +11,6 @@ const topAccentClasses: Record<TopAccentColor, string> = {
 }
 
 /** Hairline superior de color por card. Requiere que el contenedor sea `relative overflow-hidden`. */
-export function CardTopAccent({ color }: { color: TopAccentColor }) {
+export function CardTopAccent({ color = 'indigo' }: { color?: TopAccentColor }) {
   return <div aria-hidden className={`absolute inset-x-0 top-0 z-10 h-[3px] ${topAccentClasses[color]}`} />
 }

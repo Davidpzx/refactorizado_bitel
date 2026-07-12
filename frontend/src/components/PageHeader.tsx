@@ -8,6 +8,8 @@ interface PageHeaderProps {
   children?: ReactNode
   /** Acento del ícono / barrita lateral; por defecto oro Kyro */
   accent?: string
+  /** Enables the gold treatment for a monetary header. */
+  monetary?: boolean
   /**
    * Ícono (phosphor) a la izquierda del título, estilo legacy (`ph-fill`).
    * Cuando se pasa, reemplaza la barra vertical de acento.
@@ -26,12 +28,16 @@ export function PageHeader({
   subtitle,
   actions,
   children,
-  accent = '#ffc200',
+  monetary = false,
+  accent = monetary ? '#ffc200' : '#6366f1',
   Icon,
   divider = false,
 }: PageHeaderProps) {
   const sub = subtitle ?? description
   const slot = children ?? actions
+  const normalizedAccent = accent.toLowerCase()
+  const requestsGold = normalizedAccent.includes('gold') || normalizedAccent === '#ffc200'
+  const resolvedAccent = requestsGold && !monetary ? '#6366f1' : accent
   return (
     <div className="mb-6">
       <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start">
@@ -41,9 +47,9 @@ export function PageHeader({
               aria-hidden
               className="flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-xl"
               style={{
-                color: accent,
-                background: `${accent}1f`,
-                boxShadow: `0 0 16px -6px ${accent}88`,
+                color: resolvedAccent,
+                background: `color-mix(in srgb, ${resolvedAccent} 12%, transparent)`,
+                boxShadow: `0 0 16px -6px color-mix(in srgb, ${resolvedAccent} 55%, transparent)`,
               }}
             >
               <Icon size={22} />
@@ -53,8 +59,8 @@ export function PageHeader({
               aria-hidden
               className="w-1 rounded-full shrink-0 self-stretch"
               style={{
-                background: `linear-gradient(180deg, ${accent}, ${accent}33)`,
-                boxShadow: `0 0 12px -2px ${accent}88`,
+                background: `linear-gradient(180deg, ${resolvedAccent}, color-mix(in srgb, ${resolvedAccent} 20%, transparent))`,
+                boxShadow: `0 0 12px -2px color-mix(in srgb, ${resolvedAccent} 55%, transparent)`,
               }}
             />
           )}
@@ -77,7 +83,7 @@ export function PageHeader({
           className="mt-4 h-px w-full"
           style={{
             background:
-              'linear-gradient(90deg, rgba(255,194,0,0.35) 0%, rgba(255,255,255,0.06) 35%, transparent 100%)',
+              `linear-gradient(90deg, color-mix(in srgb, ${resolvedAccent} 35%, transparent) 0%, rgba(148,163,184,0.12) 35%, transparent 100%)`,
           }}
         />
       )}

@@ -5,14 +5,14 @@ export type AlertBannerTone = 'danger' | 'warning' | 'info'
 
 const TONE_ACCENT: Record<AlertBannerTone, string> = {
   danger: '#ef4444',
-  warning: '#ffc200',
+  warning: 'var(--color-kyro-warning)',
   info: '#06b6d4',
 }
 
 const TONE_ICON: Record<AlertBannerTone, ReactNode> = {
-  danger: <AlertTriangle size={16} />,
-  warning: <AlertTriangle size={16} />,
-  info: <Info size={16} />,
+  danger: <AlertTriangle size={20} />,
+  warning: <AlertTriangle size={20} />,
+  info: <Info size={20} />,
 }
 
 interface AlertBannerProps {
@@ -43,7 +43,7 @@ export function AlertBanner({
 
   return (
     <div
-      className={`flex items-center justify-between gap-4 rounded-kyro-lg border px-4 py-3 ${className}`}
+      className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${className}`}
       style={{
         borderColor: `color-mix(in srgb, ${accent} 40%, transparent)`,
         borderLeftWidth: '4px',

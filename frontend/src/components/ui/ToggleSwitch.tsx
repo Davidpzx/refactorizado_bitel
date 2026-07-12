@@ -9,7 +9,7 @@ export function ToggleSwitch({ label, accent = '#6366f1', className = '', ...pro
   return (
     <label
       style={{ '--accent': accent } as CSSProperties}
-      className={['inline-flex items-center gap-1.5 cursor-pointer select-none text-[10px] font-medium', className].join(' ')}
+      className={['inline-flex items-center gap-2 cursor-pointer select-none text-xs font-medium', className].join(' ')}
     >
       <input type="checkbox" className="peer sr-only" {...props} />
       <span

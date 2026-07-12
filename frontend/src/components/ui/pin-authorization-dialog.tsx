@@ -80,7 +80,7 @@ interface PinAuthorizationDialogProps extends PinAuthorizationOptions {
 }
 
 const fieldClasses =
-  'flex h-10 w-full rounded-lg border border-gray-300/90 bg-white/90 px-3 py-1 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:shadow-inner dark:placeholder:text-zinc-600 dark:hover:border-white/20 dark:focus:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50'
+  'flex h-10 w-full rounded-[10px] border border-gray-300/90 bg-white/90 px-3 py-1 text-sm text-gray-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-black/20 dark:text-zinc-100 dark:shadow-inner dark:placeholder:text-zinc-600 dark:hover:border-white/20 dark:focus:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
  * Modal de autorización PIN — paridad visual con el SweetAlert2 legacy
@@ -185,7 +185,7 @@ export function PinAuthorizationDialog({
           <div>
             <label
               htmlFor="pin-auth-dni"
-              className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
             >
               DNI del Agente
             </label>
@@ -205,7 +205,7 @@ export function PinAuthorizationDialog({
           <div>
             <label
               htmlFor="pin-auth-pin"
-              className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-zinc-400"
             >
               PIN de Seguridad
             </label>
@@ -236,11 +236,11 @@ export function PinAuthorizationDialog({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-[#3f3f46] px-4 text-sm font-medium text-zinc-100 transition-all duration-200 hover:brightness-125 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-white disabled:opacity-50 dark:focus:ring-offset-zinc-950"
+              className="inline-flex h-9 flex-1 items-center justify-center rounded-[10px] bg-[#3f3f46] px-4 text-sm font-medium text-zinc-100 transition-all duration-200 hover:brightness-125 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-white disabled:opacity-50 dark:focus:ring-offset-zinc-950"
             >
               Cancelar
             </button>
-            <Button type="submit" variant="gold" className="flex-1 gap-1.5" disabled={loading}>
+            <Button type="submit" className="flex-1 gap-1.5" disabled={loading}>
               <ShieldCheck size={16} weight="bold" />
               {loading ? 'Verificando…' : 'Autorizar'}
             </Button>

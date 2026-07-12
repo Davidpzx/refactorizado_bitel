@@ -47,7 +47,7 @@ export function Button({ variant = 'default', size = 'default', className = '', 
   return (
     <button
       className={[
-        'inline-flex items-center justify-center rounded-lg font-medium tracking-[0.2px]',
+        'inline-flex items-center justify-center rounded-[10px] font-medium tracking-[0.2px]',
         'transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2',
         'focus:ring-offset-white dark:focus:ring-offset-zinc-950',
         'disabled:opacity-50 disabled:pointer-events-none disabled:hover:translate-y-0 disabled:hover:brightness-100',
