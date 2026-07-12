@@ -293,3 +293,13 @@ Seguridad 16/16, App 9/10 (falta solo prueba fisica del usuario), Rediseño 45/4
 - Descarga APK corregida: trustProxies — url_descarga ahora sale https:// y la descarga arranca. Verificado.
 - Fluidez: prefetch al hover + top-5 en idle, keepPreviousData global, PageLoader skeleton.
 - Tiempo real: polling en dashboard/comprobantes/bipay/fraude (30-60s, pausado en pestaña oculta). Siguiente nivel si se pide: Laravel Reverb (websockets push).
+
+## Plan 16 (roles) — progreso 2026-07-12 tarde/noche
+- [x] R1 fundacion (commit 1f9256f): migracion admin->administrador/tienda->jefe_tienda, EnsureRole con alias+jerarquia, Permisos.php con matriz anticorrupcion. 751 tests.
+- [x] R2 matriz de rutas (347d792): reetiquetado completo + gerente no crea administradores. 760 tests.
+- [x] R2b+R3 (4ad79af): ~90 checks hardcodeados canonicalizados en 25 controladores (gerente funcional de verdad), scoping agente por usuarios.agente_id en mis-reportes/borrador/store/tickets. 768 tests.
+- [ ] R5 EN VUELO (subagente Sonnet): guards de ruta por rol, sidebar data-driven filtrado, UsuariosPage con 4 roles (gerente no crea admin), acciones condicionales canonicalizadas.
+- [ ] R4: verificar si quedo algo tras R2 (los endpoints de asistencia-modificar ya se reetiquetaron en R2) — probablemente solo confirmar con tests, puede fusionarse en R6.
+- [ ] R6: QA integral con 4 usuarios de prueba + deploy (incluye migrate en VPS: la conversion de roles corre en el proximo migrate).
+- [ ] Legacy L1-L3 (titan vuelve 5:50pm): helper require_rol + gates por pagina + asistencias solo admin/gerente. L4 decidido: agente NO tiene login en legacy (recomendacion aceptada tacitamente — confirmar con usuario en el cierre).
+- NO desplegado aun: commits 1f9256f..4ad79af estan solo locales (sin push) — push agrupado tras R5/R6.
