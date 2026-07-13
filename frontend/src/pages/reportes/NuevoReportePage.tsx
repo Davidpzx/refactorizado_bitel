@@ -1796,24 +1796,31 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               <Input id="fecha" type="date" {...register('fecha')} className="kyro-input mt-1 h-8 text-sm" />
               {errors.fecha && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.fecha.message}</p>}
             </div>
-            <div>
-              <Label htmlFor="tienda_id" className="text-xs font-medium text-kyro-body">Tienda *</Label>
-              <Select
-                id="tienda_id"
-                {...register('tienda_id', {
-                  onChange: () => {
-                    if (esAdminReporte) setValue('agente_id', 0)
-                  },
-                })}
-                className="kyro-input mt-1 h-8 text-sm"
-              >
-                <option value="">— Selecciona —</option>
-                {esAdminReporte
-                  ? tiendasAdmin.map(t => <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>)
-                  : TIENDAS.map(t => <option key={t} value={t}>{t}</option>)}
-              </Select>
-              {errors.tienda_id && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
-            </div>
+            {esAdminReporte ? (
+              <div>
+                <Label htmlFor="tienda_id" className="text-xs font-medium text-kyro-body">Tienda *</Label>
+                <Select
+                  id="tienda_id"
+                  {...register('tienda_id', {
+                    onChange: () => { setValue('agente_id', 0) },
+                  })}
+                  className="kyro-input mt-1 h-8 text-sm"
+                >
+                  <option value="">— Selecciona —</option>
+                  {tiendasAdmin.map(t => <option key={t.codigo} value={t.codigo}>{t.nombre} ({t.codigo})</option>)}
+                </Select>
+                {errors.tienda_id && <p className="text-kyro-danger text-[10px] mt-0.5">{errors.tienda_id.message}</p>}
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs font-medium text-kyro-body">Tienda</Label>
+                <div className="text-xs text-kyro-muted bg-kyro-elevated rounded-kyro px-2 py-1.5 mt-1 w-full border border-kyro-border h-8 flex items-center">
+                  <span className="text-kyro-subtle">Tienda:</span>&nbsp;
+                  <span className="font-medium text-kyro-body">{usuario?.tienda_id ?? '—'}</span>
+                  <input type="hidden" {...register('tienda_id')} />
+                </div>
+              </div>
+            )}
             <div>
               <Label htmlFor="nombre_cubre" className="text-xs font-medium text-kyro-body">Cubre tienda (si aplica)</Label>
               <Input id="nombre_cubre" {...register('nombre_cubre')} placeholder="Nombre" className="kyro-input mt-1 h-8 text-sm" />
