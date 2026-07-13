@@ -16,7 +16,6 @@ import { GlassPanel } from '../../components/ui/GlassPanel'
 import { SectionPanel } from '../../components/ui/SectionPanel'
 import { AddRowButton } from '../../components/ui/AddRowButton'
 import { MoneyTotal } from '../../components/ui/MoneyTotal'
-import { KpiCard } from '../../components/ui/KpiCard'
 import { PageHeader } from '../../components/PageHeader'
 import { useConfirmDialog } from '../../components/ui/confirm-dialog'
 import { borradorApi } from '../../services/borrador.api'
@@ -1672,8 +1671,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   const totalApoyo        = sub('APOYO')
   const ingresosFijos     = recarga_bipay + pago_servicio + pago_krece + pago_payjoy + tickets_tusamy
   const otrosFijos        = totalOtrosFlujo + ingresosFijos
-  // Ventas brutas = las 4 secciones de venta real (sin ingresos fijos/flujo).
-  const ventasBrutas      = totalPostpago + totalPrepago + totalEquipos + totalApoyo
 
   // total_sistema (legacy): suma de las 5 secciones de venta
   const totalSistema = totalPostpago + totalPrepago + totalEquipos + otrosFijos + totalApoyo
@@ -1772,7 +1769,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
                 <FolderDown size={15} /> Cargar Borrador
               </Button>
             )}
-            {esEdicion && esTienda && (
+            {esTienda && (
               <Button variant="glassIndigo" type="button" className="gap-2" onClick={() => guardarBorrador(false)}>
                 <Save size={15} /> Guardar Borrador
               </Button>
@@ -1853,48 +1850,6 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
             </div>
           )}
         </GlassPanel>
-
-        {/* ── Resumen del cuadre (KpiCard, DIS-FX-09) ──
-            Oro reservado solo al Total Sistema (monto protagonista); ventas
-            índigo, ingresos success, salidas danger. Sin sparkline: el cuadre
-            no expone series históricas — el subtítulo da contexto real, no delta
-            inventado. */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <KpiCard
-            title="Ventas"
-            value={ventasBrutas}
-            monetary
-            tone="indigo"
-            icon={<Money size={18} />}
-            subtitle={`${postpagoRows.length + prepagoRows.length + equipoRows.length + apoyoRows.length} registros`}
-          />
-          <KpiCard
-            title="Ingresos"
-            value={otrosFijos}
-            monetary
-            tone="success"
-            accent="var(--color-kyro-success)"
-            icon={<Coins size={18} />}
-            subtitle={`${otrosRows.length} de flujo · fijos`}
-          />
-          <KpiCard
-            title="Salidas"
-            value={total_salidas}
-            monetary
-            tone="danger"
-            accent="var(--color-kyro-danger)"
-            icon={<Export size={18} />}
-            subtitle={`${salidaItems.length} salida${salidaItems.length === 1 ? '' : 's'}`}
-          />
-          <KpiCard
-            title="Total Sistema"
-            value={totalSistema}
-            monetary
-            tone="gold"
-            icon={<Sigma size={18} />}
-            subtitle="Consolidado del día"
-          />
-        </div>
 
         {/* ── Cuerpo: dos columnas ── */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
@@ -2091,7 +2046,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
               <PanelHead icon={<DeviceTablet size={15} weight="fill" />} title="Dinero No Físico y Retiros" />
               <div className="space-y-2 p-3">
                 {([
-                  ['yape',          'Yape / Plin'],
+                  ['yape',          'Yape'],
                   ['bipay',         'Bipay'],
                   ['transferencia', 'Transferencia'],
                 ] as const).map(([field, label]) => (
@@ -2315,22 +2270,22 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           </>
         )}
 
-        {/* Modo crear: solo "Guardar y Cerrar Caja" */}
+        {/* Modo crear: "Guardar Reporte Completo" */}
         {!esEdicion && (
           <div className="pb-8 space-y-2">
             <Button
               type="button"
-              variant="gold"
+              variant="default"
               disabled={cerrandoCaja || stockInsuficiente || ventaSaving || !savedReporteId}
               onClick={handleCerrarCaja}
               className="w-full h-12 gap-2 text-base font-semibold"
             >
               <Receipt size={18} />
-              {cerrandoCaja ? 'Cerrando caja...' : 'Guardar y Cerrar Caja · Empezar Nuevo'}
+              {cerrandoCaja ? 'Guardando reporte...' : 'Guardar Reporte Completo'}
             </Button>
             {!savedReporteId && (
               <p className="text-[11px] text-kyro-muted text-center">
-                Agrega al menos una venta para habilitar el cierre de caja.
+                Agrega al menos una venta para habilitar el guardado del reporte.
               </p>
             )}
           </div>
