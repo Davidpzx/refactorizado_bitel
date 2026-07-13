@@ -19,6 +19,50 @@ inline y manda todo en un solo POST al finalizar. **Ese patrón NO se toca** —
 considera una mejora arquitectónica deliberada del SPA, no un bug. Esta spec cubre
 únicamente gaps cosméticos/de contenido, no el modelo de guardado.
 
+---
+
+## ⚠️ Corrección tras verificación contra el código (2026-07-13, tarde)
+
+La lista original de 10 gaps se redactó observando el SPA en **modo admin**. Al leer
+`frontend/src/pages/reportes/NuevoReportePage.tsx` y re-verificar la vista real de
+**jefe_tienda**, varios "gaps" resultaron ya implementados o inaplicables. Estado real:
+
+| # Gap original | Estado real | Acción |
+|----------------|-------------|--------|
+| 1. Bipay/Anypay embebido | `BipayConsole` ya se renderiza para `esTienda` (línea 1789); solo se auto-oculta cuando la tienda no tiene cuenta cajero configurada (legacy muestra placeholder + "Cerrar Jornada"). | Menor: mostrar placeholder cuando no hay cuenta. Baja prioridad. |
+| 2. Guardar Borrador | El botón existe pero **solo en modo edición** (`esEdicion && esTienda`, líneas 1770-1778). En modo crear no hay botón explícito. | **Válido:** exponer también en modo crear. |
+| 3. Modal CRM "Registro de Cliente" | La captura de cliente existe **inline** dentro del modal "Agregar Registro"; no existe el paso previo "modo consulta" del legacy. Endpoints `clientes-crm/{dni}` (buscar) y `clientes-crm` (guardar) ya existen en backend. | **Válido** pero medio: agregar el flujo de paso previo. |
+| 4. Fecha nativa | **YA IMPLEMENTADO.** `<input type="date">` en línea 1796. Lo que se veía como "3 spinners" era el árbol de accesibilidad de un date input nativo. | ❌ Fuera de alcance (ya hecho). |
+| 5. Label "Yape / Plin" → "Yape" | Confirmado, línea 2087. | **Válido** (trivial). |
+| 6. Tienda oculta para jefe_tienda | **BUG FUNCIONAL.** El selector "Tienda \*" para no-admin se alimenta de una lista **hardcodeada** `TIENDAS` (líneas 57-60, solo Puno/Tacna) que puede **no incluir la tienda del jefe** → campo requerido imposible de llenar → **no puede enviar el reporte**. | **ALTA PRIORIDAD:** auto-fijar `tienda_id` a `usuario.tienda_id` y ocultar el selector para no-admin (como ya se hace con el campo Agente, líneas 1833-1841). |
+| 7. Botón final renombrado | Confirmado "Guardar y Cerrar Caja · Empezar Nuevo" dorado (línea 2322). **Ojo:** el gating `!savedReporteId` (línea 2317) es **requerido** por la arquitectura incremental (cada venta se persiste antes de cerrar caja) — NO se puede quitar sin romper el flujo. | **Válido parcial:** renombrar a "Guardar Reporte Completo" + color azul; **conservar** el gating, solo reformular el texto de ayuda. |
+| 8. Comprobante electrónico embebido | El SPA ya emite comprobantes **por venta** vía `PostVentaModal` (modal unificado ticket + SUNAT, línea 2345). Es consistente con la arquitectura incremental que el usuario decidió mantener. | ❌ Fuera de alcance (ya resuelto acorde a la arquitectura). |
+| 9. Indicador de stock | `ChipStockBadge` ya muestra "N chips" (línea 1768); legacy dice "Sin stock ⌄". | Menor: ajustar wording/estilo. Baja prioridad. |
+| 10. Quitar 4 tarjetas KPI | Confirmado (líneas 1855-1890). Se agregaron bajo el ticket de diseño **DIS-FX-09**; quitarlas revierte esa decisión. Usuario ya eligió quitarlas para paridad exacta. | **Válido** (decisión explícita del usuario). |
+
+### Alcance real corregido (lo que el plan implementará)
+
+**Prioridad alta (bug):**
+- **G6 — Tienda auto-fijada y oculta para jefe_tienda.** Elimina la lista
+  hardcodeada como fuente para no-admin; usa `usuario.tienda_id` y oculta el selector.
+
+**Paridad de contenido (válidos):**
+- **G10 — Quitar las 4 tarjetas KpiCard** en `/reportes/nuevo`.
+- **G7 — Renombrar botón final** a "Guardar Reporte Completo" + color azul; conservar
+  el gating de "guarda una venta primero" con texto reformulado.
+- **G5 — Label "Yape / Plin" → "Yape".**
+- **G2 — Botón "Guardar Borrador" también en modo crear** (hoy solo en edición).
+
+**Menores / opcionales (baja prioridad, cosméticos):**
+- **G9 — Wording del badge de stock** ("N chips" → estilo "Sin stock").
+- **G1 — Placeholder de Bipay** cuando la tienda no tiene cuenta cajero.
+
+**Más grande (evaluar aparte):**
+- **G3 — Modal CRM "Registro de Cliente — Paso Previo"** (modo consulta del legacy).
+
+**Fuera de alcance (ya implementado):** G4 (fecha nativa), G8 (comprobante vía
+PostVentaModal).
+
 ## Gaps a cerrar
 
 1. **Bipay/Anypay embebido** — el legacy muestra un panel Bipay/Anypay con saldos y
