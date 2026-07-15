@@ -45,7 +45,11 @@ class EvolutionProvider implements WhatsAppProvider
             return '';
         }
 
-        return (string) ($response->json('base64') ?? $response->json('qrcode.base64') ?? '');
+        $base64 = (string) ($response->json('base64') ?? $response->json('qrcode.base64') ?? '');
+
+        // Evolution API ya devuelve el data URI completo (data:image/png;base64,...);
+        // se retorna solo el contenido base64 para que el caller anteponga el prefijo.
+        return preg_replace('/^data:image\/\w+;base64,/', '', $base64);
     }
 
     public function estadoInstancia(string $nombreInstancia): string
