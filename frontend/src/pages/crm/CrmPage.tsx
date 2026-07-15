@@ -1,7 +1,10 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { ChatCircleDots, ChartBar, Megaphone } from '@phosphor-icons/react'
 import { PageHeader } from '../../components/PageHeader'
 import { useAuth } from '../../hooks/useAuth'
+import { useIniciarChatWhatsApp } from '../../hooks/useWhatsApp'
+import type { Lead } from '../../types/crm'
+import type { WhatsAppChat } from '../../types/whatsapp'
 import { CrmEstadisticasTab } from './CrmEstadisticasTab'
 import { CrmPipelineTab } from './CrmPipelineTab'
 import { CrmWhatsAppTab } from './CrmWhatsAppTab'
@@ -16,7 +19,31 @@ const TABS: { value: CrmTab; label: string; Icon: typeof Megaphone }[] = [
 
 export function CrmPage() {
   const [tab, setTab] = useState<CrmTab>('pipeline')
+  const [chatPreseleccionado, setChatPreseleccionado] = useState<{ cuentaId: number; chat: WhatsAppChat } | null>(null)
   const { usuario } = useAuth()
+  const iniciarChat = useIniciarChatWhatsApp()
+
+  const handleContactar = (lead: Lead) => {
+    if (!lead.cliente?.telefono) return
+
+    iniciarChat.mutate(
+      {
+        telefono: lead.cliente.telefono,
+        nombre_contacto: lead.cliente.nombre,
+        tienda_id: lead.tienda_id,
+        crm_cliente_id: lead.cliente.id,
+      },
+      {
+        onSuccess: (data) => {
+          setChatPreseleccionado({ cuentaId: data.cuenta_id, chat: data.chat })
+          setTab('whatsapp')
+        },
+        onError: () => {
+          alert('No hay WhatsApp conectado para tu tienda. Contacta al administrador.')
+        },
+      }
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -39,8 +66,14 @@ export function CrmPage() {
         ))}
       </div>
 
-      {tab === 'pipeline' && <CrmPipelineTab />}
-      {tab === 'whatsapp' && <CrmWhatsAppTab usuario={usuario} />}
+      {tab === 'pipeline' && <CrmPipelineTab onContactar={handleContactar} />}
+      {tab === 'whatsapp' && (
+        <CrmWhatsAppTab
+          usuario={usuario}
+          chatPreseleccionado={chatPreseleccionado}
+          onPreseleccionConsumida={() => setChatPreseleccionado(null)}
+        />
+      )}
       {tab === 'estadisticas' && <CrmEstadisticasTab usuario={usuario} />}
     </div>
   )
