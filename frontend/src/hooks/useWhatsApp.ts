@@ -69,6 +69,16 @@ export function useEliminarCuentaWhatsApp() {
   })
 }
 
+export function useIniciarChatWhatsApp() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { telefono: string; nombre_contacto?: string; tienda_id?: string; crm_cliente_id?: number }) =>
+      whatsappApi.chats.iniciar(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-chats'] }),
+  })
+}
+
 export function useQrCuentaWhatsApp(id: number | null) {
   return useQuery({
     queryKey: ['whatsapp-qr', id],

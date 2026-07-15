@@ -19,6 +19,9 @@ export const whatsappApi = {
   chats: {
     list: (cuentaId?: number): Promise<WhatsAppChat[]> =>
       api.get('/v1/whatsapp/chats', { params: cuentaId ? { cuenta_id: cuentaId } : {} }).then(r => r.data),
+
+    iniciar: (data: { telefono: string; nombre_contacto?: string; tienda_id?: string; crm_cliente_id?: number }): Promise<{ cuenta_id: number; chat: WhatsAppChat }> =>
+      api.post('/v1/whatsapp/chats/iniciar', data).then(r => r.data),
   },
 
   mensajes: {
