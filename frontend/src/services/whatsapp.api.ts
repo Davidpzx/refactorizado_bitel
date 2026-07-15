@@ -1,5 +1,5 @@
 ﻿import { api } from './api'
-import type { WhatsAppChat, WhatsAppCuenta, WhatsAppMensaje, WhatsAppMensajesPaginados } from '../types/whatsapp'
+import type { WhatsAppBotRegla, WhatsAppChat, WhatsAppCuenta, WhatsAppMensaje, WhatsAppMensajesPaginados } from '../types/whatsapp'
 
 export const whatsappApi = {
   cuentas: {
@@ -22,6 +22,22 @@ export const whatsappApi = {
 
     iniciar: (data: { telefono: string; nombre_contacto?: string; tienda_id?: string; crm_cliente_id?: number }): Promise<{ cuenta_id: number; chat: WhatsAppChat }> =>
       api.post('/v1/whatsapp/chats/iniciar', data).then(r => r.data),
+  },
+
+  bot: {
+    reglas: (): Promise<WhatsAppBotRegla[]> =>
+      api.get('/v1/whatsapp/bot-reglas').then(r => r.data),
+
+    guardarRegla: (data: Partial<WhatsAppBotRegla> & { nombre: string; tipo: 'texto' | 'menu' }): Promise<{ ok: boolean; id?: number }> =>
+      data.id
+        ? api.put(`/v1/whatsapp/bot-reglas/${data.id}`, data).then(r => r.data)
+        : api.post('/v1/whatsapp/bot-reglas', data).then(r => r.data),
+
+    eliminarRegla: (id: number): Promise<void> =>
+      api.delete(`/v1/whatsapp/bot-reglas/${id}`).then(r => r.data),
+
+    toggle: (cuentaId: number, botActivo: boolean): Promise<{ ok: boolean }> =>
+      api.patch(`/v1/whatsapp/cuentas/${cuentaId}/bot`, { bot_activo: botActivo }).then(r => r.data),
   },
 
   mensajes: {

@@ -79,6 +79,41 @@ export function useIniciarChatWhatsApp() {
   })
 }
 
+export function useBotReglas(habilitado: boolean) {
+  return useQuery({
+    queryKey: ['whatsapp-bot-reglas'],
+    queryFn: () => whatsappApi.bot.reglas(),
+    enabled: habilitado,
+  })
+}
+
+export function useGuardarBotRegla() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof whatsappApi.bot.guardarRegla>[0]) => whatsappApi.bot.guardarRegla(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-bot-reglas'] }),
+  })
+}
+
+export function useEliminarBotRegla() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => whatsappApi.bot.eliminarRegla(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-bot-reglas'] }),
+  })
+}
+
+export function useToggleBotCuenta() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ cuentaId, botActivo }: { cuentaId: number; botActivo: boolean }) => whatsappApi.bot.toggle(cuentaId, botActivo),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-cuentas'] }),
+  })
+}
+
 export function useQrCuentaWhatsApp(id: number | null) {
   return useQuery({
     queryKey: ['whatsapp-qr', id],

@@ -6,6 +6,21 @@
   provider: 'evolution' | 'watchimp'
   tienda_id: string | null
   estado: 'conectada' | 'desconectada' | 'qr_pendiente'
+  bot_activo: boolean
+}
+
+export interface WhatsAppBotRegla {
+  id: number
+  cuenta_id: number | null
+  nombre: string
+  tipo: 'texto' | 'menu'
+  es_bienvenida: boolean
+  palabras_clave: string[] | null
+  respuesta: string | null
+  menu_titulo: string | null
+  opciones: { id: string; texto: string; regla_id: number | null }[] | null
+  prioridad: number
+  activa: boolean
 }
 
 export interface WhatsAppChat {
@@ -17,6 +32,7 @@ export interface WhatsAppChat {
   crm_cliente_id: number | null
   ultimo_mensaje_at: string | null
   no_leidos: number
+  interes_score: number
   cuenta?: { id: number; nombre: string; tienda_id: string | null }
 }
 
