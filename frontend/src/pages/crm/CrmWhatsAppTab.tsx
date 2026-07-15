@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import type { Usuario } from '../../types/auth'
 import type { WhatsAppChat } from '../../types/whatsapp'
 import { useWhatsAppChats, useWhatsAppCuentas } from '../../hooks/useWhatsApp'
@@ -9,7 +9,15 @@ import { ConectarCuentaModal } from './whatsapp/ConectarCuentaModal'
 import { ConversacionPanel } from './whatsapp/ConversacionPanel'
 import { CuentaSelector } from './whatsapp/CuentaSelector'
 
-export function CrmWhatsAppTab({ usuario }: { usuario: Usuario | null }) {
+export function CrmWhatsAppTab({
+  usuario,
+  chatPreseleccionado,
+  onPreseleccionConsumida,
+}: {
+  usuario: Usuario | null
+  chatPreseleccionado?: { cuentaId: number; chat: WhatsAppChat } | null
+  onPreseleccionConsumida?: () => void
+}) {
   const esAdmin = normalizarRol(usuario?.rol) === 'administrador'
   const [cuentaActivaId, setCuentaActivaId] = useState<number | 'todas'>('todas')
   const [chatActivo, setChatActivo] = useState<WhatsAppChat | null>(null)
@@ -17,6 +25,13 @@ export function CrmWhatsAppTab({ usuario }: { usuario: Usuario | null }) {
 
   const { data: cuentas = [] } = useWhatsAppCuentas()
   const { data: chats = [] } = useWhatsAppChats(cuentaActivaId === 'todas' ? undefined : cuentaActivaId)
+
+  useEffect(() => {
+    if (!chatPreseleccionado) return
+    setCuentaActivaId(chatPreseleccionado.cuentaId)
+    setChatActivo(chatPreseleccionado.chat)
+    onPreseleccionConsumida?.()
+  }, [chatPreseleccionado, onPreseleccionConsumida])
 
   if (cuentas.length === 0) {
     return (
