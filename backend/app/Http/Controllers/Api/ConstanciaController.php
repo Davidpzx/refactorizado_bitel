@@ -277,9 +277,14 @@ class ConstanciaController extends Controller
 
         $salidas = DB::table('reporte_salidas')->where('reporte_id', $id)->orderBy('id')->get();
 
+        $ticketsPorVenta = DB::table('tickets_emitidos')
+            ->whereIn('venta_id', $ventas->pluck('id'))
+            ->get(['venta_id', 'forma_pago', 'efectivo', 'vuelto'])
+            ->keyBy('venta_id');
+
         $empresa = $this->empresa();
 
-        $pdf = Pdf::loadView('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa'))
+        $pdf = Pdf::loadView('constancias.reporte', compact('reporte', 'ventas', 'salidas', 'empresa', 'ticketsPorVenta'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->download("reporte_{$id}.pdf");

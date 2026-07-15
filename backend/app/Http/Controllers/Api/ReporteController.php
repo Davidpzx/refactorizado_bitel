@@ -402,11 +402,15 @@ class ReporteController extends Controller
         $tiendaId = trim((string) ($request->input('tienda_id') ?: $request->user()->tienda_id));
 
         $vendedores = Cache::remember(
-            ResourceCache::key('reporte-vendedores', sha1($tiendaId)),
+            ResourceCache::key('reporte-vendedores-v2', sha1($tiendaId)),
             ResourceCache::TTL_SECONDS,
             fn () => DB::table('agentes')
                 ->select(['id', 'dni', 'nombres', 'tienda_base'])
                 ->where('estado', 'ACTIVO')
+                ->where(function ($query) {
+                    $query->whereNull('es_gerencia')
+                        ->orWhereNotIn('es_gerencia', ['1', 'true', 'TRUE', 'si', 'SI', 'Si']);
+                })
                 ->orderByRaw('CASE WHEN tienda_base = ? THEN 0 ELSE 1 END', [$tiendaId])
                 ->orderBy('nombres')
                 ->get()
@@ -472,6 +476,9 @@ class ReporteController extends Controller
             'ventas.*.cantidad'              => 'nullable|integer|min:1',
             'ventas.*.cobrado_unitario'      => 'nullable|numeric|min:0',
             'ventas.*.comision_unitaria'     => 'nullable|numeric|min:0',
+        ], [
+            'agente_id.integer' => 'El agente seleccionado no es valido.',
+            'ventas.*.vendedor_id.required' => 'Debe seleccionar un agente para cada venta.',
         ]);
 
         $user = $request->user();
@@ -493,7 +500,10 @@ class ReporteController extends Controller
             ? $tiendaSolicitada
             : trim((string) $user->tienda_id);
 
-        if ($agenteId <= 0 || ! DB::table('agentes')->where('id', $agenteId)->exists()) {
+        if ($agenteId <= 0) {
+            return response()->json(['error' => 'Debe seleccionar un agente.'], 422);
+        }
+        if (! DB::table('agentes')->where('id', $agenteId)->exists()) {
             return response()->json(['error' => 'El agente seleccionado no existe.'], 422);
         }
         if ($tiendaId === '') {

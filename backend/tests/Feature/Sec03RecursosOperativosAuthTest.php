@@ -108,6 +108,21 @@ class Sec03RecursosOperativosAuthTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_venta_sin_vendedor_muestra_mensaje_claro(): void
+    {
+        $admin = Usuario::factory()->administrador()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/ventas', [
+                'reporte_id' => 1,
+                'tipo_venta' => 'EQUIPO',
+                'monto_total' => 100,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('vendedor_id')
+            ->assertJsonPath('errors.vendedor_id.0', 'Debe seleccionar un agente.');
+    }
+
     public function test_rol_agente_recibe_403_al_crear_traslado(): void
     {
         $agente = Usuario::factory()->create(['rol' => 'agente']);

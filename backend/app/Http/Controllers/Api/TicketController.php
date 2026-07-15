@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class TicketController extends Controller
@@ -183,6 +184,25 @@ class TicketController extends Controller
 
         if (! empty($update)) {
             DB::table('tickets_emitidos')->where('id', $id)->update($update);
+
+            $camposPago = array_intersect(array_keys($update), [
+                'forma_pago',
+                'efectivo',
+                'yape',
+                'bipay',
+                'transferencia',
+                'vuelto',
+            ]);
+
+            if (! empty($camposPago)) {
+                Log::info('ticket.forma_pago_actualizada', [
+                    'ticket_id' => $id,
+                    'usuario_id' => $request->user()?->id,
+                    'tienda_id' => $ticket->tienda_id,
+                    'antes' => collect($camposPago)->mapWithKeys(fn (string $campo) => [$campo => $ticket->{$campo} ?? null])->all(),
+                    'despues' => collect($camposPago)->mapWithKeys(fn (string $campo) => [$campo => $update[$campo]])->all(),
+                ]);
+            }
         }
 
         return response()->json(['ok' => true]);

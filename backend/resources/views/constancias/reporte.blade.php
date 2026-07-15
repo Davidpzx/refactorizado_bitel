@@ -266,10 +266,34 @@
 </table>
 @endif
 
+@php
+    $ticketsPorVenta = $ticketsPorVenta ?? collect();
+    $ventasConTicket = $ventas->filter(fn ($v) => $ticketsPorVenta->has($v->id))->values();
+@endphp
+@if($ventasConTicket->count() > 0)
+<table>
+    <thead>
+        <tr><th colspan="4" class="titulo-seccion">6. FORMA DE PAGO Y VUELTO POR VENTA</th></tr>
+        <tr><th>Venta</th><th>Cliente</th><th>Forma de Pago</th><th class="monto">Vuelto Entregado</th></tr>
+    </thead>
+    <tbody>
+        @foreach($ventasConTicket as $v)
+            @php $tk = $ticketsPorVenta->get($v->id); @endphp
+        <tr>
+            <td class="centro">#{{ $v->id }}</td>
+            <td class="centro">{{ $dniCliente($v) }}</td>
+            <td>{{ strtoupper($tk->forma_pago ?? '—') }}{{ (float) ($tk->efectivo ?? 0) > 0 ? ' (Efectivo: S/ ' . number_format($tk->efectivo, 2) . ')' : '' }}</td>
+            <td class="monto">S/ {{ number_format($tk->vuelto ?? 0, 2) }}</td>
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+@endif
+
 @if($salidas->count() > 0)
 <table>
     <thead>
-        <tr><th colspan="3" class="titulo-seccion">6. SALIDAS Y GASTOS</th></tr>
+        <tr><th colspan="3" class="titulo-seccion">7. SALIDAS Y GASTOS</th></tr>
         <tr><th>Tipo</th><th class="monto">Monto</th><th>Observación</th></tr>
     </thead>
     <tbody>
@@ -292,7 +316,7 @@
 @endif
 
 <table>
-    <thead><tr><th colspan="2" class="titulo-seccion">7. CUADRE FINANCIERO Y EFECTIVO</th></tr></thead>
+    <thead><tr><th colspan="2" class="titulo-seccion">8. CUADRE FINANCIERO Y EFECTIVO</th></tr></thead>
     <tbody>
         <tr>
             <td>TOTAL VENTAS BRUTAS:</td>

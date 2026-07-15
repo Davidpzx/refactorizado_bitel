@@ -73,6 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   // ── Inventario ───────────────────────────────────────────────────────────
   { to: '/inventario',     label: 'Ver Inventario',  Icon: Package,         roles: [ADM, GER, JT],      section: 'Inventario' },
   { to: '/bitacora-stock', label: 'Bitácora Stock',  Icon: BookOpen,        roles: [ADM, GER, JT],      section: 'Inventario' },
+  { to: '/traslados',      label: 'Traslados',       Icon: ArrowLeftRight,  roles: [ADM],                section: 'Inventario' },
 
   // ── Operaciones ──────────────────────────────────────────────────────────
   { to: '/reportes/nuevo', label: 'Reporte Diario',  Icon: ClipboardList,   roles: [ADM, GER, JT, AG],  section: 'Operaciones' },
@@ -561,19 +562,6 @@ export function AppLayout() {
                   </div>
                 </div>
               </div>
-
-              {/* Aprobar Traslados — solo admin */}
-              {isAdmin && (
-                <Link
-                  to="/traslados"
-                  onClick={() => setMobileOpen(false)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}
-                >
-                  <ArrowLeftRight size={13} />
-                  Aprobar Traslados
-                </Link>
-              )}
 
               <button
                 onClick={() => logout()}

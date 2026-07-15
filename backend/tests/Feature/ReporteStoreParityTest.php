@@ -386,6 +386,40 @@ class ReporteStoreParityTest extends TestCase
         $this->assertSame((int) $vendedor->id, (int) $historial->usuario_id);
     }
 
+    public function test_vendedores_no_lista_agentes_de_gerencia(): void
+    {
+        DB::table('agentes')->insert([
+            ['id' => 9101, 'nombres' => 'Vendedor Activo', 'estado' => 'ACTIVO', 'tienda_base' => 'PUNDA50', 'dni' => '00009101', 'es_gerencia' => '0'],
+            ['id' => 9102, 'nombres' => 'Gerencia Activa', 'estado' => 'ACTIVO', 'tienda_base' => 'PUNDA50', 'dni' => '00009102', 'es_gerencia' => '1'],
+        ]);
+
+        $admin = Usuario::factory()->admin()->create();
+
+        $ids = collect($this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/reportes/vendedores?tienda_id=PUNDA50')
+            ->assertOk()
+            ->json())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $this->assertContains(9101, $ids);
+        $this->assertNotContains(9102, $ids);
+    }
+
+    public function test_admin_recibe_mensaje_claro_si_guarda_reporte_sin_agente(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/reportes', $this->payload($admin, [
+                'agente_id' => null,
+                'tienda_id' => 'PUNDA50',
+            ]))
+            ->assertStatus(422)
+            ->assertJsonPath('error', 'Debe seleccionar un agente.');
+    }
+
     private function payload(Usuario $usuario, array $overrides = []): array
     {
         $payload = array_replace([

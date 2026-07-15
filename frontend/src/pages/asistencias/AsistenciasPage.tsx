@@ -163,13 +163,26 @@ export function AsistenciasPage() {
   const confirmDialog = useConfirmDialog()
 
   const editarRegistro = useMutation({
-    mutationFn: () => api.patch(`/v1/asistencias/${editando!.id}`, {
-      ...editForm,
-      horas_extras_aprobadas: Number(editForm?.horas_extras_aprobadas || 0),
-      minutos_refrigerio_asignado: editForm?.minutos_refrigerio_asignado === ''
-        ? null
-        : Number(editForm?.minutos_refrigerio_asignado),
-    }),
+    mutationFn: () => {
+      if (!editando || !editForm) throw new Error('No hay asistencia seleccionada.')
+
+      const payload: Record<string, string | boolean | number | null> = {
+        ...editForm,
+        horas_extras_aprobadas: Number(editForm.horas_extras_aprobadas || 0),
+      }
+      delete payload.minutos_refrigerio_asignado
+
+      const refrigerioInicial = editando.minutos_refrigerio_asignado == null
+        ? ''
+        : String(editando.minutos_refrigerio_asignado)
+      if (Boolean(editando.turno_extendido) && editForm.minutos_refrigerio_asignado !== refrigerioInicial) {
+        payload.minutos_refrigerio_asignado = editForm.minutos_refrigerio_asignado === ''
+          ? null
+          : Number(editForm.minutos_refrigerio_asignado)
+      }
+
+      return api.patch(`/v1/asistencias/${editando.id}`, payload)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['asistencias'] })
       setEditando(null)

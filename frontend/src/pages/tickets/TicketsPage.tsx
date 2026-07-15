@@ -136,7 +136,7 @@ function getColumns(
       header: '',
       cell: ({ row }) => (
         <TableActions>
-          <ActionIconButton tone="edit" label="Editar ticket" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
+          <ActionIconButton tone="edit" label="Editar forma de pago" icon={<Pencil size={15} />} onClick={() => onEditar(row.original)} />
           <Button
             variant="glassInfo"
             size="iconSm"
@@ -318,6 +318,9 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-kyro border border-kyro-warning/40 bg-kyro-warning/10 px-3 py-2 text-xs text-kyro-warning">
+        Estas editando la forma de pago. Este cambio puede afectar el cuadre de caja.
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-kyro-muted mb-1">Nombre cliente</label>
@@ -349,7 +352,7 @@ function EditarTicketForm({ ticket, onSuccess, onCancel }: { ticket: Ticket; onS
       <div className="flex justify-end gap-2 pt-2 border-t border-kyro-border">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" variant="gold" disabled={actualizar.isPending}>
-          {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
+          {actualizar.isPending ? 'Guardando...' : 'Guardar forma de pago'}
         </Button>
       </div>
     </form>
@@ -415,6 +418,12 @@ export function TicketsPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }))
   }
 
+  const filtrarHoy = () => {
+    const hoy = new Date().toISOString().slice(0, 10)
+    setDesde(hoy); setHasta(hoy)
+    setPagination((p) => ({ ...p, pageIndex: 0 }))
+  }
+
   const hayFiltros = desde || hasta || tienda_id || agenteId || q || dniCliente || formaPago
 
   const columns = getColumns(abrirEditar, handleReimprimir, handleAnular, isAdmin, anular.isPending)
@@ -471,6 +480,7 @@ export function TicketsPage() {
           <label className="text-xs text-kyro-muted">Hasta</label>
           <Input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-36" />
         </div>
+        <Button variant="outline" size="sm" onClick={filtrarHoy} className="shrink-0">Hoy</Button>
         <Select value={tienda_id} onChange={(e) => { setTiendaId(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })) }} className="w-44">
           <option value="">Todas las tiendas</option>
           {tiendas.map((t) => (
@@ -504,7 +514,7 @@ export function TicketsPage() {
           onChange={(value) => { setFormaPago(value); setPagination(p => ({ ...p, pageIndex: 0 })) }}
         />
         {hayFiltros && (
-          <Button variant="ghost" onClick={limpiarFiltros}>Limpiar</Button>
+          <Button variant="ghost" onClick={limpiarFiltros} className="shrink-0">Limpiar</Button>
         )}
       </ListToolbar>
 
@@ -521,7 +531,7 @@ export function TicketsPage() {
       <Dialog
         open={dialogOpen}
         onClose={cerrar}
-        title={modoNuevo ? 'Nuevo ticket' : `Editar ticket #${editando ? padTicket(editando.id) : ''}`}
+        title={modoNuevo ? 'Nuevo ticket' : `Editar forma de pago del ticket #${editando ? padTicket(editando.id) : ''}`}
         maxWidth="lg"
       >
         {modoNuevo ? (

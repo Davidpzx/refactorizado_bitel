@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/re
 import { Capacitor } from '@capacitor/core'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RolRoute } from './components/RolRoute'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // AppLayout carga 39 iconos Phosphor + ControlCenterPanel: se difiere para no
 // pagar ese peso en rutas públicas (login/terminal/postular/cpe) ni en el
@@ -135,7 +136,7 @@ export default function App() {
               ? <Suspense fallback={<PageLoader />}><TerminalAsistenciaPage /></Suspense>
               : <TerminalWebDeshabilitado />
           } />
-          <Route path="/postular"           element={<Suspense fallback={<PageLoader />}><PostulacionPublicaPage /></Suspense>} />
+          <Route path="/postular"           element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PostulacionPublicaPage /></Suspense></ErrorBoundary>} />
           <Route path="/tickets/imprimir/:id" element={<Suspense fallback={<PageLoader />}><TicketImpresionPage /></Suspense>} />
           <Route path="/cpe/:id"           element={<Suspense fallback={<PageLoader />}><CpePublicoPage /></Suspense>} />
           <Route path="/cpe/:id/imprimir"  element={<Suspense fallback={<PageLoader />}><CpeImpresionPage /></Suspense>} />

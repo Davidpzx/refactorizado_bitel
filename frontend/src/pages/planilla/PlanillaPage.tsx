@@ -11,6 +11,7 @@ import { ActionIconButton, TableActions } from '../../components/ui/ActionIconBu
 import { Dialog } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
 import { api } from '../../services/api'
+import { apiErrorData } from '../../lib/httpError'
 import { Select } from '../../components/ui/select'
 import { useTiendasSelect } from '../../hooks/useTiendasSelect'
 import type { FilaPlanilla } from '../../types/planilla'
@@ -108,6 +109,7 @@ function BoletaDialog({
     dscto_adelantos: fila.adelanto_incluido.toFixed(2),
   })
   const [enviando, setEnviando] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const setField = (field: keyof BoletaForm, val: string) =>
     setForm(prev => ({ ...prev, [field]: val }))
@@ -121,6 +123,7 @@ function BoletaDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setEnviando(true)
+    setErrorMsg('')
     try {
       const resp = await api.post(
         '/v1/constancias/boleta',
@@ -145,8 +148,8 @@ function BoletaDialog({
       a.remove()
       window.URL.revokeObjectURL(url)
       onClose()
-    } catch {
-      // silently fail
+    } catch (error) {
+      setErrorMsg(apiErrorData(error).message ?? 'No se pudo generar la boleta PDF.')
     } finally {
       setEnviando(false)
     }
@@ -236,6 +239,11 @@ function BoletaDialog({
             </Button>
           </div>
         </div>
+        {errorMsg && (
+          <p className="rounded-kyro border border-kyro-danger/30 bg-kyro-danger/10 px-3 py-2 text-xs text-kyro-danger">
+            {errorMsg}
+          </p>
+        )}
       </form>
     </Dialog>
   )

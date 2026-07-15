@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Camera, FileText, IdentificationCard as IdCard } from '@phosphor-icons/react'
-import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { postulacionesApi } from '../services/postulaciones.api'
 import { apiErrorData, apiErrorStatus } from '../lib/httpError'
 import { useTiendasPublicas } from '../hooks/usePostulaciones'
 import type { PostulacionPublicaPayload, CargaFamiliarItem, FormacionItem, ExperienciaItem } from '../types/postulacion'
 
-const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 300_000 } } })
 
 function PostulacionForm() {
   const { data: tiendas = [] } = useTiendasPublicas()
@@ -512,24 +511,22 @@ function Field({
 
 export function PostulacionPublicaPage() {
   return (
-    <QueryClientProvider client={qc}>
-      <div className="public-premium-shell min-h-screen px-4 py-8 sm:py-12">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-300 shadow-[0_0_18px_rgba(99,102,241,0.35)]" />
-            <h1
-              className="text-2xl font-bold uppercase tracking-[0.16em] text-gray-900 dark:text-zinc-50"
-              style={{ fontFamily: "'Orbitron', sans-serif" }}
-            >
-              SIS-KYRO
-            </h1>
-            <p className="mt-2 text-gray-500 text-sm">Formulario de postulación</p>
-          </div>
-          <div className="public-premium-card rounded-3xl p-5 sm:p-8">
-            <PostulacionForm />
-          </div>
+    <div className="public-premium-shell min-h-screen px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-300 shadow-[0_0_18px_rgba(99,102,241,0.35)]" />
+          <h1
+            className="text-2xl font-bold uppercase tracking-[0.16em] text-gray-900 dark:text-zinc-50"
+            style={{ fontFamily: "'Orbitron', sans-serif" }}
+          >
+            SIS-KYRO
+          </h1>
+          <p className="mt-2 text-gray-500 text-sm">Formulario de postulacion</p>
+        </div>
+        <div className="public-premium-card rounded-3xl p-5 sm:p-8">
+          <PostulacionForm />
         </div>
       </div>
-    </QueryClientProvider>
+    </div>
   )
 }

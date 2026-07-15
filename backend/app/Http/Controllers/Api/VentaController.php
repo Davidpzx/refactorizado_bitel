@@ -50,6 +50,9 @@ class VentaController extends Controller
             'items.*.descripcion'    => ['required', 'string'],
             'items.*.cantidad'       => ['required', 'integer', 'min:1'],
             'items.*.precio_unitario'=> ['required', 'numeric', 'min:0'],
+        ], [
+            'vendedor_id.required' => 'Debe seleccionar un agente.',
+            'vendedor_id.integer' => 'El agente seleccionado no es valido.',
         ]);
 
         return DB::transaction(function () use ($data, $request) {

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 /**
@@ -83,5 +84,31 @@ class TicketShowUpdateAuthTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('Cliente Original', DB::table('tickets_emitidos')->find($id)->nombre_cliente);
+    }
+
+    public function test_editar_forma_de_pago_queda_auditado_en_log(): void
+    {
+        Log::spy();
+
+        $id = $this->crearTicket('PUNDA50');
+        $admin = Usuario::factory()->admin()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson("/api/v1/tickets/{$id}", [
+                'forma_pago' => 'Yape',
+                'efectivo' => 0,
+                'yape' => 50,
+            ])
+            ->assertOk();
+
+        Log::shouldHaveReceived('info')
+            ->once()
+            ->with('ticket.forma_pago_actualizada', \Mockery::on(
+                fn (array $context) => $context['ticket_id'] === $id
+                    && $context['usuario_id'] === $admin->id
+                    && $context['antes']['forma_pago'] === 'Efectivo'
+                    && $context['despues']['forma_pago'] === 'Yape'
+                    && (float) $context['despues']['yape'] === 50.0
+            ));
     }
 }

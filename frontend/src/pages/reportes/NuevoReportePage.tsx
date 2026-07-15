@@ -158,6 +158,8 @@ interface CarritoEquipoItem {
   tipo_venta: 'EQUIPO' | 'ACCESORIO'
   tipo_pago: 'CONTADO' | 'CUOTAS'
   precio_venta: number
+  /** Descuento en soles sobre precio_venta. Solo editable si hay efectivo disponible en caja (ver `efectivoDisponible`). */
+  descuento: number
   financiera: string
   por_cobrar_financiera: number
   costo_snap: number
@@ -166,9 +168,12 @@ interface CarritoEquipoItem {
 const newCarritoItem = (): CarritoEquipoItem => ({
   id: crypto.randomUUID(),
   inventario_tienda_id: 0, producto_nombre: '', imei_serial: '',
-  tipo_venta: 'EQUIPO', tipo_pago: 'CONTADO', precio_venta: 0,
+  tipo_venta: 'EQUIPO', tipo_pago: 'CONTADO', precio_venta: 0, descuento: 0,
   financiera: '', por_cobrar_financiera: 0, costo_snap: 0,
 })
+
+/** Precio final de un ítem del carrito tras aplicar el descuento (nunca negativo). */
+const precioFinalCarrito = (item: CarritoEquipoItem) => Math.max(0, (item.precio_venta || 0) - (item.descuento || 0))
 
 // ── Primitivas visuales del cuadre (paridad legacy) ───────────────────────────
 
@@ -410,7 +415,7 @@ const MODAL_SECCIONES: { value: Exclude<ModalSeccion,''>; label: string; color: 
 ]
 
 function AgregarRegistroModal({
-  open, onClose, onConfirm, vendedores, planes, inventarioItems, initialData, isEdit,
+  open, onClose, onConfirm, vendedores, planes, inventarioItems, initialData, isEdit, efectivoDisponible,
 }: {
   open: boolean
   onClose: () => void
@@ -420,11 +425,14 @@ function AgregarRegistroModal({
   inventarioItems: InventarioItem[]
   initialData?: ModalVentaState
   isEdit?: boolean
+  /** Efectivo esperado en caja (calcularCuadre). Sugerencia QA #15: sin efectivo disponible no se permiten descuentos. */
+  efectivoDisponible: number
 }) {
   const [m, setM] = useState<ModalVentaState>(MODAL_DEFAULT)
   const [dniStatus, setDniStatus] = useState<'idle' | 'loading' | 'found' | 'found_no_verificado' | 'notfound'>('idle')
   const [crmStatus, setCrmStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle')
   const [carrito, setCarrito] = useState<CarritoEquipoItem[]>([newCarritoItem()])
+  const [modalError, setModalError] = useState('')
 
   // "Recuperar Cliente": busca el DNI en el CRM ligero (crm_clientes) y pre-rellena.
   const recuperarClienteCrm = () => {
@@ -445,6 +453,7 @@ function AgregarRegistroModal({
     if (open) {
       setM(initialData ?? MODAL_DEFAULT)
       setDniStatus('idle')
+      setModalError('')
       // Pre-rellenar carrito si editamos un equipo/accesorio existente
       if (isEdit && initialData && (initialData.seccion === 'EQUIPO' || initialData.seccion === 'ACCESORIO')) {
         setCarrito([{
@@ -455,6 +464,7 @@ function AgregarRegistroModal({
           tipo_venta: initialData.seccion as 'EQUIPO' | 'ACCESORIO',
           tipo_pago: initialData.tipo_pago,
           precio_venta: initialData.precio_venta,
+          descuento: 0,
           financiera: initialData.financiera,
           por_cobrar_financiera: initialData.por_cobrar_financiera,
           costo_snap: initialData.costo_snap,
@@ -537,10 +547,11 @@ function AgregarRegistroModal({
         {/* 1. Vendedor */}
         <div>
           <Label className="text-[11px] font-semibold uppercase tracking-wide text-kyro-muted">1. Vendedor</Label>
-          <Select value={m.vendedor_id} onChange={e => upd('vendedor_id', Number(e.target.value))} className="kyro-input mt-1 h-9 text-sm">
+          <Select value={m.vendedor_id} onChange={e => { upd('vendedor_id', Number(e.target.value)); setModalError('') }} className="kyro-input mt-1 h-9 text-sm">
             <option value={0}>Selecciona el vendedor...</option>
             {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombres} ({v.tienda_base})</option>)}
           </Select>
+          {modalError && <p className="mt-1 text-[10px] text-kyro-danger">{modalError}</p>}
         </div>
 
         {/* 2. DNI / Cliente — siempre visible */}
@@ -748,7 +759,7 @@ function AgregarRegistroModal({
                 </div>
 
                 {/* IMEI + tipo pago + precio */}
-                <div className="grid grid-cols-[1fr_100px_90px] gap-2">
+                <div className="grid grid-cols-[1fr_90px_80px] gap-2">
                   <div>
                     <Label className="text-[10px] text-kyro-muted">IMEI / Serie</Label>
                     <Input value={item.imei_serial} onChange={e => updCarrito(item.id, { imei_serial: e.target.value })}
@@ -767,6 +778,22 @@ function AgregarRegistroModal({
                     <Input type="number" step="0.01" min="0" value={item.precio_venta || ''}
                       onChange={e => updCarrito(item.id, { precio_venta: parseFloat(e.target.value) || 0 })}
                       className="kyro-input mt-0.5 h-7 text-xs text-right" />
+                  </div>
+                </div>
+
+                {/* Descuento — bloqueado si no hay efectivo disponible en caja (informe QA #15) */}
+                <div className="grid grid-cols-[1fr_90px] gap-2 items-end">
+                  <div>
+                    <Label className="text-[10px] text-kyro-muted">
+                      Descuento S/ {efectivoDisponible <= 0 && <span className="text-kyro-danger">(sin efectivo en caja)</span>}
+                    </Label>
+                    <Input type="number" step="0.01" min="0" value={item.descuento || ''}
+                      disabled={efectivoDisponible <= 0}
+                      onChange={e => updCarrito(item.id, { descuento: parseFloat(e.target.value) || 0 })}
+                      className="kyro-input mt-0.5 h-7 text-xs disabled:opacity-50 disabled:cursor-not-allowed" />
+                  </div>
+                  <div className="text-right text-[11px] text-kyro-muted pb-1">
+                    Final: S/ {precioFinalCarrito(item).toFixed(2)}
                   </div>
                 </div>
 
@@ -807,7 +834,7 @@ function AgregarRegistroModal({
             {/* Total carrito */}
             {carrito.length > 1 && (
               <div className="text-right text-xs font-semibold text-kyro-body">
-                Total: S/ {carrito.reduce((a, it) => a + (it.precio_venta || 0), 0).toFixed(2)}
+                Total: S/ {carrito.reduce((a, it) => a + precioFinalCarrito(it), 0).toFixed(2)}
               </div>
             )}
           </div>
@@ -865,11 +892,19 @@ function AgregarRegistroModal({
         <div className="flex gap-2 pt-3 border-t border-kyro-border">
           <Button type="button" variant="default" className="flex-1 gap-2 h-10"
             disabled={
-              !m.cliente_dni || !m.vendedor_id ||
               (m.tipo_registro === 'VENTA' && !m.seccion) ||
               (m.tipo_registro === 'VENTA' && esEquipo && !carrito.some(it => it.producto_nombre && it.precio_venta > 0))
             }
             onClick={() => {
+              if (!m.vendedor_id) {
+                setModalError('Debe seleccionar un agente')
+                return
+              }
+              if (!m.cliente_dni) {
+                setModalError('Ingresa el DNI para poder continuar')
+                return
+              }
+              setModalError('')
               if (m.tipo_registro === 'VENTA' && esEquipo) {
                 const validos = carrito.filter(it => it.producto_nombre && it.precio_venta > 0)
                 onConfirm(validos.map(item => ({
@@ -879,7 +914,7 @@ function AgregarRegistroModal({
                   inventario_tienda_id: item.inventario_tienda_id,
                   imei_serial: item.imei_serial,
                   tipo_pago: item.tipo_pago,
-                  precio_venta: item.precio_venta,
+                  precio_venta: precioFinalCarrito(item),
                   financiera: item.financiera,
                   por_cobrar_financiera: item.por_cobrar_financiera,
                   costo_snap: item.costo_snap,
@@ -963,7 +998,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } =
+  const { register, control, handleSubmit, watch, setValue, getValues, reset, setError, formState: { errors } } =
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: {
@@ -1729,6 +1764,10 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
   })
 
   const onSubmit = (data: FormData) => {
+    if (data.tienda_id && !data.agente_id) {
+      setError('agente_id', { type: 'manual', message: 'Debe seleccionar un agente' })
+      return
+    }
     const todasVentas = data.ventas ?? []
     if (todasVentas.length > 0) crearTicketsVentas(todasVentas)
     guardar.mutate(data)
@@ -2252,7 +2291,8 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
           <>
             {guardar.isError && (
               <p className="text-kyro-danger text-sm border border-kyro-danger/30 bg-kyro-danger/10 rounded-kyro px-3 py-2">
-                {(guardar.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+                {(guardar.error as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error
+                  ?? (guardar.error as { response?: { data?: { message?: string } } })?.response?.data?.message
                   ?? 'Error al guardar el reporte. Revisa los datos e intenta de nuevo.'}
               </p>
             )}
@@ -2345,6 +2385,7 @@ export function NuevoReportePage({ mode = 'create' }: NuevoReportePageProps) {
         inventarioItems={inventarioItems}
         initialData={editData}
         isEdit={editIndex !== null}
+        efectivoDisponible={efectivoEsperado}
       />
     </div>
   )
