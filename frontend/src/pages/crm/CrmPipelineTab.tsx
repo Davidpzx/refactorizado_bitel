@@ -159,11 +159,13 @@ function LeadCard({
   onEditar,
   onCambiarEstado,
   onEliminar,
+  onContactar,
 }: {
   lead: Lead
   onEditar: (l: Lead) => void
   onCambiarEstado: (id: number, estado: Lead['estado']) => void
   onEliminar: (id: number) => void
+  onContactar: (lead: Lead) => void
 }) {
   const estados = ESTADOS.map(e => e.value).filter(e => e !== lead.estado)
   const confirmDialog = useConfirmDialog()
@@ -175,14 +177,13 @@ function LeadCard({
           <p className="text-sm font-semibold tracking-tight text-kyro-text">{lead.cliente.nombre}</p>
           <p className="font-mono text-[0.68rem] text-kyro-subtle">{lead.cliente.dni_ruc}</p>
           {lead.cliente.telefono && (
-            <a
-              href={`https://wa.me/51${lead.cliente.telefono}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => onContactar(lead)}
               className="font-medium text-kyro-success transition-colors hover:underline"
             >
               {lead.cliente.telefono}
-            </a>
+            </button>
           )}
         </div>
       ) : (
@@ -237,12 +238,14 @@ function KanbanColumna({
   onEditar,
   onCambiarEstado,
   onEliminar,
+  onContactar,
 }: {
   config: typeof ESTADOS[0]
   leads: Lead[]
   onEditar: (l: Lead) => void
   onCambiarEstado: (id: number, estado: Lead['estado']) => void
   onEliminar: (id: number) => void
+  onContactar: (lead: Lead) => void
 }) {
   return (
     <div className={`flex min-h-[200px] min-w-[260px] flex-col gap-2.5 rounded-kyro-lg border p-4 shadow-kyro-card ${config.bg}`}>
@@ -257,6 +260,7 @@ function KanbanColumna({
           onEditar={onEditar}
           onCambiarEstado={onCambiarEstado}
           onEliminar={onEliminar}
+          onContactar={onContactar}
         />
       ))}
       {leads.length === 0 && (
@@ -266,7 +270,7 @@ function KanbanColumna({
   )
 }
 
-export function CrmPipelineTab() {
+export function CrmPipelineTab({ onContactar }: { onContactar: (lead: Lead) => void }) {
   const navigate = useNavigate()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [leadEdicion, setLeadEdicion] = useState<Lead | undefined>()
@@ -365,6 +369,7 @@ export function CrmPipelineTab() {
               onEditar={abrirEdicion}
               onCambiarEstado={cambiarEstado}
               onEliminar={eliminarLead}
+              onContactar={onContactar}
             />
           ))}
         </div>
