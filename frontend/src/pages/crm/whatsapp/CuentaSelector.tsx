@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react'
-import { CaretDown, Circle, Plus } from '@phosphor-icons/react'
+import { CaretDown, Circle, Plus, Trash } from '@phosphor-icons/react'
 import type { WhatsAppCuenta } from '../../../types/whatsapp'
+import { useEliminarCuentaWhatsApp } from '../../../hooks/useWhatsApp'
 
 export function CuentaSelector({
   cuentas,
@@ -17,6 +18,16 @@ export function CuentaSelector({
 }) {
   const [abierto, setAbierto] = useState(false)
   const activa = cuentaActivaId === 'todas' ? null : cuentas.find((cuenta) => cuenta.id === cuentaActivaId)
+  const eliminar = useEliminarCuentaWhatsApp()
+
+  const handleEliminar = (cuenta: WhatsAppCuenta) => {
+    if (!confirm(`Eliminar la cuenta "${cuenta.nombre}"? Se perdera el vinculo con Evolution.`)) return
+    eliminar.mutate(cuenta.id, {
+      onSuccess: () => {
+        if (cuentaActivaId === cuenta.id) onSeleccionar('todas')
+      },
+    })
+  }
 
   return (
     <div className="relative">
@@ -47,25 +58,37 @@ export function CuentaSelector({
             Todas las cuentas
           </button>
           {cuentas.map((cuenta) => (
-            <button
+            <div
               key={cuenta.id}
-              type="button"
-              onClick={() => {
-                onSeleccionar(cuenta.id)
-                setAbierto(false)
-              }}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-kyro-border/40"
+              className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm hover:bg-kyro-border/40"
             >
-              <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onSeleccionar(cuenta.id)
+                  setAbierto(false)
+                }}
+                className="flex flex-1 items-center gap-2 text-left"
+              >
                 <Circle
                   weight="fill"
                   size={8}
                   className={cuenta.estado === 'conectada' ? 'text-kyro-success' : 'text-kyro-muted'}
                 />
                 {cuenta.nombre}
-              </span>
+              </button>
               <span className="text-xs text-kyro-muted">{cuenta.numero}</span>
-            </button>
+              {esAdmin && (
+                <button
+                  type="button"
+                  title="Eliminar cuenta"
+                  onClick={() => handleEliminar(cuenta)}
+                  className="text-kyro-muted hover:text-red-400"
+                >
+                  <Trash size={14} />
+                </button>
+              )}
+            </div>
           ))}
           {esAdmin && (
             <button

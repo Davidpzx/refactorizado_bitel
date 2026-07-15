@@ -13,6 +13,8 @@ interface WhatsAppProvider
     /** 'conectada' | 'desconectada' | 'qr_pendiente' */
     public function estadoInstancia(string $nombreInstancia): string;
 
+    public function eliminarInstancia(string $nombreInstancia): void;
+
     public function enviarTexto(string $nombreInstancia, string $jid, string $texto): array;
 
     public function enviarMedia(string $nombreInstancia, string $jid, string $mediaUrl, string $tipo, ?string $caption): array;

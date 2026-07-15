@@ -60,6 +60,15 @@ export function useCrearCuentaWhatsApp() {
   })
 }
 
+export function useEliminarCuentaWhatsApp() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => whatsappApi.cuentas.eliminar(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-cuentas'] }),
+  })
+}
+
 export function useQrCuentaWhatsApp(id: number | null) {
   return useQuery({
     queryKey: ['whatsapp-qr', id],

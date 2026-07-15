@@ -123,7 +123,10 @@ class WhatsAppController extends Controller
             return response()->json(['message' => 'Solo administradores.'], 403);
         }
 
-        WhatsAppCuenta::findOrFail($id)->delete();
+        $cuenta = WhatsAppCuenta::findOrFail($id);
+        $provider = WhatsAppProviderFactory::make($cuenta->provider);
+        $provider->eliminarInstancia($cuenta->instancia);
+        $cuenta->delete();
 
         return response()->json(['ok' => true]);
     }

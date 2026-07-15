@@ -69,6 +69,11 @@ class EvolutionProvider implements WhatsAppProvider
         };
     }
 
+    public function eliminarInstancia(string $nombreInstancia): void
+    {
+        $this->http()->delete("/instance/delete/{$nombreInstancia}");
+    }
+
     public function enviarTexto(string $nombreInstancia, string $jid, string $texto): array
     {
         $response = $this->http()->post("/message/sendText/{$nombreInstancia}", [
