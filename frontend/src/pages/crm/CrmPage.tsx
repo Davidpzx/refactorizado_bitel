@@ -1,3 +1,7 @@
+// MAPEO F1 (temporal):
+// Pipeline: lineas 34-287 y 794-932 (constantes, formulario lead, tarjetas, Kanban, filtros, mutaciones y dialog de leads/clientes)
+// Estadisticas: lineas 291-783 y 918-919 (analytics, KPIs, graficos recharts, temperatura y tabla CRM)
+// Estado compartido: filtroTienda se usa en Pipeline y Estadisticas; tab/busqueda/dialog/leadEdicion pertenecen al shell o Pipeline.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
