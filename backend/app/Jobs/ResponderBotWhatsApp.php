@@ -2,6 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\InventarioTienda;
+use App\Models\WhatsAppBotFotoProducto;
+use App\Models\WhatsAppBotPromocion;
 use App\Models\WhatsAppBotRegla;
 use App\Models\WhatsAppChat;
 use App\Models\WhatsAppMensaje;
@@ -68,33 +71,44 @@ class ResponderBotWhatsApp implements ShouldQueue
             return;
         }
 
-        // Resolver contenido.
-        if ($this->esAsesor) {
-            $tipo = 'texto';
-            $contenido = BotResponder::TEXTO_ASESOR;
-            $menuTitulo = '';
-            $opciones = [];
-        } else {
-            $regla = WhatsAppBotRegla::where('activa', true)->find($this->reglaId);
-            if (!$regla) {
-                $this->descartar('regla_inexistente');
-                return;
-            }
-            $tipo = $regla->tipo;
-            $contenido = (string) ($regla->respuesta ?? '');
-            $menuTitulo = (string) ($regla->menu_titulo ?? '');
-            $opciones = $regla->opciones ?? [];
-        }
-
         $provider = WhatsAppProviderFactory::make($chat->cuenta->provider);
 
-        // Presencia "escribiendo..." proporcional al largo (3-8s).
-        $largo = $tipo === 'menu' ? mb_strlen($menuTitulo) + 60 : mb_strlen($contenido);
-        $delayMs = max(3000, min(8000, $largo * 60));
+        if ($this->esAsesor) {
+            $largo = mb_strlen(BotResponder::TEXTO_ASESOR);
+            $delayMs = max(3000, min(8000, $largo * 60));
+            $provider->enviarPresencia($chat->cuenta->instancia, $chat->jid, $delayMs);
+            usleep($delayMs * 1000);
+            $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, BotResponder::TEXTO_ASESOR);
+            $this->registrarMensaje($chat, BotResponder::TEXTO_ASESOR);
+            return;
+        }
+
+        $regla = WhatsAppBotRegla::where('activa', true)->find($this->reglaId);
+        if (!$regla) {
+            $this->descartar('regla_inexistente');
+            return;
+        }
+
+        $largoBase = mb_strlen((string) ($regla->respuesta ?? ''));
+        $delayMs = max(3000, min(8000, $largoBase * 60));
         $provider->enviarPresencia($chat->cuenta->instancia, $chat->jid, $delayMs);
         usleep($delayMs * 1000);
 
-        // Enviar (lista nativa con fallback a texto numerado).
+        if ($regla->usa_promocion_dinamica) {
+            $this->enviarPromocionDinamica($chat, $provider, (string) $regla->respuesta);
+            return;
+        }
+
+        if ($regla->tipo === 'equipos') {
+            $this->enviarCatalogoEquipos($chat, $provider, (string) $regla->respuesta);
+            return;
+        }
+
+        $tipo = $regla->tipo;
+        $contenido = (string) ($regla->respuesta ?? '');
+        $menuTitulo = (string) ($regla->menu_titulo ?? '');
+        $opciones = $regla->opciones ?? [];
+
         $textoRegistrado = $contenido;
         if ($tipo === 'menu') {
             $resultado = $provider->enviarLista($chat->cuenta->instancia, $chat->jid, $menuTitulo, $opciones);
@@ -114,11 +128,80 @@ class ResponderBotWhatsApp implements ShouldQueue
             $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $contenido);
         }
 
+        $this->registrarMensaje($chat, $textoRegistrado);
+    }
+
+    private function enviarPromocionDinamica(WhatsAppChat $chat, $provider, string $textoFallback): void
+    {
+        $promo = WhatsAppBotPromocion::find(1);
+        if (!$promo || trim((string) $promo->texto) === '') {
+            $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $textoFallback);
+            $this->registrarMensaje($chat, $textoFallback);
+            return;
+        }
+
+        if ($promo->foto_base64) {
+            $base64 = preg_replace('/^data:image\/\w+;base64,/', '', $promo->foto_base64);
+            try {
+                $provider->enviarMedia($chat->cuenta->instancia, $chat->jid, $base64, 'image', $promo->texto);
+            } catch (\RuntimeException $e) {
+                $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $promo->texto);
+            }
+        } else {
+            $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $promo->texto);
+        }
+        $this->registrarMensaje($chat, $promo->texto);
+    }
+
+    private function enviarCatalogoEquipos(WhatsAppChat $chat, $provider, string $textoFallback): void
+    {
+        $tiendaId = $chat->cuenta->tienda_id;
+
+        $modelos = InventarioTienda::query()
+            ->where('tipo', 'EQUIPO')->where('estado', 'DISPONIBLE')->where('cantidad', '>', 0)
+            ->when($tiendaId !== null, fn ($q) => $q->where('tienda_id', $tiendaId))
+            ->selectRaw('producto_nombre, SUM(cantidad) as stock, MAX(precio_normal) as precio')
+            ->groupBy('producto_nombre')->orderByDesc('stock')->limit(5)->get();
+
+        if ($modelos->isEmpty()) {
+            $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $textoFallback);
+            $this->registrarMensaje($chat, $textoFallback);
+            return;
+        }
+
+        $sinFoto = [];
+        foreach ($modelos as $m) {
+            $caption = $m->producto_nombre.' — S/'.number_format((float) $m->precio, 2);
+            $foto = WhatsAppBotFotoProducto::where('producto_nombre', $m->producto_nombre)->value('foto_base64');
+
+            if ($foto) {
+                $base64 = preg_replace('/^data:image\/\w+;base64,/', '', $foto);
+                try {
+                    $provider->enviarMedia($chat->cuenta->instancia, $chat->jid, $base64, 'image', $caption);
+                    $this->registrarMensaje($chat, $caption);
+                    usleep(rand(1000, 2000) * 1000);
+                } catch (\RuntimeException $e) {
+                    $sinFoto[] = $caption;
+                }
+            } else {
+                $sinFoto[] = $caption;
+            }
+        }
+
+        if (!empty($sinFoto)) {
+            $texto = "Otros modelos disponibles:\n".implode("\n", $sinFoto);
+            $provider->enviarTexto($chat->cuenta->instancia, $chat->jid, $texto);
+            $this->registrarMensaje($chat, $texto);
+        }
+    }
+
+    private function registrarMensaje(WhatsAppChat $chat, string $texto): void
+    {
         WhatsAppMensaje::create([
             'chat_id' => $chat->id,
             'direccion' => 'out',
             'tipo' => 'texto',
-            'contenido' => $textoRegistrado,
+            'contenido' => $texto,
             'enviado_por' => null,
             'timestamp' => now(),
         ]);
