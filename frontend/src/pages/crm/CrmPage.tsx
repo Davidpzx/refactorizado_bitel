@@ -1,19 +1,22 @@
 import { useState } from 'react'
-import { ChatCircleDots, ChartBar, Megaphone } from '@phosphor-icons/react'
+import { ChatCircleDots, ChartBar, Image, Megaphone } from '@phosphor-icons/react'
 import { PageHeader } from '../../components/PageHeader'
 import { useAuth } from '../../hooks/useAuth'
 import { useIniciarChatWhatsApp } from '../../hooks/useWhatsApp'
+import { normalizarRol } from '../../utils/roles'
 import type { Lead } from '../../types/crm'
 import type { WhatsAppChat } from '../../types/whatsapp'
+import { CrmContenidoBotTab } from './CrmContenidoBotTab'
 import { CrmEstadisticasTab } from './CrmEstadisticasTab'
 import { CrmPipelineTab } from './CrmPipelineTab'
 import { CrmWhatsAppTab } from './CrmWhatsAppTab'
 
-type CrmTab = 'pipeline' | 'whatsapp' | 'estadisticas'
+type CrmTab = 'pipeline' | 'whatsapp' | 'contenido' | 'estadisticas'
 
 const TABS: { value: CrmTab; label: string; Icon: typeof Megaphone }[] = [
   { value: 'pipeline', label: 'Pipeline', Icon: Megaphone },
   { value: 'whatsapp', label: 'WhatsApp', Icon: ChatCircleDots },
+  { value: 'contenido', label: 'Contenido del bot', Icon: Image },
   { value: 'estadisticas', label: 'Estadisticas', Icon: ChartBar },
 ]
 
@@ -22,6 +25,7 @@ export function CrmPage() {
   const [chatPreseleccionado, setChatPreseleccionado] = useState<{ cuentaId: number; chat: WhatsAppChat } | null>(null)
   const { usuario } = useAuth()
   const iniciarChat = useIniciarChatWhatsApp()
+  const esAdmin = normalizarRol(usuario?.rol) === 'administrador'
 
   const handleContactar = (lead: Lead) => {
     if (!lead.cliente?.telefono) return
@@ -50,7 +54,7 @@ export function CrmPage() {
       <PageHeader title="CRM y Marketing" description="Pipeline de ventas, WhatsApp y estadisticas." Icon={Megaphone} />
 
       <div className="flex gap-1 border-b border-kyro-border">
-        {TABS.map(({ value, label, Icon }) => (
+        {TABS.filter(t => t.value !== 'contenido' || esAdmin).map(({ value, label, Icon }) => (
           <button
             key={value}
             onClick={() => setTab(value)}
@@ -74,6 +78,7 @@ export function CrmPage() {
           onPreseleccionConsumida={() => setChatPreseleccionado(null)}
         />
       )}
+      {tab === 'contenido' && esAdmin && <CrmContenidoBotTab />}
       {tab === 'estadisticas' && <CrmEstadisticasTab usuario={usuario} />}
     </div>
   )
