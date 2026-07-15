@@ -40,7 +40,7 @@ export function CrmPage() {
       </div>
 
       {tab === 'pipeline' && <CrmPipelineTab />}
-      {tab === 'whatsapp' && <CrmWhatsAppTab />}
+      {tab === 'whatsapp' && <CrmWhatsAppTab usuario={usuario} />}
       {tab === 'estadisticas' && <CrmEstadisticasTab usuario={usuario} />}
     </div>
   )
