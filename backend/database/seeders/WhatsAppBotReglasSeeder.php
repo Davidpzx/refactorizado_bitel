@@ -15,13 +15,14 @@ class WhatsAppBotReglasSeeder extends Seeder
 
         $planes = WhatsAppBotRegla::create([
             'nombre' => 'Planes', 'tipo' => 'texto', 'prioridad' => 10,
+            'usa_promocion_dinamica' => true,
             'palabras_clave' => ['plan', 'planes', 'promocion', 'precio', 'cuanto'],
-            'respuesta' => "Estos son nuestros planes vigentes 📱:\n\n• Plan S/29.90 — 20GB + llamadas ilimitadas\n• Plan S/39.90 — 40GB + llamadas ilimitadas\n• Plan S/49.90 — GB ilimitados\n\n(Escribe \"asesor\" si quieres que te contacte una persona.)",
+            'respuesta' => "Estos son nuestros planes vigentes 📱:\n\n• Plan S/29.90 — 20GB + llamadas ilimitadas\n• Plan S/39.90 — 40GB + llamadas ilimitadas\n• Plan S/49.90 — GB ilimitados",
         ]);
         $equipos = WhatsAppBotRegla::create([
-            'nombre' => 'Equipos', 'tipo' => 'texto', 'prioridad' => 10,
+            'nombre' => 'Equipos', 'tipo' => 'equipos', 'prioridad' => 10,
             'palabras_clave' => ['equipo', 'equipos', 'celular', 'telefono', 'stock'],
-            'respuesta' => 'Tenemos equipos desde S/199 con plan 📲. Cuéntanos qué modelo buscas y te confirmamos stock y precio.',
+            'respuesta' => 'Por ahora no tenemos equipos en stock, un asesor te confirma disponibilidad.',
         ]);
         WhatsAppBotRegla::create([
             'nombre' => 'Horario y ubicacion', 'tipo' => 'texto', 'prioridad' => 10,

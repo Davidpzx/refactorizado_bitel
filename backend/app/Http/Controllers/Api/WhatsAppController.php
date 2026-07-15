@@ -156,8 +156,9 @@ class WhatsAppController extends Controller
     {
         return $request->validate([
             'nombre' => ['required', 'string', 'max:100'],
-            'tipo' => ['required', 'in:texto,menu'],
+            'tipo' => ['required', 'in:texto,menu,equipos'],
             'es_bienvenida' => ['sometimes', 'boolean'],
+            'usa_promocion_dinamica' => ['sometimes', 'boolean'],
             'palabras_clave' => ['nullable', 'array'],
             'respuesta' => ['nullable', 'string'],
             'menu_titulo' => ['nullable', 'string', 'max:150'],

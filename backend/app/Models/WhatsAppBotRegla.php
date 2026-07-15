@@ -11,6 +11,7 @@ class WhatsAppBotRegla extends Model
     protected $fillable = [
         'cuenta_id', 'nombre', 'tipo', 'es_bienvenida', 'palabras_clave',
         'respuesta', 'menu_titulo', 'opciones', 'prioridad', 'activa',
+        'usa_promocion_dinamica',
     ];
 
     protected $casts = [
@@ -18,5 +19,6 @@ class WhatsAppBotRegla extends Model
         'opciones' => 'array',
         'es_bienvenida' => 'boolean',
         'activa' => 'boolean',
+        'usa_promocion_dinamica' => 'boolean',
     ];
 }
