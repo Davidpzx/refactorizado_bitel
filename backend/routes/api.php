@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\AgenteDocumentoController;
 use App\Http\Controllers\Api\AsistenciaNeiryController;
 use App\Http\Controllers\Api\AuditoriaBipayController;
 use App\Http\Controllers\Api\ClienteCrmController;
+use App\Http\Controllers\Api\CrmEstadisticasController;
 use App\Http\Controllers\Api\CrmTemperaturaController;
 use App\Http\Controllers\Api\CuadreBitelController;
 use App\Http\Controllers\Api\IntegradorController;
@@ -305,6 +306,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::middleware('role:administrador,gerente,jefe_tienda')->group(function () {
         Route::get('crm/dashboard',              [LeadController::class, 'dashboard']);
         Route::get('crm/pipeline',               [LeadController::class, 'pipeline']);
+        Route::get('crm/estadisticas-resumen',   [CrmEstadisticasController::class, 'resumen']);
         Route::apiResource('leads',              LeadController::class);
         Route::get('leads/{lead}/interacciones', [LeadController::class, 'interacciones']);
         Route::post('leads/{lead}/interacciones',[LeadController::class, 'agregarInteraccion']);
