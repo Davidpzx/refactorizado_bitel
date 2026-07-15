@@ -74,6 +74,34 @@ class EvolutionProvider implements WhatsAppProvider
         $this->http()->delete("/instance/delete/{$nombreInstancia}");
     }
 
+    public function enviarPresencia(string $nombreInstancia, string $jid, int $delayMs): void
+    {
+        $this->http()->post("/chat/sendPresence/{$nombreInstancia}", [
+            'number' => $jid,
+            'presence' => 'composing',
+            'delay' => $delayMs,
+        ]);
+    }
+
+    public function enviarLista(string $nombreInstancia, string $jid, string $titulo, array $opciones): array
+    {
+        $filas = array_map(fn ($o) => ['title' => $o['texto'], 'rowId' => $o['id']], $opciones);
+        $response = $this->http()->post("/message/sendList/{$nombreInstancia}", [
+            'number' => $jid,
+            'title' => $titulo,
+            'description' => 'Elige una opción',
+            'buttonText' => 'Ver opciones',
+            'sections' => [['title' => 'Opciones', 'rows' => $filas]],
+        ]);
+
+        if ($response->failed()) {
+            Log::warning('evolution.send_list_fallo', ['instancia' => $nombreInstancia, 'status' => $response->status()]);
+            return [];
+        }
+
+        return $response->json() ?? [];
+    }
+
     public function enviarTexto(string $nombreInstancia, string $jid, string $texto): array
     {
         $response = $this->http()->post("/message/sendText/{$nombreInstancia}", [

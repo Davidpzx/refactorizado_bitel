@@ -36,4 +36,25 @@ class EvolutionProviderTest extends TestCase
         $provider = new EvolutionProvider();
         $this->assertSame('desconectada', $provider->estadoInstancia('mi-instancia'));
     }
+
+    public function test_enviar_presencia_llama_al_endpoint(): void
+    {
+        Http::fake(['*/chat/sendPresence/mi-instancia' => Http::response([], 200)]);
+        config(['services.evolution.base_url' => 'https://evolution.example.com', 'services.evolution.api_key' => 'secreto']);
+
+        (new EvolutionProvider())->enviarPresencia('mi-instancia', '51999@s.whatsapp.net', 5000);
+
+        Http::assertSent(fn ($req) => str_contains($req->url(), '/chat/sendPresence/mi-instancia')
+            && $req['presence'] === 'composing' && $req['delay'] === 5000);
+    }
+
+    public function test_enviar_lista_devuelve_vacio_en_fallo(): void
+    {
+        Http::fake(['*/message/sendList/*' => Http::response([], 500)]);
+        config(['services.evolution.base_url' => 'https://evolution.example.com', 'services.evolution.api_key' => 'secreto']);
+
+        $r = (new EvolutionProvider())->enviarLista('mi-instancia', '51999@s.whatsapp.net', 'Menu', [['id' => 'op_1', 'texto' => 'Uno']]);
+
+        $this->assertSame([], $r);
+    }
 }
