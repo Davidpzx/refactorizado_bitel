@@ -13,7 +13,8 @@ export interface WhatsAppBotRegla {
   id: number
   cuenta_id: number | null
   nombre: string
-  tipo: 'texto' | 'menu'
+  tipo: 'texto' | 'menu' | 'equipos'
+  usa_promocion_dinamica: boolean
   es_bienvenida: boolean
   palabras_clave: string[] | null
   respuesta: string | null
@@ -52,4 +53,16 @@ export interface WhatsAppMensajesPaginados {
   data: WhatsAppMensaje[]
   current_page: number
   last_page: number
+}
+
+export interface WhatsAppPromocion {
+  id: number
+  texto: string
+  foto_base64: string | null
+}
+
+export interface WhatsAppFotoProducto {
+  id: number
+  producto_nombre: string
+  foto_base64: string
 }

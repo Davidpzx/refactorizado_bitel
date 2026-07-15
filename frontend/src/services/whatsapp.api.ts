@@ -1,5 +1,5 @@
 ﻿import { api } from './api'
-import type { WhatsAppBotRegla, WhatsAppChat, WhatsAppCuenta, WhatsAppMensaje, WhatsAppMensajesPaginados } from '../types/whatsapp'
+import type { WhatsAppBotRegla, WhatsAppChat, WhatsAppCuenta, WhatsAppFotoProducto, WhatsAppMensaje, WhatsAppMensajesPaginados, WhatsAppPromocion } from '../types/whatsapp'
 
 export const whatsappApi = {
   cuentas: {
@@ -28,7 +28,7 @@ export const whatsappApi = {
     reglas: (): Promise<WhatsAppBotRegla[]> =>
       api.get('/v1/whatsapp/bot-reglas').then(r => r.data),
 
-    guardarRegla: (data: Partial<WhatsAppBotRegla> & { nombre: string; tipo: 'texto' | 'menu' }): Promise<{ ok: boolean; id?: number }> =>
+    guardarRegla: (data: Partial<WhatsAppBotRegla> & { nombre: string; tipo: 'texto' | 'menu' | 'equipos' }): Promise<{ ok: boolean; id?: number }> =>
       data.id
         ? api.put(`/v1/whatsapp/bot-reglas/${data.id}`, data).then(r => r.data)
         : api.post('/v1/whatsapp/bot-reglas', data).then(r => r.data),
@@ -38,6 +38,34 @@ export const whatsappApi = {
 
     toggle: (cuentaId: number, botActivo: boolean): Promise<{ ok: boolean }> =>
       api.patch(`/v1/whatsapp/cuentas/${cuentaId}/bot`, { bot_activo: botActivo }).then(r => r.data),
+  },
+
+  contenido: {
+    promocion: (): Promise<WhatsAppPromocion | null> =>
+      api.get('/v1/whatsapp/promocion').then(r => r.data.data),
+
+    guardarPromocion: (texto: string, foto?: File): Promise<{ ok: boolean }> => {
+      const fd = new FormData()
+      fd.append('texto', texto)
+      if (foto) fd.append('foto', foto)
+      return api.post('/v1/whatsapp/promocion', fd).then(r => r.data)
+    },
+
+    fotosProducto: (): Promise<WhatsAppFotoProducto[]> =>
+      api.get('/v1/whatsapp/fotos-producto').then(r => r.data.data),
+
+    guardarFotoProducto: (productoNombre: string, foto: File): Promise<{ ok: boolean }> => {
+      const fd = new FormData()
+      fd.append('producto_nombre', productoNombre)
+      fd.append('foto', foto)
+      return api.post('/v1/whatsapp/fotos-producto', fd).then(r => r.data)
+    },
+
+    eliminarFotoProducto: (id: number): Promise<void> =>
+      api.delete(`/v1/whatsapp/fotos-producto/${id}`).then(r => r.data),
+
+    buscarInventario: (q: string): Promise<string[]> =>
+      api.get('/v1/whatsapp/inventario/nombres', { params: { q } }).then(r => r.data),
   },
 
   mensajes: {

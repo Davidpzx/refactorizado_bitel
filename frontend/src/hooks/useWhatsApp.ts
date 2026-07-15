@@ -79,6 +79,46 @@ export function useIniciarChatWhatsApp() {
   })
 }
 
+export function usePromocion() {
+  return useQuery({ queryKey: ['whatsapp-promocion'], queryFn: () => whatsappApi.contenido.promocion() })
+}
+
+export function useGuardarPromocion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ texto, foto }: { texto: string; foto?: File }) => whatsappApi.contenido.guardarPromocion(texto, foto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-promocion'] }),
+  })
+}
+
+export function useFotosProducto() {
+  return useQuery({ queryKey: ['whatsapp-fotos-producto'], queryFn: () => whatsappApi.contenido.fotosProducto() })
+}
+
+export function useGuardarFotoProducto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ productoNombre, foto }: { productoNombre: string; foto: File }) => whatsappApi.contenido.guardarFotoProducto(productoNombre, foto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-fotos-producto'] }),
+  })
+}
+
+export function useEliminarFotoProducto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => whatsappApi.contenido.eliminarFotoProducto(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp-fotos-producto'] }),
+  })
+}
+
+export function useBuscarProductosInventario(q: string) {
+  return useQuery({
+    queryKey: ['inventario-nombres', q],
+    queryFn: () => whatsappApi.contenido.buscarInventario(q),
+    enabled: q.length >= 2,
+  })
+}
+
 export function useBotReglas(habilitado: boolean) {
   return useQuery({
     queryKey: ['whatsapp-bot-reglas'],
