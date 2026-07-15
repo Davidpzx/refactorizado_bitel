@@ -9,7 +9,9 @@ class WhatsAppCuenta extends Model
 {
     protected $table = 'whatsapp_cuentas';
 
-    protected $fillable = ['nombre', 'numero', 'instancia', 'provider', 'tienda_id', 'estado'];
+    protected $fillable = ['nombre', 'numero', 'instancia', 'provider', 'tienda_id', 'estado', 'bot_activo'];
+
+    protected $casts = ['bot_activo' => 'boolean'];
 
     public function chats(): HasMany
     {

@@ -13,9 +13,13 @@ class WhatsAppChat extends Model
     protected $fillable = [
         'cuenta_id', 'jid', 'nombre_contacto', 'numero_contacto',
         'crm_cliente_id', 'ultimo_mensaje_at', 'no_leidos',
+        'interes_score', 'bot_silenciado_hasta',
     ];
 
-    protected $casts = ['ultimo_mensaje_at' => 'datetime'];
+    protected $casts = [
+        'ultimo_mensaje_at' => 'datetime',
+        'bot_silenciado_hasta' => 'datetime',
+    ];
 
     public static function normalizarJid(string $telefono): string
     {
