@@ -17,6 +17,16 @@ class WhatsAppChat extends Model
 
     protected $casts = ['ultimo_mensaje_at' => 'datetime'];
 
+    public static function normalizarJid(string $telefono): string
+    {
+        $digitos = preg_replace('/\D/', '', $telefono) ?? '';
+        if (strlen($digitos) === 9 && $digitos[0] === '9') {
+            $digitos = '51' . $digitos;
+        }
+
+        return $digitos . '@s.whatsapp.net';
+    }
+
     public function cuenta(): BelongsTo
     {
         return $this->belongsTo(WhatsAppCuenta::class, 'cuenta_id');
