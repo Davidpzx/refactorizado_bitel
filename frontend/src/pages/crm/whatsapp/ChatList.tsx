@@ -51,11 +51,14 @@ export function ChatList({
                 <span className="truncate text-sm font-medium">
                   {chat.nombre_contacto ?? chat.numero_contacto ?? 'Desconocido'}
                 </span>
-                {chat.no_leidos > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-kyro-indigo px-1 text-[10px] font-bold text-white">
-                    {chat.no_leidos}
-                  </span>
-                )}
+                <span className="flex items-center gap-1">
+                  {chat.interes_score >= 5 && <span title="Cliente interesado">🔥</span>}
+                  {chat.no_leidos > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-kyro-indigo px-1 text-[10px] font-bold text-white">
+                      {chat.no_leidos}
+                    </span>
+                  )}
+                </span>
               </div>
               {mostrarBadgeCuenta && chat.cuenta && (
                 <span className="text-[10px] text-kyro-muted">{chat.cuenta.nombre}</span>

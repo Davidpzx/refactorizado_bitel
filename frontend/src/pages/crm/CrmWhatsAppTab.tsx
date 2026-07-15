@@ -4,6 +4,7 @@ import type { WhatsAppChat } from '../../types/whatsapp'
 import { useWhatsAppChats, useWhatsAppCuentas } from '../../hooks/useWhatsApp'
 import { normalizarRol } from '../../utils/roles'
 import { Button } from '../../components/ui/button'
+import { BotReglasModal } from './whatsapp/BotReglasModal'
 import { ChatList } from './whatsapp/ChatList'
 import { ConectarCuentaModal } from './whatsapp/ConectarCuentaModal'
 import { ConversacionPanel } from './whatsapp/ConversacionPanel'
@@ -22,6 +23,7 @@ export function CrmWhatsAppTab({
   const [cuentaActivaId, setCuentaActivaId] = useState<number | 'todas'>('todas')
   const [chatActivo, setChatActivo] = useState<WhatsAppChat | null>(null)
   const [modalQrAbierto, setModalQrAbierto] = useState(false)
+  const [reglasAbierto, setReglasAbierto] = useState(false)
 
   const { data: cuentas = [] } = useWhatsAppCuentas()
   const { data: chats = [] } = useWhatsAppChats(cuentaActivaId === 'todas' ? undefined : cuentaActivaId)
@@ -57,6 +59,7 @@ export function CrmWhatsAppTab({
           setChatActivo(null)
         }}
         onAgregarNueva={() => setModalQrAbierto(true)}
+        onAbrirReglas={() => setReglasAbierto(true)}
         esAdmin={esAdmin}
       />
 
@@ -73,6 +76,7 @@ export function CrmWhatsAppTab({
       </div>
 
       <ConectarCuentaModal open={modalQrAbierto} onClose={() => setModalQrAbierto(false)} />
+      <BotReglasModal open={reglasAbierto} onClose={() => setReglasAbierto(false)} />
     </div>
   )
 }

@@ -1,24 +1,27 @@
 ﻿import { useState } from 'react'
-import { CaretDown, Circle, Plus, Trash } from '@phosphor-icons/react'
+import { CaretDown, Circle, Plus, Robot, Trash } from '@phosphor-icons/react'
 import type { WhatsAppCuenta } from '../../../types/whatsapp'
-import { useEliminarCuentaWhatsApp } from '../../../hooks/useWhatsApp'
+import { useEliminarCuentaWhatsApp, useToggleBotCuenta } from '../../../hooks/useWhatsApp'
 
 export function CuentaSelector({
   cuentas,
   cuentaActivaId,
   onSeleccionar,
   onAgregarNueva,
+  onAbrirReglas,
   esAdmin,
 }: {
   cuentas: WhatsAppCuenta[]
   cuentaActivaId: number | 'todas'
   onSeleccionar: (id: number | 'todas') => void
   onAgregarNueva: () => void
+  onAbrirReglas: () => void
   esAdmin: boolean
 }) {
   const [abierto, setAbierto] = useState(false)
   const activa = cuentaActivaId === 'todas' ? null : cuentas.find((cuenta) => cuenta.id === cuentaActivaId)
   const eliminar = useEliminarCuentaWhatsApp()
+  const toggleBot = useToggleBotCuenta()
 
   const handleEliminar = (cuenta: WhatsAppCuenta) => {
     if (!confirm(`Eliminar la cuenta "${cuenta.nombre}"? Se perdera el vinculo con Evolution.`)) return
@@ -81,6 +84,16 @@ export function CuentaSelector({
               {esAdmin && (
                 <button
                   type="button"
+                  title={cuenta.bot_activo ? 'Bot activo — clic para apagar' : 'Bot apagado — clic para activar'}
+                  onClick={() => toggleBot.mutate({ cuentaId: cuenta.id, botActivo: !cuenta.bot_activo })}
+                  className={cuenta.bot_activo ? 'text-kyro-success' : 'text-kyro-muted hover:text-kyro-body'}
+                >
+                  <Robot size={14} />
+                </button>
+              )}
+              {esAdmin && (
+                <button
+                  type="button"
                   title="Eliminar cuenta"
                   onClick={() => handleEliminar(cuenta)}
                   className="text-kyro-muted hover:text-red-400"
@@ -100,6 +113,18 @@ export function CuentaSelector({
               className="mt-1 flex w-full items-center gap-2 rounded-md border-t border-kyro-border px-3 py-2 text-left text-sm text-kyro-indigo hover:bg-kyro-border/40"
             >
               <Plus size={14} /> Agregar otro numero
+            </button>
+          )}
+          {esAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                onAbrirReglas()
+                setAbierto(false)
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-kyro-indigo hover:bg-kyro-border/40"
+            >
+              <Robot size={14} /> Reglas del bot
             </button>
           )}
         </div>
