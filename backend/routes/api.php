@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\VentaController;
 use App\Http\Controllers\Api\PostpagoController;
 use App\Http\Controllers\Api\MapaCalorController;
 use App\Http\Controllers\Api\WhatsAppController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
 use App\Http\Controllers\Api\AgenteDocumentoController;
 use App\Http\Controllers\Api\AsistenciaNeiryController;
 use App\Http\Controllers\Api\AuditoriaBipayController;
@@ -108,6 +109,9 @@ Route::prefix('v1/cpe')->middleware('throttle:60,1')->group(function () {
     Route::get('{id}',                  [ComprobanteColaPublicoController::class, 'show']);
     Route::get('{id}/descargar/{tipo}', [ComprobanteColaPublicoController::class, 'descargar']);
 });
+
+// WhatsApp Evolution webhook (publico, protegido por token secreto en query string).
+Route::post('/v1/whatsapp/webhook', [WhatsAppWebhookController::class, 'recibir']);
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
