@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Models\WhatsAppBotRegla;
 use App\Models\WhatsAppChat;
 use App\Models\WhatsAppCuenta;
 use App\Models\WhatsAppMensaje;
@@ -127,6 +128,72 @@ class WhatsAppController extends Controller
         $provider = WhatsAppProviderFactory::make($cuenta->provider);
         $provider->eliminarInstancia($cuenta->instancia);
         $cuenta->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function toggleBot(Request $request, int $id): JsonResponse
+    {
+        if (!$this->esAdministrador()) {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        $data = $request->validate(['bot_activo' => ['required', 'boolean']]);
+        WhatsAppCuenta::findOrFail($id)->update(['bot_activo' => $data['bot_activo']]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function botReglas(): JsonResponse
+    {
+        if (!$this->esAdministrador()) {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+
+        return response()->json(WhatsAppBotRegla::orderByDesc('prioridad')->orderBy('id')->get());
+    }
+
+    private function validarBotRegla(Request $request): array
+    {
+        return $request->validate([
+            'nombre' => ['required', 'string', 'max:100'],
+            'tipo' => ['required', 'in:texto,menu'],
+            'es_bienvenida' => ['sometimes', 'boolean'],
+            'palabras_clave' => ['nullable', 'array'],
+            'respuesta' => ['nullable', 'string'],
+            'menu_titulo' => ['nullable', 'string', 'max:150'],
+            'opciones' => ['nullable', 'array'],
+            'prioridad' => ['sometimes', 'integer'],
+            'activa' => ['sometimes', 'boolean'],
+            'cuenta_id' => ['nullable', 'integer', 'exists:whatsapp_cuentas,id'],
+        ]);
+    }
+
+    public function crearBotRegla(Request $request): JsonResponse
+    {
+        if (!$this->esAdministrador()) {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        $regla = WhatsAppBotRegla::create($this->validarBotRegla($request));
+
+        return response()->json(['ok' => true, 'id' => $regla->id]);
+    }
+
+    public function actualizarBotRegla(Request $request, int $id): JsonResponse
+    {
+        if (!$this->esAdministrador()) {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        WhatsAppBotRegla::findOrFail($id)->update($this->validarBotRegla($request));
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function eliminarBotRegla(int $id): JsonResponse
+    {
+        if (!$this->esAdministrador()) {
+            return response()->json(['message' => 'Solo administradores.'], 403);
+        }
+        WhatsAppBotRegla::findOrFail($id)->delete();
 
         return response()->json(['ok' => true]);
     }
