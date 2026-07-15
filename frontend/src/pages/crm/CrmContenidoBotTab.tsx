@@ -70,7 +70,7 @@ function FotosProductoPanel() {
       <div className="relative">
         <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto (ej. iPhone 13 128GB)" />
         {sugerencias.length > 0 && nombre.length >= 2 && (
-          <div className="absolute z-10 mt-1 w-full rounded-kyro border border-kyro-border bg-kyro-surface shadow-lg">
+          <div className="absolute z-10 mt-1 w-full rounded-kyro border border-kyro-border bg-kyro-elevated shadow-lg">
             {sugerencias.map(s => (
               <button key={s} type="button" onClick={() => setNombre(s)} className="block w-full px-3 py-1.5 text-left text-xs hover:bg-kyro-border/40">
                 {s}

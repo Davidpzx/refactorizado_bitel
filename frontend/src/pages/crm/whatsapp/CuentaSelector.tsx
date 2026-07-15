@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { CaretDown, Circle, Plus, Robot, Trash } from '@phosphor-icons/react'
 import type { WhatsAppCuenta } from '../../../types/whatsapp'
 import { useEliminarCuentaWhatsApp, useToggleBotCuenta } from '../../../hooks/useWhatsApp'
@@ -22,6 +22,18 @@ export function CuentaSelector({
   const activa = cuentaActivaId === 'todas' ? null : cuentas.find((cuenta) => cuenta.id === cuentaActivaId)
   const eliminar = useEliminarCuentaWhatsApp()
   const toggleBot = useToggleBotCuenta()
+  const contenedorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!abierto) return
+    const handleClickFuera = (e: MouseEvent) => {
+      if (contenedorRef.current && !contenedorRef.current.contains(e.target as Node)) {
+        setAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [abierto])
 
   const handleEliminar = (cuenta: WhatsAppCuenta) => {
     if (!confirm(`Eliminar la cuenta "${cuenta.nombre}"? Se perdera el vinculo con Evolution.`)) return
@@ -33,11 +45,11 @@ export function CuentaSelector({
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={contenedorRef}>
       <button
         type="button"
         onClick={() => setAbierto((valor) => !valor)}
-        className="flex items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-surface px-3 py-2 text-sm font-medium hover:border-kyro-indigo"
+        className="flex items-center gap-2 rounded-kyro border border-kyro-border bg-kyro-elevated px-3 py-2 text-sm font-medium hover:border-kyro-indigo"
       >
         <Circle
           weight="fill"
@@ -49,7 +61,7 @@ export function CuentaSelector({
       </button>
 
       {abierto && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-72 rounded-kyro border border-kyro-border bg-kyro-surface p-1 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-72 rounded-kyro border border-kyro-border bg-kyro-elevated p-1 shadow-lg">
           <button
             type="button"
             onClick={() => {
