@@ -43,4 +43,8 @@ return [
         'api_key' => env('INTEGRADOR_API_KEY'),
     ],
 
+    'evolution' => [
+        'base_url' => env('EVOLUTION_API_BASE_URL'),
+        'api_key' => env('EVOLUTION_API_KEY'),
+    ],
 ];
