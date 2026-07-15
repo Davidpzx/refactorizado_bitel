@@ -51,6 +51,9 @@ export interface CrmDashboardFilters {
   tienda_id?: string
   desde?: string
   hasta?: string
+  agente_id?: string
+  categoria?: string
+  canal?: string
 }
 
 export interface CrmFuenteStat {
