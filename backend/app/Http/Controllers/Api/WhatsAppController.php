@@ -131,6 +131,49 @@ class WhatsAppController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function iniciarChat(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'telefono' => ['required', 'string'],
+            'nombre_contacto' => ['nullable', 'string', 'max:150'],
+            'tienda_id' => ['nullable', 'string', 'max:10'],
+            'crm_cliente_id' => ['nullable', 'integer'],
+        ]);
+
+        $tiendaId = $data['tienda_id'] ?? null;
+
+        // Un jefe_tienda nunca resuelve cuenta fuera de su propia tienda, sin
+        // importar que le hayan mandado otro tienda_id en el body.
+        if (!$this->veTodasLasTiendas()) {
+            $tiendaId = trim((string) Auth::user()?->tienda_id) ?: null;
+        }
+
+        $cuenta = null;
+        if ($tiendaId !== null) {
+            $cuenta = WhatsAppCuenta::where('tienda_id', $tiendaId)->where('estado', 'conectada')->first();
+        }
+        if (!$cuenta) {
+            $cuenta = WhatsAppCuenta::whereNull('tienda_id')->where('estado', 'conectada')->first();
+        }
+        if (!$cuenta) {
+            return response()->json(['message' => 'sin_cuenta'], 422);
+        }
+
+        $jid = WhatsAppChat::normalizarJid($data['telefono']);
+
+        $chat = WhatsAppChat::firstOrCreate(
+            ['cuenta_id' => $cuenta->id, 'jid' => $jid],
+            [
+                'nombre_contacto' => $data['nombre_contacto'] ?? null,
+                'numero_contacto' => $data['telefono'],
+                'crm_cliente_id' => $data['crm_cliente_id'] ?? null,
+                'no_leidos' => 0,
+            ]
+        );
+
+        return response()->json(['cuenta_id' => $cuenta->id, 'chat' => $chat]);
+    }
+
     public function chats(Request $request): JsonResponse
     {
         $cuentaId = $request->query('cuenta_id');

@@ -380,6 +380,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('cuentas', [WhatsAppController::class, 'crearCuenta']);
         Route::get('cuentas/{id}/qr', [WhatsAppController::class, 'qr']);
         Route::delete('cuentas/{id}', [WhatsAppController::class, 'eliminarCuenta']);
+        Route::post('chats/iniciar', [WhatsAppController::class, 'iniciarChat']);
         Route::get('chats', [WhatsAppController::class, 'chats']);
         Route::get('chats/{id}/mensajes', [WhatsAppController::class, 'mensajes']);
         Route::post('chats/{id}/mensajes', [WhatsAppController::class, 'enviarMensaje']);
