@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VentaController;
 use App\Http\Controllers\Api\PostpagoController;
 use App\Http\Controllers\Api\MapaCalorController;
+use App\Http\Controllers\Api\WhatsAppController;
 use App\Http\Controllers\Api\AgenteDocumentoController;
 use App\Http\Controllers\Api\AsistenciaNeiryController;
 use App\Http\Controllers\Api\AuditoriaBipayController;
@@ -369,6 +370,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('tickets/{id}',      [TicketController::class, 'destroy']);
     });
 
+    // WhatsApp CRM (admin/gerente ven todo; jefe_tienda queda scoped por tienda).
+    Route::middleware('role:administrador,gerente,jefe_tienda')->prefix('whatsapp')->group(function () {
+        Route::get('cuentas', [WhatsAppController::class, 'cuentas']);
+        Route::post('cuentas', [WhatsAppController::class, 'crearCuenta']);
+        Route::get('cuentas/{id}/qr', [WhatsAppController::class, 'qr']);
+        Route::delete('cuentas/{id}', [WhatsAppController::class, 'eliminarCuenta']);
+        Route::get('chats', [WhatsAppController::class, 'chats']);
+        Route::get('chats/{id}/mensajes', [WhatsAppController::class, 'mensajes']);
+        Route::post('chats/{id}/mensajes', [WhatsAppController::class, 'enviarMensaje']);
+    });
     // ── Postulaciones (admin/gerente) ─────────────────────────────────────────
     Route::get('postulaciones',          [PostulanteController::class, 'index'])->middleware('role:administrador,gerente');
     Route::get('postulaciones/{id}',     [PostulanteController::class, 'show'])->middleware('role:administrador,gerente');
