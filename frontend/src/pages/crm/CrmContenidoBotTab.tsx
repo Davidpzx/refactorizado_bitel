@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Trash } from '@phosphor-icons/react'
 import {
   useBuscarProductosInventario,
@@ -53,8 +53,21 @@ function FotosProductoPanel() {
   const eliminar = useEliminarFotoProducto()
   const [nombre, setNombre] = useState('')
   const [foto, setFoto] = useState<File | null>(null)
+  const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const buscadorRef = useRef<HTMLDivElement>(null)
   const { data: sugerencias = [] } = useBuscarProductosInventario(nombre)
+
+  useEffect(() => {
+    if (!sugerenciasAbiertas) return
+    const handleClickFuera = (e: MouseEvent) => {
+      if (buscadorRef.current && !buscadorRef.current.contains(e.target as Node)) {
+        setSugerenciasAbiertas(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [sugerenciasAbiertas])
 
   const handleSubir = () => {
     if (!nombre.trim() || !foto) return
@@ -67,12 +80,22 @@ function FotosProductoPanel() {
   return (
     <div className="kyro-card space-y-3 p-4">
       <h3 className="text-sm font-semibold">Fotos de equipos</h3>
-      <div className="relative">
-        <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del producto (ej. iPhone 13 128GB)" />
-        {sugerencias.length > 0 && nombre.length >= 2 && (
+      <div className="relative" ref={buscadorRef}>
+        <Input
+          value={nombre}
+          onChange={e => { setNombre(e.target.value); setSugerenciasAbiertas(true) }}
+          onFocus={() => setSugerenciasAbiertas(true)}
+          placeholder="Nombre del producto (ej. iPhone 13 128GB)"
+        />
+        {sugerenciasAbiertas && sugerencias.length > 0 && nombre.length >= 2 && (
           <div className="absolute z-10 mt-1 w-full rounded-kyro border border-kyro-border bg-kyro-elevated shadow-lg">
             {sugerencias.map(s => (
-              <button key={s} type="button" onClick={() => setNombre(s)} className="block w-full px-3 py-1.5 text-left text-xs hover:bg-kyro-border/40">
+              <button
+                key={s}
+                type="button"
+                onClick={() => { setNombre(s); setSugerenciasAbiertas(false) }}
+                className="block w-full px-3 py-1.5 text-left text-xs hover:bg-kyro-border/40"
+              >
                 {s}
               </button>
             ))}
