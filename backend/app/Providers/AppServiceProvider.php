@@ -23,8 +23,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // Falla ruidosamente en el arranque (no en cada request) si el secreto M2M del
         // integrador no está configurado en producción. En local/testing se permite vacío
-        // para no romper la suite ni el arranque de desarrollo.
+        // para no romper la suite ni el arranque de desarrollo. Se excluye la consola:
+        // en build-time (composer install → package:discover) no existen las env vars.
         if ($this->app->environment('production')
+            && !$this->app->runningInConsole()
             && blank(config('services.integrador.api_key'))) {
             throw new \RuntimeException(
                 'INTEGRADOR_API_KEY no está configurada. Define la variable de entorno '
