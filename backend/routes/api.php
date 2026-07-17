@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\AppTerminalController;
+use App\Http\Controllers\Api\AppVentaController;
+use App\Http\Controllers\Api\VentaOnlineController;
 use App\Http\Controllers\Api\AsistenciaController;
 use App\Http\Controllers\Api\AsistenciaPresenciaController;
 use App\Http\Controllers\Api\AuthController;
@@ -101,6 +103,13 @@ Route::prefix('v1/integrador')->middleware('throttle:120,1')->group(function () 
 Route::prefix('v1/app-terminal')->group(function () {
     Route::get('version',    [AppTerminalController::class, 'version'])->middleware('throttle:60,1');
     Route::get('descargar',  [AppTerminalController::class, 'descargar'])->middleware('throttle:30,1');
+});
+
+// ── App Venta Online — distribución del APK + OTA (público) ──────────────────
+Route::prefix('v1/app-venta')->group(function () {
+    Route::get('version',   [AppVentaController::class, 'version'])->middleware('throttle:60,1');
+    Route::get('ota',       [AppVentaController::class, 'ota'])->middleware('throttle:60,1');
+    Route::get('descargar', [AppVentaController::class, 'descargar'])->middleware('throttle:30,1');
 });
 
 // ── CPE público — link firmado HMAC para WhatsApp (sin sesión) ───────────────
@@ -241,6 +250,21 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── App Terminal — subir nueva versión del APK (SOLO administrador — plan 16) ─
     Route::post('app-terminal/subir', [AppTerminalController::class, 'subir'])->middleware('role:administrador');
+
+    // ── App Venta Online — subir APK + gestión (admin/gerente) ───────────────
+    Route::post('app-venta/subir', [AppVentaController::class, 'subir'])->middleware('role:administrador,gerente');
+    Route::get('ventas-online',    [VentaOnlineController::class, 'index'])->middleware('role:administrador,gerente,jefe_tienda');
+
+    // ── App Venta Online — endpoints de la app (agente autenticado) ──────────
+    // Cualquiera de los 4 roles con sesión puede operar la app; el scoping por
+    // agente/tienda va dentro del controller (anti-IDOR).
+    Route::prefix('app')->group(function () {
+        Route::get('consulta-dni/{dni}', [DniController::class, 'consultar']);
+        Route::post('ventas',            [VentaOnlineController::class, 'store']);
+        Route::get('ventas/mias',        [VentaOnlineController::class, 'mias']);
+        Route::patch('ventas/{id}/estado', [VentaOnlineController::class, 'estado']);
+        Route::post('incumplimiento',    [VentaOnlineController::class, 'incumplimiento']);
+    });
 
     // ── Facturación electrónica — emisión ─────────────────────────────────────
     // Único camino de emisión síncrona: encola y drena esa misma fila. Un cajero
