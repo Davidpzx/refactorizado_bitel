@@ -135,4 +135,16 @@ export const adminPaginasApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data)
   },
+
+  appVentaVersion: () =>
+    api.get<AppTerminalVersion>('/v1/app-venta/version').then((r) => r.data),
+
+  appVentaSubir: (file: File, version: string) => {
+    const fd = new FormData()
+    fd.append('apk', file)
+    fd.append('version', version)
+    return api.post<{ message: string; version: string }>('/v1/app-venta/subir', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
 }
