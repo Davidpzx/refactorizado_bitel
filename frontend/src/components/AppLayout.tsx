@@ -7,7 +7,7 @@ import { controlCenterApi } from '../services/controlCenter.api'
 import { useTheme } from '../hooks/useTheme'
 import { ControlCenterPanel } from './ControlCenterPanel'
 import { prefetchRoute, prefetchTopRoutes } from '../routesPrefetch'
-import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug, MagnifyingGlass } from '@phosphor-icons/react'
+import { SquaresFour as LayoutDashboard, ClockCounterClockwise as History, ChartBar as BarChart2, CurrencyCircleDollar as CircleDollarSign, QrCode, CalendarCheck, Users, CurrencyDollar as DollarSign, Package, BookOpen, Buildings as Building2, IdentificationCard as IdCard, Handshake, Wallet, Faders as Settings2, Storefront as Store, SignOut as LogOut, Bell, CaretLeft as ChevronLeft, CaretRight as ChevronRight, CaretDown, ClipboardText as ClipboardList, List as Menu, Receipt, Files, Sun, Moon, ArrowsLeftRight as ArrowLeftRight, Bank as Landmark, Ticket, Megaphone, CellSignalFull as Signal, MapPin, Plugs as Plug, MagnifyingGlass, DeviceMobile as Smartphone } from '@phosphor-icons/react'
 import { api } from '../services/api'
 
 interface NavItem {
@@ -51,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/',               label: 'Dashboard',       Icon: LayoutDashboard, roles: [ADM, GER, JT],      section: 'Gerencia' },
   { to: '/estadisticas',   label: 'Productividad',   Icon: BarChart2,       roles: [ADM, GER, JT],      section: 'Gerencia' },
   { to: '/crm',            label: 'CRM y Marketing', Icon: Megaphone,       roles: [ADM, GER, JT],      section: 'Gerencia', accent: '#c084fc' },
+  { to: '/ventas-online',  label: 'Ventas Online',   Icon: Smartphone,      roles: [ADM, GER, JT],      section: 'Gerencia' },
   { to: '/revisar-stock',  label: 'Precios',         Icon: CircleDollarSign, roles: [ADM, GER],         section: 'Gerencia' },
   { to: '/historial',      label: 'Historial',       Icon: History,         roles: [ADM, GER, JT],      section: 'Gerencia' },
   { to: '/mi-historial',   label: 'Mi Historial',    Icon: History,         roles: [AG],                section: 'Gerencia' },
