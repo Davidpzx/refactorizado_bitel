@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,7 +67,7 @@ class BitacoraStockController extends Controller
             ]);
         }
 
-        $perPage = $request->integer('per_page', 20);
+        $perPage = Paginacion::desde($request, 20);
         $base    = $this->baseQuery($request);
 
         $kpis = (clone $base)->selectRaw("

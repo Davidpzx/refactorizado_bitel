@@ -15,13 +15,36 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class WhatsAppWebhookController extends Controller
 {
+    private const MAX_BODY_BYTES = 1024 * 1024;
+
+    private const RATE_LIMIT = 60;
+
     public function recibir(Request $request): JsonResponse
     {
+        $rateLimitKey = 'whatsapp:webhook:'.hash('sha256', (string) $request->ip());
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT)) {
+            return response()->json(['message' => 'Demasiadas solicitudes.'], 429)
+                ->header('Retry-After', (string) RateLimiter::availableIn($rateLimitKey));
+        }
+        RateLimiter::hit($rateLimitKey, 60);
+
+        $contentLength = (int) $request->server('CONTENT_LENGTH', 0);
+        if ($contentLength > self::MAX_BODY_BYTES
+            || strlen($request->getContent()) > self::MAX_BODY_BYTES) {
+            return response()->json(['message' => 'Payload demasiado grande.'], 413);
+        }
+
         $tokenEsperado = (string) config('services.evolution.webhook_token');
-        if ($tokenEsperado === '' || $request->query('token') !== $tokenEsperado) {
+        $tokenHeader = $request->header('X-Webhook-Token');
+        // Compatibilidad temporal: el token por query string está deprecado; usar X-Webhook-Token.
+        $tokenRecibido = is_string($tokenHeader) && $tokenHeader !== ''
+            ? $tokenHeader
+            : (string) $request->query('token', '');
+        if ($tokenEsperado === '' || $tokenRecibido === '' || ! hash_equals($tokenEsperado, $tokenRecibido)) {
             return response()->json(['message' => 'Token invalido.'], 403);
         }
 

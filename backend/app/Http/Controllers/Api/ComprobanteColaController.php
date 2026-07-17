@@ -10,6 +10,7 @@ use App\Services\Facturacion\CpeLinkService;
 use App\Services\Facturacion\FacturacionApiClient;
 use App\Services\Facturacion\ProcesadorColaComprobantes;
 use App\Services\Facturacion\ResultadoProceso;
+use App\Support\Paginacion;
 use App\Support\TiendaGuard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -66,7 +67,7 @@ class ComprobanteColaController extends Controller
             'tienda_id' => ['sometimes', 'string', 'max:20'],
             'desde'     => ['sometimes', 'date'],
             'hasta'     => ['sometimes', 'date'],
-            'per_page'  => ['sometimes', 'integer', 'min:1', 'max:200'],
+            'per_page'  => ['sometimes', 'integer'],
         ]);
 
         $cola = ComprobanteCola::query()
@@ -76,7 +77,7 @@ class ComprobanteColaController extends Controller
             ->when($datos['desde'] ?? null, fn (Builder $q, string $v) => $q->where('creado_en', '>=', $v.' 00:00:00'))
             ->when($datos['hasta'] ?? null, fn (Builder $q, string $v) => $q->where('creado_en', '<=', $v.' 23:59:59'))
             ->latest('creado_en')
-            ->paginate($datos['per_page'] ?? 20)
+            ->paginate(Paginacion::desde($request, 20))
             ->withQueryString();
 
         return response()->json($cola);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Paginacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -112,7 +113,7 @@ class PostpagoController extends Controller
 
     public function ventas(Request $request): JsonResponse
     {
-        $perPage = min((int) ($request->per_page ?? 50), 200);
+        $perPage = Paginacion::desde($request, 50);
 
         $rows = $this->buildBase($request)
             ->select($this->seleccionColumnas())

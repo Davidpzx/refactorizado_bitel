@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\EnviarComprobanteSunat;
 use App\Models\Comprobante;
+use App\Support\Paginacion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,14 +61,14 @@ class ComprobanteController extends Controller
                 ->with(['venta.cliente'])
                 ->where('estado_sunat', $request->estado_sunat)
                 ->latest('creado_en')
-                ->paginate($request->integer('per_page', 20));
+                ->paginate(Paginacion::desde($request, 20));
         } else {
             $comprobantes = $this->aplicarScopeTienda(Comprobante::query(), $request)
                 ->with(['venta.cliente'])
                 ->when($request->tipo, fn($q, $t) => $q->where('tipo_comprobante', $t))
                 ->pendientes()
                 ->latest('creado_en')
-                ->paginate($request->integer('per_page', 20));
+                ->paginate(Paginacion::desde($request, 20));
         }
 
         return response()->json($comprobantes);

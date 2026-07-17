@@ -41,6 +41,7 @@ class TurnoCorridoTest extends TestCase
             'hora_salida' => '18:00:00',
             'hora_ref_inicio' => '12:00:00',
             'hora_ref_fin' => '13:00:00',
+            'hash_dispositivo' => 'kyro-hw-test',
         ]);
 
         DB::table('asistencias')->insert([
@@ -67,6 +68,87 @@ class TurnoCorridoTest extends TestCase
 
         $this->getJson('/api/v1/attendance/status/12345678')
             ->assertOk()
+            ->assertJsonPath('entrada', true);
+    }
+
+    public function test_marcar_turno_corrido_acepta_hash_facial_vinculado(): void
+    {
+        $hashFacial = 'dasam-face-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+        DB::table('tiendas')->insert([
+            'codigo' => 'T01',
+            'nombre' => 'Tienda Uno',
+            'activo' => true,
+        ]);
+
+        DB::table('agentes')->insert([
+            'id' => 1,
+            'dni' => '12345678',
+            'nombres' => 'Agente Prueba',
+            'estado' => 'ACTIVO',
+            'tienda_base' => 'T01',
+            'hora_ingreso' => '08:00:00',
+            'hora_salida' => '18:00:00',
+            'hora_ref_inicio' => '12:00:00',
+            'hora_ref_fin' => '13:00:00',
+            'hash_facial' => $hashFacial,
+        ]);
+
+        DB::table('asistencias')->insert([
+            'agente_id' => 1,
+            'tienda_id' => 'T01',
+            'fecha' => now()->toDateString(),
+            'hora_ingreso' => now()->subHours(3)->toTimeString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/asistencias/turno-corrido', [
+            'dni' => '12345678',
+            'huella' => $hashFacial,
+        ])
+            ->assertOk()
+            ->assertJsonFragment(['omitio_refrigerio' => true])
             ->assertJsonPath('siguiente_marcacion', 'salida');
+    }
+
+    public function test_marcar_turno_corrido_rechaza_huella_no_enrolada(): void
+    {
+        DB::table('tiendas')->insert([
+            'codigo' => 'T01',
+            'nombre' => 'Tienda Uno',
+            'activo' => true,
+        ]);
+
+        DB::table('agentes')->insert([
+            'id' => 1,
+            'dni' => '12345678',
+            'nombres' => 'Agente Prueba',
+            'estado' => 'ACTIVO',
+            'tienda_base' => 'T01',
+            'hora_ingreso' => '08:00:00',
+            'hora_salida' => '18:00:00',
+        ]);
+
+        DB::table('asistencias')->insert([
+            'agente_id' => 1,
+            'tienda_id' => 'T01',
+            'fecha' => now()->toDateString(),
+            'hora_ingreso' => now()->subHours(3)->toTimeString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/asistencias/turno-corrido', [
+            'dni' => '12345678',
+            'huella' => 'kyro-hw-no-enrolada',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('code', 'DEVICE_MISMATCH');
+
+        $this->assertDatabaseMissing('asistencias', [
+            'agente_id' => 1,
+            'omitio_refrigerio' => true,
+        ]);
     }
 }

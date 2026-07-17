@@ -38,13 +38,13 @@ class OptimizationPaginationCacheTest extends TestCase
 
         $paginado = $this->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/chips?page=1&per_page=999')
-            ->assertOk()->assertJsonPath('per_page', 200)->assertJsonPath('total', 501);
-        $this->assertCount(200, $paginado->json('data'));
+            ->assertOk()->assertJsonPath('per_page', 100)->assertJsonPath('total', 501);
+        $this->assertCount(100, $paginado->json('data'));
 
         $inventario = $this->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/inventario-chips?page=1&per_page=999')
-            ->assertOk()->assertJsonPath('per_page', 200);
-        $this->assertCount(200, $inventario->json('data'));
+            ->assertOk()->assertJsonPath('per_page', 100);
+        $this->assertCount(100, $inventario->json('data'));
     }
 
     public function test_interacciones_usan_cursor_compuesto(): void

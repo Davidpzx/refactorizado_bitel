@@ -37,6 +37,7 @@ class AsistenciaTest extends TestCase
             'hora_ref_fin' => '13:00:00',
             'dia_descanso' => 'DOMINGO',
             'sueldo_base' => 1200,
+            'hash_dispositivo' => 'device-123',
         ]);
     }
 
@@ -143,6 +144,36 @@ class AsistenciaTest extends TestCase
         ]);
     }
 
+    public function test_rechaza_marcacion_sin_factor_enrolado_y_verificado(): void
+    {
+        DB::table('agentes')->where('id', 1)->update(['hash_dispositivo' => null]);
+
+        $payload = $this->gpsPayload('entrada');
+        unset($payload['device_id']);
+
+        $this->postJson('/api/v1/attendance/mark', $payload)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'DEVICE_REQUIRED');
+
+        $this->assertDatabaseMissing('asistencias', [
+            'agente_id' => 1,
+        ]);
+    }
+
+
+    public function test_no_autoriza_automaticamente_un_dispositivo_no_enrolado(): void
+    {
+        DB::table('agentes')->where('id', 1)->update(['hash_dispositivo' => null]);
+
+        $this->postJson('/api/v1/attendance/mark', $this->gpsPayload('entrada'))
+            ->assertForbidden()
+            ->assertJsonPath('code', 'DEVICE_MISMATCH');
+
+        $this->assertDatabaseHas('agentes', [
+            'id' => 1,
+            'hash_dispositivo' => null,
+        ]);
+    }
     public function test_token_emergencia_valido_permite_marcar_fuera_del_rango_gps(): void
     {
         DB::table('agentes')->where('id', 1)->update([

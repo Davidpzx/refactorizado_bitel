@@ -10,6 +10,7 @@ use App\Models\Reporte;
 use App\Models\Usuario;
 use App\Services\AgenteService;
 use App\Services\HistorialAgenteService;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\TiendaGuard;
 use App\Support\ResourceCache;
@@ -39,7 +40,7 @@ class AgenteController extends Controller
             ->when($request->tienda, fn($q, $t) => $q->porTienda($t))
             ->when($request->estado, fn($q, $e) => $q->where('estado', $e))
             ->orderBy('nombres')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($agentes);
     }
@@ -119,7 +120,7 @@ class AgenteController extends Controller
             ])
             ->withCount('ventas')
             ->orderByDesc('fecha')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         $stats = Reporte::query()
             ->where('agente_id', $agente->id)

@@ -8,6 +8,7 @@ use App\Models\InventarioChip;
 use App\Models\Tienda;
 use App\Models\TrasladoChip;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,7 @@ class TrasladoChipsController extends Controller
             $query->where('tienda_destino', $request->tienda_destino);
         }
 
-        $perPage = min((int)($request->per_page ?? 50), 200);
+        $perPage = Paginacion::desde($request, 50);
         return response()->json($query->paginate($perPage));
     }
 
@@ -325,7 +326,7 @@ class TrasladoChipsController extends Controller
         $query->orderByDesc('stock_actual')->orderByDesc('id');
 
         if ($request->hasAny(['page', 'per_page'])) {
-            $perPage = max(1, min($request->integer('per_page', 50), 200));
+            $perPage = Paginacion::desde($request, 50);
             return response()->json($query->paginate($perPage));
         }
 

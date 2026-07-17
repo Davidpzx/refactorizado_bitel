@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Venta;
 use App\Models\Cliente;
+use App\Support\Paginacion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,7 +42,7 @@ class VentaController extends Controller
             ->when($request->tipo_venta, fn($q, $tipo) => $q->porTipo($tipo))
             ->when($request->vendedor_id, fn($q, $id) => $q->where('vendedor_id', $id))
             ->latest('creado_en')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($ventas);
     }

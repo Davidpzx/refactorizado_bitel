@@ -7,9 +7,11 @@ use App\Models\Usuario;
 use App\Services\CuadreBitelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Integrador Bitel (agente extractor local). Puerto del legacy sis_bipay:
@@ -23,6 +25,14 @@ use Illuminate\Support\Facades\Log;
  */
 class IntegradorController extends Controller
 {
+    private const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024;
+
+    private const MAX_ARRAY_ELEMENTS = 1000;
+
+    private const M2M_RATE_LIMIT = 60;
+
+    private const M2M_WINDOW_SECONDS = 300;
+
     // ══════════════════════════ M2M (agente → servidor) ══════════════════════
 
     /** POST /v1/integrador/agente-config — entrega la config al agente a cambio de su token. */
@@ -566,6 +576,21 @@ class IntegradorController extends Controller
 
     private function validarM2M(Request $request): ?JsonResponse
     {
+        $rateLimitKey = 'integrador:m2m:'.hash('sha256', (string) $request->ip());
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::M2M_RATE_LIMIT)) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Demasiadas solicitudes. Intenta nuevamente en un minuto.',
+            ], 429)->header('Retry-After', (string) RateLimiter::availableIn($rateLimitKey));
+        }
+        RateLimiter::hit($rateLimitKey, 60);
+
+        $contentLength = (int) $request->server('CONTENT_LENGTH', 0);
+        if ($contentLength > self::MAX_PAYLOAD_BYTES
+            || strlen($request->getContent()) > self::MAX_PAYLOAD_BYTES) {
+            return response()->json(['ok' => false, 'error' => 'Payload demasiado grande.'], 422);
+        }
+
         // Sin key central configurada NO se autentica a nadie: rechazar antes de comparar
         // para que un config vacío no cuele como válido ('' === '' / null === null).
         $apiKeyCentral = config('services.integrador.api_key');
@@ -578,6 +603,12 @@ class IntegradorController extends Controller
             // agente_config manda form-data; el resto JSON
             $data = $request->all();
         }
+        if ($this->excedeLimiteDeArreglos($data)) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'El payload contiene un arreglo de más de '.self::MAX_ARRAY_ELEMENTS.' elementos.',
+            ], 422);
+        }
         $apiKeyRecibida = (string) ($data['api_key'] ?? '');
         if ($apiKeyRecibida === '' || ! hash_equals($apiKeyCentral, $apiKeyRecibida)) {
             return response()->json(['ok' => false, 'error' => 'API key inválida'], 403);
@@ -586,7 +617,36 @@ class IntegradorController extends Controller
             return response()->json(['ok' => false, 'error' => 'Timestamp expirado (desincronización de reloj)'], 400);
         }
 
+        $payloadNormalizado = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($payloadNormalizado === false) {
+            return response()->json(['ok' => false, 'error' => 'Payload inválido.'], 422);
+        }
+
+        $replayHash = hash_hmac(
+            'sha256',
+            $request->path().chr(0).$payloadNormalizado,
+            $apiKeyCentral
+        );
+        if (! Cache::add('integrador:replay:'.$replayHash, true, self::M2M_WINDOW_SECONDS)) {
+            return response()->json(['ok' => false, 'error' => 'Payload duplicado.'], 409);
+        }
+
         return null;
+    }
+
+    private function excedeLimiteDeArreglos(array $data): bool
+    {
+        if (count($data) > self::MAX_ARRAY_ELEMENTS) {
+            return true;
+        }
+
+        foreach ($data as $valor) {
+            if (is_array($valor) && $this->excedeLimiteDeArreglos($valor)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function autorizarTienda(Request $request, string $codigo): ?JsonResponse

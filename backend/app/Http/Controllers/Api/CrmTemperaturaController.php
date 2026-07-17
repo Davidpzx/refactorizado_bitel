@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\Crm\TemperaturaCalculator;
+use App\Support\Paginacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class CrmTemperaturaController extends Controller
     /** GET /v1/crm/temperatura — feed de interacciones con la temperatura del cliente. */
     public function index(Request $request): JsonResponse
     {
-        $perPage    = $request->integer('per_page', 50);
+        $perPage    = Paginacion::desde($request, 50);
         $filtroTemp = $request->input('temperatura');
         $sinRango   = ! $request->desde && ! $request->hasta;
 

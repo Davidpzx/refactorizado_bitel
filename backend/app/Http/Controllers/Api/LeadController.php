@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InteraccionCrm;
 use App\Models\Lead;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -45,7 +46,7 @@ class LeadController extends Controller
                 });
             })
             ->latest('creado_en')
-            ->paginate($request->integer('per_page', 50));
+            ->paginate(Paginacion::desde($request, 50));
 
         return response()->json($leads);
     }

@@ -31,7 +31,8 @@ class WhatsAppWebhookTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson('/api/v1/whatsapp/webhook?token=secreto-webhook', $payload);
+        $response = $this->withHeader('X-Webhook-Token', 'secreto-webhook')
+            ->postJson('/api/v1/whatsapp/webhook', $payload);
 
         $response->assertOk();
         $this->assertDatabaseHas('whatsapp_chats', ['cuenta_id' => $cuenta->id, 'jid' => '51988888888@s.whatsapp.net']);

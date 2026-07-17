@@ -92,7 +92,7 @@ class RolesR2MatrizRutasTest extends TestCase
             ->postJson('/api/v1/usuarios', [
                 'nombre'   => 'Nuevo Admin',
                 'email'    => 'nuevo.admin@example.test',
-                'password' => 'secret123',
+                'password' => 'secret1234',
                 'rol'      => 'admin',
             ])
             ->assertForbidden();
@@ -106,7 +106,7 @@ class RolesR2MatrizRutasTest extends TestCase
             ->postJson('/api/v1/usuarios', [
                 'nombre'   => 'Nuevo Admin',
                 'email'    => 'nuevo.admin2@example.test',
-                'password' => 'secret123',
+                'password' => 'secret1234',
                 'rol'      => 'admin',
             ])
             ->assertStatus(201);

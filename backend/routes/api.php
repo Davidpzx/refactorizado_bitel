@@ -111,7 +111,7 @@ Route::prefix('v1/cpe')->middleware('throttle:60,1')->group(function () {
     Route::get('{id}/descargar/{tipo}', [ComprobanteColaPublicoController::class, 'descargar']);
 });
 
-// WhatsApp Evolution webhook (publico, protegido por token secreto en query string).
+// WhatsApp Evolution webhook: usar X-Webhook-Token; query string queda deprecado por compatibilidad.
 Route::post('/v1/whatsapp/webhook', [WhatsAppWebhookController::class, 'recibir']);
 
 // ── Recursos protegidos ──────────────────────────────────────────────────────

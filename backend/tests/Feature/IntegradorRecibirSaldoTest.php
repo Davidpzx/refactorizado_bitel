@@ -151,8 +151,8 @@ class IntegradorRecibirSaldoTest extends TestCase
         $this->assertSame(1, DB::table('bitel_operaciones_detalle')
             ->where('tienda_codigo', self::TIENDA)->where('descripcion', 'like', 'Venta postpago%')->count());
 
-        // Reenviar el mismo sync tampoco duplica ni rompe.
-        $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertOk()->assertJsonPath('ok', true);
+        // Reenviar exactamente el mismo sync se detecta como replay y no duplica.
+        $this->postJson('/api/v1/integrador/recibir-saldo', $payload)->assertConflict()->assertJsonPath('ok', false);
         $this->assertSame(1, DB::table('bitel_operaciones_detalle')
             ->where('tienda_codigo', self::TIENDA)->where('descripcion', 'like', 'Venta postpago%')->count());
     }

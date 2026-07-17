@@ -7,6 +7,7 @@ use App\Models\Agente;
 use App\Models\Usuario;
 use App\Services\HistorialAgenteService;
 use App\Services\UserAgentResolver;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use Carbon\Carbon;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -368,8 +369,9 @@ class AsistenciaController extends Controller
         }
 
         $huella = trim((string) ($data['huella'] ?? ''));
-        $hashDispositivo = trim((string) $this->valor($agente, 'hash_dispositivo', ''));
-        if ($huella === '' || $hashDispositivo === '' || ! hash_equals($hashDispositivo, $huella)) {
+        $columnaHash = str_starts_with($huella, 'dasam-face-') ? 'hash_facial' : 'hash_dispositivo';
+        $hashEnrolado = trim((string) $this->valor($agente, $columnaHash, ''));
+        if ($huella === '' || $hashEnrolado === '' || ! hash_equals($hashEnrolado, $huella)) {
             return response()->json([
                 'error' => 'Dispositivo no autorizado.',
                 'code' => 'DEVICE_MISMATCH',
@@ -831,16 +833,29 @@ class AsistenciaController extends Controller
 
         // Prefijo dasam-face-: hash de reconocimiento facial (dispositivo/app externa), vive en su
         // propia columna independiente de hash_dispositivo (paridad con verificarHashDispositivo() legacy).
-        $columnaHash = str_starts_with($deviceId, 'dasam-face-') ? 'hash_facial' : 'hash_dispositivo';
+        $esFacial = str_starts_with($deviceId, 'dasam-face-');
+        $columnaHash = $esFacial ? 'hash_facial' : 'hash_dispositivo';
         $hashDb = trim((string) $this->valor($agente, $columnaHash, ''));
 
-        if (! $usaToken && ($hashDb === '' || ! hash_equals($hashDb, $deviceId))) {
+        if (! $usaToken && $hashDb !== '' && ! hash_equals($hashDb, $deviceId)) {
             if (str_starts_with($hashDb, 'dasam-sf-')) {
                 // Sentinel dasam-sf-: bypass manual de fraude para este agente/columna. No bloquea,
                 // no registra fraude y no re-vincula (el sentinel se mantiene tal cual en BD).
                 return null;
             }
 
+            $this->registrarFraudeDispositivo($agente, 'HASH_DISTINTO', $tienda);
+
+            return response()->json([
+                'error' => 'Dispositivo no autorizado. Usa tu celular registrado o solicita un token.',
+                'code' => 'DEVICE_MISMATCH',
+            ], 403);
+        }
+
+        // Una huella de dispositivo normal debe haber sido enrolada previamente mediante el flujo
+        // autorizado por PIN. El hash facial, en cambio, llega verificado por el terminal facial
+        // externo y su primer uso es precisamente el flujo de vinculacion a hash_facial.
+        if (! $usaToken && $hashDb === '' && ! $esFacial) {
             $this->registrarFraudeDispositivo($agente, 'HASH_DISTINTO', $tienda);
 
             return response()->json([
@@ -1468,7 +1483,7 @@ class AsistenciaController extends Controller
             ')
             ->first();
 
-        $data = $query->paginate($request->integer('per_page', 30));
+        $data = $query->paginate(Paginacion::desde($request, 30));
 
         return response()->json(['kpis' => $kpis, 'data' => $data]);
     }

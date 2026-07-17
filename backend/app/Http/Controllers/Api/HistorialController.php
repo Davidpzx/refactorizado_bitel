@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Reporte;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class HistorialController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->integer('per_page', 15);
+        $perPage = Paginacion::desde($request, 15);
         $user    = $request->user();
 
         $query = $this->baseQuery($request)

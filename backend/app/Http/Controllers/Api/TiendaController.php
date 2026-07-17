@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tienda;
+use App\Support\Paginacion;
 use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class TiendaController extends Controller
             ->when($request->get('q'), fn($q, $s) => $q->where('nombre', 'like', "%{$s}%")
                 ->orWhere('codigo', 'like', "%{$s}%"))
             ->orderBy('nombre')
-            ->paginate($request->integer('per_page', 50));
+            ->paginate(Paginacion::desde($request, 50));
 
         return response()->json($tiendas);
     }

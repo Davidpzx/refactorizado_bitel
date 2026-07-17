@@ -8,6 +8,7 @@ use App\Models\InventarioTienda;
 use App\Models\Usuario;
 use App\Models\VentaEquipo;
 use App\Services\ReporteDetalleNormalizer;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\PlanillaGuard;
 use App\Support\TiendaGuard;
@@ -34,7 +35,7 @@ class InventarioController extends Controller
             ->when($request->tipo,   fn($q, $t) => $q->porTipo($t))
             ->when($request->estado, fn($q, $e) => $q->porEstado($e))
             ->orderByDesc('fecha_registro')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($items);
     }

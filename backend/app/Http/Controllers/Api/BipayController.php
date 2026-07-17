@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,7 +85,7 @@ class BipayController extends Controller
         [$desde, $hasta] = $this->resolverRangoFechas($request);
         $query = $this->consultaTransacciones($request, $desde, $hasta);
 
-        $data = $query->orderByDesc('tb.creado_en')->paginate($request->integer('per_page', 20));
+        $data = $query->orderByDesc('tb.creado_en')->paginate(Paginacion::desde($request, 20));
 
         return response()->json($data);
     }

@@ -15,6 +15,7 @@ use App\Models\VentaLinea;
 use App\Services\ComisionService;
 use App\Services\ComisionOperativaService;
 use App\Services\UserAgentResolver;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\PlanillaGuard;
 use App\Support\ResourceCache;
@@ -46,7 +47,7 @@ class ReporteController extends Controller
             ->withCount('ventas')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($reportes);
     }
@@ -720,7 +721,7 @@ class ReporteController extends Controller
             ->withCount('ventas')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($reportes);
     }

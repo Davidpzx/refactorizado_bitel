@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\ResourceCache;
 use Illuminate\Http\JsonResponse;
@@ -130,7 +131,7 @@ class PostulanteController extends Controller
             });
         }
 
-        $perPage = min((int)($request->per_page ?? 30), 100);
+        $perPage = Paginacion::desde($request, 30);
         return response()->json($query->paginate($perPage));
     }
 

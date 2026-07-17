@@ -8,6 +8,7 @@ use App\Models\InventarioTienda;
 use App\Models\Tienda;
 use App\Models\TrasladoStock;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
@@ -48,7 +49,7 @@ class TrasladoController extends Controller
             $query->where('codigo_lote', $request->codigo_lote);
         }
 
-        $perPage = min((int)($request->per_page ?? 50), 200);
+        $perPage = Paginacion::desde($request, 50);
         return response()->json($query->paginate($perPage));
     }
 

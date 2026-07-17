@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
+use App\Support\Paginacion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class ClienteController extends Controller
             ->when($request->q, fn ($q, $term) => $q->where(fn ($buscar) => $buscar->buscar($term)))
             ->when($request->tipo, fn($q, $tipo) => $q->where('tipo_documento', $tipo))
             ->orderBy('nombre')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($clientes);
     }

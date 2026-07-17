@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use App\Support\Permisos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class UsuarioController extends Controller
             ->when($request->get('rol'), fn ($q, $rol) => $q->where('rol', $rol))
             ->orderBy('rol')
             ->orderBy('nombre')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(Paginacion::desde($request, 20));
 
         return response()->json($usuarios);
     }
@@ -48,7 +49,7 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'nombre' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
             'email'     => ['required', 'email', 'max:50', 'unique:usuarios,email'],
-            'password'  => ['required', 'string', 'min:6'],
+            'password'  => ['required', 'string', 'min:10'],
             // Plan 16: acepta los 4 roles canónicos + los 2 alias legacy vivos (admin→administrador, tienda→jefe_tienda).
             'rol'       => ['required', Rule::in(['admin', 'tienda', 'administrador', 'gerente', 'jefe_tienda', 'agente'])],
             'tienda_id' => ['nullable', 'string', 'max:20', 'required_if:rol,tienda', 'required_if:rol,jefe_tienda', Rule::exists('tiendas', 'codigo')],
@@ -87,7 +88,7 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'nombre' => ['sometimes', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
             'email'     => ['sometimes', 'email', 'max:50', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
-            'password'  => ['nullable', 'string', 'min:6'],
+            'password'  => ['nullable', 'string', 'min:10'],
             'rol'       => ['sometimes', Rule::in(['admin', 'tienda', 'administrador', 'gerente', 'jefe_tienda', 'agente'])],
             'tienda_id' => ['nullable', 'string', 'max:20', 'required_if:rol,tienda', 'required_if:rol,jefe_tienda', Rule::exists('tiendas', 'codigo')],
             'agente_id' => ['nullable', 'required_if:rol,agente', 'integer', 'exists:agentes,id'],

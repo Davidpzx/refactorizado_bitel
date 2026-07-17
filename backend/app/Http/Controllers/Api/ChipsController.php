@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\InventarioChip;
 use App\Models\Usuario;
+use App\Support\Paginacion;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class ChipsController extends Controller
         // Retrocompatible: sin parametros las pantallas consumen {data: Chip[]}.
         // Quien envia page/per_page opta por el shape paginado de Laravel.
         if ($request->hasAny(['page', 'per_page'])) {
-            $perPage = max(1, min($request->integer('per_page', 50), 200));
+            $perPage = Paginacion::desde($request, 50);
             return response()->json($query->paginate($perPage));
         }
 

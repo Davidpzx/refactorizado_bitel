@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
 use App\Services\UserAgentResolver;
+use App\Support\Paginacion;
 use App\Support\TiendaGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -285,7 +286,7 @@ class TicketController extends Controller
     // ── GET /tickets — Listar tickets (admin o filtro por tienda) ─────────────
     public function index(Request $request): JsonResponse
     {
-        $perPage = min((int)($request->per_page ?? 50), 200);
+        $perPage = Paginacion::desde($request, 50);
         $query   = $this->baseQuery($request)->orderByDesc('creado_en');
 
         return response()->json($query->paginate($perPage));
