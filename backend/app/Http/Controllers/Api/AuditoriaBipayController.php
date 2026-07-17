@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\AuditoriaBipayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -66,7 +67,8 @@ class AuditoriaBipayController extends Controller
 
         $scraperLogs = DB::table('bitel_operaciones_detalle')
             ->where('tienda_codigo', $aud->tienda_codigo)
-            ->whereRaw('DATE(fecha_hora) = ?', [$aud->fecha])
+            ->where('fecha_hora', '>=', $aud->fecha)
+            ->where('fecha_hora', '<', Carbon::parse($aud->fecha)->addDay()->toDateString())
             ->orderBy('fecha_hora')
             ->get(['fecha_hora', 'tipo_operacion', 'descripcion', 'monto', 'codigo_personal']);
 

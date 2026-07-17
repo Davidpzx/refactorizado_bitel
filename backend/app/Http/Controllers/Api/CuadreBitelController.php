@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\CuadreBitelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,11 +31,12 @@ class CuadreBitelController extends Controller
         $fecha = $this->fecha($request);
 
         // Tiendas con actividad Bitel ese día (si no hay, todas)
+        $fechaSiguiente = Carbon::parse($fecha)->addDay()->toDateString();
         $codigosBitel = collect(DB::select("
             SELECT DISTINCT tienda_codigo FROM bitel_operaciones_detalle
-            WHERE DATE(fecha_hora) = ? AND UPPER(descripcion) NOT LIKE 'TRANSFERENCIA%'
+            WHERE fecha_hora >= ? AND fecha_hora < ? AND UPPER(descripcion) NOT LIKE 'TRANSFERENCIA%'
             ORDER BY tienda_codigo
-        ", [$fecha]))->pluck('tienda_codigo');
+        ", [$fecha, $fechaSiguiente]))->pluck('tienda_codigo');
 
         if ($codigosBitel->isNotEmpty()) {
             $nombres = DB::table('tiendas')->whereIn('codigo', $codigosBitel)->pluck('nombre', 'codigo');
@@ -132,7 +134,8 @@ class CuadreBitelController extends Controller
         $incluir = array_filter(array_map('trim', explode(',', strtoupper((string) $request->query('agentes', '')))));
 
         $detalles = DB::table('bitel_operaciones_detalle')
-            ->whereRaw('DATE(fecha_hora) = ?', [$fecha])
+            ->where('fecha_hora', '>=', $fecha)
+            ->where('fecha_hora', '<', Carbon::parse($fecha)->addDay()->toDateString())
             ->orderBy('tienda_codigo')->orderByDesc('fecha_hora')
             ->get(['tienda_codigo', 'fecha_hora', 'tipo_operacion', 'descripcion', 'monto', 'codigo_personal']);
 

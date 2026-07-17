@@ -143,13 +143,14 @@ class AuthController extends Controller
 
     private function turnoAbierto(int $agenteId): bool
     {
-        return Schema::hasTable('asistencias')
-            && DB::table('asistencias')
-                ->where('agente_id', $agenteId)
-                ->whereDate('fecha', now()->toDateString())
-                ->whereNotNull('hora_ingreso')
-                ->whereNull('hora_salida')
-                ->exists();
+        // 'asistencias' es fundacional (create_core_tables.php, creación incondicional):
+        // no hace falta Schema::hasTable en este chequeo de cada intento de login.
+        return DB::table('asistencias')
+            ->where('agente_id', $agenteId)
+            ->where('fecha', now()->toDateString())
+            ->whereNotNull('hora_ingreso')
+            ->whereNull('hora_salida')
+            ->exists();
     }
 
     private function pinValido(string $guardado, string $pin): bool

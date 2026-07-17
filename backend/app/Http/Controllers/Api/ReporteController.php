@@ -592,7 +592,7 @@ class ReporteController extends Controller
                     ReporteBorrador::query()
                         ->where('agente_id', $agenteId)
                         ->where('tienda_id', $user->tienda_id)
-                        ->whereDate('fecha', now(config('reportes.timezone'))->toDateString())
+                        ->where('fecha', now(config('reportes.timezone'))->toDateString())
                         ->delete();
                 } catch (\Throwable $cleanupError) {
                     Log::warning('No se pudo limpiar el borrador tras guardar el reporte.', [

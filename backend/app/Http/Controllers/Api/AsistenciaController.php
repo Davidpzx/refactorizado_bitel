@@ -35,7 +35,10 @@ class AsistenciaController extends Controller
 
     private function tablaExiste(): bool
     {
-        return Schema::hasTable('asistencias');
+        // 'asistencias' es fundacional (2026_06_07_200000_create_core_tables.php,
+        // creación incondicional): comprobar su existencia en cada request es
+        // overhead puro en el controlador más caliente del sistema.
+        return true;
     }
 
     private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float
@@ -381,7 +384,7 @@ class AsistenciaController extends Controller
         $hoy = $this->ahora()->toDateString();
         $asistencia = DB::table('asistencias')
             ->where('agente_id', $agente->id)
-            ->whereDate('fecha', $hoy)
+            ->where('fecha', $hoy)
             ->first();
 
         if (! $asistencia || empty($asistencia->hora_ingreso)) {
@@ -2123,7 +2126,7 @@ class AsistenciaController extends Controller
         if ($estado === 'PERDONAR') {
             $borrados = DB::table('asistencias')
                 ->where('agente_id', $agenteId)
-                ->whereDate('fecha', $fecha)
+                ->where('fecha', $fecha)
                 ->whereIn('estado_asistencia', ['FALTA_INJUSTIFICADA', 'PERMISO', 'EXCEPCION'])
                 ->delete();
 
@@ -2136,7 +2139,7 @@ class AsistenciaController extends Controller
         // FALTA/PERMISO: insertar excepción (sin duplicar el día).
         $existe = DB::table('asistencias')
             ->where('agente_id', $agenteId)
-            ->whereDate('fecha', $fecha)
+            ->where('fecha', $fecha)
             ->exists();
         if ($existe) {
             return response()->json(['success' => false, 'message' => 'Ya existe un registro de asistencia para ese día.'], 422);

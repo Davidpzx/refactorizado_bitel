@@ -41,7 +41,7 @@ class ReporteBorradorController extends Controller
 
         $borrador = ReporteBorrador::query()
             ->where('tienda_id', $tiendaId)
-            ->whereDate('fecha', $fecha)
+            ->where('fecha', $fecha)
             ->orderByRaw('CASE WHEN agente_id = ? THEN 0 ELSE 1 END', [$agenteId])
             ->orderByDesc('actualizado_en')
             ->first();
@@ -86,7 +86,7 @@ class ReporteBorradorController extends Controller
         $existia = ReporteBorrador::query()
             ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
-            ->whereDate('fecha', $fecha)
+            ->where('fecha', $fecha)
             ->exists();
 
         DB::table('reportes_borradores')->upsert(
@@ -105,7 +105,7 @@ class ReporteBorradorController extends Controller
         $borrador = ReporteBorrador::query()
             ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
-            ->whereDate('fecha', $fecha)
+            ->where('fecha', $fecha)
             ->firstOrFail();
 
         return response()->json([
@@ -124,7 +124,7 @@ class ReporteBorradorController extends Controller
         ReporteBorrador::query()
             ->where('agente_id', $agenteId)
             ->where('tienda_id', $tiendaId)
-            ->whereDate('fecha', $this->fechaOperativa())
+            ->where('fecha', $this->fechaOperativa())
             ->delete();
 
         return response()->json([

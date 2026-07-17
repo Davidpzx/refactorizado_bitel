@@ -203,7 +203,7 @@ class AsistenciaPresenciaController extends Controller
         // Agentes con turno abierto hoy (entrada marcada, sin salida).
         $turnos = DB::table('asistencias as a')
             ->join('agentes as ag', 'ag.id', '=', 'a.agente_id')
-            ->whereDate('a.fecha', $hoy)
+            ->where('a.fecha', $hoy)
             ->whereNotNull('a.hora_ingreso')
             ->whereNull('a.hora_salida')
             ->select([
@@ -231,7 +231,8 @@ class AsistenciaPresenciaController extends Controller
         $incidencias = Schema::hasTable('asistencia_incidencias_ubicacion')
             ? DB::table('asistencia_incidencias_ubicacion')
                 ->whereIn('agente_id', $agenteIds)
-                ->whereDate('created_at', $hoy)
+                ->where('created_at', '>=', $hoy)
+                ->where('created_at', '<', Carbon::parse($hoy)->addDay()->toDateString())
                 ->select('agente_id', DB::raw('COUNT(*) as total'))
                 ->groupBy('agente_id')
                 ->pluck('total', 'agente_id')

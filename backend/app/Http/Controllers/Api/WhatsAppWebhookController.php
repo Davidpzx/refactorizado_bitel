@@ -93,7 +93,8 @@ class WhatsAppWebhookController extends Controller
                 : now(),
         ]);
 
-        $chat->update(['ultimo_mensaje_at' => $mensaje->timestamp, 'no_leidos' => $chat->no_leidos + 1]);
+        $chat->update(['ultimo_mensaje_at' => $mensaje->timestamp]);
+        $chat->increment('no_leidos');
 
         $this->procesarBot($cuenta, $chat, (string) ($contenido ?? ''), $opcionId);
 

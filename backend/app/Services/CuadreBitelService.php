@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -77,14 +78,15 @@ class CuadreBitelService
             ->where('tienda_id', $tienda)->where('fecha', $fecha)
             ->sum('recarga_bipay'), 2);
 
+        $fechaSiguiente = Carbon::parse($fecha)->addDay()->toDateString();
         $movimientos = DB::select("
             SELECT COALESCE(NULLIF(SUBSTRING_INDEX(TRIM(descripcion), ' ', 1), ''), tipo_operacion, 'OTRO') AS op_tipo,
                    COUNT(*) AS cantidad, COALESCE(SUM(monto), 0) AS total
             FROM bitel_operaciones_detalle
-            WHERE tienda_codigo = ? AND DATE(fecha_hora) = ?
+            WHERE tienda_codigo = ? AND fecha_hora >= ? AND fecha_hora < ?
               AND UPPER(TRIM(descripcion)) NOT LIKE 'TRANSFERENCIA%'
             GROUP BY op_tipo ORDER BY total
-        ", [$tienda, $fecha]);
+        ", [$tienda, $fecha, $fechaSiguiente]);
 
         $scrapeadoTotal = round(array_sum(array_map(fn ($m) => abs((float) $m->total), $movimientos)), 2);
         $diferencia     = round($scrapeadoTotal - $declaradoTotal, 2);
@@ -113,7 +115,8 @@ class CuadreBitelService
 
         $bitelRows = DB::table('bitel_operaciones_detalle')
             ->whereIn('tienda_codigo', $tiendas)
-            ->whereRaw('DATE(fecha_hora) = ?', [$fecha])
+            ->where('fecha_hora', '>=', $fecha)
+            ->where('fecha_hora', '<', Carbon::parse($fecha)->addDay()->toDateString())
             ->groupBy('descripcion')
             ->selectRaw('descripcion, MAX(codigo_personal) AS codigo_personal, COUNT(*) AS cantidad, COALESCE(SUM(monto),0) AS total')
             ->get();
@@ -163,7 +166,8 @@ class CuadreBitelService
     public function detectarAnomaliaApoyo(string $fecha): array
     {
         $bitelPorTienda = DB::table('bitel_operaciones_detalle')
-            ->whereRaw('DATE(fecha_hora) = ?', [$fecha])
+            ->where('fecha_hora', '>=', $fecha)
+            ->where('fecha_hora', '<', Carbon::parse($fecha)->addDay()->toDateString())
             ->whereRaw("UPPER(descripcion) NOT LIKE 'TRANSFERENCIA%'")
             ->groupBy('tienda_codigo')
             ->selectRaw('tienda_codigo, ABS(COALESCE(SUM(monto),0)) AS total_bitel')
@@ -210,7 +214,8 @@ class CuadreBitelService
             ->pluck('recarga', 'tienda');
 
         $scr = DB::table('bitel_operaciones_detalle')
-            ->whereRaw('DATE(fecha_hora) = ?', [$fecha])
+            ->where('fecha_hora', '>=', $fecha)
+            ->where('fecha_hora', '<', Carbon::parse($fecha)->addDay()->toDateString())
             ->whereNull('codigo_personal')
             ->groupBy('tienda_codigo')
             ->selectRaw('tienda_codigo AS tienda, COALESCE(SUM(ABS(monto)),0) AS total, COUNT(*) AS cant')
