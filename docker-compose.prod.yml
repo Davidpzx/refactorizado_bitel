@@ -7,7 +7,7 @@
 #   3. Las variables VITE_* se inyectan en build-time del frontend vía ARG.
 #
 # Servicios:
-#   backend  → Laravel 11 (PHP-FPM + artisan serve)
+#   backend  → Laravel 11 (Nginx + PHP-FPM via entrypoint.sh)
 #   frontend → React 18 compilado servido por Nginx
 #   redis    → Cola + caché + sesiones
 
@@ -63,18 +63,15 @@ services:
         condition: service_healthy
     networks:
       - siskyro
-    # Ejecutar optimizaciones de Laravel al arrancar
-    command: >
-      sh -c "php artisan config:cache &&
-             php artisan route:cache &&
-             php artisan view:cache &&
-             php artisan serve --host=0.0.0.0 --port=8000"
+    # Sin override de command: se usa el entrypoint de la imagen (Nginx + PHP-FPM,
+    # con OPcache y config/route/view:cache). `artisan serve` es servidor de
+    # desarrollo y no debe usarse en producción.
     healthcheck:
-      test: ["CMD", "php", "artisan", "health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
 
   # ── Queue Worker ─────────────────────────────────────────────────────────
   queue:
@@ -102,6 +99,34 @@ services:
     networks:
       - siskyro
     command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+
+  # ── Scheduler ────────────────────────────────────────────────────────────
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_KEY: "${APP_KEY}"
+      DB_HOST: "${DB_HOST}"
+      DB_PORT: "${DB_PORT:-3306}"
+      DB_DATABASE: "${DB_DATABASE:-migracion}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_PREFIX: "siskyro_"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - siskyro
+    command: php artisan schedule:work
 
   # ── Frontend React (Nginx) ───────────────────────────────────────────────
   frontend:
@@ -139,7 +164,7 @@ services:
     networks:
       - siskyro
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD:-}\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5

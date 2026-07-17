@@ -180,9 +180,9 @@ class IntegradorController extends Controller
                 ];
             });
         } catch (\Throwable $e) {
-            Log::error('[INTEGRADOR] recibirSaldo: '.$e->getMessage());
+            Log::error($e);
 
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            return response()->json(['ok' => false, 'error' => 'Error interno del servidor'], 500);
         }
 
         // Entregar al agente las colas pendientes (deudas on-demand + histórico Bitel)
@@ -238,7 +238,9 @@ class IntegradorController extends Controller
                 return [$clientes, $morosidad];
             });
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['ok' => false, 'error' => 'Error interno del servidor'], 500);
         }
 
         return response()->json([
@@ -280,8 +282,9 @@ class IntegradorController extends Controller
         } catch (\Throwable $e) {
             DB::table('bitel_historico_queue')->where('id', $queueId)
                 ->update(['estado' => 'ERROR', 'mensaje' => substr($e->getMessage(), 0, 255)]);
+            Log::error($e);
 
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            return response()->json(['ok' => false, 'error' => 'Error interno del servidor'], 500);
         }
     }
 

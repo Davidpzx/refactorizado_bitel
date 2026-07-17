@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class TrasladoController extends Controller
@@ -539,7 +540,9 @@ class TrasladoController extends Controller
                 return ['ids' => $confirmados, 'destino' => $destino];
             });
         } catch (\RuntimeException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            Log::error($e);
+
+            return response()->json(['success' => false, 'message' => 'Error interno del servidor'], 422);
         }
 
         return response()->json([

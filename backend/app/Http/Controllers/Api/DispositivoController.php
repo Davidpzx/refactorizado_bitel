@@ -110,15 +110,9 @@ class DispositivoController extends Controller
         $hashDb = trim((string) $agente->hash_dispositivo);
 
         if ($hashDb === '') {
-            DB::table('agentes')->where('id', $agente->id)->update([
-                'hash_dispositivo' => $deviceHash,
-                'fecha_registro_disp' => now(),
-            ]);
-
             return response()->json([
-                'status' => 'ok',
-                'primer_dispositivo' => true,
-                'mensaje' => 'Dispositivo registrado automáticamente.',
+                'status' => 'require_pin',
+                'mensaje' => 'Ingresa tu PIN para autorizar el primer dispositivo.',
             ]);
         }
 

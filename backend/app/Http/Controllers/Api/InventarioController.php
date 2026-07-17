@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -504,7 +505,9 @@ class InventarioController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['success' => false, 'msg' => 'Error: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['success' => false, 'msg' => 'Error interno del servidor'], 500);
         }
 
         return response()->json(['success' => true, 'msg' => "Se actualizaron {$updated} registros.", 'updated' => $updated]);

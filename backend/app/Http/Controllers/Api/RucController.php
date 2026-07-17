@@ -63,9 +63,11 @@ class RucController extends Controller
             Cache::put($cacheKey, $normalizado, self::TTL);
             return response()->json($normalizado);
         } catch (\Throwable $e) {
+            Log::error($e);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al consultar SUNAT: ' . $e->getMessage(),
+                'message' => 'Error interno del servidor',
             ], 503);
         }
     }

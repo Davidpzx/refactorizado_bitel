@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class PostulanteController extends Controller
@@ -33,7 +34,9 @@ class PostulanteController extends Controller
             $fotoPerfil = $this->procesarDocumento($request, 'foto_perfil', permitirPdf: false);
             $fotoDni    = $this->procesarDocumento($request, 'foto_dni', permitirPdf: true);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            Log::error($e);
+
+            return response()->json(['success' => false, 'message' => 'Error interno del servidor'], 422);
         }
 
         $yaExiste = DB::table('postulantes_temp')

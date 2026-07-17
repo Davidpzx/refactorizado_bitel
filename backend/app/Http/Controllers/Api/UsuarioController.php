@@ -12,13 +12,25 @@ use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
+    private function bloquearGestionDeAdministrador(Request $request, Usuario $usuario): ?JsonResponse
+    {
+        if ($usuario->esAdministrador()
+            && ! Permisos::puede($request->user(), 'crear_administradores')) {
+            return response()->json([
+                'error' => 'No tienes permisos para modificar usuarios administradores.',
+            ], 403);
+        }
+
+        return null;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $usuarios = Usuario::query()
             ->with('agente:id,nombres,dni')
-            ->when($request->get('q'), fn($q, $s) => $q->where('nombre', 'like', "%{$s}%")
+            ->when($request->get('q'), fn ($q, $s) => $q->where('nombre', 'like', "%{$s}%")
                 ->orWhere('email', 'like', "%{$s}%"))
-            ->when($request->get('rol'), fn($q, $rol) => $q->where('rol', $rol))
+            ->when($request->get('rol'), fn ($q, $rol) => $q->where('rol', $rol))
             ->orderBy('rol')
             ->orderBy('nombre')
             ->paginate($request->integer('per_page', 20));
@@ -34,7 +46,7 @@ class UsuarioController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'nombre'    => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
+            'nombre' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
             'email'     => ['required', 'email', 'max:50', 'unique:usuarios,email'],
             'password'  => ['required', 'string', 'min:6'],
             // Plan 16: acepta los 4 roles canónicos + los 2 alias legacy vivos (admin→administrador, tienda→jefe_tienda).
@@ -68,8 +80,12 @@ class UsuarioController extends Controller
 
     public function update(Request $request, Usuario $usuario): JsonResponse
     {
+        if ($respuesta = $this->bloquearGestionDeAdministrador($request, $usuario)) {
+            return $respuesta;
+        }
+
         $data = $request->validate([
-            'nombre'    => ['sometimes', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
+            'nombre' => ['sometimes', 'string', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\'-]+$/'],
             'email'     => ['sometimes', 'email', 'max:50', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
             'password'  => ['nullable', 'string', 'min:6'],
             'rol'       => ['sometimes', Rule::in(['admin', 'tienda', 'administrador', 'gerente', 'jefe_tienda', 'agente'])],
@@ -113,15 +129,23 @@ class UsuarioController extends Controller
     }
 
     /** SEC-16: revocación manual de todas las sesiones de un usuario (compromiso sospechado). */
-    public function revocarTokens(Usuario $usuario): JsonResponse
+    public function revocarTokens(Request $request, Usuario $usuario): JsonResponse
     {
+        if ($respuesta = $this->bloquearGestionDeAdministrador($request, $usuario)) {
+            return $respuesta;
+        }
+
         $usuario->tokens()->delete();
 
         return response()->json(['ok' => true, 'mensaje' => 'Todas las sesiones del usuario fueron cerradas.']);
     }
 
-    public function destroy(Usuario $usuario): JsonResponse
+    public function destroy(Request $request, Usuario $usuario): JsonResponse
     {
+        if ($respuesta = $this->bloquearGestionDeAdministrador($request, $usuario)) {
+            return $respuesta;
+        }
+
         // No permitir eliminar al propio usuario autenticado
         if ($usuario->id === auth()->id()) {
             return response()->json(['error' => 'No puedes eliminar tu propia cuenta.'], 422);

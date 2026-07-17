@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\EnviarComprobanteSunat;
 use App\Models\Comprobante;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,26 @@ use Illuminate\Validation\Rule;
  */
 class ComprobanteController extends Controller
 {
+    private function aplicarScopeTienda(Builder $query, Request $request): Builder
+    {
+        $user = $request->user();
+
+        if (! $user->esAdministrador()) {
+            $query->whereHas('venta.reporte', fn ($reporte) => $reporte
+                ->where('tienda_id', $user->tienda_id ?: '__SIN_TIENDA__'));
+        }
+
+        return $query;
+    }
+
+    private function autorizarAcceso(Request $request, Comprobante $comprobante): void
+    {
+        abort_unless(
+            $this->aplicarScopeTienda(Comprobante::query()->whereKey($comprobante->getKey()), $request)->exists(),
+            404
+        );
+    }
+
     /** Respuesta 410 mientras la ruta Greenter esté apagada, o `null` si está activa. */
     private function greenterApagado(): ?JsonResponse
     {
@@ -35,13 +56,13 @@ class ComprobanteController extends Controller
     public function index(Request $request): JsonResponse
     {
         if ($request->estado_sunat) {
-            $comprobantes = Comprobante::query()
+            $comprobantes = $this->aplicarScopeTienda(Comprobante::query(), $request)
                 ->with(['venta.cliente'])
                 ->where('estado_sunat', $request->estado_sunat)
                 ->latest('creado_en')
                 ->paginate($request->integer('per_page', 20));
         } else {
-            $comprobantes = Comprobante::query()
+            $comprobantes = $this->aplicarScopeTienda(Comprobante::query(), $request)
                 ->with(['venta.cliente'])
                 ->when($request->tipo, fn($q, $t) => $q->where('tipo_comprobante', $t))
                 ->pendientes()
@@ -52,8 +73,10 @@ class ComprobanteController extends Controller
         return response()->json($comprobantes);
     }
 
-    public function show(Comprobante $comprobante): JsonResponse
+    public function show(Request $request, Comprobante $comprobante): JsonResponse
     {
+        $this->autorizarAcceso($request, $comprobante);
+
         $comprobante->load(['venta.cliente', 'venta.equipo', 'venta.linea']);
         return response()->json($comprobante);
     }
@@ -112,8 +135,10 @@ class ComprobanteController extends Controller
         return response()->json(['message' => 'Comprobante encolado para reenvío.']);
     }
 
-    public function destroy(Comprobante $comprobante): JsonResponse
+    public function destroy(Request $request, Comprobante $comprobante): JsonResponse
     {
+        $this->autorizarAcceso($request, $comprobante);
+
         if ($comprobante->estaAceptado()) {
             return response()->json(['error' => 'No se puede eliminar un comprobante aceptado por SUNAT.'], 422);
         }

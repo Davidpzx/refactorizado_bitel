@@ -123,7 +123,9 @@ class FacturacionConfigController extends Controller
                 trim($datos['clave_sol']),
             );
         } catch (SunatSetupException $e) {
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], $e->status);
+            Log::error($e);
+
+            return response()->json(['ok' => false, 'msg' => 'Error interno del servidor'], $e->status);
         } catch (Throwable $e) {
             // Sin secretos: el password va por STDIN a OpenSSL, nunca por argv.
             Log::error('[FACT-CONFIGURE-SUNAT] fallo inesperado', [

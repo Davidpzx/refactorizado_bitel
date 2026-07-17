@@ -267,7 +267,9 @@ class BipayController extends Controller
             return response()->json(['message' => 'Recarga registrada. Nuevo saldo: S/ ' . number_format($nuevoTotal, 2)]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 

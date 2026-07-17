@@ -16,6 +16,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -52,45 +53,17 @@ class AsistenciaController extends Controller
             return response()->json(['error' => 'DNI no encontrado.'], 404);
         }
 
-        $ahora = $this->ahora();
-        $hoy = $ahora->toDateString();
+        $hoy = $this->ahora()->toDateString();
         $asistencia = DB::table('asistencias')
             ->where('agente_id', $agente->id)
             ->where('fecha', $hoy)
             ->first();
 
-        $siguiente = $this->siguienteMarcacion($asistencia, $agente);
-        $tienda = $this->buscarTienda($request->query('tienda_id'));
-        $radio = max(10, (int) ($this->valor($tienda, 'radio_permitido', 60) ?: 60));
-        $tieneRefrigerio = $this->agenteTieneRefrigerio($agente);
-        $deviceId = trim((string) $request->query('device_id', $request->query('device_hash', '')));
-        $hashDispositivo = trim((string) $this->valor($agente, 'hash_dispositivo', ''));
-
         return response()->json([
             'agente' => [
-                'id' => $agente->id,
                 'nombre' => $agente->nombres ?? $agente->nombre ?? '',
-                'tienda_id' => $agente->tienda_id ?? $agente->tienda_base ?? null,
             ],
-            'asistencia' => $asistencia,
-            'siguiente_marcacion' => $siguiente,
-            'siguiente' => $this->tipoLegacy($siguiente),
-            'next_tipo' => $this->tipoLegacy($siguiente),
-            'fecha' => $hoy,
-            'timestamp_servidor' => $ahora->getTimestampMs(),
-            'hora_servidor' => $ahora->toTimeString(),
             'entrada' => ! empty($asistencia?->hora_ingreso),
-            'salida_refrigerio' => ! empty($asistencia?->inicio_refrigerio),
-            'entrada_refrigerio' => ! empty($asistencia?->fin_refrigerio),
-            'salida' => ! empty($asistencia?->hora_salida),
-            'tiene_refri' => $tieneRefrigerio,
-            'es_medio_tiempo' => ! $tieneRefrigerio,
-            'omitio_refrigerio' => (bool) $this->valor($asistencia, 'omitio_refrigerio', false),
-            'turno_extendido' => (bool) $this->valor($asistencia, 'turno_extendido', false),
-            'minutos_refrigerio_asignado' => $this->valor($asistencia, 'minutos_refrigerio_asignado'),
-            'radio_permitido' => $radio,
-            'accuracy_maxima' => $radio,
-            'device_authorized' => $deviceId !== '' && $hashDispositivo !== '' && hash_equals($hashDispositivo, $deviceId),
         ]);
     }
 
@@ -383,7 +356,7 @@ class AsistenciaController extends Controller
 
         $data = $request->validate([
             'dni' => ['required', 'string'],
-            'huella' => ['required', 'string'],
+            'huella' => ['nullable', 'string'],
         ]);
 
         $agente = $this->buscarAgente($data['dni']);
@@ -392,6 +365,15 @@ class AsistenciaController extends Controller
         }
         if ($error = $this->validarAgenteActivo($agente)) {
             return $error;
+        }
+
+        $huella = trim((string) ($data['huella'] ?? ''));
+        $hashDispositivo = trim((string) $this->valor($agente, 'hash_dispositivo', ''));
+        if ($huella === '' || $hashDispositivo === '' || ! hash_equals($hashDispositivo, $huella)) {
+            return response()->json([
+                'error' => 'Dispositivo no autorizado.',
+                'code' => 'DEVICE_MISMATCH',
+            ], 403);
         }
 
         $hoy = $this->ahora()->toDateString();
@@ -831,7 +813,10 @@ class AsistenciaController extends Controller
         }
 
         if ($deviceId === '') {
-            return null;
+            return response()->json([
+                'error' => 'Identificador de dispositivo requerido.',
+                'code' => 'DEVICE_REQUIRED',
+            ], 403);
         }
 
         // El sentinel dasam-sf- (bypass manual de fraude) solo puede originarse por edición directa
@@ -849,7 +834,7 @@ class AsistenciaController extends Controller
         $columnaHash = str_starts_with($deviceId, 'dasam-face-') ? 'hash_facial' : 'hash_dispositivo';
         $hashDb = trim((string) $this->valor($agente, $columnaHash, ''));
 
-        if (! $usaToken && $hashDb !== '' && ! hash_equals($hashDb, $deviceId)) {
+        if (! $usaToken && ($hashDb === '' || ! hash_equals($hashDb, $deviceId))) {
             if (str_starts_with($hashDb, 'dasam-sf-')) {
                 // Sentinel dasam-sf-: bypass manual de fraude para este agente/columna. No bloquea,
                 // no registra fraude y no re-vincula (el sentinel se mantiene tal cual en BD).
@@ -1727,8 +1712,9 @@ class AsistenciaController extends Controller
             throw $e;
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error($e);
 
-            return response()->json(['success' => false, 'mensaje' => $e->getMessage()]);
+            return response()->json(['success' => false, 'mensaje' => 'Error interno del servidor']);
         }
     }
 

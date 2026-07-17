@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ComprobanteCola;
 use App\Models\FacturacionConfig;
+use App\Models\Usuario;
 use App\Services\Facturacion\CpeLinkService;
 use App\Services\Facturacion\FacturacionApiClient;
 use App\Services\Facturacion\ProcesadorColaComprobantes;
 use App\Services\Facturacion\ResultadoProceso;
+use App\Support\TiendaGuard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -273,6 +275,7 @@ class ComprobanteColaController extends Controller
     public function link(Request $request, int $id, CpeLinkService $links): JsonResponse
     {
         $cola = ComprobanteCola::findOrFail($id);
+        $this->autorizarTienda($request, $cola->tienda_id);
 
         if (!in_array($cola->estado, [ComprobanteCola::ESTADO_ACEPTADO, ComprobanteCola::ESTADO_ANULADO], true)) {
             return response()->json(['error' => 'El comprobante aún no tiene un CPE emitido para compartir.'], 422);
@@ -345,12 +348,30 @@ class ComprobanteColaController extends Controller
         ]);
 
         if (isset($datos['cola_id'])) {
-            return ComprobanteCola::findOrFail($datos['cola_id']);
+            $cola = ComprobanteCola::findOrFail($datos['cola_id']);
+            $this->autorizarTienda($request, $cola->tienda_id);
+
+            return $cola;
         }
+
+        $this->autorizarTienda($request, $datos['tienda_id'] ?? null);
 
         // Encolar primero y emitir después no es una formalidad: si el proceso muere
         // entre ambos pasos, la fila ya existe y el cron la recoge.
         return ComprobanteCola::encolar(Arr::except($datos, ['cola_id']));
+    }
+
+    private function autorizarTienda(Request $request, ?string $tiendaId): void
+    {
+        $usuario = $request->user();
+        $veTodasLasTiendas = $usuario instanceof Usuario
+            && $usuario->tieneAlgunRol(Usuario::ROL_ADMINISTRADOR, Usuario::ROL_GERENTE);
+
+        abort_if(
+            TiendaGuard::bloqueaAcceso($veTodasLasTiendas, $usuario?->tienda_id, $tiendaId),
+            403,
+            'No tienes permisos sobre los comprobantes de esta tienda.'
+        );
     }
 
     /** @return array<string, mixed> */

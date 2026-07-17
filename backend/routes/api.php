@@ -243,14 +243,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('app-terminal/subir', [AppTerminalController::class, 'subir'])->middleware('role:administrador');
 
     // ── Facturación electrónica — emisión ─────────────────────────────────────
-    // Único camino de emisión síncrona: encola y drena esa misma fila. Cualquier
-    // usuario autenticado puede pedirlo (el cajero entrega la boleta en el acto);
+    // Único camino de emisión síncrona: encola y drena esa misma fila. Un cajero
+    // autorizado puede pedirlo; el jefe queda limitado a su propia tienda.
     // el resto de la cola la drena `facturacion:procesar-cola` cada minuto.
-    Route::post('comprobantes-cola/emitir-ahora', [ComprobanteColaController::class, 'emitirAhora']);
+    Route::post('comprobantes-cola/emitir-ahora', [ComprobanteColaController::class, 'emitirAhora'])
+        ->middleware('role:administrador,gerente,jefe_tienda');
 
-    // Link público firmado (WhatsApp): cualquier autenticado puede generarlo, igual
-    // que puede "emitir ahora" — es el mismo cajero entregando el comprobante.
-    Route::post('comprobantes-cola/{id}/link', [ComprobanteColaController::class, 'link']);
+    // Link público firmado (WhatsApp): respeta el mismo rol y scope que la emisión.
+    Route::post('comprobantes-cola/{id}/link', [ComprobanteColaController::class, 'link'])
+        ->middleware('role:administrador,gerente,jefe_tienda');
 
     // ── Facturación electrónica — nota de crédito, anulación y descarga (admin) ─
     // Todas operan sobre `comprobantes_cola` (ticket 005), no sobre la tabla
@@ -332,7 +333,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // ── Reporte BCP ───────────────────────────────────────────────────────────
     Route::get('reporte-bcp',         [ReporteBcpController::class, 'index'])->middleware('role:admin');
-    Route::post('reporte-bcp',        [ReporteBcpController::class, 'store'])->middleware('open.shift');
+    Route::post('reporte-bcp',        [ReporteBcpController::class, 'store'])
+        ->middleware(['role:administrador,gerente,jefe_tienda', 'open.shift']);
     Route::get('reporte-bcp/tiendas', [ReporteBcpController::class, 'tiendas']);
 
     // ── Usuarios ──────────────────────────────────────────────────────────────

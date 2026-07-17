@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * "Cliente Activo" del cuadre: CRM ligero por DNI usado desde Nuevo Cuadre.
@@ -112,7 +113,9 @@ class ClienteCrmController extends Controller
                 return $clienteId;
             });
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => 'Error de base de datos: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['ok' => false, 'error' => 'Error interno del servidor'], 500);
         }
 
         return response()->json([

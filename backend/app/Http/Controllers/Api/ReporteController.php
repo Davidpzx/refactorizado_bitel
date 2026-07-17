@@ -608,10 +608,14 @@ class ReporteController extends Controller
         } catch (\RuntimeException $e) {
             DB::rollBack();
             // Violación de regla de negocio (p.ej. guardia de stock) → 422, no 500.
-            return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor', 'code' => 'STOCK_GUARD'], 422);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al guardar: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 
@@ -1378,10 +1382,14 @@ class ReporteController extends Controller
             return response()->json($reporte->fresh()->load(['ventas.equipo', 'ventas.linea', 'ventas.cliente', 'salidas']));
         } catch (\RuntimeException $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor', 'code' => 'STOCK_GUARD'], 422);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al reprocesar: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 
@@ -1606,10 +1614,14 @@ class ReporteController extends Controller
             return response()->json($reporte);
         } catch (\RuntimeException $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage(), 'code' => 'STOCK_GUARD'], 422);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor', 'code' => 'STOCK_GUARD'], 422);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al agregar la venta: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 
@@ -1671,7 +1683,9 @@ class ReporteController extends Controller
             return response()->json($reporte);
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al eliminar la venta: ' . $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 

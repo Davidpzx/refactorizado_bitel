@@ -153,7 +153,9 @@ class ConfiguracionController extends Controller
         try {
             $sincronizar->ejecutar($config, trim($datos['clave_sol']));
         } catch (SunatSetupException $e) {
-            return response()->json(['ok' => false, 'msg' => $e->getMessage()], $e->status);
+            Log::error($e);
+
+            return response()->json(['ok' => false, 'msg' => 'Error interno del servidor'], $e->status);
         } catch (Throwable $e) {
             Log::error('[FACT-SYNC-LOGO] fallo inesperado', [
                 'excepcion' => $e::class,

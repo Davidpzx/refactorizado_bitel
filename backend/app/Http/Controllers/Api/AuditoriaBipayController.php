@@ -7,6 +7,7 @@ use App\Services\AuditoriaBipayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Auditoría de cierres Bipay (cruce declarado vs scrapeado) + resolución de
@@ -151,7 +152,9 @@ class AuditoriaBipayController extends Controller
                 ]);
             });
         } catch (\Throwable $e) {
-            return response()->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            Log::error($e);
+
+            return response()->json(['ok' => false, 'error' => 'Error interno del servidor'], 500);
         }
 
         return response()->json(['ok' => true, 'message' => 'Conflicto resuelto y comisión re-atribuida con éxito.']);

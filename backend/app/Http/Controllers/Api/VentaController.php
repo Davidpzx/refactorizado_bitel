@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Venta;
 use App\Models\Cliente;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +13,29 @@ use Illuminate\Validation\Rule;
 
 class VentaController extends Controller
 {
+    private function aplicarScopeTienda(Builder $query, Request $request): Builder
+    {
+        $user = $request->user();
+
+        if (! $user->esAdministrador()) {
+            $query->whereHas('reporte', fn ($reporte) => $reporte
+                ->where('tienda_id', $user->tienda_id ?: '__SIN_TIENDA__'));
+        }
+
+        return $query;
+    }
+
+    private function autorizarAcceso(Request $request, Venta $venta): void
+    {
+        abort_unless(
+            $this->aplicarScopeTienda(Venta::query()->whereKey($venta->getKey()), $request)->exists(),
+            404
+        );
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $ventas = Venta::query()
+        $ventas = $this->aplicarScopeTienda(Venta::query(), $request)
             ->with(['cliente', 'items'])
             ->when($request->reporte_id, fn($q, $id) => $q->porReporte($id))
             ->when($request->tipo_venta, fn($q, $tipo) => $q->porTipo($tipo))
@@ -25,8 +46,10 @@ class VentaController extends Controller
         return response()->json($ventas);
     }
 
-    public function show(Venta $venta): JsonResponse
+    public function show(Request $request, Venta $venta): JsonResponse
     {
+        $this->autorizarAcceso($request, $venta);
+
         $venta->load(['cliente', 'items', 'comprobantes']);
         return response()->json($venta);
     }
@@ -90,6 +113,8 @@ class VentaController extends Controller
 
     public function update(Request $request, Venta $venta): JsonResponse
     {
+        $this->autorizarAcceso($request, $venta);
+
         $data = $request->validate([
             'comision_estado' => ['sometimes', Rule::in(['ACTIVA', 'PENDIENTE', 'ANULADA'])],
             'monto_total'     => ['sometimes', 'numeric', 'min:0'],
@@ -100,8 +125,10 @@ class VentaController extends Controller
         return response()->json($venta->fresh(['cliente', 'items']));
     }
 
-    public function destroy(Venta $venta): JsonResponse
+    public function destroy(Request $request, Venta $venta): JsonResponse
     {
+        $this->autorizarAcceso($request, $venta);
+
         if ($venta->comprobantes()->where('estado_sunat', 'ACEPTADO')->exists()) {
             return response()->json(['error' => 'No se puede eliminar: tiene comprobantes aceptados por SUNAT.'], 422);
         }
