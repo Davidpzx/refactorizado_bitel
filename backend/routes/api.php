@@ -109,6 +109,7 @@ Route::prefix('v1/app-terminal')->group(function () {
 Route::prefix('v1/app-venta')->group(function () {
     Route::get('version',   [AppVentaController::class, 'version'])->middleware('throttle:60,1');
     Route::get('ota',       [AppVentaController::class, 'ota'])->middleware('throttle:60,1');
+    Route::get('ota-file',  [AppVentaController::class, 'otaFile'])->middleware('throttle:60,1');
     Route::get('descargar', [AppVentaController::class, 'descargar'])->middleware('throttle:30,1');
 });
 

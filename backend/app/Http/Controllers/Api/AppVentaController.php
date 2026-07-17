@@ -45,14 +45,52 @@ class AppVentaController extends Controller
     {
         $fila = DB::table('app_venta_version')->orderByDesc('id')->first();
 
-        if (! $fila || empty($fila->ota_bundle_version) || empty($fila->ota_url_zip)) {
+        if (! $fila || empty($fila->ota_bundle_version)) {
             return response()->json(['disponible' => false, 'bundle_version' => null]);
         }
+
+        $base = url('/api/v1/app-venta/ota-file') . '?file=';
 
         return response()->json([
             'disponible'     => true,
             'bundle_version' => $fila->ota_bundle_version,
-            'url_zip'        => $fila->ota_url_zip,
+            'files'          => [
+                'app.js'     => $base . 'app.js',
+                'styles.css' => $base . 'styles.css',
+                'index.html' => $base . 'index.html',
+                'config.js'  => $base . 'config.js',
+            ],
+        ]);
+    }
+
+    /**
+     * Sirve los 4 archivos de la app Venta Online desde storage/app/app-venta/ota/
+     * (subidos junto con el APK). Mismo propósito que ota_files.php en rolando,
+     * pero bitel no comparte filesystem con ese repo, así que aquí sí es una copia
+     * que hay que re-subir cuando cambie la lógica compartida de la app.
+     */
+    public function otaFile(Request $request): mixed
+    {
+        $permitidos = [
+            'app.js'     => 'application/javascript',
+            'styles.css' => 'text/css',
+            'index.html' => 'text/html',
+            'config.js'  => 'application/javascript',
+        ];
+
+        $file = (string) $request->query('file', '');
+        if (! isset($permitidos[$file])) {
+            return response()->json(['success' => false, 'message' => 'Archivo no encontrado'], 404);
+        }
+
+        $ruta = storage_path('app/app-venta/ota/' . $file);
+        if (! is_file($ruta)) {
+            return response()->json(['success' => false, 'message' => 'Archivo no publicado'], 404);
+        }
+
+        return response(file_get_contents($ruta), 200, [
+            'Content-Type'  => $permitidos[$file] . '; charset=utf-8',
+            'Cache-Control' => 'no-cache',
         ]);
     }
 
